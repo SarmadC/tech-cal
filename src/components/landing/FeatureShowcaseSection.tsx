@@ -8,39 +8,38 @@ import styles from './FeatureShowcaseSection.module.css';
 const features = [
     {
         id: 'agenda',
-        title: 'Browse complete session breakdowns',
+        title: 'Plan your day in minutes',
         items: [
             {
-                label: 'Session cards with time slots',
-                detail: 'Dive deep into event agendas with rich session details. Session cards clearly display start and end times, helping you plan your day with precision.',
+                label: 'Every session, time-stamped',
+                detail: 'Scan the full agenda with clear start and end times so you can build a precise, conflict-free plan.',
             },
             {
-                label: 'Topic tags and tracks',
-                detail: 'Filter and find sessions that match your interests using color-coded topic tags and track categorization. Quickly identify relevant content at a glance.',
+                label: 'Tracks and topic tags',
+                detail: 'Spot the sessions that match your focus with color-coded tracks and topic tags you can scan fast.',
             },
             {
-                label: 'Quick-add to calendar',
-                detail: 'Seamlessly integrate sessions into your personal schedule. With a single click, add events to your calendar so you never miss a moment.',
+                label: 'One-tap calendar adds',
+                detail: 'Save the sessions you care about to your calendar in a click so you never miss a start time.',
             },
         ],
     },
     {
         id: 'timeline',
-        title: 'See your schedule at a glance',
-        description: 'Visualize event timelines with an intuitive view showing all sessions across days. Easily switch between days to see how your event unfolds.',
+        title: 'See the whole day at a glance',
+        description: 'A visual timeline shows every track and session so you can spot gaps, overlaps, and key moments instantly.',
         items: [], // Static blocks use description
     },
     {
         id: 'speakers',
-        title: 'Discover who\'s presenting',
-        description: 'Get to know the experts. Browse speaker profiles with high-quality photos and detailed biographies to learn about their background and expertise.',
-        items: [], // Static blocks use description
+        title: 'Meet the minds behind the sessions',
+        description: 'See who\'s speaking, what they\'re covering, and where to catch them.',
     },
 ];
 
 // Interactive Mockup Components
 
-function AgendaMockup() {
+export function AgendaMockup() {
     const [bookmarked, setBookmarked] = useState(false);
     const [starredSessions, setStarredSessions] = useState<number[]>([]);
 
@@ -83,7 +82,7 @@ function AgendaMockup() {
                         onClick={() => setBookmarked(!bookmarked)}
                         style={{ color: bookmarked ? '#FFD700' : undefined }}
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                         </svg>
                     </button>
@@ -91,7 +90,7 @@ function AgendaMockup() {
                         className={styles.iconButton}
                         onClick={() => window.open('https://www.nvidia.com/gtc/', '_blank')}
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                             <polyline points="15 3 21 3 21 9" />
                             <line x1="10" y1="14" x2="21" y2="3" />
@@ -150,7 +149,7 @@ function AgendaMockup() {
                             onClick={(e) => { e.stopPropagation(); toggleStar(1); }}
                             style={{ color: starredSessions.includes(1) ? '#FFD700' : undefined }}
                         >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill={starredSessions.includes(1) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(1) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                         </button>
@@ -186,7 +185,7 @@ function AgendaMockup() {
                             onClick={(e) => { e.stopPropagation(); toggleStar(2); }}
                             style={{ color: starredSessions.includes(2) ? '#FFD700' : undefined }}
                         >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill={starredSessions.includes(2) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(2) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                         </button>
@@ -197,7 +196,7 @@ function AgendaMockup() {
     );
 }
 
-function TimelineMockup() {
+export function TimelineMockup() {
     const [activeTrack, setActiveTrack] = useState<string | null>(null);
     const [hoveredEvent, setHoveredEvent] = useState<string | null>(null);
 
@@ -330,7 +329,7 @@ function TimelineMockup() {
     );
 }
 
-function SpeakersMockup() {
+export function SpeakersMockup() {
     const [activeCard, setActiveCard] = useState<'back' | 'middle' | 'front' | null>(null);
 
     return (
@@ -359,7 +358,7 @@ function SpeakersMockup() {
                         </div>
                         <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Mike Johnson</span>
                     </div>
-                    <span className={styles.stackText}>AI Ethics Panel: Navigating the New Frontier</span>
+                    <span className={styles.stackText}>AI Ethics Panel: Safety, Policy, and Real-World Impact</span>
                     <div className={styles.stackFooter}>
                         <span>02:00 PM</span>
                     </div>
@@ -386,7 +385,7 @@ function SpeakersMockup() {
                         </div>
                         <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Sarah Chen</span>
                     </div>
-                    <span className={styles.stackText}>Building Large Scale Systems with PyTorch</span>
+                    <span className={styles.stackText}>Scaling PyTorch from Prototype to Production</span>
                     <div className={styles.stackFooter}>
                         <span>11:00 AM</span>
                     </div>
@@ -413,7 +412,7 @@ function SpeakersMockup() {
                         </div>
                         <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Jensen Huang</span>
                     </div>
-                    <span className={styles.stackText}>Opening Keynote: The Future of AI Computing</span>
+                    <span className={styles.stackText}>Opening Keynote: The Next Wave of AI Computing</span>
                     <div className={styles.stackFooter}>
                         <span>09:00 AM</span>
                     </div>

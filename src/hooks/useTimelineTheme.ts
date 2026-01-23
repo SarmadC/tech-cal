@@ -7,8 +7,9 @@ import { useTheme } from 'next-themes';
  * Provides consistent theme-aware classes and utilities
  */
 export function useTimelineTheme() {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
+    const { resolvedTheme } = useTheme();
+    // Use resolvedTheme to correctly handle 'system' preference
+    const isDark = resolvedTheme === 'dark';
     
     return {
         isDark,

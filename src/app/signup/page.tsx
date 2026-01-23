@@ -1,7 +1,7 @@
 // src/app/signup/page.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
-import EmailConfirmationSent from '@/components/auth/EmailConfirmationSent';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
 
@@ -22,8 +21,6 @@ const initialState: AuthFormState = {
 
 export default function SignupPage() {
     const router = useRouter();
-    const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
-    const [submittedEmail, setSubmittedEmail] = useState('');
     const emailInputRef = useRef<HTMLInputElement>(null);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
@@ -46,34 +43,16 @@ export default function SignupPage() {
     const handleSignupSuccess = (state: AuthFormState) => {
         if (state?.shouldRedirect) {
             router.push('/discover');
-        } else {
-            // Email confirmation required - capture email and show confirmation UI
-            const email = emailInputRef.current?.value || '';
-            setSubmittedEmail(email);
-            setEmailConfirmationSent(true);
+            return;
         }
-    };
 
-    // Show email confirmation sent state
-    if (emailConfirmationSent && submittedEmail) {
-        return (
-            <ProtectedRoute allowUnauthenticated>
-                <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full">
-                        <div className="text-center mb-8">
-                            <Link href="/" className="inline-flex items-center space-x-2">
-                                <Image src="/logo.svg" alt="KureCal" width={48} height={48} />
-                                <span className="text-2xl font-bold text-foreground-primary">KureCal</span>
-                            </Link>
-                        </div>
-                        <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
-                            <EmailConfirmationSent email={submittedEmail} />
-                        </div>
-                    </div>
-                </div>
-            </ProtectedRoute>
-        );
-    }
+        const email = emailInputRef.current?.value?.trim() || '';
+        const params = new URLSearchParams({ verify: '1' });
+        if (email) {
+            params.set('email', email);
+        }
+        router.push(`/login?${params.toString()}`);
+    };
 
     return (
         <ProtectedRoute allowUnauthenticated>

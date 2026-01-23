@@ -1408,7 +1408,7 @@ html.dark .mobile-chaos-to-order {
 }
 
 .mobile-chaos-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 3rem;
 }
 
@@ -1425,8 +1425,8 @@ html.dark .mobile-chaos-to-order {
   font-size: 1rem;
   color: var(--foreground-secondary);
   line-height: 1.6;
-  max-width: 90%;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
 }
 
 /* Animation Container */
@@ -1702,15 +1702,6 @@ html.dark .mobile-chaos-to-order {
   gap: 12px;
   position: relative;
   grid-auto-rows: 1fr;
-  /* Premium grid border styling */
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 8px;
-}
-
-/* Light mode grid border */
-:root:not(.dark) .calendar-dates {
-  border-color: rgba(0, 0, 0, 0.04);
 }
 
 .calendar-date {
@@ -1759,21 +1750,6 @@ html.dark .mobile-chaos-to-order {
   background: #2563eb;
 }
 
-/* Vertical grid dividers */
-.calendar-date:not(:nth-child(7n))::after {
-  content: '';
-  position: absolute;
-  right: -6px;
-  top: 10%;
-  bottom: 10%;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.05);
-  pointer-events: none;
-}
-
-:root:not(.dark) .calendar-date:not(:nth-child(7n))::after {
-  background: rgba(0, 0, 0, 0.04);
-}
 
 /* Cell landing flash animation */
 .calendar-date.flash {
@@ -2319,7 +2295,7 @@ html.dark .mobile-use-cases {
 }
 
 .mobile-use-cases-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: var(--space-8);
 }
 
@@ -2337,8 +2313,8 @@ html.dark .mobile-use-cases {
   font-size: 1rem;
   line-height: 1.6;
   color: var(--foreground-secondary);
-  max-width: 90%;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   font-family: var(--font-sans);
 }
 
@@ -2748,7 +2724,7 @@ html.dark .mobile-faq {
 }
 
 .mobile-faq-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: var(--space-8);
 }
 
@@ -2774,8 +2750,8 @@ html.dark .mobile-faq {
 
 .mobile-faq-subtitle {
   color: var(--foreground-secondary);
-  max-width: 90%;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   line-height: 1.6;
   font-size: 1rem;
   font-family: var(--font-sans);
@@ -3472,7 +3448,7 @@ html.dark .mobile-footer {
 
 /* Section Header */
 .bento-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 32px;
 }
 
@@ -3493,8 +3469,8 @@ html.dark .mobile-footer {
   font-size: 0.9375rem;
   color: #A1A1AA;
   line-height: 1.6;
-  max-width: 320px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
 }
 
 /* Bento Grid Layout */

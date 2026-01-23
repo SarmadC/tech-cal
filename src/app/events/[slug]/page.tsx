@@ -1,19 +1,36 @@
-// src/app/events/[slug]/page.tsx
-// Public SEO-optimized event page with dynamic metadata and JSON-LD
-
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { EventJsonLd, BreadcrumbJsonLd } from '@/components/seo';
-import { formatDate, formatMonthYear } from '@/utils/dateUtils';
+import { formatDate, formatMonthYear, formatTime } from '@/utils/dateUtils';
+import { transformAgendaItemsToApp } from '@/utils/transformers';
+import { EventAgendaSection } from '@/components/events/EventAgendaSection';
+import type { AgendaItem } from '@/types';
+import {
+    ArrowSquareOut,
+    Globe
+} from '@phosphor-icons/react/dist/ssr';
+import BookmarkEventButton from '@/components/events/BookmarkEventButton';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
 
 interface EventPageProps {
     params: Promise<{ slug: string }>;
+}
+
+// Minimal interface for the DB agenda item (snake_case from database)
+interface DbAgendaItem {
+    id: string;
+    start_time: string;
+    end_time: string | null;
+    title: string;
+    description: string | null;
+    location: string | null;
+    agenda_type: string | null;
+    track: string | null;
 }
 
 // Explicit type for public event data
@@ -39,6 +56,7 @@ interface PublicEvent {
     status: string;
     event_type: { id: string; name: string; color: string } | null;
     organizer: { id: string; name: string; logo_url?: string } | null;
+    agenda: DbAgendaItem[];
 }
 
 // UUID v4 regex pattern for legacy link detection
@@ -65,7 +83,8 @@ const EVENT_SELECT_QUERY = `
     target_audience,
     status,
     event_type:event_type_id(id, name, color),
-    organizer:organizer_id(id, name, logo_url)
+    organizer:organizer_id(id, name, logo_url),
+    agenda:event_agenda(*)
 `;
 
 async function getPublicReadClient() {
@@ -79,34 +98,63 @@ async function getPublicReadClient() {
     return await createClient();
 }
 
-// Fetch event by slug with fallback to UUID lookup for legacy links
+import { extractIdFromSlug } from '@/utils/slugUtils';
+
+// Fetch event by slug with fallback to UUID lookup for legacy links or composite slugs
 async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shouldRedirect: boolean } | null> {
     const supabase = await getPublicReadClient();
 
-    // First, try to find by slug
-    const { data: event, error } = await supabase
+    // 1. Try exact slug match first (fastest, most common)
+    const { data: eventData, error } = await supabase
         .from('events')
         .select(EVENT_SELECT_QUERY)
         .eq('slug' as never, slug)
         .eq('status', 'confirmed')
         .single();
 
-    if (!error && event) {
-        return { event: event as unknown as PublicEvent, shouldRedirect: false };
+    if (!error && eventData) {
+        const event = eventData as unknown as PublicEvent;
+
+        // Debug logging
+        console.log(`[EventPage] Found event by slug: ${slug}, ID: ${event.id}`);
+        console.log(`[EventPage] Agenda items count: ${event.agenda?.length || 0}`);
+
+        // Fallback: If agenda is empty, try explicit fetch
+        if (!event.agenda || event.agenda.length === 0) {
+            console.log(`[EventPage] Agenda empty, attempting explicit fetch for event ${event.id}`);
+            const { data: explicitAgenda } = await supabase
+                .from('event_agenda')
+                .select('*')
+                .eq('event_id', event.id)
+                .order('start_time', { ascending: true });
+
+            if (explicitAgenda && explicitAgenda.length > 0) {
+                console.log(`[EventPage] Found ${explicitAgenda.length} agenda items via explicit fetch`);
+                event.agenda = explicitAgenda;
+            }
+        }
+
+        return { event, shouldRedirect: false };
     }
 
-    // If slug lookup failed, check if the param is a UUID (legacy link)
-    if (UUID_REGEX.test(slug)) {
+    // 2. Try extracting ID from composite slug (title--id) or checking if it's a raw UUID
+    const extractedId = extractIdFromSlug(slug);
+
+    // Only proceed if we have a valid UUID (extractIdFromSlug returns the input if extraction fails)
+    if (UUID_REGEX.test(extractedId)) {
         const { data: eventById, error: idError } = await supabase
             .from('events')
             .select(EVENT_SELECT_QUERY)
-            .eq('id', slug)
+            .eq('id', extractedId)
             .eq('status', 'confirmed')
             .single();
 
         if (!idError && eventById) {
-            // Found by UUID - return with redirect flag for 301 to canonical slug URL
-            return { event: eventById as unknown as PublicEvent, shouldRedirect: true };
+            const event = eventById as unknown as PublicEvent;
+
+            // Found by ID (either raw UUID or extracted from composite)
+            // We should redirect to the canonical slug URL to clean up the browser bar
+            return { event, shouldRedirect: true };
         }
     }
 
@@ -229,167 +277,227 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 ]}
             />
 
-            <div className="min-h-screen bg-background-main pt-20">
-                {/* Hero Section */}
-                <section className="py-12 px-6 bg-background-secondary border-b border-border-color">
-                    <div className="max-w-4xl mx-auto">
-                        {/* Breadcrumb */}
-                        <nav className="mb-6 text-sm text-foreground-tertiary">
-                            <Link href="/" className="hover:text-accent-primary">Home</Link>
-                            <span className="mx-2">/</span>
-                            <Link href="/discover" className="hover:text-accent-primary">Events</Link>
-                            <span className="mx-2">/</span>
-                            <span className="text-foreground-secondary">{event.title}</span>
+            <div className="min-h-screen bg-background-main pb-24 selection:bg-accent-primary/20 selection:text-accent-primary">
+
+                {/* Header - Linear-inspired minimal */}
+                <header className="sticky top-0 z-40 bg-background-main/95 backdrop-blur-md border-b border-border-subtle pt-5 pb-5">
+                    <div className="max-w-7xl mx-auto px-6 sm:px-8">
+                        {/* Minimal Breadcrumb */}
+                        <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-5">
+                            <Link href="/discover" className="hover:text-foreground-tertiary transition-colors">
+                                Events
+                            </Link>
+                            <span className="text-foreground-tertiary/30">/</span>
+                            <span className="text-foreground-tertiary truncate max-w-[200px]">{event.title}</span>
                         </nav>
 
-                        {/* Event Type Badge */}
-                        {eventType && (
-                            <span
-                                className="inline-block px-3 py-1 text-xs font-medium rounded-full mb-4"
-                                style={{ backgroundColor: eventType.color + '20', color: eventType.color }}
-                            >
-                                {eventType.name}
-                            </span>
-                        )}
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
+                            <div className="flex-1 min-w-0">
+                                {/* Clean Title */}
+                                <h1 className="text-2xl md:text-[28px] font-semibold tracking-[-0.02em] text-foreground-primary leading-tight mb-3">
+                                    {event.title}
+                                </h1>
 
-                        <h1 className="text-3xl md:text-4xl font-bold text-foreground-primary mb-4">
-                            {event.title}
-                        </h1>
-
-                        {/* Event Meta */}
-                        <div className="flex flex-wrap gap-4 text-foreground-secondary mb-6">
-                            {event.start_time && (
-                                <div className="flex items-center gap-2">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <span>{formatDate(event.start_time)}</span>
-                                </div>
-                            )}
-                            {event.location && (
-                                <div className="flex items-center gap-2">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span>{event.location}</span>
-                                </div>
-                            )}
-                            {event.event_format && (
-                                <div className="flex items-center gap-2">
-                                    <span className="px-2 py-0.5 text-xs bg-accent-primary/10 text-accent-primary rounded">
-                                        {event.event_format}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* CTA Buttons */}
-                        <div className="flex flex-wrap gap-3">
-                            {event.registration_url && (
-                                <a
-                                    href={event.registration_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center px-6 py-3 bg-accent-primary hover:bg-accent-primary-hover text-accent-primary-foreground font-semibold rounded-lg transition-colors"
-                                >
-                                    Register Now
-                                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                </a>
-                            )}
-                            {event.source_url && (
-                                <a
-                                    href={event.source_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center px-6 py-3 border border-border-default hover:border-accent-primary text-foreground-primary font-medium rounded-lg transition-colors"
-                                >
-                                    Visit Website
-                                </a>
-                            )}
-                            <Link
-                                href="/login?redirect=/discover"
-                                className="inline-flex items-center px-6 py-3 border border-border-default hover:border-accent-primary text-foreground-primary font-medium rounded-lg transition-colors"
-                            >
-                                Track This Event
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Event Details */}
-                <section className="py-12 px-6">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="grid md:grid-cols-3 gap-8">
-                            {/* Main Content */}
-                            <div className="md:col-span-2">
-                                <h2 className="text-xl font-semibold text-foreground-primary mb-4">About This Event</h2>
-                                <div className="prose prose-invert max-w-none text-foreground-secondary">
-                                    {event.description ? (
-                                        <p className="whitespace-pre-wrap">{event.description}</p>
-                                    ) : (
-                                        <p>No description available for this event.</p>
+                                {/* Text-only Meta with dot separators */}
+                                <div className="flex flex-wrap items-center text-[13px] text-foreground-tertiary">
+                                    {event.start_time && (
+                                        <span>{formatDate(event.start_time)}</span>
+                                    )}
+                                    {event.location && (
+                                        <>
+                                            <span className="mx-3 text-foreground-tertiary/30">·</span>
+                                            <span>{event.location}</span>
+                                        </>
+                                    )}
+                                    {event.event_format && (
+                                        <>
+                                            <span className="mx-3 text-foreground-tertiary/30">·</span>
+                                            <span>{event.event_format}</span>
+                                        </>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Sidebar */}
-                            <div className="space-y-6">
-                                {/* Organizer */}
-                                {organizer && (
-                                    <div className="bg-background-secondary rounded-xl p-6 border border-border-color">
-                                        <h3 className="text-sm font-medium text-foreground-tertiary mb-3">Organized by</h3>
-                                        <div className="flex items-center gap-3">
-                                            {organizer.logo_url && (
-                                                <img src={organizer.logo_url} alt={organizer.name} className="w-10 h-10 rounded-full object-cover" />
-                                            )}
-                                            <span className="font-medium text-foreground-primary">{organizer.name}</span>
+
+                        </div>
+                    </div>
+                </header>
+
+                {/* Body Layout - Generous spacing */}
+                <main className="max-w-7xl mx-auto px-6 sm:px-8 py-12 grid grid-cols-1 lg:grid-cols-12 gap-y-16 gap-x-6">
+
+                    {/* Left Column */}
+                    <div className="space-y-12 min-w-0 lg:col-span-8">
+
+                        {/* Section: Overview */}
+                        <section>
+                            <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                                Overview
+                            </h2>
+                            <div className="text-[15px] text-foreground-secondary leading-[1.7] max-w-prose">
+                                {event.description ? (
+                                    <p className="whitespace-pre-wrap">{event.description}</p>
+                                ) : (
+                                    <p className="text-foreground-tertiary/60 italic">No description available.</p>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Section: Details */}
+                        {(event.price_range || event.target_audience || event.difficulty) && (
+                            <section>
+                                <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                                    Details
+                                </h2>
+                                <dl className="space-y-0">
+                                    {event.price_range && (
+                                        <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                                            <dt className="text-[13px] text-foreground-tertiary/70">Price</dt>
+                                            <dd className="text-[13px] text-foreground-primary">{event.price_range}</dd>
                                         </div>
+                                    )}
+                                    {event.target_audience && (
+                                        <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                                            <dt className="text-[13px] text-foreground-tertiary/70">Audience</dt>
+                                            <dd className="text-[13px] text-foreground-primary text-right max-w-[55%] truncate">
+                                                {event.target_audience}
+                                            </dd>
+                                        </div>
+                                    )}
+                                    {event.difficulty && (
+                                        <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                                            <dt className="text-[13px] text-foreground-tertiary/70">Level</dt>
+                                            <dd className="text-[13px] text-foreground-primary capitalize">{event.difficulty}</dd>
+                                        </div>
+                                    )}
+                                </dl>
+                            </section>
+                        )}
+                    </div>
+
+                    {/* Right Rail - Minimal Ghost Style */}
+                    <aside className="hidden lg:block lg:col-span-4">
+                        <div className="rounded-lg border border-border-subtle bg-background-secondary/40 overflow-hidden">
+                            <div className="p-4 space-y-3 border-b border-border-subtle">
+                                <BookmarkEventButton
+                                    eventId={event.id}
+                                    event={{
+                                        id: event.id,
+                                        title: event.title,
+                                        startTime: event.start_time,
+                                        location: event.location,
+                                        eventType: event.event_type?.name || null,
+                                        organizer: event.organizer?.name || null
+                                    }}
+                                    loginRedirect={`/events/${event.slug}`}
+                                />
+
+                                {event.registration_url && (
+                                    <a
+                                        href={event.registration_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex w-full items-center justify-center h-10 border border-border-subtle hover:border-border-default rounded-md text-[13px] font-medium text-foreground-secondary transition-colors gap-2"
+                                    >
+                                        Register on website
+                                        <ArrowSquareOut className="w-3.5 h-3.5 opacity-70" />
+                                    </a>
+                                )}
+                            </div>
+
+                            <div className="divide-y divide-border-subtle">
+                                {organizer && (
+                                    <div className="flex items-center justify-between px-4 py-3">
+                                        <span className="text-[11px] text-foreground-tertiary/70">Organizer</span>
+                                        <span className="flex items-center gap-2 text-[11px] text-foreground-primary">
+                                            {organizer.logo_url && (
+                                                <img
+                                                    src={organizer.logo_url}
+                                                    alt={`${organizer.name} logo`}
+                                                    className="h-5 w-5 object-contain"
+                                                />
+                                            )}
+                                            <span>{organizer.name}</span>
+                                        </span>
                                     </div>
                                 )}
 
-                                {/* Quick Info */}
-                                <div className="bg-background-secondary rounded-xl p-6 border border-border-color">
-                                    <h3 className="text-sm font-medium text-foreground-tertiary mb-4">Event Details</h3>
-                                    <dl className="space-y-3 text-sm">
-                                        {event.price_range && (
-                                            <div>
-                                                <dt className="text-foreground-tertiary">Price</dt>
-                                                <dd className="font-medium text-foreground-primary">{event.price_range}</dd>
-                                            </div>
-                                        )}
-                                        {event.difficulty && (
-                                            <div>
-                                                <dt className="text-foreground-tertiary">Level</dt>
-                                                <dd className="font-medium text-foreground-primary capitalize">{event.difficulty}</dd>
-                                            </div>
-                                        )}
-                                        {event.target_audience && (
-                                            <div>
-                                                <dt className="text-foreground-tertiary">Audience</dt>
-                                                <dd className="font-medium text-foreground-primary">{event.target_audience}</dd>
-                                            </div>
-                                        )}
-                                    </dl>
-                                </div>
-
-                                {/* CTA Card */}
-                                <div className="bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-xl p-6 border border-accent-primary/20">
-                                    <h3 className="font-semibold text-foreground-primary mb-2">Never miss an event</h3>
-                                    <p className="text-sm text-foreground-secondary mb-4">Sign up to track this event and get personalized recommendations.</p>
-                                    <Link
-                                        href="/signup"
-                                        className="block w-full text-center px-4 py-2 bg-accent-primary hover:bg-accent-primary-hover text-accent-primary-foreground font-medium rounded-lg transition-colors"
-                                    >
-                                        Get Started Free
-                                    </Link>
-                                </div>
+                                {eventType && (
+                                    <div className="flex items-center justify-between px-4 py-3">
+                                        <span className="text-[11px] text-foreground-tertiary/70">Type</span>
+                                        <span className="text-[11px] text-foreground-primary">{eventType.name}</span>
+                                    </div>
+                                )}
                             </div>
+
                         </div>
+                    </aside>
+
+                    {/* Section: Schedule */}
+                    <section className="lg:col-span-12">
+                        {(() => {
+                            // Transform agenda from database format (snake_case) to app format (camelCase)
+                            const transformedAgenda: AgendaItem[] = transformAgendaItemsToApp(event.agenda || []);
+
+                            // Create an event object that matches what EventAgendaSection expects
+                            const eventWithAgenda = {
+                                id: event.id,
+                                title: event.title,
+                                description: event.description || '',
+                                startTime: event.start_time,
+                                endTime: event.end_time,
+                                timezone: null,
+                                organizer: event.organizer?.name || '',
+                                location: event.location || '',
+                                status: event.status,
+                                sourceUrl: event.source_url || '',
+                                livestreamUrl: event.livestream_url,
+                                eventTypeId: event.event_type?.id || '',
+                                createdAt: '',
+                                agenda: transformedAgenda,
+                            };
+
+                            if (transformedAgenda.length === 0) {
+                                return (
+                                    <>
+                                        <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                                            Schedule
+                                        </h2>
+                                        <p className="text-[13px] text-foreground-tertiary/60 italic">No schedule available for this event.</p>
+                                    </>
+                                );
+                            }
+
+                            return (
+                                <>
+                                    <EventAgendaSection event={eventWithAgenda} timezone={null} title="Schedule" />
+                                </>
+                            );
+                        })()}
+                    </section>
+                </main>
+
+                {/* Mobile Sticky Bottom Bar */}
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-main/95 backdrop-blur-md border-t border-border-subtle lg:hidden z-50">
+                    <div className="flex gap-2 max-w-md mx-auto">
+                        <Link
+                            href="/login?redirect=/discover"
+                            className="flex-1 h-11 flex items-center justify-center bg-foreground-primary text-background-main font-medium rounded-lg text-[14px]"
+                        >
+                            Track
+                        </Link>
+                        {event.source_url && (
+                            <a
+                                href={event.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-11 px-4 flex items-center justify-center border border-border-default rounded-lg text-foreground-secondary text-[14px]"
+                            >
+                                Website
+                            </a>
+                        )}
                     </div>
-                </section>
+                </div>
             </div>
         </>
     );

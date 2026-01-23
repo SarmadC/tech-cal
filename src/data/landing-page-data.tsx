@@ -28,7 +28,7 @@ export const features = [
     {
         icon: <Database size={24} />,
         title: 'Event Aggregation Engine',
-        description: 'Aggregates from 100+ event sources—RSS feeds, APIs, and ICS calendars—with real-time updates.'
+        description: 'Aggregates from 100+ event sources, including RSS feeds, APIs, and ICS calendars, with real-time updates.'
     },
     {
         icon: <Funnel size={24} />,

@@ -36,8 +36,11 @@ export function extractIdFromSlug(slug: string): string {
   const parts = slug.split('--');
   if (parts.length > 1) {
     const id = parts[parts.length - 1];
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      return id;
+    
+    // Match standard UUID at the start of the string
+    const match = id.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (match) {
+      return match[1];
     }
   }
   

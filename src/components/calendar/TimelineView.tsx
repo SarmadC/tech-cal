@@ -140,13 +140,13 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     // renderEventCard has been refactored into TimelineEventCard component
 
     return (
-        <div className="relative pb-12 flex h-[calc(100vh-200px)]">
-            {/* Left Panel (Timeline List) - 40% Width */}
-            <div className="w-[40%] overflow-y-auto pr-4 border-r border-zinc-800 pt-8">
+        <div className="relative pb-12 grid grid-cols-1 md:grid-cols-8 gap-x-6 md:h-[calc(100vh-220px)]">
+            {/* Left Panel (Timeline List) */}
+            <div className="md:col-span-3 overflow-y-auto md:pr-6 md:border-r border-border-subtle pt-6">
                 {/* Main Container with Continuous Spine */}
                 <div className="ml-6 pl-6 relative min-h-[200px]">
                     {/* Continuous Vertical Line */}
-                    <div className="absolute left-[0px] top-4 bottom-0 w-[2px] bg-zinc-800 z-0" />
+                    <div className="absolute left-[0px] top-4 bottom-0 w-[2px] bg-border-subtle z-0" />
 
                     {Object.entries(timelineClusters)
                         .sort(([a], [b]) => parseInt(a) - parseInt(b))
@@ -236,8 +236,8 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                 </div>
             </div>
 
-            {/* Right Panel (Detail View) - 60% Width */}
-            <div className="w-[60%] pl-6 border-l border-zinc-800/50 h-full overflow-hidden relative">
+            {/* Right Panel (Detail View) */}
+            <div className="md:col-span-5 md:pl-6 pt-6 mt-6 md:mt-0 border-t md:border-t-0 border-border-subtle md:h-full overflow-hidden relative">
                 {selectedEvent ? (
                     <TimelineDetailPanel event={selectedEvent} eventTimezone={eventTimezone} />
                 ) : (

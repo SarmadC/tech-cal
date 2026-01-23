@@ -18,7 +18,7 @@ const bentoFeatures = [
     icon: <Database size={24} weight="light" />,
     watermarkIcon: <Database size={80} weight="light" />,
     title: 'Event Aggregation Engine',
-    description: 'Aggregates from 100+ event sources; RSS feeds, APIs, and ICS calendars with real-time updates.',
+    description: 'Aggregates from 100+ event sources, including RSS feeds, APIs, and ICS calendars, with real-time updates.',
     layout: 'wide',
   },
   {

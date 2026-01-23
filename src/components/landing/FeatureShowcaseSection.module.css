@@ -92,15 +92,40 @@
     
     .mockupCard {
         max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        
+        /* Global transparency for mobile */
+        box-shadow: none;
+        background: transparent;
+        border: none;
     }
     
-    /* Interactive Mockup adjustments for mobile */
-    .interactiveMockup .mockupCard {
-        box-shadow: 
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 12px 32px rgba(0, 0, 0, 0.3);
+    .mockupCard::-webkit-scrollbar {
+        display: none;
+    }
+
+
+
+    /* Ensure clearer alignment on tablet/mobile */
+    .sessionRow {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .sessionMeta {
+        flex-direction: row;
+        width: 100%;
+        padding-left: 0;
+        justify-content: flex-start; /* Keep them together */
+        gap: 12px;
+        align-items: center;
+        margin-top: 4px;
     }
 }
+
 
 @media (max-width: 600px) {
     .section {
@@ -122,43 +147,47 @@
     
     /* Agenda Mockup Mobile Tweaks */
     .agendaHeader {
-        padding: 16px 16px 12px;
+        padding: 16px 16px 14px;
     }
-    
+
     .agendaTitle {
-        font-size: 16px;
+        font-size: 15px;
     }
-    
+
     .agendaMeta {
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
         align-items: flex-start;
     }
-    
+
     .filterBar {
         padding: 10px 16px;
     }
-    
+
     .sessionRow {
-        padding: 16px;
+        padding: 14px 16px;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
-    
+
     .sessionMain {
-        gap: 6px;
+        gap: 5px;
     }
-    
+
     .sessionMeta {
         flex-direction: row;
         width: 100%;
         padding-left: 0;
         justify-content: space-between;
         align-items: center;
-        margin-top: 4px;
+        margin-top: 2px;
     }
     
     /* Timeline Mobile Tweaks */
+    .trackHeader, .trackGrid {
+        min-width: 600px; /* Force horizontal scroll */
+    }
+
     .trackTimeColumn, .trackTimeCell {
         width: 44px;
     }
@@ -409,40 +438,29 @@
 
 .mockupCard {
     width: 100%;
-    max-width: 600px; /* Wider for 4-column density */
-    border-radius: 12px;
+    max-width: 600px;
+    border-radius: 10px;
     overflow: hidden;
-    
-    /* 1. Elevation Surface: Panel color, distinct from section bg */
-    background: #141416; 
-    
-    /* 2. Crisp Border: 1px low opacity */
-    border: 1px solid rgba(255, 255, 255, 0.08);
 
-    /* 3. Inner Highlight + Subtle Depth (Refined for crispness) */
-    box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.08), /* Brighter top edge */
-        0 2px 8px rgba(0, 0, 0, 0.4); /* Tighter, less blurry shadow */
-    
+    /* Linear-inspired clean surface */
+    background: #141416;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
     transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.3s ease;
 }
 
 :global(:root:not(.dark)) .mockupCard,
 :global(.light) .mockupCard {
     background: #ffffff;
-    border-color: rgba(0,0,0,0.08);
-    box-shadow: 
-        inset 0 0 0 1px rgba(0,0,0,0.02),
-        0 4px 12px rgba(0,0,0,0.08);
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* Stronger elevation for Interactive Mockup (Large Card) */
 .interactiveMockup .mockupCard {
-    /* Slightly 'closer' to viewer */
-    box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 12px 32px rgba(0, 0, 0, 0.5); /* Deeper shadow */
-    background: #161618; /* Slightly lighter surface step */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    background: #141416;
 }
 
 /* Internal Elements - Utility cleanup */
@@ -469,18 +487,18 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 24px 24px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06); /* Subtler border */
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .agendaInfo {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .agendaBreadcrumb {
-    font-size: 13px;
+    font-size: 12px;
     color: #8A8F98;
     display: flex;
     align-items: center;
@@ -495,47 +513,47 @@
 }
 
 .agendaTitle {
-    font-size: 18px; /* Slightly larger */
+    font-size: 15px;
     font-weight: 500;
-    color: #fff;
+    color: #F0F0F0;
     margin: 0;
     letter-spacing: -0.01em;
 }
 
 .agendaMeta {
     display: flex;
-    gap: 20px;
-    margin-top: 4px;
+    gap: 16px;
+    margin-top: 2px;
 }
 
 .metaItem {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #9EA2B0;
+    gap: 6px;
+    font-size: 12px;
+    color: #8A8F98;
 }
 
 .metaItem svg {
     opacity: 0.8;
-    color: #8A8F98;
+    color: #717684;
 }
 
 .agendaActions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .iconButton {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.08); /* Darker border */
+    border: 1px solid rgba(255, 255, 255, 0.06);
     background: transparent;
-    color: #8A8F98;
+    color: #717684;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -543,7 +561,7 @@
 .iconButton:hover {
     background: rgba(255, 255, 255, 0.04);
     color: #E0E0E0;
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Filter Bar */
@@ -551,36 +569,37 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.01);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .sessionCount {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #8A8F98;
+    gap: 6px;
+    font-size: 12px;
+    color: #717684;
 }
 
 .sessionCount svg {
-    color: #6D717A;
+    color: #5F6166;
 }
 
 /* Segmented Control - Refined */
 .viewToggle {
     display: flex;
     padding: 2px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 6px;
 }
 
 .toggleButton {
-    padding: 4px 12px;
-    font-size: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
     font-weight: 500;
-    color: #8A8F98;
+    color: #717684;
     background: transparent;
     border: none;
     border-radius: 4px;
@@ -591,8 +610,7 @@
 .toggleButton.active {
     background: rgba(255, 255, 255, 0.08);
     color: #E0E0E0;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    border: 1px solid rgba(0, 0, 0, 0.2); /* Inset-like border */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Session List (Linear Rows) */
@@ -603,9 +621,9 @@
 .sessionRow {
     display: flex;
     justify-content: space-between;
-    align-items: stretch; /* Stretch to fill height */
-    padding: 20px 24px; /* More breathing room */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    align-items: stretch;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     cursor: pointer;
     position: relative;
     transition: background 0.15s ease;
@@ -616,10 +634,10 @@
 }
 
 .sessionRow:hover {
-    background: rgba(255, 255, 255, 0.015);
+    background: rgba(255, 255, 255, 0.02);
 }
 
-/* Hover Highland: Left accent indicator line (optional Linear detail) */
+/* Hover accent indicator line (optional Linear detail) */
 .sessionRow::before {
     content: '';
     position: absolute;
@@ -628,35 +646,36 @@
     transform: translateY(-50%) scaleY(0);
     width: 2px;
     height: 60%;
-    background: #5E6AD2; /* Primary accent */
+    background: #5E6AD2;
     transition: transform 0.2s ease;
     border-radius: 0 2px 2px 0;
 }
-/*.sessionRow:hover::before { transform: translateY(-50%) scaleY(1); } Optional */
-
 
 .sessionMain {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
 }
 
 .sessionTag {
     font-size: 10px;
-    font-weight: 600;
-    /* text-transform: uppercase; Removed */
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    margin-bottom: 1px;
     display: inline-block;
 }
 
 .sessionTitle {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 500;
     color: #F0F0F0;
     line-height: 1.4;
     transition: color 0.15s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .sessionRow:hover .sessionTitle {
@@ -665,16 +684,16 @@
 
 .sessionDetails {
     display: flex;
-    gap: 16px;
-    margin-top: 0px;
+    gap: 12px;
+    margin-top: 2px;
 }
 
 .detailItem {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #717684; /* Muted */
+    gap: 5px;
+    font-size: 11px;
+    color: #717684;
 }
 
 .detailItem svg {
@@ -686,17 +705,16 @@
     flex-direction: column;
     justify-content: space-between;
     align-items: flex-end;
-    padding-left: 20px;
+    padding-left: 16px;
 }
 
 .sessionTimeBadge {
-    /* font-family: 'Inter', sans-serif; Reverted to default */
-    font-size: 12px;
-    color: #8A8F98;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 4px 8px;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, 'Cascadia Mono', monospace;
+    font-size: 11px;
+    color: #717684;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 3px 6px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
     font-weight: 500;
     letter-spacing: 0.02em;
 }
@@ -704,23 +722,129 @@
 .addButton {
     display: flex;
     align-items: center;
-    justify-content: center; /* Centered icon */
-    width: 28px; /* Fixed square size for icon */
-    height: 28px;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     font-size: 12px;
-    color: #C0C0C0;
+    color: #717684;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-    padding: 0; /* No padding needed for icon only */
+    padding: 0;
 }
 
 .addButton:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #FFD700; /* Gold star on hover */
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #FFD700;
+}
+
+/* Agenda Mockup - Light Mode */
+:global(:root:not(.dark)) .agendaHeader,
+:global(.light) .agendaHeader {
+    border-bottom-color: rgba(0, 0, 0, 0.03);
+}
+
+:global(:root:not(.dark)) .agendaTitle,
+:global(.light) .agendaTitle {
+    color: #1A1A1A;
+}
+
+:global(:root:not(.dark)) .metaItem,
+:global(.light) .metaItem {
+    color: #6B7280;
+}
+
+:global(:root:not(.dark)) .metaItem svg,
+:global(.light) .metaItem svg {
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .iconButton,
+:global(.light) .iconButton {
+    border-color: rgba(0, 0, 0, 0.06);
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .iconButton:hover,
+:global(.light) .iconButton:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #1A1A1A;
+}
+
+:global(:root:not(.dark)) .filterBar,
+:global(.light) .filterBar {
+    background: rgba(0, 0, 0, 0.01);
+    border-bottom-color: rgba(0, 0, 0, 0.03);
+}
+
+:global(:root:not(.dark)) .sessionCount,
+:global(.light) .sessionCount {
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .viewToggle,
+:global(.light) .viewToggle {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.04);
+}
+
+:global(:root:not(.dark)) .toggleButton,
+:global(.light) .toggleButton {
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .toggleButton.active,
+:global(.light) .toggleButton.active {
+    background: rgba(0, 0, 0, 0.06);
+    color: #1A1A1A;
+}
+
+:global(:root:not(.dark)) .sessionRow,
+:global(.light) .sessionRow {
+    border-bottom-color: rgba(0, 0, 0, 0.03);
+}
+
+:global(:root:not(.dark)) .sessionRow:hover,
+:global(.light) .sessionRow:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+:global(:root:not(.dark)) .sessionTitle,
+:global(.light) .sessionTitle {
+    color: #1A1A1A;
+}
+
+:global(:root:not(.dark)) .sessionRow:hover .sessionTitle,
+:global(.light) .sessionRow:hover .sessionTitle {
+    color: #0A0A0A;
+}
+
+:global(:root:not(.dark)) .detailItem,
+:global(.light) .detailItem {
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .sessionTimeBadge,
+:global(.light) .sessionTimeBadge {
+    color: #9CA3AF;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+:global(:root:not(.dark)) .addButton,
+:global(.light) .addButton {
+    border-color: rgba(0, 0, 0, 0.06);
+    color: #9CA3AF;
+}
+
+:global(:root:not(.dark)) .addButton:hover,
+:global(.light) .addButton:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #F59E0B;
 }
 
 /* Timeline */
@@ -729,7 +853,7 @@
 .trackHeader { 
     display: flex; 
     /* Remove padding to let dividers hit edges, handle spacing in cells */
-    padding: 0; 
+    padding: 6px 0; 
     border-bottom: 1px solid rgba(255,255,255,0.04); 
     margin-bottom: 0; 
     background: rgba(255, 255, 255, 0.03); /* Slightly more visible tint */
@@ -740,7 +864,7 @@
 }
 .trackColumn { 
     flex: 1; 
-    padding: 16px; 
+    padding: 18px 16px; 
     border-left: 1px solid rgba(255,255,255,0.02); /* Ultra subtle vertical */
     display: flex;
     flex-direction: column;
@@ -783,7 +907,7 @@
 .trackRow { 
     display: flex; 
     align-items: stretch; 
-    min-height: 56px; /* Slightly taller for table feel */
+    min-height: 64px; /* Slightly taller for table feel */
     border-bottom: 1px solid rgba(255,255,255,0.04); /* Softer horizontal */
     padding: 0; /* Padding handled by cells */
 }
@@ -809,7 +933,7 @@
 
 .trackEventCell { 
     flex: 1; 
-    padding: 14px 16px; 
+    padding: 16px 18px; 
     display: flex; 
     align-items: center; /* Center vertically for cleaner grid */
     border-left: 1px solid rgba(255,255,255,0.02); /* Ultra subtle vertical */
@@ -821,7 +945,7 @@
     background: transparent;
     border: none;
     border-radius: 0; 
-    padding: 2px 0 2px 10px; 
+    padding: 4px 0 4px 10px; 
     /* Accent fixed consistency */
     border-left: 2px solid rgba(62, 207, 142, 0.6); 
     
@@ -829,7 +953,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center; /* Center content vertically too */
-    gap: 2px;
+    gap: 4px;
     height: 100%; /* Ensure full height alignment */
 }
 
@@ -845,7 +969,7 @@
     font-size: 11px; 
     color: #fff; 
     font-weight: 500; 
-    line-height: 1.3; 
+    line-height: 1.4; 
 }
 
 /* Speakers */

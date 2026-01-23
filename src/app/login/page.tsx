@@ -3,15 +3,95 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
-import { loginAction } from '@/app/auth/actions';
+import { loginAction, resendVerificationAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
+
+function VerificationNotice({ email }: { email?: string }) {
+    const { showSuccess, showError } = useSnackbar();
+    const [isResending, setIsResending] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
+
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [cooldown]);
+
+    const handleResend = useCallback(async () => {
+        if (isResending || cooldown > 0) return;
+
+        if (!email) {
+            showError('Please enter your email above to resend the verification link.');
+            return;
+        }
+
+        setIsResending(true);
+        try {
+            const result = await resendVerificationAction(email);
+            if (result.success) {
+                showSuccess(result.message || 'Verification email sent! Check your inbox.');
+                setCooldown(60);
+            } else {
+                showError(result.message || 'Unable to send verification email. Please try again.');
+            }
+        } catch (error) {
+            console.error('[LoginPage] Resend verification error:', error);
+            showError('An error occurred while resending. Please try again.');
+        } finally {
+            setIsResending(false);
+        }
+    }, [email, isResending, cooldown, showSuccess, showError]);
+
+    return (
+        <div className="rounded-2xl border border-border-default bg-background-secondary p-5 text-left shadow-sm">
+            <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-primary/10 text-accent-primary">
+                    <svg
+                        className="h-6 w-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                    </svg>
+                </div>
+                <div className="flex-1 space-y-2">
+                    <div>
+                        <p className="text-sm font-semibold text-foreground-primary">Verify your email to sign in</p>
+                        <p className="text-sm text-foreground-secondary">
+                            We sent a confirmation link{email ? ' to' : ''}{' '}
+                            {email ? <span className="font-medium text-foreground-primary">{email}</span> : 'to your email address'}.
+                            Click the link to activate your account.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleResend}
+                            disabled={isResending || cooldown > 0}
+                            className="inline-flex items-center justify-center rounded-lg border border-border-default bg-background-main px-3 py-2 text-sm font-medium text-foreground-primary transition-colors hover:border-accent-primary/40 hover:text-accent-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isResending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
+                        </button>
+                        <span className="text-xs text-foreground-tertiary">Check spam if you don't see it.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function LoginPageContent() {
     const router = useRouter();
@@ -119,6 +199,9 @@ function LoginPageContent() {
     }, [user, loading, initialized, isOAuthLoading]);
 
     const initialState: AuthFormState = { message: '', success: false };
+    const verificationEmail = searchParams.get('email') || '';
+    const showVerificationNotice =
+        searchParams.get('verify') === '1' || searchParams.get('verify') === 'true';
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         setIsOAuthLoading(true);
@@ -182,6 +265,10 @@ function LoginPageContent() {
                     <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account to continue</p>
                 </div>
 
+                {showVerificationNotice && (
+                    <VerificationNotice email={verificationEmail} />
+                )}
+
                 <AuthProviders
                     onSelectProvider={handleOAuthSignIn}
                     isPending={isOAuthLoading}
@@ -206,6 +293,7 @@ function LoginPageContent() {
                                     type="email"
                                     autoComplete="email"
                                     required
+                                    defaultValue={verificationEmail}
                                     className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
                                     placeholder="you@example.com"
                                     aria-describedby={state.errors?.email ? "email-error" : undefined}

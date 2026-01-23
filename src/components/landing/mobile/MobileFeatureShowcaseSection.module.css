@@ -1,0 +1,965 @@
+.section {
+    position: relative;
+    padding: 56px 0 64px;
+    background: #08090a;
+    overflow: hidden;
+}
+
+:global(:root:not(.dark)) .section,
+:global(.light) .section,
+:global(html.light) .section {
+    background: linear-gradient(180deg, rgba(250, 250, 250, 1) 0%, rgba(242, 244, 246, 1) 100%);
+}
+
+.container {
+    padding: 0 18px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(62, 207, 142, 0.8);
+    font-weight: 600;
+}
+
+.title {
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.subtitle {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+:global(:root:not(.dark)) .title,
+:global(.light) .title,
+:global(html.light) .title {
+    color: #0c0d0f;
+}
+
+:global(:root:not(.dark)) .subtitle,
+:global(.light) .subtitle,
+:global(html.light) .subtitle {
+    color: #3c3f45;
+}
+
+.cardList {
+    display: grid;
+    gap: 14px;
+}
+
+.card {
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: grid;
+    gap: 12px;
+    text-align: left;
+}
+
+:global(:root:not(.dark)) .card,
+:global(.light) .card,
+:global(html.light) .card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.cardBadge {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(62, 207, 142, 0.16);
+    color: #77e2a6;
+    font-weight: 600;
+}
+
+:global(:root:not(.dark)) .cardBadge,
+:global(.light) .cardBadge,
+:global(html.light) .cardBadge {
+    color: #1a7a3f;
+    background: rgba(62, 207, 142, 0.16);
+}
+
+.cardTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.cardCopy {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.68);
+}
+
+:global(:root:not(.dark)) .cardTitle,
+:global(.light) .cardTitle,
+:global(html.light) .cardTitle {
+    color: #0c0d0f;
+}
+
+:global(:root:not(.dark)) .cardCopy,
+:global(.light) .cardCopy,
+:global(html.light) .cardCopy {
+    color: #3c3f45;
+}
+
+.miniPreview {
+    padding: 0;
+    background: transparent;
+    border: none;
+    display: grid;
+    gap: 10px;
+}
+
+:global(:root:not(.dark)) .miniPreview,
+:global(.light) .miniPreview,
+:global(html.light) .miniPreview {
+    background: transparent;
+    border: none;
+}
+
+.timelineRow {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.timePill {
+    font-size: 10px;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+:global(:root:not(.dark)) .timePill,
+:global(.light) .timePill,
+:global(html.light) .timePill {
+    color: #60646c;
+}
+
+.timelineChip {
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(62, 207, 142, 0.16);
+    color: #d9ffe8;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+:global(:root:not(.dark)) .timelineChip,
+:global(.light) .timelineChip,
+:global(html.light) .timelineChip {
+    color: #0c3b1c;
+    background: rgba(62, 207, 142, 0.18);
+}
+
+.timelinePanel {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    display: grid;
+    gap: 14px;
+    padding: 8px 0 6px;
+}
+
+.timelineHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 4px;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.timelineLabel {
+    font-size: 10px; /* Smaller */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.4); /* More restrained/muted */
+    font-weight: 500;
+}
+
+.timelineTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.timelineMeta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.3); /* Muted meta */
+}
+
+:global(:root:not(.dark)) .timelineHeader {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:global(:root:not(.dark)) .timelineLabel {
+    color: #888d96;
+}
+
+:global(:root:not(.dark)) .timelineTitle {
+    color: #0c0d0f;
+}
+
+:global(:root:not(.dark)) .timelineMeta {
+    color: #9ca2ab;
+}
+
+.timelineRows {
+    display: grid;
+    /* gap removed to allow borders to work better as dividers */
+}
+
+/* Row Styling */
+.timelineRow {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 12px;
+    padding: 12px 8px; /* Increased padding relative to previous slightly */
+    position: relative; /* For pseudo-element divider */
+    transition: background 0.15s ease-out;
+}
+
+/* Inset Divider */
+.timelineRow::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 68px; /* 48px + 12px gap + 8px padding = 68px start? actually alignment needs to be checked. Let's try matching content start. 
+                   Grid: 8px padding-left + 48px col + 12px gap = 68px. */
+    right: 8px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.timelineRow:last-child::after {
+    display: none;
+}
+
+.timelineRow:active {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px; /* Only round on active state if needed, or keep square. User "Reduced corner radii" earlier. Let's keep 0 or small for active. */
+}
+/* Actually user said "Replace each rounded row outline...". If I add bg on active, it might need radius. Let's add slight radius to active only. */
+.timelineRow:active {
+    border-radius: 4px;
+}
+
+/* Time Column */
+.timelineTime {
+    font-size: 12px;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.95); /* Higher contrast as requested */
+    font-weight: 500;
+    padding-top: 3px;
+}
+
+/* Content Column */
+.timelineContent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Chip/Badge */
+.timelineChip {
+    padding: 2px 6px; /* Smaller height/padding */
+    border-radius: 4px; /* Tighter radius */
+    font-size: 10px; /* Smaller font */
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: rgba(255, 255, 255, 0.03); /* Lighter/Fainter fill */
+    border: 1px solid rgba(255, 255, 255, 0.06); /* Subtle border */
+    color: rgba(255, 255, 255, 0.55); /* Lower contrast to not fight title */
+    white-space: nowrap;
+}
+
+.timelineEventTitle {
+    font-size: 13px;
+    color: #ffffff;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Light Mode Overrides */
+:global(:root:not(.dark)) .timelineRow::after {
+    background: rgba(0, 0, 0, 0.08); /* Darker divider in light mode */
+}
+
+:global(:root:not(.dark)) .timelineRow {
+    border-bottom: none; /* Ensure no border override */
+}
+:global(:root:not(.dark)) .timelineRow:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+:global(:root:not(.dark)) .timelineTime {
+    color: #111316; /* High contrast dark */
+}
+
+:global(:root:not(.dark)) .timelineChip {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    color: #6a707b;
+}
+
+:global(:root:not(.dark)) .timelineEventTitle {
+    color: #0c0d0f;
+}
+
+@media (max-width: 480px) {
+    .timelinePanel {
+        max-width: 320px;
+    }
+
+    .timelineEvent {
+        padding: 8px 10px;
+        border-radius: 12px;
+    }
+}
+
+.avatarRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #3ecf8e, #1a8f55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #07110c;
+}
+
+.avatar:nth-child(2) {
+    background: linear-gradient(135deg, #f2c94c, #b87918);
+}
+
+.avatar:nth-child(3) {
+    background: linear-gradient(135deg, #5bbcff, #1d6db8);
+}
+
+.speakerLine {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+:global(:root:not(.dark)) .speakerLine,
+:global(.light) .speakerLine,
+:global(html.light) .speakerLine {
+    color: #4a4f57;
+}
+
+.webMockup {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 4px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.webMockup > * {
+    width: 100%;
+    max-width: 520px;
+    transform: scale(0.9);
+    transform-origin: top center;
+}
+
+.linearMockup {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.linearMockup > * {
+    width: 100%;
+    max-width: 340px;
+    transform: none;
+    transform-origin: top center;
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 14px;
+    }
+
+    .webMockup > * {
+        transform: scale(0.82);
+    }
+
+    .linearMockup > * {
+        max-width: 320px;
+        transform: none;
+    }
+
+    .linearShell {
+        max-width: 320px;
+    }
+}
+
+@media (max-width: 380px) {
+    .timelinePanel {
+        max-width: 290px;
+    }
+
+    .webMockup > * {
+        transform: scale(0.72);
+    }
+
+    .linearMockup > * {
+        max-width: 290px;
+        transform: none;
+    }
+}
+
+
+/* Legacy Agenda Styles Removed */
+
+
+/* Agenda Styles */
+/* --- Agenda Component Styles (Linear Refined) --- */
+
+.agendaPanel {
+    /* "One surface" feel: No extra padding or borders inside the card wrapper */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* Remove any default card styling if inherited */
+    background: transparent;
+}
+
+/* Sticky Utility Bar */
+/* Sticky Utility Bar */
+.agendaUtilityBar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(23, 23, 23, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+:global(:root:not(.dark)) .agendaUtilityBar {
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.agendaUtilityRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Segmented Control: Visually compact, Touch large */
+.segmentedControl {
+    display: flex;
+    padding: 0;
+    background: transparent;
+    border-radius: 8px;
+    height: 44px; /* 44px tap with smaller visual */
+    width: auto;
+    gap: 0;
+    /* Remove heavy border, rely on subtle track */
+    border: none;
+    flex-shrink: 0;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Visual track (smaller than hit area) */
+.segmentedControl::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    z-index: 0;
+}
+
+:global(:root:not(.dark)) .segmentedControl::before {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.segmentBtn {
+    /* Reset defaults */
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    
+    flex: 0 0 auto;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* Visual thumb (smaller than hit area) */
+.segmentBtn::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 4px;
+    right: 4px;
+    border-radius: 7px;
+    background: transparent;
+    transition: background 0.2s ease;
+    z-index: -1;
+}
+
+.segmentBtnActive {
+    color: rgba(255, 255, 255, 0.95);
+    z-index: 2;
+}
+
+.segmentBtnActive::before {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+:global(:root:not(.dark)) .segmentBtnActive {
+    color: #000;
+}
+
+:global(:root:not(.dark)) .segmentBtnActive::before {
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+
+.agendaUtilityMeta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    font-feature-settings: "tnum";
+    line-height: 1.2;
+}
+
+:global(:root:not(.dark)) .agendaUtilityMeta {
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* Agenda List */
+.agendaList {
+    padding-bottom: 16px; /* Bottom spacing */
+    display: flex;
+    flex-direction: column;
+    transition: opacity 180ms ease, transform 220ms ease;
+    will-change: opacity, transform;
+}
+
+.agendaListTimeline {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.agendaListTracks {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .agendaListTimeline {
+        animation: agendaFadeSlideIn 180ms ease;
+    }
+
+    .agendaListTracks {
+        animation: agendaFadeSlideIn 180ms ease;
+    }
+}
+
+@keyframes agendaFadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.agendaRow {
+    display: grid;
+    /* Strict Grid: Time(56) | Content (1fr) | Star(44) */
+    grid-template-columns: 56px 16px 1fr 44px;
+    column-gap: 0;
+    padding: 12px 16px;
+    position: relative;
+    align-items: flex-start; 
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    text-decoration: none;
+    outline: none;
+    user-select: none;
+}
+
+/* Inset Divider: 88px left (56+16+16), 60px right (16+44) - Calculated */
+.agendaRow::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 88px; 
+    right: 60px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+/* Remove divider on last item if needed */
+.agendaRow:last-child::after {
+    display: none;
+}
+
+.agendaRow:active {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+:global(:root:not(.dark)) .agendaRow::after {
+    background: rgba(0, 0, 0, 0.05);
+}
+:global(:root:not(.dark)) .agendaRow:active {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* Time Column */
+.agendaTimeColumn {
+    /* Width controlled by grid */
+    padding-top: 2px; /* Optical adjustment */
+    display: flex;
+    justify-content: flex-end;
+    grid-column: 1;
+}
+
+.agendaTime {
+    font-size: 11px;
+    font-weight: 500;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.4); /* More muted per Linear aesthetic */
+    display: block;
+    text-align: right;
+}
+
+:global(:root:not(.dark)) .agendaTime {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+/* Content Column: Left Align anchor */
+.agendaContent {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-self: flex-start; /* Ensure top alignment in grid */
+    text-align: left; /* Strict left align */
+    justify-self: start;
+    grid-column: 3;
+}
+
+/* Meta Row: Single Line Force */
+.agendaMetaRow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+    color: rgba(255, 255, 255, 0.35); /* More muted base color */
+}
+
+.metaSeparator {
+    color: rgba(255, 255, 255, 0.25);
+    flex: 0 0 auto;
+}
+
+/* Badges: Quieter metadata style */
+.agendaBadge {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: 600;
+    line-height: 1.1;
+    /* Much subtler backgrounds */
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.badgeGreen { color: rgba(134, 239, 172, 0.55); border-color: rgba(134, 239, 172, 0.08); background: rgba(134, 239, 172, 0.02); }
+.badgeTeal { color: rgba(94, 234, 212, 0.55); border-color: rgba(94, 234, 212, 0.08); background: rgba(94, 234, 212, 0.02); }
+.badgePurple { color: rgba(196, 181, 253, 0.55); border-color: rgba(196, 181, 253, 0.08); background: rgba(196, 181, 253, 0.02); }
+
+.agendaBadgeMuted {
+    color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+:global(:root:not(.dark)) .agendaBadge {
+    border-color: rgba(0,0,0,0.1);
+    color: rgba(0,0,0,0.6);
+}
+:global(:root:not(.dark)) .badgeGreen { color: #15803d; background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.15); }
+:global(:root:not(.dark)) .badgeTeal { color: #0f766e; background: rgba(13, 148, 136, 0.08); border-color: rgba(13, 148, 136, 0.15); }
+:global(:root:not(.dark)) .badgePurple { color: #7e22ce; background: rgba(126, 34, 206, 0.08); border-color: rgba(126, 34, 206, 0.15); }
+:global(:root:not(.dark)) .agendaBadgeMuted { color: rgba(0, 0, 0, 0.55); background: rgba(0, 0, 0, 0.03); border-color: rgba(0, 0, 0, 0.1); }
+
+
+/* Room/Speakers - Inline Meta Style */
+.agendaRoom {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+}
+
+/* Title */
+.agendaTitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.3;
+}
+
+/* Speakers */
+.agendaSpeakers {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+:global(:root:not(.dark)) .agendaTitle { color: #111; }
+:global(:root:not(.dark)) .agendaRoom,
+:global(:root:not(.dark)) .agendaSpeakers { color: rgba(0, 0, 0, 0.4); }
+:global(:root:not(.dark)) .metaSeparator { color: rgba(0, 0, 0, 0.25); }
+:global(:root:not(.dark)) .agendaMetaRow { color: rgba(0, 0, 0, 0.35); }
+
+
+/* Aside: Action Group */
+.agendaAside {
+    /* No margin left needed, handled by grid gap */
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end; /* Right align in its column */
+    gap: 0; /* Tight grouping */
+    padding-top: 2px;
+    grid-column: 4;
+}
+
+/* Track View */
+/* Track Picker */
+.trackPicker {
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.trackSelect {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 6px 10px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+
+.trackSelect:active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.trackSelectLabel {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+}
+
+.trackSelectValue {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    font-size: 11px;
+}
+
+.trackSelectChevron {
+    color: rgba(255, 255, 255, 0.5);
+    margin-left: 2px;
+}
+
+:global(:root:not(.dark)) .trackSelect {
+    color: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+:global(:root:not(.dark)) .trackSelect:active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+:global(:root:not(.dark)) .trackSelectLabel {
+    color: rgba(0, 0, 0, 0.45);
+}
+
+:global(:root:not(.dark)) .trackSelectValue {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+:global(:root:not(.dark)) .trackSelectChevron {
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* Track Select Value Row (with dot preview) */
+.trackSelectValueRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Track Color Dots */
+.trackDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.trackDotAI { background: #5E6AD2; }
+.trackDotProduct { background: #3ECF8E; }
+.trackDotInfrastructure { background: #F5A524; }
+
+/* Light mode dot colors */
+:global(:root:not(.dark)) .trackDotAI { background: #4F46E5; }
+:global(:root:not(.dark)) .trackDotProduct { background: #16A34A; }
+:global(:root:not(.dark)) .trackDotInfrastructure { background: #D97706; }
+
+/* Title Row (with dot) */
+.titleRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Session Type Label */
+.sessionType {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .sessionType {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+/* Star Button */
+.starBtn {
+    background: none;
+    border: none;
+    padding: 10px; /* Comfortable hit target */
+    margin: -10px -2px; /* Negative margin to maintain layout flow */
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.2); /* Quieter default state */
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.starBtn:active {
+    transform: scale(0.92);
+}
+
+/* Active Star - Muted Gold/Bronze (Calmer) */
+.starActive {
+    color: rgba(234, 179, 8, 0.45); /* muted amber-500 equivalent */
+}
+
+:global(:root:not(.dark)) .starBtn { color: rgba(0,0,0,0.15); }
+:global(:root:not(.dark)) .starActive { color: rgba(202, 138, 4, 0.45); }
+
+/* Chevron Removed */
+.chevronIcon {
+    display: none;
+}

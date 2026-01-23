@@ -19,52 +19,59 @@ interface TimelineEventCardProps {
 export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndividualTime, eventTimezone, isSelected, onClick }) => {
     const theme = useTimelineTheme();
 
+    // Dynamic styles based on theme and selection state
+    const containerClasses = theme.isDark
+        ? isSelected
+            ? 'bg-white/10 border-zinc-500 shadow-md' // Selected Dark (Glass)
+            : 'bg-[#18181B] border-white/5 hover:border-zinc-700 hover:bg-white/5' // Default Dark
+        : isSelected
+            ? 'bg-blue-50 border-blue-300 shadow-md' // Selected Light
+            : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'; // Default Light
+
+    const tagClasses = theme.isDark
+        ? 'bg-white/5 border-white/10 text-zinc-400'
+        : 'bg-gray-50 border-gray-200 text-gray-500';
+
+    const titleColor = theme.isDark ? 'text-white' : 'text-gray-900';
+    const textColor = theme.isDark ? 'text-zinc-400' : 'text-gray-600';
+    const metaColor = theme.isDark ? 'text-zinc-400' : 'text-gray-500';
+
     return (
         <div
             onClick={onClick}
-            className={`relative p-4 rounded-md border transition-all duration-200 cursor-pointer group ${isSelected
-                ? theme.isDark
-                    ? 'bg-white/10 border-zinc-500 shadow-md'
-                    : 'bg-blue-50 border-blue-300 shadow-md'
-                : theme.isDark
-                    ? 'bg-[#18181B] border-white/5 hover:border-zinc-700'
-                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                }`}
+            className={`relative p-4 rounded-md border transition-all duration-200 cursor-pointer group ${containerClasses}`}
         >
             {/* Tag positioned absolutely in top-right - Subtle Style */}
             <div className="absolute top-3 right-3">
-                <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${theme.isDark
-                    ? 'bg-transparent border-white/10 text-zinc-400'
-                    : 'bg-gray-50 border-gray-200 text-gray-500'
-                    }`}>
+                <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${tagClasses}`}>
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                 </span>
             </div>
 
             {/* Time Display - Only shown if requested */}
             {showIndividualTime && (
-                <div className={`text-[11px] font-mono mb-1.5 ${theme.isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                <div className={`text-[11px] font-mono mb-1.5 ${metaColor}`}>
                     {formatEventTimeRange(item.startTime, item.endTime, eventTimezone)}
                 </div>
             )}
 
             {/* Title */}
             <div className="pr-16">
-                <h5 className={`text-[14px] font-semibold mb-1 leading-snug ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h5 className={`text-[14px] font-semibold mb-1 leading-snug ${titleColor}`}>
                     {item.title}
                 </h5>
             </div>
 
             {/* Description */}
             {item.description && (
-                <p className={`text-[13px] leading-relaxed mb-3 line-clamp-2 ${theme.isDark ? 'text-zinc-400' : 'text-gray-600'}`}>
+                <p className={`text-[13px] leading-relaxed mb-3 line-clamp-2 ${textColor}`}>
                     {item.description}
                 </p>
             )}
 
             {/* Location */}
             {item.location && (
-                <div className={`flex items-center gap-1.5 text-[12px] mb-3 ${theme.textMuted}`}>
+                <div className={`flex items-center gap-1.5 text-[12px] mb-3 ${metaColor}`}>
                     <MapPinIcon className="w-3.5 h-3.5" />
                     <span>{item.location}</span>
                 </div>
@@ -91,7 +98,7 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                 const overflowCount = Math.max(0, allSpeakers.length - 4);
 
                 return (
-                    <div className="mt-3 pt-3 border-t border-dashed border-zinc-800">
+                    <div className={`mt-3 pt-3 border-t border-dashed ${theme.isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                         <div className="flex items-center -space-x-2">
                             {visibleSpeakers.map((speaker, index) => {
                                 return (

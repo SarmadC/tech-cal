@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 
 import { createClient } from '@/utils/supabase/server'
@@ -30,6 +31,24 @@ export type AuthFormState = {
     success: boolean;
     // Optional hint to client for immediate navigation after success
     shouldRedirect?: boolean;
+}
+
+async function getRequestBaseUrl() {
+    const headersList = await headers()
+    const origin = headersList.get('origin')
+    if (origin) return origin
+
+    const forwardedHost = headersList.get('x-forwarded-host')
+    const host = headersList.get('host')
+    const protoHeader = headersList.get('x-forwarded-proto')
+
+    const resolvedHost = forwardedHost || host
+    if (!resolvedHost) return undefined
+
+    const isLocalhost = resolvedHost.includes('localhost') || resolvedHost.includes('127.0.0.1')
+    const proto = protoHeader || (isLocalhost ? 'http' : 'https')
+
+    return `${proto}://${resolvedHost}`
 }
 
 /**
@@ -132,7 +151,8 @@ export async function signupAction(
 
     const supabase = await createClient();
     try {
-        const result = await AuthService.signUp(serviceData, supabase);
+        const baseUrl = await getRequestBaseUrl();
+        const result = await AuthService.signUp(serviceData, supabase, baseUrl);
         
         // If signup failed, return error state with mapped errors
         if (!result.success) {
@@ -227,7 +247,8 @@ export async function forgotPasswordAction(
 
     const supabase = await createClient();
     try {
-        await AuthService.resetPassword(validatedFields.data.email, supabase);
+        const baseUrl = await getRequestBaseUrl();
+        await AuthService.resetPassword(validatedFields.data.email, supabase, baseUrl);
     } catch (error) {
         console.error("Forgot Password Action Error:", error);
         return {

@@ -43,7 +43,8 @@ export class AuthService {
      */
     static async signUp(
         data: SignupForm,
-        supabaseClient: SupabaseClientType
+        supabaseClient: SupabaseClientType,
+        baseUrl?: string
     ): Promise<AuthResponse> {
         try {
             if (data.password !== data.confirmPassword) {
@@ -58,7 +59,7 @@ export class AuthService {
 
             // Get the email confirmation redirect URL
             const { getEmailConfirmationUrl } = await import('@/utils/authUtils');
-            const emailRedirectTo = getEmailConfirmationUrl('/discover');
+            const emailRedirectTo = getEmailConfirmationUrl('/discover', baseUrl);
 
             const { data: authData, error } = await supabaseClient.auth.signUp({
                 email: data.email,
@@ -145,11 +146,12 @@ export class AuthService {
      */
     static async resetPassword(
         email: string,
-        supabaseClient: SupabaseClientType
+        supabaseClient: SupabaseClientType,
+        baseUrl?: string
     ): Promise<AuthResponse> {
         try {
             const { getPasswordResetUrl } = await import('@/utils/authUtils');
-            const redirectTo = getPasswordResetUrl();
+            const redirectTo = getPasswordResetUrl(baseUrl);
             
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };

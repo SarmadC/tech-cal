@@ -74,7 +74,12 @@
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "mcp__fetch__imageFetch",
+      "mcp__browser-tools__getConsoleErrors"
     ],
     "deny": [],
     "ask": []

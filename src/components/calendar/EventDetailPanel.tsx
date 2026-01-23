@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { XIcon, ArrowSquareOutIcon, Bookmark, Star, ChatText } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import '@/app/styles/event-card.css';
@@ -158,15 +159,16 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         >
             <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
                 {/* Open Full Page Action */}
-                <a
-                    href={displayEvent.sourceUrl || `/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
+                {/* Open Full Page Action - Internal Event Page */}
+                <Link
+                    href={`/events/${generateEventSlug(displayEvent.title, ('originalEventId' in displayEvent ? (displayEvent as MultiDayEventInstance).originalEventId : displayEvent.id))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                    title="Open full page"
+                    title="Open full event page"
                 >
                     <ArrowSquareOutIcon className="w-4 h-4" />
-                </a>
+                </Link>
 
                 {/* Bookmark Action */}
                 <button
