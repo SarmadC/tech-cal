@@ -258,8 +258,9 @@ function LoginPageContent() {
 
     // 3. Only if initialization is complete AND there's no user, show the login form.
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
+        <main className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
+                <h1 className="sr-only">Sign in to Kure-Cal</h1>
                 <div className="text-center">
                     <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Welcome back</h2>
                     <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account to continue</p>
@@ -348,7 +349,7 @@ function LoginPageContent() {
                     </p>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }
 

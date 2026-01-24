@@ -38,9 +38,11 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
                 {/* Social row */}
                 <div className="mobile-footer-social-row">
                     <Link href="https://twitter.com/kurecal" className="social-icon" aria-label="Twitter">
+                        <span className="sr-only">Twitter</span>
                         <TwitterLogoIcon size={18} />
                     </Link>
                     <Link href="https://linkedin.com/company/kurecal" className="social-icon" aria-label="LinkedIn">
+                        <span className="sr-only">LinkedIn</span>
                         <LinkedinLogoIcon size={18} />
                     </Link>
                 </div>

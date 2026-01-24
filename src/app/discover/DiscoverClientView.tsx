@@ -183,6 +183,7 @@ export default function DiscoverClientView({
                 {/* Mobile Navigation - Only visible on mobile */}
                 <MobileBottomNav />
                 <div className="flex h-screen bg-background">
+                    <h1 className="sr-only">Discover tech events</h1>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         {/* Main Navbar - Hidden on mobile */}

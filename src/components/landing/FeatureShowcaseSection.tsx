@@ -81,6 +81,7 @@ export function AgendaMockup() {
                         className={styles.iconButton}
                         onClick={() => setBookmarked(!bookmarked)}
                         style={{ color: bookmarked ? '#FFD700' : undefined }}
+                        aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark agenda'}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
@@ -89,6 +90,7 @@ export function AgendaMockup() {
                     <button
                         className={styles.iconButton}
                         onClick={() => window.open('https://www.nvidia.com/gtc/', '_blank')}
+                        aria-label="Open event website"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -148,6 +150,7 @@ export function AgendaMockup() {
                             className={styles.addButton}
                             onClick={(e) => { e.stopPropagation(); toggleStar(1); }}
                             style={{ color: starredSessions.includes(1) ? '#FFD700' : undefined }}
+                            aria-label={starredSessions.includes(1) ? 'Remove from schedule' : 'Add to schedule'}
                         >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(1) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -184,6 +187,7 @@ export function AgendaMockup() {
                             className={styles.addButton}
                             onClick={(e) => { e.stopPropagation(); toggleStar(2); }}
                             style={{ color: starredSessions.includes(2) ? '#FFD700' : undefined }}
+                            aria-label={starredSessions.includes(2) ? 'Remove from schedule' : 'Add to schedule'}
                         >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(2) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />

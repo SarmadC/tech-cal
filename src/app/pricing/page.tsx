@@ -224,7 +224,7 @@ export default function PricingPage() {
             {/* FAQ JSON-LD for rich snippets */}
             <FAQPageJsonLd faqs={pricingFaqs} />
 
-            <div className="min-h-screen pt-20 bg-background text-foreground">
+            <main className="min-h-screen pt-20 bg-background text-foreground">
                 {/* Hero */}
                 <section className="relative px-6 pt-12 pb-24">
                     <div className="mx-auto max-w-6xl">
@@ -431,7 +431,7 @@ export default function PricingPage() {
                 </section>
 
 
-            </div >
+            </main>
         </>
     );
 }

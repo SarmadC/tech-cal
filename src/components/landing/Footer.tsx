@@ -65,9 +65,11 @@ export function Footer() {
                         </p>
                         <div className="footer-social-icons">
                             <Link href="https://twitter.com/kurecal" className="footer-social-icon twitter" aria-label="Twitter">
+                                <span className="sr-only">Twitter</span>
                                 <TwitterLogoIcon size={20} />
                             </Link>
                             <Link href="https://linkedin.com/company/kurecal" className="footer-social-icon linkedin" aria-label="LinkedIn">
+                                <span className="sr-only">LinkedIn</span>
                                 <LinkedinLogoIcon size={20} />
                             </Link>
                         </div>

@@ -70,10 +70,12 @@ export default function BlogFilters({ categories }: BlogFiltersProps) {
 
             {/* Search Input - Glass Style */}
             <div className="w-full md:w-64 relative group">
+                <label htmlFor="blog-search" className="sr-only">Search blog posts</label>
                 <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
                 <input
+                    id="blog-search"
                     type="text"
                     placeholder="Search..."
                     value={searchTerm}

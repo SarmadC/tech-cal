@@ -1,11 +1,28 @@
 // src/app/legal/terms/page.tsx
 
+import type { Metadata } from 'next';
+
 // Static generation for legal pages - static content
 export const dynamic = 'force-static';
 
+export const metadata: Metadata = {
+    title: 'Terms of Service',
+    description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+    openGraph: {
+        title: 'Terms of Service | Kure-Cal',
+        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Terms of Service | Kure-Cal',
+        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+    },
+};
+
 export default function TermsOfServicePage() {
     return (
-        <div className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
+        <main className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
             <h1>Terms of Service</h1>
             <p>Last updated: September 12, 2025</p>
 
@@ -94,6 +111,6 @@ export default function TermsOfServicePage() {
             <p>
                 Email: <a href="mailto:support@kurecal.app">support@kurecal.app</a>
             </p>
-        </div>
+        </main>
     );
 }

@@ -2,17 +2,17 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Sign Up',
+    title: 'Create Your Kure-Cal Account',
     description: 'Create your free Kure-Cal account. Get personalized tech event recommendations, calendar sync, and never miss a conference or meetup again.',
     keywords: ['sign up Kure-Cal', 'create account', 'tech events signup', 'developer calendar'],
     openGraph: {
-        title: 'Sign Up | Kure-Cal',
+        title: 'Create Your Kure-Cal Account | Kure-Cal',
         description: 'Create your free Kure-Cal account and never miss a tech event again.',
         type: 'website',
     },
     twitter: {
         card: 'summary',
-        title: 'Sign Up | Kure-Cal',
+        title: 'Create Your Kure-Cal Account | Kure-Cal',
         description: 'Create your free Kure-Cal account and never miss a tech event again.',
     },
 };

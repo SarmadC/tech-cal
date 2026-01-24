@@ -56,8 +56,9 @@ export default function SignupPage() {
 
     return (
         <ProtectedRoute allowUnauthenticated>
-            <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <main className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full">
+                    <h1 className="sr-only">Create your Kure-Cal account</h1>
                     {/* Header section remains the same */}
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
@@ -136,7 +137,7 @@ export default function SignupPage() {
                         </AuthForm>
                     </div>
                 </div>
-            </div>
+            </main>
         </ProtectedRoute>
     );
 }

@@ -31,18 +31,26 @@ function JsonLd({ data }: JsonLdProps) {
  * Organization schema - Use in root layout for site-wide branding
  */
 export function OrganizationJsonLd() {
+    const sameAs = [
+        // Add social media URLs when available
+        // 'https://twitter.com/kurecal',
+        // 'https://linkedin.com/company/kurecal',
+    ].filter(Boolean);
+
     const data = {
         '@context': 'https://schema.org',
         '@type': 'Organization',
+        '@id': 'https://kure-cal.com/#organization',
         name: 'Kure-Cal',
         url: 'https://kure-cal.com',
-        logo: 'https://kure-cal.com/logo.svg',
+        logo: {
+            '@type': 'ImageObject',
+            url: 'https://kure-cal.com/logo.svg',
+            width: 512,
+            height: 512,
+        },
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
-        sameAs: [
-            // Add social media URLs when available
-            // 'https://twitter.com/kurecal',
-            // 'https://linkedin.com/company/kurecal',
-        ],
+        ...(sameAs.length > 0 && { sameAs }),
     };
 
     return <JsonLd data={data} />;
@@ -55,16 +63,18 @@ export function WebsiteJsonLd() {
     const data = {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
+        '@id': 'https://kure-cal.com/#website',
         name: 'Kure-Cal',
         url: 'https://kure-cal.com',
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         potentialAction: {
             '@type': 'SearchAction',
-            target: {
-                '@type': 'EntryPoint',
-                urlTemplate: 'https://kure-cal.com/discover?q={search_term_string}',
-            },
+            target: 'https://kure-cal.com/discover?q={search_term_string}',
             'query-input': 'required name=search_term_string',
+        },
+        publisher: {
+            '@type': 'Organization',
+            '@id': 'https://kure-cal.com/#organization',
         },
     };
 
@@ -194,16 +204,19 @@ export function EventJsonLd({
     organizer,
     offers,
 }: EventJsonLdProps) {
+    const fallbackImage = 'https://kure-cal.com/opengraph-image';
+    const resolvedImage = imageUrl || fallbackImage;
+
     // Build offers schema only if we have pricing data
     const offersSchema =
         offers && (offers.priceMin !== null || offers.priceMax !== null)
             ? {
-                  '@type': 'AggregateOffer',
-                  ...(offers.priceMin !== null && { lowPrice: offers.priceMin }),
-                  ...(offers.priceMax !== null && { highPrice: offers.priceMax }),
-                  priceCurrency: offers.currency || 'USD',
-                  url: url,
-              }
+                '@type': 'AggregateOffer',
+                ...(offers.priceMin !== null && { lowPrice: offers.priceMin }),
+                ...(offers.priceMax !== null && { highPrice: offers.priceMax }),
+                priceCurrency: offers.currency || 'USD',
+                url: url,
+            }
             : undefined;
 
     const data = {
@@ -219,11 +232,11 @@ export function EventJsonLd({
             : 'https://schema.org/OfflineEventAttendanceMode',
         location: isOnline
             ? {
-                  '@type': 'VirtualLocation',
-                  url: url,
-              }
+                '@type': 'VirtualLocation',
+                url: url,
+            }
             : location
-              ? {
+                ? {
                     '@type': 'Place',
                     name: location.name,
                     ...(location.address && {
@@ -233,17 +246,23 @@ export function EventJsonLd({
                         },
                     }),
                 }
-              : undefined,
+                : {
+                    '@type': 'Place',
+                    name: 'Location TBA',
+                },
         url: url,
-        ...(imageUrl && {
-            image: imageUrl,
-        }),
+        image: [resolvedImage],
         // Only include organizer if provided, otherwise omit entirely (valid per Schema.org)
         ...(organizer && {
             organizer: {
                 '@type': 'Organization',
                 name: organizer.name,
-                ...(organizer.logo_url && { logo: organizer.logo_url }),
+                ...(organizer.logo_url && {
+                    logo: {
+                        '@type': 'ImageObject',
+                        url: organizer.logo_url,
+                    },
+                }),
             },
         }),
         ...(offersSchema && { offers: offersSchema }),

@@ -3,7 +3,7 @@
 export function SocialProof() {
     return (
         <section className="social-proof fade-in">
-            <h3 className="social-proof-title">Trusted by people at</h3>
+            <h2 className="social-proof-title">Trusted by people at</h2>
             <div className="company-logos">
                 <div className="company-logo">Stripe</div>
                 <div className="company-logo">Vercel</div>

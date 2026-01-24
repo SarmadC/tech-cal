@@ -1,11 +1,28 @@
 // src/app/legal/privacy/page.tsx
 
+import type { Metadata } from 'next';
+
 // Static generation for legal pages - static content
 export const dynamic = 'force-static';
 
+export const metadata: Metadata = {
+    title: 'Privacy Policy',
+    description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+    openGraph: {
+        title: 'Privacy Policy | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Privacy Policy | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+    },
+};
+
 export default function PrivacyPage() {
     return (
-        <div className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
+        <main className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
             <h1>Privacy Policy</h1>
             <p>Last updated: September 12, 2025</p>
 
@@ -113,6 +130,6 @@ export default function PrivacyPage() {
             <p>
                 Email: <a href="mailto:support@kurecal.app">support@kurecal.app</a>
             </p>
-        </div>
+        </main>
     );
 }

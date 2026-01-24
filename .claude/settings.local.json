@@ -79,7 +79,13 @@
       "Bash(git show:*)",
       "Bash(git diff:*)",
       "mcp__fetch__imageFetch",
-      "mcp__browser-tools__getConsoleErrors"
+      "mcp__browser-tools__getConsoleErrors",
+      "Skill(vercel-react-best-practices)",
+      "Bash(npx @anthropic-ai/claude-code skills add:*)",
+      "Bash(squirrel --version:*)",
+      "Bash(bash)",
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
+      "Bash(squirrel audit:*)"
     ],
     "deny": [],
     "ask": []

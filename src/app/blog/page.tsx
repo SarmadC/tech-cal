@@ -104,7 +104,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-black pt-24 pb-20">
+        <main className="min-h-screen bg-black pt-24 pb-20">
+            <h1 className="sr-only">Kure-Cal Blog</h1>
 
             {/* Header - Simpler and cleaner */}
             <section className="px-6 mb-12 hidden"> {/* Hidden as per design ref which starts immediately with content often, but keeping context if needed. Actually let's hide to match the 'clean' look or keep very minimal. */}
@@ -202,6 +203,6 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
                 </div>
             </section>
-        </div>
+        </main>
     );
 }

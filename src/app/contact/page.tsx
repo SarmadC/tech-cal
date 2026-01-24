@@ -50,7 +50,7 @@ export default function ContactPage() {
     }, [state, showSuccess, showError]);
 
     return (
-        <div className="min-h-screen bg-background-main pt-20">
+        <main className="min-h-screen bg-background-main pt-20">
             {/* Header section (unchanged) */}
             <section className="py-16 px-6 bg-background-secondary">
                 <div className="max-w-[1600px] mx-auto">
@@ -84,23 +84,23 @@ export default function ContactPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-foreground-secondary mb-2">Name *</label>
-                                    <input type="text" id="name" name="name" required className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                    <input type="text" id="name" name="name" required aria-label="Name" className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                                     {state.errors?.name && <p className="text-red-500 text-sm mt-1">{state.errors.name[0]}</p>}
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-foreground-secondary mb-2">Email *</label>
-                                    <input type="email" id="email" name="email" required className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                    <input type="email" id="email" name="email" required aria-label="Email" className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                                     {state.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email[0]}</p>}
                                 </div>
                             </div>
                             <div>
                                 <label htmlFor="company" className="block text-sm font-medium text-foreground-secondary mb-2">Company</label>
-                                <input type="text" id="company" name="company" className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                <input type="text" id="company" name="company" aria-label="Company" className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                             </div>
                             <div>
-                                <label htmlFor="subject" className="block text-sm font-medium text-foreground-secondary mb-2">Subject *</label>
+                                <label id="subject-label" htmlFor="subject" className="block text-sm font-medium text-foreground-secondary mb-2">Subject *</label>
                                 <Select name="subject" required>
-                                    <SelectTrigger id="subject" className="w-full bg-background-main border-border-default text-foreground-secondary">
+                                    <SelectTrigger id="subject" aria-label="Subject" aria-labelledby="subject-label" className="w-full bg-background-main border-border-default text-foreground-secondary">
                                         <SelectValue placeholder="Select a subject..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -115,7 +115,7 @@ export default function ContactPage() {
                             </div>
                             <div>
                                 <label htmlFor="message" className="block text-sm font-medium text-foreground-secondary mb-2">Message *</label>
-                                <textarea id="message" name="message" required rows={4} className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary resize-none" placeholder="Tell us more about how we can help..." />
+                                <textarea id="message" name="message" required aria-label="Message" rows={4} className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary resize-none" placeholder="Tell us more about how we can help..." />
                                 {state.errors?.message && <p className="text-red-500 text-sm mt-1">{state.errors.message[0]}</p>}
                             </div>
                             <SubmitButton />
@@ -131,6 +131,6 @@ export default function ContactPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }

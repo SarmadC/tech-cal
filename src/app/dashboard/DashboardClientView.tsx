@@ -124,6 +124,7 @@ export default function DashboardClientView({
                 />
             ) : null}
             <div className="flex h-screen bg-background">
+                <h1 className="sr-only">Dashboard</h1>
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden">
                     {/* Main Navbar - Only visible on desktop */}

@@ -14,6 +14,7 @@ import UnifiedMobileNavbar from "@/components/common/UnifiedMobileNavbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
 import MarketingNavbar from "@/components/common/MarketingNavbar";
 import { RouteTracker } from './RouteTracker';
+import LegalFooter from '@/components/common/LegalFooter';
 
 export default function ClientLayout({
     children,
@@ -55,10 +56,13 @@ export default function ClientLayout({
         marketingPaths.includes(pathname) ||
         (!user && !loading && !excludedPaths.includes(pathname));
 
+    const shouldShowLegalFooter = pathname !== '/';
+
     if (!shouldShowNavbar) {
         return (
             <>
                 {children}
+                {shouldShowLegalFooter && <LegalFooter />}
                 <AnalyticsConsentBanner />
             </>
         );
@@ -111,10 +115,11 @@ export default function ClientLayout({
                     <Navbar />
                 )
             )}
-            {/* ✅ Wrap children in a main tag with top padding to offset the navbar */}
-            <main className="pt-16">
+            {/* ✅ Offset content for the navbar height */}
+            <div className="pt-16">
                 {children}
-            </main>
+            </div>
+            {shouldShowLegalFooter && <LegalFooter />}
             <AnalyticsConsentBanner />
         </>
     );
