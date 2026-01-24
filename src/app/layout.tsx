@@ -63,11 +63,20 @@ export const metadata: Metadata = {
         locale: 'en_US',
         siteName: 'Kure-Cal',
         url: 'https://kure-cal.com',
+        images: [
+            {
+                url: '/og-image.png',
+                width: 1200,
+                height: 630,
+                alt: 'Kure-Cal: The All-in-One Tech Events Calendar',
+            },
+        ],
     },
     twitter: {
         card: 'summary_large_image',
         title: 'Kure-Cal: The All-in-One Tech Events Calendar',
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
+        images: ['/og-image.png'],
     },
     robots: {
         index: true,

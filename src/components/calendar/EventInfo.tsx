@@ -49,7 +49,7 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescrip
                 </div>
                 <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight flex items-center gap-1">
                     {event.location || 'Online'}
-                    {event.location && <span className="text-[#757575]" aria-hidden="true">↗</span>}
+
                 </div>
 
                 {/* Host Property */}

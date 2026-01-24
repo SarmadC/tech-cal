@@ -35,10 +35,6 @@ export interface CareerImpactScore {
   };
 }
 
-/**
- * Consolidated Event Types for Kure-Cal
- * This replaces the multiple event type variations with a cleaner hierarchy
- */
 
 // ============================================
 // AGENDA TYPES
@@ -229,6 +225,7 @@ export interface Speaker {
     company?: string;
     bio?: string;
     photoUrl?: string;
+    linkedinUrl?: string;
     socialLinks?: {
         twitter?: string;
         linkedin?: string;

@@ -1,7 +1,8 @@
 import { FC } from 'react';
 import { AgendaItem } from '@/types';
-import { XIcon, MapPinIcon, ClockIcon, UserIcon } from '@phosphor-icons/react';
+import { XIcon, MapPinIcon, ClockIcon } from '@phosphor-icons/react';
 import { formatTimeRange } from '@/utils/dateUtils';
+import { getSpeakerAvatarUrls } from '@/utils/timelineUtils';
 
 interface TimelineDetailPanelProps {
     event: AgendaItem;
@@ -60,27 +61,31 @@ export const TimelineDetailPanel: FC<TimelineDetailPanelProps> = ({ event, event
                     <div className="pt-6 border-t border-white/10">
                         <h3 className="text-sm font-semibold text-zinc-300 mb-4">Speakers</h3>
                         <div className="space-y-4">
-                            {event.speakers.map((speaker) => (
-                                <div key={speaker.id} className="flex items-center gap-3">
-                                    {speaker.photoUrl ? (
+                            {event.speakers.map((speaker) => {
+                                const { primary: avatarSrc, fallback: fallbackSrc } = getSpeakerAvatarUrls(speaker, 40);
+
+                                return (
+                                    <div key={speaker.id} className="flex items-center gap-3">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={speaker.photoUrl}
+                                            src={avatarSrc}
                                             alt={speaker.name}
-                                            className="w-10 h-10 rounded-full object-cover border border-white/10"
+                                            className="w-10 h-10 rounded-full object-cover border border-white/10 bg-zinc-800"
+                                            onError={(e) => {
+                                                if (e.currentTarget.src !== fallbackSrc) {
+                                                    e.currentTarget.src = fallbackSrc;
+                                                }
+                                            }}
                                         />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10">
-                                            <UserIcon className="w-5 h-5 text-zinc-500" />
+                                        <div>
+                                            <div className="font-medium text-zinc-200">{speaker.name}</div>
+                                            {speaker.title && (
+                                                <div className="text-xs text-zinc-500">{speaker.title}</div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div>
-                                        <div className="font-medium text-zinc-200">{speaker.name}</div>
-                                        {speaker.title && (
-                                            <div className="text-xs text-zinc-500">{speaker.title}</div>
-                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

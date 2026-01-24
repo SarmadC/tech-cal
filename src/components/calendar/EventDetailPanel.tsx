@@ -12,6 +12,7 @@ import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
 import AdaptiveTimeline from './AdaptiveTimeline';
+import { getSpeakerAvatarUrls } from '@/utils/timelineUtils';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
 import { EventFeedbackForm } from '@/components/events/EventFeedbackForm';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
@@ -313,37 +314,42 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                 {/* Speakers Section */}
                 {displayEvent.speakerLineup && displayEvent.speakerLineup.length > 0 && (
-                    <div className="mt-8 pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
-                        <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em] mb-4">
+                    <div className="pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
+                        <h3 className="text-sm font-semibold text-zinc-300 mb-4">
                             Speakers
-                        </div>
-                        <div className="flex flex-wrap gap-4">
-                            {displayEvent.speakerLineup.map((speaker) => (
-                                <div key={speaker.id} className="flex items-center gap-3 min-w-[140px]">
-                                    {speaker.photoUrl ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={speaker.photoUrl}
-                                            alt={speaker.name}
-                                            className="w-8 h-8 rounded-full object-cover bg-white/10"
-                                        />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-medium text-white/50">
-                                            {speaker.name.charAt(0)}
+                        </h3>
+                        <div className="space-y-4">
+                            {displayEvent.speakerLineup.map((speaker) => {
+                                const { primary: avatarSrc, fallback: fallbackSrc } = getSpeakerAvatarUrls(speaker, 40);
+
+                                return (
+                                    <div key={speaker.id} className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={avatarSrc}
+                                                alt={speaker.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    if (e.currentTarget.src !== fallbackSrc) {
+                                                        e.currentTarget.src = fallbackSrc;
+                                                    }
+                                                }}
+                                            />
                                         </div>
-                                    )}
-                                    <div className="flex flex-col">
-                                        <span className="text-[13px] font-medium text-[#E6E6E6] leading-none mb-1">
-                                            {speaker.name}
-                                        </span>
-                                        {(speaker.title || speaker.company) && (
-                                            <span className="text-[11px] text-[#757575] leading-none truncate max-w-[120px]" title={`${speaker.title || ''}${speaker.title && speaker.company ? ' at ' : ''}${speaker.company || ''}`}>
-                                                {speaker.title || speaker.company}
-                                            </span>
-                                        )}
+                                        <div>
+                                            <div className="font-medium text-zinc-200">
+                                                {speaker.name}
+                                            </div>
+                                            {(speaker.title || speaker.company) && (
+                                                <div className="text-xs text-zinc-500" title={`${speaker.title || ''}${speaker.title && speaker.company ? ' at ' : ''}${speaker.company || ''}`}>
+                                                    {speaker.title || speaker.company}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

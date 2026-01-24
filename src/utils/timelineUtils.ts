@@ -94,18 +94,22 @@ export function eventsOverlap(event1: AgendaItem, event2: AgendaItem): boolean {
 /**
  * Get speaker avatar URL with fallback
  */
-export function getSpeakerAvatarUrl(speaker: { name: string; avatar?: string }, size: number = 40): string {
-    if (speaker.avatar) {
-        return speaker.avatar;
-    }
-    
-    // Generate initials-based avatar
-    const initials = speaker.name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=${size}&background=random`;
+type SpeakerAvatarInput = {
+    name: string;
+    avatar?: string;
+    photoUrl?: string;
+    linkedinUrl?: string;
+    socialLinks?: { linkedin?: string };
+};
+
+export function getSpeakerAvatarUrls(speaker: SpeakerAvatarInput, size: number = 40): { primary: string; fallback: string } {
+    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&size=${size}&background=random`;
+    const linkedin = speaker.linkedinUrl || speaker.socialLinks?.linkedin;
+    const primary = speaker.photoUrl || speaker.avatar || (linkedin ? `https://unavatar.io/${linkedin}` : fallback);
+
+    return { primary, fallback };
+}
+
+export function getSpeakerAvatarUrl(speaker: SpeakerAvatarInput, size: number = 40): string {
+    return getSpeakerAvatarUrls(speaker, size).primary;
 }

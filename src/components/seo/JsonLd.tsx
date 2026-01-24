@@ -204,7 +204,7 @@ export function EventJsonLd({
     organizer,
     offers,
 }: EventJsonLdProps) {
-    const fallbackImage = 'https://kure-cal.com/opengraph-image';
+    const fallbackImage = 'https://kure-cal.com/og-image.png';
     const resolvedImage = imageUrl || fallbackImage;
 
     // Build offers schema only if we have pricing data
