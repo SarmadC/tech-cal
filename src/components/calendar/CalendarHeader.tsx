@@ -142,7 +142,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     }, [onNavigate, handleViewChange, isDatePickerOpen]);
 
     return (
-        <header className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border-subtle bg-background-secondary/50 backdrop-blur-sm z-10 transition-colors">
+        <header className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border-subtle bg-background-secondary/50 backdrop-blur-sm z-50 transition-colors">
             {/* Left Group: Navigation & Context */}
             <div className="flex items-center gap-3">
                 {/* Today Button - Ghost style */}

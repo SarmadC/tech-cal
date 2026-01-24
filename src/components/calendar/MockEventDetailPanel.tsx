@@ -199,7 +199,7 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                 onClick={onClose}
             />
 
-            <div className="relative h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] overflow-hidden">
+            <div className="relative h-full w-full w-[100vw] sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[100vw] sm:max-w-[95vw] overflow-hidden">
                 <div
                     className={containerClasses}
                     style={{
@@ -214,7 +214,7 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="absolute top-4 right-6 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 z-10"
+                        className="absolute top-3 right-4 sm:top-4 sm:right-6 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 z-10"
                         aria-label="Close event details"
                     >
                         <XIcon className="w-4 h-4" />

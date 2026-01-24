@@ -62,6 +62,9 @@ export default function ClientLayout({
     if (!shouldShowNavbar) {
         return (
             <>
+                <Suspense fallback={null}>
+                    <RouteTracker />
+                </Suspense>
                 {children}
                 {shouldShowLegalFooter && <LegalFooter />}
                 <AnalyticsConsentBanner />
