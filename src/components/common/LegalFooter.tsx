@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function LegalFooter() {
     return (
-        <footer className="border-t border-border/40 bg-background/80 backdrop-blur-sm">
+        <footer className="border-t border-border/40 bg-background">
             <div className="mx-auto max-w-6xl px-6 py-6 text-xs text-muted-foreground flex flex-wrap items-center justify-center gap-2">
                 <span>© {new Date().getFullYear()} Kure-Cal</span>
                 <span aria-hidden="true">•</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useState, useEffect, useMemo } from 'react';
+import { FC, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { XIcon, ArrowSquareOutIcon, Bookmark, Star, ChatText } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
@@ -148,15 +148,73 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     }, [event.id, event]);
 
 
+    // Resize logic
+    const [width, setWidth] = useState(800); // Default width increased to 800px
+    const [isResizing, setIsResizing] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
+
+    // Initialize width from localStorage if available
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedWidth = localStorage.getItem('eventDetailPanelWidth');
+            if (savedWidth) {
+                setWidth(Math.max(400, Math.min(parseInt(savedWidth, 10), window.innerWidth * 0.9)));
+            }
+        }
+    }, []);
+
+    const startResizing = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+    }, []);
+
+    useEffect(() => {
+        const stopResizing = () => {
+            if (isResizing) {
+                setIsResizing(false);
+                localStorage.setItem('eventDetailPanelWidth', width.toString());
+            }
+        };
+
+        const resize = (mouseMoveEvent: MouseEvent) => {
+            if (isResizing) {
+                const newWidth = window.innerWidth - mouseMoveEvent.clientX;
+                // Constraints: Min 400px, Max 90vw
+                if (newWidth >= 400 && newWidth <= window.innerWidth * 0.9) {
+                    setWidth(newWidth);
+                }
+            }
+        };
+
+        if (isResizing) {
+            window.addEventListener('mousemove', resize);
+            window.addEventListener('mouseup', stopResizing);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        };
+    }, [isResizing, width]);
+
     // Conditional styling based on variant with glassmorphism
     const containerClasses = variant === 'modal'
         ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-gray-300 dark:ring-white/20 p-6 flex flex-col relative overflow-hidden`
-        : `h-full event-detail-glass-sidebar border-l border-gray-300 dark:border-white/10 shadow-2xl p-6 flex flex-col relative`;
+        : `h-full event-detail-glass-sidebar border-l border-gray-300 dark:border-white/10 shadow-2xl p-6 flex flex-col relative bg-clip-padding`;
 
     return (
         <div
+            ref={variant === 'sidebar' ? sidebarRef : undefined}
             className={containerClasses}
+            style={variant === 'sidebar' ? { width: `${width}px`, transition: isResizing ? 'none' : 'width 0.1s ease-out' } : undefined}
         >
+            {variant === 'sidebar' && (
+                <div
+                    className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-blue-500/50 transition-colors z-[60] -ml-[3px]"
+                    onMouseDown={startResizing}
+                    title="Drag to resize"
+                />
+            )}
             <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
                 {/* Open Full Page Action */}
                 {/* Open Full Page Action - Internal Event Page */}

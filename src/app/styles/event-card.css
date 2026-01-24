@@ -471,34 +471,36 @@
 /* Event detail panel glassmorphism - sidebar variant */
 .event-detail-glass-sidebar {
     /* Override CSS custom properties and apply glass effect */
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     /* Override CSS custom properties */
-    --card: rgba(255, 255, 255, 0.1) !important;
-    --background: rgba(255, 255, 255, 0.1) !important;
+    --card: rgba(255, 255, 255, 0.95) !important;
+    --background: rgba(255, 255, 255, 0.95) !important;
 }
 
 .dark .event-detail-glass-sidebar {
-    background: rgba(0, 0, 0, 0.85) !important;
+    background: rgba(24, 24, 27, 0.98) !important;
+    /* Almost solid opaque */
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     /* Override CSS custom properties for dark mode */
-    --card: rgba(0, 0, 0, 0.85) !important;
-    --background: rgba(0, 0, 0, 0.85) !important;
+    --card: rgba(24, 24, 27, 0.98) !important;
+    --background: rgba(24, 24, 27, 0.98) !important;
 }
 
 /* Higher specificity override for any remaining theme conflicts */
 div.event-detail-glass-sidebar {
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
 }
 
 .dark div.event-detail-glass-sidebar {
-    background: rgba(0, 0, 0, 0.85) !important;
+    background: rgba(24, 24, 27, 0.98) !important;
+    /* Almost solid opaque */
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
 }
@@ -535,8 +537,8 @@ div.event-detail-glass-sidebar {
 
 /* Timeline Detail Panel Glass Style */
 .timeline-detail-glass-panel {
-    background: rgba(24, 24, 27, 0.5);
-    /* zinc-900/50 */
+    background: rgba(24, 24, 27, 0.95);
+    /* zinc-900/95 - nearly opaque to match cards */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }

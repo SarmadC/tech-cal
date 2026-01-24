@@ -56,7 +56,8 @@ export default function ClientLayout({
         marketingPaths.includes(pathname) ||
         (!user && !loading && !excludedPaths.includes(pathname));
 
-    const shouldShowLegalFooter = pathname !== '/';
+    const shouldShowLegalFooter =
+        pathname !== '/' && !pathname.startsWith('/calendar');
 
     if (!shouldShowNavbar) {
         return (
