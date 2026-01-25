@@ -140,6 +140,7 @@ export type SearchSuggestion = {
   careerScore?: number;
   organizer?: string;
   startTime?: string;
+  organizerLogoUrl?: string | null;
 };
 export type LoginForm = { email: string; password: string; rememberMe?: boolean; };
 export type SignupForm = { name: string; email: string; password: string; confirmPassword: string; acceptTerms: boolean; };

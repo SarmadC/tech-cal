@@ -795,7 +795,7 @@ export class EventService {
 
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`id, title, start_time, organizer:organizers (name)`)
+                .select(`id, title, start_time, organizer:organizers (name, logo_url)`)
                 .textSearch('fts', sanitizeFtsQuery(term), {
                     type: 'websearch',
                     config: 'english'
@@ -805,7 +805,7 @@ export class EventService {
 
             if (error) throw error;
 
-            type SearchResult = { id: string; title: string | null; start_time: string; organizer: { name: string } | null };
+            type SearchResult = { id: string; title: string | null; start_time: string; organizer: { name: string; logo_url?: string | null } | null };
 
             return (data as SearchResult[] || [])
                 .filter(item => item.start_time !== null)
@@ -814,7 +814,8 @@ export class EventService {
                     title: item.title || 'Untitled Event',
                     organizer: item.organizer?.name || 'Unknown Organizer',
                     startTime: item.start_time,
-                    type: 'event' as const
+                    type: 'event' as const,
+                    organizerLogoUrl: item.organizer?.logo_url || null,
                 }));
         } catch (error) {
             console.error('Error searching events:', error);

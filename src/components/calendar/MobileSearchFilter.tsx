@@ -395,7 +395,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                     onFocus={() => setIsSearchFocused(true)}
                                     onBlur={() => {
                                         setIsSearchFocused(false);
-                                        setTimeout(() => setShowSuggestions(false), 200);
+                                        setTimeout(() => setShowSuggestions(false), 350);
                                     }}
                                     placeholder="Search events, organizers, topics..."
                                     className="mobile-search-input"
@@ -413,7 +413,13 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
 
                             {/* Search Suggestions */}
                             {showSuggestions && (
-                                <div className="mobile-search-suggestions">
+                                <div
+                                    className="mobile-search-suggestions"
+                                    onMouseDown={(event) => {
+                                        // Prevent input blur from closing suggestions before selection.
+                                        event.preventDefault();
+                                    }}
+                                >
                                     {isSuggestionsLoading ? (
                                         <div className="mobile-search-suggestions-loading">
                                             <div className="mobile-suggestion-loading-spinner"></div>

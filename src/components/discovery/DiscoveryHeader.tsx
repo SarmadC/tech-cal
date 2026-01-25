@@ -295,7 +295,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className={`relative z-0 mb-8 transition-colors`}>
+        <div className={`relative z-50 mb-8 transition-colors`}>
             {/* Glass strip container */}
             <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-background/40 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/20">
 
@@ -319,7 +319,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
                         onBlur={(e) => {
                             onSearchChange(e.target.value.trim());
-                            setTimeout(() => setIsAutocompleteOpen(false), 200);
+                            setTimeout(() => setIsAutocompleteOpen(false), 350);
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {

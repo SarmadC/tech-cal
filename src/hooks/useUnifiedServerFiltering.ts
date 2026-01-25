@@ -377,7 +377,14 @@ export function useUnifiedServerFiltering(
     if (key === 'tags' && process.env.NODE_ENV === 'development') {
       console.log('[useUnifiedServerFiltering] updateFilter called:', { key, value });
     }
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => {
+      const next = { ...prev, [key]: value };
+      // Reset pagination whenever filters change to avoid empty pages.
+      if (key !== 'page') {
+        next.page = 1;
+      }
+      return next;
+    });
   }, []);
 
   const resetFilters = useCallback(() => {

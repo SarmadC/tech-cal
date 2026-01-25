@@ -6,7 +6,7 @@ import type { SearchSuggestion } from '@/types';
 
 export interface UseSearchSuggestionsProps {
     searchTerm: string;
-    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string; tags?: Array<{ id: string; name: string; category?: string }> }>;
+    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string; description?: string; tags?: Array<{ id: string; name: string; category?: string }> }>;
     categories: Array<{ id: string; name: string }>;
     tags?: Array<{ id: string; name: string; category?: string }>;
     maxSuggestions?: number;
@@ -48,7 +48,8 @@ export function useSearchSuggestions({
             const eventMatches = events
                 .filter(event => 
                     event.title.toLowerCase().includes(term) ||
-                    event.organizer.toLowerCase().includes(term)
+                    event.organizer.toLowerCase().includes(term) ||
+                    (event.description || '').toLowerCase().includes(term)
                 )
                 .sort((a, b) => {
                     // Sort by career impact if available, otherwise by relevance

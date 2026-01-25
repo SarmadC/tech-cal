@@ -9,7 +9,7 @@ import EventCard from '@/components/discovery/EventCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, FilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
-import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
+import { useRemoteSearchSuggestions } from '@/hooks/useRemoteSearchSuggestions';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import {
     Select,
@@ -63,10 +63,8 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Search suggestions and history for autocomplete
-    const { suggestions, isLoading: isSuggestionsLoading } = useSearchSuggestions({
+    const { suggestions, isLoading: isSuggestionsLoading } = useRemoteSearchSuggestions({
         searchTerm: filters.searchTerm,
-        events: events as unknown as Parameters<typeof useSearchSuggestions>[0]['events'],
-        categories,
         maxSuggestions: 6
     });
 

@@ -102,11 +102,30 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
 
   const hasContent = history.length > 0 || suggestions.length > 0;
 
+  const renderLead = (suggestion: SearchSuggestion | SearchHistoryItem) => {
+    if ('type' in suggestion && suggestion.type === 'event' && suggestion.organizerLogoUrl) {
+      return (
+        <img
+          src={suggestion.organizerLogoUrl}
+          alt=""
+          className="h-7 w-7 rounded-full object-cover border border-border/60 bg-muted/30"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      );
+    }
+    return getIcon('type' in suggestion ? suggestion.type : 'history');
+  };
+
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 right-0 mt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl rounded-xl border border-border/60 shadow-2xl overflow-hidden z-[101] animate-in slide-in-from-top-2 duration-200"
+      className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl border border-border shadow-2xl overflow-hidden z-[9999] animate-in slide-in-from-top-2 duration-200"
       style={{ maxHeight }}
+      onMouseDown={(event) => {
+        // Keep input focused so blur handlers don't close the menu prematurely.
+        event.preventDefault();
+      }}
     >
       {isLoading ? (
         <div className="p-4 text-center text-sm text-muted-foreground">
@@ -133,7 +152,7 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
                       isSelected ? 'bg-muted/80' : ''
                     }`}
                   >
-                    <div className="flex-shrink-0">{getIcon('history')}</div>
+                    <div className="flex-shrink-0">{renderLead(item)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
                         {item.term || 'Search'}
@@ -168,7 +187,7 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
                       isSelected ? 'bg-muted/80' : ''
                     }`}
                   >
-                    <div className="flex-shrink-0">{getIcon(suggestion.type)}</div>
+                    <div className="flex-shrink-0">{renderLead(suggestion)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
                         {suggestion.title}

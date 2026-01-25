@@ -27,7 +27,7 @@ import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import { cn } from '@/lib/utils';
 import '@/app/styles/discovery-sidebar.css';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
-import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
+import { useRemoteSearchSuggestions } from '@/hooks/useRemoteSearchSuggestions';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 interface EventListViewProps {
@@ -182,10 +182,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }, [countsFromServer, filteredEvents, initialCategories]);
 
     // Hook up search suggestions and history for DiscoveryHeader - NOW positioned correctly
-    const { suggestions, isLoading: isSuggestionsLoading } = useSearchSuggestions({
+    const { suggestions, isLoading: isSuggestionsLoading } = useRemoteSearchSuggestions({
         searchTerm: filters.searchTerm,
-        events: filteredEvents, // Use filtered events for suggestions or empty if preferred
-        categories: initialCategories,
         maxSuggestions: 6
     });
 

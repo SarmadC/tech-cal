@@ -269,7 +269,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Ensure discover surface only shows future events by default
-    if (requestSurface === 'discover' && !dateRange?.start) {
+    // If user is actively searching, allow past events unless they set a date range.
+    if (requestSurface === 'discover' && !dateRange?.start && !normalizedSearchTerm) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (!eventFilters.startDate || eventFilters.startDate < today) {
