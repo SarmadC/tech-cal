@@ -24,17 +24,17 @@ export const LinearFormField: React.FC<LinearFormFieldProps> = ({
     return (
         <div className={`space-y-1.5 ${className}`}>
             <div className="flex items-center justify-between">
-                <label className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+                <label className="text-[14px] sm:text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
                     {label}
                     {required && <span className="text-red-500/80 ml-0.5">*</span>}
                 </label>
             </div>
             {children}
             {description && !error && (
-                <p className="text-[12px] text-zinc-500 dark:text-zinc-500 leading-normal">{description}</p>
+                <p className="text-[13px] sm:text-[12px] text-zinc-500 dark:text-zinc-500 leading-normal">{description}</p>
             )}
             {error && (
-                <p className="text-[12px] text-red-500 font-medium flex items-center gap-1">
+                <p className="text-[13px] sm:text-[12px] text-red-500 font-medium flex items-center gap-1">
                     {error}
                 </p>
             )}
@@ -51,7 +51,7 @@ export const LinearInput = React.forwardRef<HTMLInputElement, LinearInputProps>(
         <input
             ref={ref}
             className={`
-                w-full px-3 py-2 text-[13px] rounded-md transition-all duration-150 outline-none
+                w-full px-3 py-2.5 sm:py-2 text-[15px] sm:text-[13px] rounded-lg sm:rounded-md transition-all duration-150 outline-none
                 bg-zinc-50 dark:bg-white/[0.06]
                 text-zinc-900 dark:text-zinc-100 
                 placeholder:text-zinc-400 dark:placeholder:text-zinc-500
@@ -81,7 +81,7 @@ export const LinearSelect = React.forwardRef<HTMLSelectElement, LinearSelectProp
             <select
                 ref={ref}
                 className={`
-                    w-full appearance-none px-3 py-2 text-[13px] rounded-md transition-all duration-150 outline-none
+                    w-full appearance-none px-3 py-2.5 sm:py-2 text-[15px] sm:text-[13px] rounded-lg sm:rounded-md transition-all duration-150 outline-none
                     bg-zinc-50 dark:bg-white/[0.06]
                     text-zinc-900 dark:text-zinc-100
                     border border-zinc-200 dark:border-white/[0.08]

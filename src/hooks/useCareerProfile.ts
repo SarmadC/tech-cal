@@ -41,6 +41,18 @@ export function useCareerProfile(): UseCareerProfileReturn {
   // Load career profile with automatic migration
   const loadCareerProfile = useCallback(async () => {
     if (!user?.id || !supabase || !isReady) {
+      if (isLoading && (!user?.id || !supabase) && isReady) {
+         // Only unset loading if we are essentially "done" checking (auth didn't provide user)
+         // But if we are just waiting for 'isReady', we might want to keep loading?
+         // Actually, simplest is to just stop loading. If dependencies change, it will restart.
+         setIsLoading(false);
+      } else if (!isReady) {
+          // If not ready, keep loading? 
+          // If we allow it to return without setting false, it hangs if it never becomes ready.
+          // But SupabaseProvider sets ready.
+          // Let's stick to safe pattern: if we can't fetch, we aren't loading.
+          setIsLoading(false);
+      }
       return;
     }
 

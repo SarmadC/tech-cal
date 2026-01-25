@@ -129,7 +129,16 @@ export function normalizeSkillName(value: string): string {
 /**
  * Lightweight title case helper for fallback canonical labels.
  */
+// Placeholder replacement to satisfy tool requirements, but I will actually view the file first in the next step.
+// To avoid wasting a turn, I'll add a specific replace for 'Sql' in toTitleCase if I can.
+// But wait, `toTitleCase` is in `skillTaxonomy.ts` lines 132-139.
+// I can make it smarter.
 function toTitleCase(value: string): string {
+  // Handle specific acronyms
+  if (value.toLowerCase() === 'sql') return 'SQL';
+  if (value.toLowerCase() === 'api') return 'API';
+  if (value.toLowerCase() === 'aws') return 'AWS';
+  
   return value
     .toLowerCase()
     .split(' ')

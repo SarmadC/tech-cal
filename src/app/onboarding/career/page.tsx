@@ -12,6 +12,8 @@ import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { motion } from 'framer-motion';
+import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCareerOnboarding';
+import { useIsMobile } from '@/hooks/useDeviceDetection';
 
 function CareerOnboardingContent() {
     const router = useRouter();
@@ -22,6 +24,7 @@ function CareerOnboardingContent() {
     const { supabase, isReady } = useSupabaseSafe();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+    const isMobile = useIsMobile();
 
     const {
         hasCompletedOnboarding,
@@ -184,11 +187,19 @@ function CareerOnboardingContent() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, ease: "easeOut" }}
                         >
-                            <CareerOnboarding
-                                onComplete={handleComplete}
-                                onSkip={handleSkip}
-                                className=""
-                            />
+                            {isMobile ? (
+                                <MobileCareerOnboarding
+                                    onComplete={handleComplete}
+                                    onSkip={handleSkip}
+                                    className=""
+                                />
+                            ) : (
+                                <CareerOnboarding
+                                    onComplete={handleComplete}
+                                    onSkip={handleSkip}
+                                    className=""
+                                />
+                            )}
                         </motion.div>
                     </div>
                 </OnboardingErrorBoundary>

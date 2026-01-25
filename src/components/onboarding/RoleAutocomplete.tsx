@@ -19,6 +19,8 @@ interface RoleAutocompleteProps {
     className?: string; // Added className prop
     placeholder?: string;
     showSuccess?: boolean; // Show success state with green border
+    hideLabel?: boolean;
+    hideHint?: boolean;
 }
 
 export function RoleAutocomplete({
@@ -32,7 +34,9 @@ export function RoleAutocomplete({
     ariaDescribedBy: _ariaDescribedBy,
     className,
     placeholder = "Search for your role...",
-    showSuccess = false
+    showSuccess = false,
+    hideLabel = false,
+    hideHint = false
 }: RoleAutocompleteProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -44,6 +48,7 @@ export function RoleAutocomplete({
 
     const hintId = hint ? `${id}-hint` : undefined;
     const errorId = error ? `${id}-error` : undefined;
+    const describedBy = [hintId, errorId, _ariaDescribedBy].filter(Boolean).join(' ') || undefined;
 
     // Filter roles based on search query
     const filteredRoles = React.useMemo(() => {
@@ -120,15 +125,17 @@ export function RoleAutocomplete({
 
     return (
         <div className={twMerge("space-y-1.5", className)} ref={containerRef}>
-            <div className="flex items-center justify-between">
-                <label htmlFor={id} className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
-                    {label}
-                    {required && <span className="text-red-500/80 ml-0.5">*</span>}
-                </label>
-            </div>
+            {!hideLabel && (
+                <div className="flex items-center justify-between">
+                    <label htmlFor={id} className="text-[14px] sm:text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+                        {label}
+                        {required && <span className="text-red-500/80 ml-0.5">*</span>}
+                    </label>
+                </div>
+            )}
 
-            {hint && (
-                <p id={hintId} className="text-[12px] text-zinc-500 dark:text-zinc-500">
+            {!hideHint && hint && (
+                <p id={hintId} className="text-[13px] sm:text-[12px] text-zinc-500 dark:text-zinc-500">
                     {hint}
                 </p>
             )}
@@ -153,9 +160,10 @@ export function RoleAutocomplete({
                         inputRef.current?.focus();
                     }}
                 >
-                    <div className="flex items-center px-3 py-2 min-h-[38px]">
+                    <div className="flex items-center px-3 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px]">
                         <input
                             ref={inputRef}
+                            id={id}
                             type="text"
                             value={isOpen ? searchQuery : (displayedRole || '')}
                             onChange={(e) => {
@@ -168,7 +176,9 @@ export function RoleAutocomplete({
                             }}
                             onKeyDown={handleKeyDown}
                             placeholder={placeholder}
-                            className="w-full bg-transparent border-none p-0 text-[13px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0"
+                            aria-label={hideLabel ? label : undefined}
+                            aria-describedby={describedBy}
+                            className="w-full bg-transparent border-none p-0 text-[15px] sm:text-[13px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0"
                         />
 
                         {displayedRole && !isOpen ? (
@@ -208,7 +218,7 @@ export function RoleAutocomplete({
                                 aria-label="Role options"
                             >
                                 {filteredRoles.length === 0 ? (
-                                    <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                                    <div className="px-4 py-6 text-center text-[14px] sm:text-sm text-muted-foreground">
                                         No roles found matching &quot;{searchQuery}&quot;
                                     </div>
                                 ) : (
@@ -237,7 +247,7 @@ export function RoleAutocomplete({
                                                             aria-selected={isSelected}
                                                             onClick={() => handleSelect(role)}
                                                             className={clsx(
-                                                                "w-full text-left px-4 py-2 text-sm transition-all outline-none flex items-center justify-between",
+                                                                "w-full text-left px-4 py-2.5 sm:py-2 text-[15px] sm:text-sm transition-all outline-none flex items-center justify-between",
                                                                 isSelected
                                                                     ? "bg-secondary text-foreground font-medium"
                                                                     : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",

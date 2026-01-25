@@ -26,11 +26,11 @@ export interface MultiSelectDropdownProps {
     searchable?: boolean;
     className?: string;
     disabled?: boolean;
-    suggestions?: string[];
+    suggestions?: string[]; 
     suggestionLabel?: string;
     allowCustom?: boolean;
     onDuplicateAttempt?: (value: string) => void;
-    variant?: 'default' | 'minimal';
+    variant?: 'default' | 'minimal' | 'linear';
 }
 
 export default function MultiSelectDropdown({
@@ -272,23 +272,39 @@ export default function MultiSelectDropdown({
                     isOpen ? "z-[100]" : "z-0"
                 )}
             >
-                {/* Trigger Area - Looks like an input */}
+                {/* Trigger Area */}
                 <div
                     ref={triggerRef}
                     onClick={() => { if (!isOpen) handleToggle(); searchRef.current?.focus(); }}
                     className={clsx(
-                        "w-full min-h-[42px] px-3 py-2 rounded-xl border transition-all duration-200 flex flex-wrap gap-2 items-center cursor-text",
+                        "w-full text-left transition-all duration-200 flex flex-wrap gap-2 items-center cursor-text relative",
                         variant === 'minimal'
-                            ? "bg-transparent border-transparent hover:bg-secondary/50"
-                            : "bg-[hsl(var(--background))]",
-                        isOpen
+                            ? "min-h-[42px] px-3 py-2 rounded-xl border bg-transparent border-transparent hover:bg-secondary/50"
+                            : variant === 'linear'
+                                ? "min-h-[40px] rounded-lg border bg-[#1D1E21] border-[#36373A] px-2 py-1.5" // Input container
+                                : "min-h-[42px] px-3 py-2 rounded-xl border bg-[hsl(var(--background))]",
+                        isOpen && variant !== 'linear'
                             ? (variant === 'minimal' ? "bg-secondary/50" : "border-border ring-1 ring-border/50 shadow-lg")
-                            : (variant === 'minimal' ? "" : "border-border/50 hover:border-border hover:bg-secondary/30")
+                            : (variant === 'linear' ? "border-[#E3E3E3] shadow-[0_0_0_1px_rgba(227,227,227,0.4)]" : "border-border/50 hover:border-border hover:bg-secondary/30")
                     )}
                 >
-                    <MagnifyingGlass size={16} className={clsx("text-muted-foreground transition-colors", isOpen ? "text-foreground" : "")} />
+                    {(variant !== 'linear') && (
+                        <div className={clsx(
+                            "absolute pointer-events-none flex items-center text-[#8A8F98]",
+                            "left-3"
+                        )}>
+                            <MagnifyingGlass size={16} weight="regular" className={clsx("transition-colors", isOpen ? "text-foreground" : "")} />
+                        </div>
+                    )}
 
-                    {/* Selected Chips Inline */}
+                    {/* Linear Icon - only layout if no chips? Or just first element */}
+                    {variant === 'linear' && selectedValues.length === 0 && (
+                        <div className="flex items-center justify-center w-5 h-5 text-[#8A8F98]">
+                            <MagnifyingGlass size={16} weight="bold" />
+                        </div>
+                    )}
+
+                    {/* Selected Chips - Inside Input for Linear */}
                     <AnimatePresence>
                         {selectedValues.map(value => (
                             <motion.span
@@ -298,15 +314,25 @@ export default function MultiSelectDropdown({
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-secondary text-foreground border border-border/50"
+                                className={clsx(
+                                    "inline-flex items-center gap-1.5 cursor-default transition-colors w-max",
+                                    variant === 'linear'
+                                        ? "h-[22px] pl-2 pr-1 rounded-[4px] bg-[#36373A] text-[#EDEDEF] text-[12px] font-normal border border-white/[0.08] min-w-[140px] justify-between"
+                                        : "px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-foreground border border-border/50"
+                                )}
                             >
-                                {getLabel(value)}
+                                <span className={clsx("truncate", variant === 'linear' ? "max-w-[120px] flex-1" : "")}>{getLabel(value)}</span>
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleRemove(value); }}
-                                    className="hover:bg-secondary/70 rounded-full p-0.5 transition-colors"
+                                    className={clsx(
+                                        "rounded-sm transition-all flex-shrink-0 flex items-center justify-center",
+                                        variant === 'linear'
+                                            ? "text-[#8A8F98] opacity-50 hover:opacity-100 hover:text-white ml-auto"
+                                            : "hover:bg-white/20 p-0.5"
+                                    )}
                                 >
-                                    <X size={10} weight="bold" />
+                                    <X size={variant === 'linear' ? 12 : 10} weight="bold" />
                                 </button>
                             </motion.span>
                         ))}
@@ -331,20 +357,31 @@ export default function MultiSelectDropdown({
                             }
                         }}
                         onKeyDown={handleKeyDown}
-                        placeholder={selectedValues.length === 0 ? placeholder : ""}
-                        className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/50 min-w-[120px] flex-1 py-0.5"
+                        placeholder={selectedValues.length === 0 || variant === 'linear' ? (variant === 'linear' && selectedValues.length > 0 ? "" : placeholder) : ""}
+                        className={clsx(
+                            "bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/50 flex-1 py-0.5 min-w-[60px]",
+                            variant === 'linear' ? "text-[#E3E3E3] placeholder:text-[#8A8F98]" : "text-foreground",
+                            variant !== 'linear' ? "pl-6" : ""
+                        )}
+                        style={{ paddingLeft: variant !== 'linear' ? '1.5rem' : '0' }}
                     />
 
-                    <div className="flex items-center gap-2">
-                        {maxSelections && (
-                            <span className="text-[10px] text-muted-foreground/40 font-mono">
+                    {/* Counter - Centered on right for Linear */}
+                    {maxSelections && (
+                        <div className={clsx(
+                            variant === 'linear' ? "absolute right-3 top-1/2 -translate-y-1/2" : "flex items-center gap-2"
+                        )}>
+                            <span className={clsx(
+                                "text-[10px] font-mono",
+                                variant === 'linear' ? "text-[#5A5B60]" : "text-muted-foreground/40"
+                            )}>
                                 {selectedValues.length}/{maxSelections}
                             </span>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Dropdown Menu - rendered via portal to escape stacking context */}
+                {/* Dropdown Menu */}
                 {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
                     <AnimatePresence>
                         <motion.div
@@ -353,19 +390,57 @@ export default function MultiSelectDropdown({
                             exit={{ opacity: 0, y: 4, scale: 0.98 }}
                             transition={{ duration: 0.12, ease: [0.23, 1, 0.32, 1] }}
                             ref={listboxRef}
-                            className="fixed p-1 bg-[hsl(var(--background))] border border-border rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl z-[9999]"
+                            className={clsx(
+                                "fixed overflow-hidden z-[9999]",
+                                variant === 'linear'
+                                    ? "bg-[#222326] border border-[#2E2F33] rounded-lg shadow-2xl p-1"
+                                    : "bg-[hsl(var(--background))] border border-border rounded-xl shadow-2xl p-1 backdrop-blur-xl"
+                            )}
                             style={{
                                 top: `${dropdownPosition.top}px`,
                                 left: `${dropdownPosition.left}px`,
                                 width: `${dropdownPosition.width}px`,
                             }}
                         >
-                            <div className="max-h-60 overflow-y-auto custom-scrollbar p-1 space-y-1">
-                                {flatOptions.length === 0 && !allowCustom && (
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-0.5">
+                                {flatOptions.length === 0 && !allowCustom && !filteredSuggestions.length && (
                                     <div className="p-4 text-center text-xs text-muted-foreground">
                                         No results found
                                     </div>
                                 )}
+
+                                {/* Suggestions Section (Merged for Linear) */}
+                                {variant === 'linear' && !searchTerm && filteredSuggestions.length > 0 && (
+                                    <div className="mb-2">
+                                        <div className="px-3 py-2 text-[11px] font-medium text-[#8A8F98] uppercase tracking-wider">
+                                            {suggestionLabel || 'Suggested'}
+                                        </div>
+                                        {filteredSuggestions.map((suggestion) => {
+                                            const isSelected = selectedValues.includes(suggestion);
+                                            return (
+                                                <div
+                                                    key={suggestion}
+                                                    onClick={() => handleSelect(suggestion)}
+                                                    className={clsx(
+                                                        "flex items-center justify-between px-3 h-8 rounded text-[13px] cursor-pointer transition-colors mx-1",
+                                                        "text-[#EDEDEF] hover:bg-[#2C2D31]",
+                                                        isSelected ? "bg-[#2C2D31]" : ""
+                                                    )}
+                                                >
+                                                    <span className="flex-1 truncate">{suggestion}</span>
+                                                    {isSelected && (
+                                                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-[#E3E3E3]">
+                                                            <Check size={14} weight="bold" />
+                                                        </motion.span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        {/* Divider between suggestions and main list */}
+                                        <div className="h-[1px] bg-[#2E2F33] my-1 mx-2" />
+                                    </div>
+                                )}
+
 
                                 {flatOptions.length === 0 && allowCustom && searchTerm && (
                                     <div
@@ -380,35 +455,67 @@ export default function MultiSelectDropdown({
                                     </div>
                                 )}
 
-                                {flatOptions.map((option, index) => {
-                                    const isSelected = selectedValues.includes(option.value);
-                                    const isDisabled = maxSelections && selectedValues.length >= maxSelections && !isSelected;
+                                {/* Main Options List */}
+                                {Object.entries(groupedOptions).map(([category, categoryOptions]) => {
+                                    const activeCategoryOptions = categoryOptions.filter(matchesSearch);
+                                    if (activeCategoryOptions.length === 0) return null;
 
                                     return (
-                                        <div
-                                            key={option.value}
-                                            data-index={index}
-                                            onClick={() => !isDisabled && handleSelect(option.value)}
-                                            className={clsx(
-                                                "flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition-all duration-150",
-                                                index === focusedIndex ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                                                isSelected && !isDisabled ? "text-emerald-400 bg-emerald-400/5 group" : "",
-                                                isDisabled && "opacity-40 cursor-not-allowed"
+                                        <div key={category}>
+                                            {/* Show Category Header if multiple categories exist or always if desired. 
+                                                Linear often just lists, but if we have explicit categories, use headers. 
+                                            */}
+                                            {(Object.keys(groupedOptions).length > 1 || category !== 'Other') && (
+                                                <div className={clsx(
+                                                    "px-3 py-1.5 mt-1 text-[11px] font-medium uppercase tracking-wider sticky top-0 bg-[#222326]/90 backdrop-blur-sm z-10",
+                                                    variant === 'linear' ? "text-[#8A8F98]" : "text-muted-foreground"
+                                                )}>
+                                                    {category}
+                                                </div>
                                             )}
-                                        >
-                                            <span className="flex-1 truncate">{option.label}</span>
-                                            {isSelected && (
-                                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                                    <Check size={14} weight="bold" />
-                                                </motion.span>
-                                            )}
+
+                                            {activeCategoryOptions.map((option) => {
+                                                const isSelected = selectedValues.includes(option.value);
+                                                const isDisabled = maxSelections && selectedValues.length >= maxSelections && !isSelected;
+                                                const index = flatOptions.indexOf(option);
+
+                                                return (
+                                                    <div
+                                                        key={option.value}
+                                                        data-index={index}
+                                                        onClick={() => !isDisabled && handleSelect(option.value)}
+                                                        className={clsx(
+                                                            "flex items-center justify-between px-3 rounded cursor-pointer transition-colors mx-1",
+                                                            variant === 'linear'
+                                                                ? "h-8 text-[13px]"
+                                                                : "py-2 px-3 text-sm rounded-lg",
+
+                                                            variant === 'linear'
+                                                                ? (index === focusedIndex ? "bg-[#2C2D31] text-[#EDEDEF]" : "text-[#EDEDEF] hover:bg-[#2C2D31]")
+                                                                : (index === focusedIndex ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"),
+
+                                                            isSelected && !isDisabled
+                                                                ? (variant === 'linear' ? "text-[#EDEDEF]" : "text-emerald-400 bg-emerald-400/5 group")
+                                                                : "",
+                                                            isDisabled && "opacity-40 cursor-not-allowed"
+                                                        )}
+                                                    >
+                                                        <span className="flex-1 truncate">{option.label}</span>
+                                                        {isSelected && (
+                                                            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className={variant === 'linear' ? "text-[#E3E3E3]" : ""}>
+                                                                <Check size={14} weight="bold" />
+                                                            </motion.span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            {/* Suggestions Footer */}
-                            {filteredSuggestions.length > 0 && (
+                            {/* Old Footer - Only if NOT linear */}
+                            {variant !== 'linear' && filteredSuggestions.length > 0 && (
                                 <div className="p-2 border-t border-border/50 bg-secondary/20">
                                     <div className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-2 px-1">
                                         {suggestionLabel || 'Suggested'}

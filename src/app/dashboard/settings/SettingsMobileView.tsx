@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { MaterialIcon, IconName } from '@/components/ui/Icon';
@@ -14,6 +14,7 @@ import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { calculateCareerProfileCompletion } from '@/utils/careerProfileUtils';
+import { useTheme } from 'next-themes';
 
 interface SettingItem {
     id: string;
@@ -36,12 +37,23 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
+    const { theme, resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
     const activeTab = searchParams.get('tab');
 
     // Fetch career profile data
     const { careerProfile, optionalSections } = useCareerProfile();
     const completionPercentage = calculateCareerProfileCompletion(careerProfile, optionalSections);
+    const appearanceValue = useMemo(() => {
+        if (!mounted) return 'Theme';
+        const normalizedTheme = theme ?? 'system';
+        if (normalizedTheme === 'system') {
+            const resolvedLabel = resolvedTheme === 'dark' ? 'Dark' : 'Light';
+            return `System (${resolvedLabel})`;
+        }
+        return normalizedTheme === 'dark' ? 'Dark' : 'Light';
+    }, [mounted, theme, resolvedTheme]);
 
     // Grouped Settings Data
     const settingGroups: SettingGroup[] = [
@@ -59,7 +71,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
             label: 'PREFERENCES',
             items: [
                 { id: 'integrations', label: 'Integrations', icon: 'extension', value: '1 Connected' },
-                { id: 'appearance', label: 'Appearance', icon: 'palette', value: 'Dark System' },
+                { id: 'appearance', label: 'Appearance', icon: 'palette', value: appearanceValue },
             ]
         }
     ];
@@ -78,6 +90,10 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
         params.delete('tab');
         router.push(`${pathname}?${params.toString()}`);
     };
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const renderContent = () => {
         switch (activeTab) {

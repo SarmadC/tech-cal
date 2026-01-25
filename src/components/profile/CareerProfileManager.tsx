@@ -8,11 +8,13 @@ import { QuickEditSection } from './quick-edit/sections';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { useAuth } from '@/contexts';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
+import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCareerOnboarding';
 import QuickEditModal from './quick-edit';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Button } from '@/components/ui/button';
-import { User, CheckCircle, PencilSimple } from '@phosphor-icons/react';
+import { IdentificationCard, CheckCircle, PencilSimple } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
+import { useIsMobile } from '@/hooks/useDeviceDetection';
 
 // --- Shared Components (Linear Style) ---
 
@@ -142,12 +144,52 @@ const DEFAULT_OPTIONAL_STATUS = {
 };
 
 const OPTIONAL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const QUICK_EDIT_STEP_MAP: Record<QuickEditSection, number> = {
+    role: 1,
+    skills: 2,
+    goals: 3,
+    learning: 4,
+    networking: 5,
+    team: 6
+};
+
+const buildOnboardingInitialData = (profile?: CareerProfile | null): Partial<CareerOnboardingData> | undefined => {
+    if (!profile) return undefined;
+    return {
+        step1_role: {
+            currentRole: profile.currentRole || '',
+            seniority: profile.seniority || 'mid-level',
+            industry: profile.industry || '',
+            companySize: profile.companySize || 'medium'
+        },
+        step2_skills: {
+            primarySkills: profile.primarySkills || [],
+            skillsToLearn: profile.skillsToLearn || [],
+            interests: profile.interests || [],
+            skillTags: profile.skillTags || []
+        },
+        step3_goals: {
+            careerGoals: profile.careerGoals || [],
+            timeframe: profile.timeframe || 'immediate'
+        },
+        step4_preferences: {
+            learningStyle: profile.learningStyle || [],
+            availableTime: profile.availableTime || 'moderate',
+            budget: profile.budget || 'moderate'
+        },
+        step5_networking: {
+            networkingGoals: profile.networkingGoals || [],
+            preferredEventTypes: profile.preferredEventTypes || []
+        }
+    };
+};
 
 export default function CareerProfileManager({
     className = '',
     onProfileUpdate
 }: CareerProfileManagerProps) {
     const { user } = useAuth();
+    const isMobile = useIsMobile();
     const router = useRouter();
     const queryClient = useQueryClient();
     const { showError } = useSnackbar();
@@ -292,39 +334,57 @@ export default function CareerProfileManager({
     if (!hasCompletedOnboarding || !currentCareerProfile) {
         return (
             <div className={`career-profile-manager incomplete ${className}`}>
-                <div className="rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                            <User size={32} className="text-zinc-900 dark:text-zinc-100" />
-                        </div>
-                        <div className="flex-1">
-                            <h3 className="text-lg font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-                                Complete Your Career Profile
-                            </h3>
-                            <p className="mb-4 text-zinc-500 dark:text-zinc-400">
-                                Get personalized event recommendations by telling us about your career goals and interests.
-                            </p>
-                            <div className="flex gap-3">
-                                <Button onClick={() => setIsEditing(true)}>
-                                    Complete Profile
-                                </Button>
-                                <Button variant="outline" onClick={() => router.push('/dashboard')}>
-                                    Skip for Now
-                                </Button>
-                            </div>
-                        </div>
+                <div className="flex flex-col items-start text-left py-8">
+                    <div className="flex items-center justify-center h-12 w-12 rounded-[36%] bg-[#2E2F33] mb-3">
+                        <IdentificationCard
+                            size={28}
+                            weight="fill"
+                            color="#EDEDEF"
+                        />
+                    </div>
+                    <h3 className="text-[14px] font-medium text-[#EDEDEF] mb-1.5">
+                        Complete Your Career Profile
+                    </h3>
+                    <p className="text-[13px] leading-[1.4] text-[#8A8F98] max-w-[320px] mb-6">
+                        Get personalized event recommendations by telling us about your career goals and interests.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-start gap-4">
+                        <Button
+                            size="sm"
+                            onClick={() => setIsEditing(true)}
+                            className="h-7 rounded-md bg-[#EDEDEF] px-3 text-[13px] font-medium text-[#191A1D] hover:bg-[#EDEDEF]/90"
+                        >
+                            Complete Profile
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => router.push('/dashboard')}
+                            variant="ghost"
+                            className="h-7 rounded-md bg-transparent px-3 text-[13px] font-medium text-[#8A8F98] hover:bg-transparent hover:text-[#EDEDEF]"
+                        >
+                            Skip for Now
+                        </Button>
                     </div>
                 </div>
-                {/* Onboarding Modal */}
+                {/* Onboarding Modal (Desktop) / Fullscreen (Mobile) */}
                 {isEditing && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
-                            <CareerOnboarding
-                                onComplete={handleComplete}
-                                onSkip={() => setIsEditing(false)}
-                                preserveDataOnSkip={true}
-                                initialData={undefined}
-                            />
+                    <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center bg-transparent sm:bg-black/50 sm:backdrop-blur-sm">
+                        <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-transparent sm:bg-white dark:sm:bg-zinc-900 sm:rounded-xl overflow-hidden shadow-none sm:shadow-2xl">
+                            {isMobile ? (
+                                <MobileCareerOnboarding
+                                    onComplete={handleComplete}
+                                    onSkip={() => setIsEditing(false)}
+                                    preserveDataOnSkip={true}
+                                    initialData={undefined}
+                                />
+                            ) : (
+                                <CareerOnboarding
+                                    onComplete={handleComplete}
+                                    onSkip={() => setIsEditing(false)}
+                                    preserveDataOnSkip={true}
+                                    initialData={undefined}
+                                />
+                            )}
                         </div>
                     </div>
                 )}
@@ -333,6 +393,25 @@ export default function CareerProfileManager({
     }
 
     // --- Main View (Linear Style Settings) ---
+    if (isMobile && quickEditSection) {
+        const initialStep = QUICK_EDIT_STEP_MAP[quickEditSection];
+        return (
+            <div className={`career-profile-manager mobile-edit ${className}`}>
+                <MobileCareerOnboarding
+                    onComplete={async (data, options) => {
+                        await handleComplete(data, options);
+                        handleQuickEditClose();
+                    }}
+                    onSkip={handleQuickEditClose}
+                    preserveDataOnSkip={false}
+                    initialData={buildOnboardingInitialData(currentCareerProfile)}
+                    initialStep={initialStep}
+                    initialIncludeOptionalSteps={initialStep > 3}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-500 pb-20">
             {/* Header */}
@@ -474,14 +553,16 @@ export default function CareerProfileManager({
             </div>
 
             {/* Quick Edit Modal */}
-            <QuickEditModal
-                isOpen={!!quickEditSection}
-                onClose={handleQuickEditClose}
-                section={quickEditSection || 'role'}
-                currentProfile={currentCareerProfile}
-                onSectionCompleted={handleOptionalSectionCompleted}
-                onStateChange={setQuickEditModalState}
-            />
+            {!isMobile && (
+                <QuickEditModal
+                    isOpen={!!quickEditSection}
+                    onClose={handleQuickEditClose}
+                    section={quickEditSection || 'role'}
+                    currentProfile={currentCareerProfile}
+                    onSectionCompleted={handleOptionalSectionCompleted}
+                    onStateChange={setQuickEditModalState}
+                />
+            )}
         </div>
     );
 }

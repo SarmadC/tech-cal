@@ -32,12 +32,13 @@ const RoleEditor: React.FC<RoleEditorProps> = React.memo(({ profile, onUpdate })
     };
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6 sm:space-y-5">
             {/* Current Role - Autocomplete Dropdown */}
-            <div className="space-y-1.5">
-                {/* RoleAutocomplete handles its own label/structure internally, but we can wrap or rely on it. 
-             Since it's complex, we'll use it directly but try to pass consistent styles if possible. 
-             However, to ensure alignment, we can wrap it in a way that matches LinearFormField spacing. */}
+            <LinearFormField
+                label="Current Role"
+                description="Search for your role or browse by category"
+                required
+            >
                 <RoleAutocomplete
                     id="current-role"
                     label="Current Role"
@@ -46,10 +47,12 @@ const RoleEditor: React.FC<RoleEditorProps> = React.memo(({ profile, onUpdate })
                     onChange={(value) => handleFieldChange('currentRole', value)}
                     required
                     className="w-full"
+                    hideLabel
+                    hideHint
                 />
-            </div>
+            </LinearFormField>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-4 sm:space-y-4 pt-2">
                 {/* Seniority Dropdown */}
                 <LinearFormField label="Experience Level" required>
                     <LinearSelect
