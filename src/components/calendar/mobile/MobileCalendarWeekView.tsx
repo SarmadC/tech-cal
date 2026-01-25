@@ -38,7 +38,6 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
 }) => {
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -163,9 +162,10 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
 
   // Event handlers
   const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
-    setPreviewEvent(event);
-        _setIsPreviewVisible(true);
     onEventSelect?.(event);
+    if (!('isInstance' in event)) {
+      setPreviewEvent(event);
+    }
   }, [onEventSelect]);
 
   // Format event time for mobile display
@@ -324,14 +324,10 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
         )}
       </div>
 
-      {/* Event Detail Panel */}
       {previewEvent && (
         <MobileEventDetailPanel
           event={previewEvent}
-          onClose={() => {
-            _setIsPreviewVisible(false);
-            setPreviewEvent(null);
-          }}
+          onClose={() => setPreviewEvent(null)}
           categories={_categories}
         />
       )}

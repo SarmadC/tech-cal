@@ -5,11 +5,11 @@ import { Event, EventType, AppProfile, TrackedEvent } from '@/types';
 import './mobile-calendar.css';
 import { Calendar } from '@phosphor-icons/react';
 import TodayTaskCard from './components/TodayTaskCard';
-import MobileEventDetailPanel from './MobileEventDetailPanel';
 import ForYouSection from './sections/ForYouSection';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import './sections/discovery.css';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 
 export interface MobileTodayViewProps {
     events: Event[];
@@ -36,6 +36,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
 }) => {
     // Get user location for location-aware recommendations
     const { location: userLocation } = useUserLocation(profile);
+    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
     // Debug logging
     // Mobile today view events loaded
 
@@ -43,8 +44,6 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
     const now = new Date();
     const _upcomingEvents = events.filter(event => new Date(event.startTime) > now);
     // Mobile today view time and events processed
-    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-    const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
     // Filter events for today - not used in current implementation
     const _todayEvents = useMemo(() => {
         const today = new Date(currentDate);
@@ -91,17 +90,10 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
         });
     };
 
-    // Event preview handlers
     const handleEventTap = (event: Event) => {
-        setPreviewEvent(event);
-        _setIsPreviewVisible(true);
         // Also call the parent's onEventSelect if provided
         onEventSelect?.(event);
-    };
-
-    const handleClosePreview = () => {
-        _setIsPreviewVisible(false);
-        setPreviewEvent(null);
+        setPreviewEvent(event);
     };
 
     const handleTrackEvent = (event: Event) => {
@@ -163,11 +155,10 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
                 </div>
             )}
 
-            {/* Mobile Event Detail Panel */}
             {previewEvent && (
                 <MobileEventDetailPanel
                     event={previewEvent}
-                    onClose={handleClosePreview}
+                    onClose={() => setPreviewEvent(null)}
                     categories={_categories}
                 />
             )}

@@ -12,9 +12,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 
-import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@/types/fullcalendar';
+import { EventClickArg, EventContentArg, EventMountArg } from '@/types/fullcalendar';
 import { Event } from '@/types';
-import { useEventPreview } from '@/hooks/useEventPreview';
 import EventContent from './EventContent';
 import { getPillColor } from '@/utils/pillColorUtils';
 
@@ -45,8 +44,6 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
     headerToolbar = false,
     ...otherProps
 }, _ref) => {
-    const { showPreview, hidePreview } = useEventPreview();
-
     // Create a key that changes when tracking status changes to force re-render
     const trackingKey = events.map((event: Event) => 
         ('isTracked' in event) ? `${event.id}-${event.isTracked}` : `${event.id}-false`
@@ -98,16 +95,6 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
         // Event mounting logic if needed
     };
 
-    const handleEventMouseEnter = (info: EventHoveringArg) => {
-        const event = info.event.extendedProps as Event;
-        const rect = info.el.getBoundingClientRect();
-        const position = {
-            x: rect.left + rect.width / 2,
-            y: rect.top
-        };
-        showPreview(event, position);
-    };
-
     const handleDatesSet = (dateInfo: { start: Date }) => {
         onDateChange?.(dateInfo.start);
     };
@@ -124,8 +111,6 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
                 eventContent={renderEventContent}
                 eventClick={handleEventClick}
                 eventDidMount={handleEventDidMount}
-                eventMouseEnter={handleEventMouseEnter}
-                eventMouseLeave={hidePreview}
                 datesSet={handleDatesSet}
                 headerToolbar={headerToolbar}
                 height={height}

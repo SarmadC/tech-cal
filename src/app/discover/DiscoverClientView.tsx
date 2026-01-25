@@ -17,13 +17,7 @@ import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import Loading from '@/components/Loading';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
-
-const MobileEventDetailPanelDynamic = dynamic(
-    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
-    { loading: () => <Loading /> }
-);
 
 // IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
 const MobileDiscoveryViewDynamic = dynamic(
@@ -267,22 +261,12 @@ export default function DiscoverClientView({
                     </main>
 
                     {/* Event Detail Panel */}
-                    {selectedEvent && (
-                        <>
-                            {isMobile ? (
-                                <MobileEventDetailPanelDynamic
-                                    event={selectedEvent}
-                                    onClose={handleCloseEventDetail}
-                                    categories={initialCategories}
-                                />
-                            ) : (
-                                <EventDetailSidebarDynamic
-                                    event={selectedEvent}
-                                    onClose={handleCloseEventDetail}
-                                    categories={initialCategories}
-                                />
-                            )}
-                        </>
+                    {selectedEvent && !isMobile && (
+                        <EventDetailSidebarDynamic
+                            event={selectedEvent}
+                            onClose={handleCloseEventDetail}
+                            categories={initialCategories}
+                        />
                     )}
                 </div>
             </SidebarProvider>

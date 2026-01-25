@@ -32,7 +32,6 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
   const [fullSpeakerData, setFullSpeakerData] = useState<Record<string, Array<{ id: string; name: string; photoUrl?: string }>>>({});
 
@@ -119,17 +118,10 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
     onDateChange?.(date);
   }, [onDateChange]);
 
-  // Event preview handlers
   const handleEventTap = useCallback((event: Event) => {
-    setPreviewEvent(event);
-    _setIsPreviewVisible(true);
     onEventSelect?.(event);
+    setPreviewEvent(event);
   }, [onEventSelect]);
-
-  const handleClosePreview = useCallback(() => {
-    _setIsPreviewVisible(false);
-    setPreviewEvent(null);
-  }, []);
 
   // Swipe navigation handlers
   const handleSwipeLeft = useCallback(() => {
@@ -458,11 +450,10 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
         )}
       </div>
 
-      {/* Mobile Event Detail Panel */}
       {previewEvent && (
         <MobileEventDetailPanel
           event={previewEvent}
-          onClose={handleClosePreview}
+          onClose={() => setPreviewEvent(null)}
           categories={categories}
         />
       )}

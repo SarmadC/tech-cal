@@ -1,7 +1,7 @@
 /* Month Day Popover Styles */
 
 .month-day-popover {
-    background: var(--color-surface-primary);
+    background: var(--background-elevated);
     border: 1px solid var(--color-border);
     border-radius: 8px;
     box-shadow:
@@ -12,8 +12,6 @@
     max-height: 500px;
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .month-day-popover-header {
@@ -103,7 +101,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .month-day-popover {
-        background: var(--color-surface-primary);
+        background: var(--background-elevated);
         border-color: var(--color-border);
     }
 

@@ -16,65 +16,37 @@ interface MonthEventCardProps {
 }
 
 const FALLBACK_ACCENT = 'var(--accent-primary)';
-const FALLBACK_SURFACE = 'rgba(148, 163, 184, 0.14)';
-const FALLBACK_SURFACE_HOVER = 'rgba(148, 163, 184, 0.24)';
-
-const hexToRgba = (hex: string, alpha: number): string | null => {
-    if (!hex.startsWith('#')) {
-        return null;
-    }
-
-    const normalized = hex.length === 4
-        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
-        : hex;
-
-    if (normalized.length !== 7) {
-        return null;
-    }
-
-    const r = parseInt(normalized.slice(1, 3), 16);
-    const g = parseInt(normalized.slice(3, 5), 16);
-    const b = parseInt(normalized.slice(5, 7), 16);
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
 const getCategoryColor = (event: Event | MultiDayEventInstance) => {
+    // If the event has a specific color override, use it (assumed to be correct)
     if (event.category?.color) return event.category.color;
     if (event.color) return event.color;
 
     const categoryName = event.category?.name?.toLowerCase();
 
+    // Return CSS variables instead of hardcoded hex values to support dark mode overrides
     switch (categoryName) {
         case 'tech summit':
         case 'summit':
-            return '#3b82f6';
+            return 'var(--color-category-summit, #3b82f6)';
         case 'workshop':
-            return '#8b5cf6';
+            return 'var(--color-category-workshop, #8b5cf6)';
         case 'networking':
-            return '#10b981';
+            return 'var(--color-category-networking, #10b981)';
         case 'conference':
-            return '#0ea5e9';
+            return 'var(--color-category-conference, #0ea5e9)';
         case 'webinar':
-            return '#f97316';
+            return 'var(--color-category-webinar, #f97316)';
         case 'startup':
-            return '#ec4899';
+            return 'var(--color-category-startup, #ec4899)';
         case 'trade show':
-            return '#6366f1';
+            return 'var(--color-category-trade-show, #6366f1)';
         case 'product launch':
-            return '#f59e0b';
+            return 'var(--color-category-product-launch, #f59e0b)';
         case 'training':
-            return '#14b8a6';
+            return 'var(--color-category-training, #14b8a6)';
         default:
             return FALLBACK_ACCENT;
     }
-};
-
-const getAccentSurfaces = (color: string) => {
-    const surface = hexToRgba(color, 0.18) ?? FALLBACK_SURFACE;
-    const hover = hexToRgba(color, 0.28) ?? FALLBACK_SURFACE_HOVER;
-
-    return { surface, hover };
 };
 
 const formatDateRange = (start: Date, end: Date) => {
@@ -192,16 +164,13 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     style = {}
 }) => {
     const accentColor = getCategoryColor(event);
-    const { surface, hover } = getAccentSurfaces(accentColor);
     const isPast = isEventPast(event.startTime, event.endTime);
     const timeLabelRaw = formatTimeLabel(event);
     const durationLabelRaw = getDurationLabel(event);
 
     const composedStyle: React.CSSProperties = {
         ...style,
-        ['--event-accent-color' as string]: accentColor,
-        ['--event-accent-surface' as string]: surface,
-        ['--event-accent-surface-hover' as string]: hover
+        ['--event-accent-color' as string]: accentColor
     };
 
     const spanInfo =

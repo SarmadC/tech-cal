@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
-import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import '@/app/styles/event-card.css';
@@ -29,11 +28,6 @@ export interface TechCalendarDayViewProps {
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => ({ hour: i }));
 
 export function TechCalendarDayView({ events, initialDate, categories, onEventSelect }: TechCalendarDayViewProps) {
-    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-    const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
-
     const dayEvents = useMemo(() => {
         // Use proper day view processing for multi-day events
         const processedEvents = processEventsForDayView(events, initialDate);
@@ -182,31 +176,10 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
 
     // Handlers
     const handleEventClick = (event: Event) => {
-        setIsPreviewVisible(false);
         onEventSelect?.(event);
     };
-    const handleEventHover = (event: Event, mouseEvent: React.MouseEvent) => {
-        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-        const rect = mouseEvent.currentTarget.getBoundingClientRect();
-        setPreviewEvent(event);
-        setPreviewPosition({ x: rect.right + 10, y: rect.top });
-        setIsPreviewVisible(true);
-    };
-    const handleEventLeave = () => {
-        hideTimerRef.current = setTimeout(() => setIsPreviewVisible(false), 300);
-    };
-    const handlePreviewHover = () => {
-        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-
-    // Cleanup timer on unmount
-    useEffect(() => {
-        return () => {
-            if (hideTimerRef.current) {
-                clearTimeout(hideTimerRef.current);
-            }
-        };
-    }, []);
+    const handleEventHover = (_event: Event, _mouseEvent: React.MouseEvent) => {};
+    const handleEventLeave = () => {};
 
     const gridColsStyle = { gridTemplateColumns: `100px repeat(${Math.max(1, dynamicColumns.length)}, 1fr)` };
 
@@ -316,7 +289,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                 </div>
             </div>
 
-            {previewEvent && (<EventPreviewCard event={previewEvent} isVisible={isPreviewVisible} position={previewPosition} onClose={handleEventLeave} onHover={handlePreviewHover} onLeave={handleEventLeave} />)}
         </div>
     );
 }

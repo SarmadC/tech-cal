@@ -5,8 +5,8 @@ import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import './mobile-calendar.css';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
-// Career impact components removed - using inline implementation
 import MobileEventDetailPanel from './MobileEventDetailPanel';
+// Career impact components removed - using inline implementation
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, DayViewSkeleton } from '@/components/ui/SkeletonLoader';
@@ -37,9 +37,8 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
     isAndroid: _isAndroid = false,
     isLoading = false,
 }) => {
-    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-    const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
     const [_isTransitioning, _setIsTransitioning] = useState(false);
+    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -134,9 +133,8 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
 
     // Event handlers
     const handleEventClick = useCallback((event: Event) => {
-        setPreviewEvent(event);
-        _setIsPreviewVisible(true);
         onEventSelect?.(event);
+        setPreviewEvent(event);
     }, [onEventSelect]);
 
     const _handleEventHover = useCallback((_event: Event, _mouseEvent: React.MouseEvent) => {
@@ -350,10 +348,7 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
             {previewEvent && (
                 <MobileEventDetailPanel
                     event={previewEvent}
-                    onClose={() => {
-                        _setIsPreviewVisible(false);
-                        setPreviewEvent(null);
-                    }}
+                    onClose={() => setPreviewEvent(null)}
                     categories={_categories}
                 />
             )}

@@ -9,7 +9,6 @@ import { useResizeListener } from '@/hooks/useEventListener';
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
-import Loading from '@/components/Loading';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
@@ -18,11 +17,6 @@ import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
 import { CalendarProvider } from '@/contexts';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
-
-const MobileEventDetailPanelDynamic = dynamic(
-    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
-    { loading: () => <Loading /> }
-);
 
 // Shared Desktop Sidebar
 const EventDetailSidebarDynamic = dynamic(
@@ -431,22 +425,12 @@ export default function CalendarClientView({
                                         </div>
                                     </div>
                                 )}
-                                {state.selectedEvent && (
-                                    <>
-                                        {isMobile ? (
-                                            <MobileEventDetailPanelDynamic
-                                                event={state.selectedEvent}
-                                                onClose={actions.closeEventDetail}
-                                                categories={initialCategories}
-                                            />
-                                        ) : (
-                                            <EventDetailSidebarDynamic
-                                                event={state.selectedEvent}
-                                                onClose={actions.closeEventDetail}
-                                                categories={initialCategories}
-                                            />
-                                        )}
-                                    </>
+                                {state.selectedEvent && !isMobile && (
+                                    <EventDetailSidebarDynamic
+                                        event={state.selectedEvent}
+                                        onClose={actions.closeEventDetail}
+                                        categories={initialCategories}
+                                    />
                                 )}
                             </div>
                         )}

@@ -4,8 +4,8 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
-// Career impact components removed - using inline implementation
 import MobileEventDetailPanel from './MobileEventDetailPanel';
+// Career impact components removed - using inline implementation
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
 export interface MobileMultiDayCalendarViewProps {
@@ -23,13 +23,10 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
   currentDate,
   categories: _categories,
   profile: _profile,
-  onEventSelect: _onEventSelect,
+  onEventSelect,
   onDateChange,
   className = ''
 }) => {
-  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
-
   // Generate array of days to display (current week)
   const displayDays = useMemo(() => {
     const days = [];
@@ -78,20 +75,11 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
 
   const monthNames = getMonthNames();
 
-  // Event preview handlers
+  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
+
   const handleEventTap = (event: Event) => {
+    onEventSelect?.(event);
     setPreviewEvent(event);
-    _setIsPreviewVisible(true);
-  };
-
-  const handleClosePreview = () => {
-    _setIsPreviewVisible(false);
-    setPreviewEvent(null);
-  };
-
-  const _handleTrackEvent = (_event: Event) => {
-    // Event tracking is handled by the MobileEventDetailPanel component
-    // Event tracked successfully
   };
 
   // Swipe navigation handlers
@@ -247,7 +235,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
       {previewEvent && (
         <MobileEventDetailPanel
           event={previewEvent}
-          onClose={handleClosePreview}
+          onClose={() => setPreviewEvent(null)}
           categories={_categories}
         />
       )}

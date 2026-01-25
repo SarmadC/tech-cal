@@ -202,6 +202,33 @@ textarea:not([class*="fc-"]):focus {
   /* weekday headers */
   --calendar-divider: var(--border-subtle);
   /* week dividers */
+
+  /* Calendar Month View - Dark Mode */
+  --calendar-month-grid-line: var(--border-strong);
+  --calendar-month-grid-line-soft: var(--border-default);
+  --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main), var(--accent-primary) 6%);
+  --calendar-month-cell-hover-ring: color-mix(in srgb, var(--accent-primary) 40%, var(--background-main));
+  --calendar-month-other-bg: color-mix(in srgb, var(--background-main) 85%, var(--foreground-primary));
+  --calendar-month-weekend-bg: color-mix(in srgb, var(--background-secondary) 85%, var(--foreground-primary));
+  --calendar-month-weekend-text: var(--foreground-tertiary);
+  --calendar-month-today-bg: color-mix(in srgb, var(--brand-primary) 14%, var(--background-main));
+  --calendar-month-today-border: color-mix(in srgb, var(--brand-primary) 40%, var(--background-main));
+  --calendar-month-today-ring: color-mix(in srgb, var(--brand-primary) 60%, var(--background-main));
+  --calendar-month-today-number-bg: color-mix(in srgb, var(--brand-primary) 24%, var(--background-main));
+  --calendar-month-today-number-text: var(--foreground-primary);
+  --calendar-month-chip-bg: var(--background-secondary);
+  --calendar-month-chip-border: var(--border-default);
+  --calendar-month-chip-hover-bg: color-mix(in srgb, var(--background-secondary) 88%, var(--accent-primary));
+  --calendar-month-chip-focus: var(--accent-primary);
+  --calendar-month-chip-text: var(--foreground-primary);
+  --calendar-month-chip-meta: var(--foreground-secondary);
+  --calendar-month-chip-shadow: color-mix(in srgb, var(--foreground-primary) 18%, transparent);
+  --calendar-month-accent-mix-base: var(--background-secondary);
+  --calendar-month-accent-strength: 45%;
+  --calendar-month-accent-hover-strength: 55%;
+  --calendar-month-more-bg: var(--background-tertiary);
+  --calendar-month-more-border: var(--border-strong);
+  --calendar-month-more-text: var(--foreground-primary);
 }
 
 /* --- Light Theme Override --- */
@@ -304,6 +331,33 @@ textarea:not([class*="fc-"]):focus {
   /* automatically adapts */
   --calendar-divider: var(--border-subtle);
   /* automatically adapts */
+
+  /* Calendar Month View - Light Mode */
+  --calendar-month-grid-line: var(--border-strong);
+  --calendar-month-grid-line-soft: var(--border-default);
+  --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main), var(--accent-primary) 4%);
+  --calendar-month-cell-hover-ring: color-mix(in srgb, var(--accent-primary) 40%, var(--background-main));
+  --calendar-month-other-bg: color-mix(in srgb, var(--background-main) 92%, var(--foreground-primary));
+  --calendar-month-weekend-bg: color-mix(in srgb, var(--background-secondary) 92%, var(--foreground-primary));
+  --calendar-month-weekend-text: var(--foreground-tertiary);
+  --calendar-month-today-bg: color-mix(in srgb, var(--brand-primary) 12%, var(--background-main));
+  --calendar-month-today-border: color-mix(in srgb, var(--brand-primary) 38%, var(--background-main));
+  --calendar-month-today-ring: color-mix(in srgb, var(--brand-primary) 62%, var(--background-main));
+  --calendar-month-today-number-bg: color-mix(in srgb, var(--brand-primary) 22%, var(--background-main));
+  --calendar-month-today-number-text: var(--foreground-primary);
+  --calendar-month-chip-bg: var(--background-secondary);
+  --calendar-month-chip-border: var(--border-default);
+  --calendar-month-chip-hover-bg: color-mix(in srgb, var(--background-secondary) 90%, var(--accent-primary));
+  --calendar-month-chip-focus: var(--accent-primary);
+  --calendar-month-chip-text: var(--foreground-primary);
+  --calendar-month-chip-meta: var(--foreground-secondary);
+  --calendar-month-chip-shadow: color-mix(in srgb, var(--foreground-primary) 18%, transparent);
+  --calendar-month-accent-mix-base: var(--background-main);
+  --calendar-month-accent-strength: 26%;
+  --calendar-month-accent-hover-strength: 36%;
+  --calendar-month-more-bg: var(--background-tertiary);
+  --calendar-month-more-border: var(--border-strong);
+  --calendar-month-more-text: var(--foreground-primary);
 }
 
 /* ============================================== */

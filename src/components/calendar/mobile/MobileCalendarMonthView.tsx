@@ -7,8 +7,8 @@ import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
-import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import DiscoveryCard from './DiscoveryCard';
 import { TimelineAgendaItem } from './TimelineAgendaItem';
 
@@ -45,7 +45,6 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 }) => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
     const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-    const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
     const isCalendarCollapsed = propIsCalendarCollapsed;
 
 
@@ -76,34 +75,9 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 
     const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
         e.stopPropagation();
-        setPreviewEvent(event);
-        _setIsPreviewVisible(true);
         onEventSelect?.(event);
+        setPreviewEvent(event);
     }, [onEventSelect]);
-
-    const _handleEventHover = useCallback((_event: Event, _mouseEvent: React.MouseEvent) => {
-        // if (hideTimer) {
-        //   clearTimeout(hideTimer);
-        //   setHideTimer(null);
-        // }
-
-        // const rect = mouseEvent.currentTarget.getBoundingClientRect();
-        // setPreviewEvent(event);
-        // setPreviewPosition({ x: rect.right + 10, y: rect.top });
-        // setIsPreviewVisible(true);
-    }, []);
-
-    const _handleEventLeave = useCallback(() => {
-        // const timer = setTimeout(() => {
-        //   setIsPreviewVisible(false);
-        //   setPreviewEvent(null);
-        // }, 300);
-        // setHideTimer(timer);
-    }, []);
-
-
-
-
 
 
     // Show loading state
@@ -203,14 +177,10 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                 </div>
             </div>
 
-            {/* Event Detail Panel */}
             {previewEvent && (
                 <MobileEventDetailPanel
                     event={previewEvent}
-                    onClose={() => {
-                        _setIsPreviewVisible(false);
-                        setPreviewEvent(null);
-                    }}
+                    onClose={() => setPreviewEvent(null)}
                     categories={categories}
                 />
             )}

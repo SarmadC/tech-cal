@@ -58,7 +58,6 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
@@ -332,8 +331,8 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
 
   const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
     e.stopPropagation();
-    _setIsPreviewVisible(false);
     onEventSelect?.(event);
+    setPreviewEvent(event);
   }, [onEventSelect]);
 
 
@@ -676,10 +675,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
       {previewEvent && (
         <MobileEventDetailPanel
           event={previewEvent}
-          onClose={() => {
-            _setIsPreviewVisible(false);
-            setPreviewEvent(null);
-          }}
+          onClose={() => setPreviewEvent(null)}
           categories={categories}
         />
       )}

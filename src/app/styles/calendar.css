@@ -1,24 +1,4 @@
 /* ==========================================================================
-   EVENT PREVIEW CARD - ENSURE ALWAYS INTERACTIVE
-   ========================================================================== */
-
-/* Force EventPreviewCard to always be interactive and above all other elements */
-[class*="EventPreviewCard"],
-.fixed.z-\\[9999\\] {
-  pointer-events: auto !important;
-  z-index: 9999 !important;
-}
-
-/* Ensure all buttons and interactive elements within EventPreviewCard are clickable */
-[class*="EventPreviewCard"] button,
-.fixed.z-\\[9999\\] button,
-[class*="EventPreviewCard"] a,
-.fixed.z-\\[9999\\] a {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* ==========================================================================
    1. GENERIC CALENDAR & GRID STYLES
    ========================================================================== */
 

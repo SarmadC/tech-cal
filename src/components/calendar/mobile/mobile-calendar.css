@@ -1251,212 +1251,6 @@
   }
 }
 
-/* ==========================================================================
-   MOBILE EVENT PREVIEW - TAP-TO-PREVIEW FUNCTIONALITY
-   ========================================================================== */
-
-.mobile-event-preview-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: var(--space-4);
-  backdrop-filter: blur(4px);
-  animation: mobile-preview-fade-in 0.3s ease-out;
-}
-
-.mobile-event-preview-container {
-  background: var(--background-main);
-  border-radius: 20px 20px 0 0;
-  width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-2xl);
-  border: 1px solid var(--border-default);
-  animation: mobile-preview-slide-up 0.3s ease-out;
-}
-
-.mobile-event-preview-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-4) var(--space-2);
-  border-bottom: 1px solid var(--border-default);
-}
-
-.mobile-event-preview-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  flex: 1;
-}
-
-.mobile-event-tag {
-  font-size: 0.75rem;
-  padding: var(--space-1) var(--space-2);
-  border-radius: 12px;
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-  border: 1px solid var(--accent-border) !important;
-  font-weight: 500;
-}
-
-/* Override Badge component styles specifically for mobile event tags */
-.mobile-event-tag.bg-secondary {
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-}
-
-.mobile-event-tag.text-secondary-foreground {
-  color: var(--background-main) !important;
-}
-
-.mobile-event-tag.border-transparent {
-  border: 1px solid var(--accent-border) !important;
-}
-
-.mobile-event-tag:hover {
-  background: var(--accent-primary-hover) !important;
-  color: var(--background-main) !important;
-}
-
-.mobile-live-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: var(--accent-error);
-  color: white;
-  border: none;
-}
-
-.mobile-live-indicator {
-  width: 6px;
-  height: 6px;
-  background: white;
-  border-radius: 50%;
-  animation: mobile-pulse 1.5s infinite;
-}
-
-.mobile-event-preview-close {
-  background: none;
-  border: none;
-  color: var(--foreground-secondary);
-  padding: var(--space-1);
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  margin-left: var(--space-2);
-}
-
-.mobile-event-preview-close:hover {
-  background: var(--background-tertiary);
-  color: var(--foreground-primary);
-}
-
-.mobile-event-preview-title {
-  padding: 0 var(--space-4) var(--space-3);
-}
-
-.mobile-event-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--foreground-primary);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.mobile-event-preview-details {
-  padding: 0 var(--space-4) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.mobile-event-detail {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--foreground-secondary);
-  font-size: 0.875rem;
-}
-
-.mobile-event-detail .material-icon {
-  color: var(--accent-primary);
-  flex-shrink: 0;
-}
-
-.mobile-event-preview-description {
-  padding: 0 var(--space-4) var(--space-4);
-  border-top: 1px solid var(--border-default);
-}
-
-.mobile-event-description {
-  color: var(--foreground-secondary);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  margin: var(--space-3) 0 0;
-}
-
-.mobile-event-preview-actions {
-  padding: var(--space-4);
-  border-top: 1px solid var(--border-default);
-  background: var(--background-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.mobile-track-button,
-.mobile-share-button,
-.mobile-join-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  font-weight: 500;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-}
-
-/* Track button - override default button styles */
-.mobile-track-button {
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-}
-
-/* Primary CTA - Track button with accent background */
-.mobile-track-button {
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-  border: none !important;
-  font-weight: 600 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-.mobile-track-button:hover {
-  background: var(--accent-primary-hover) !important;
-  color: var(--background-main) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-}
-
-/* Override Tailwind classes for track button */
-.mobile-track-button.bg-primary {
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-}
-
-.mobile-track-button.text-primary-foreground {
-  color: var(--background-main) !important;
-}
-
 /* Icon-only button styling */
 .mobile-icon-only {
   aspect-ratio: 1;
@@ -1580,134 +1374,6 @@
 .mobile-share-menu-option:hover {
   background: var(--background-tertiary) !important;
   transform: translateY(-1px);
-}
-
-.mobile-share-button {
-  background: var(--background-main) !important;
-  color: var(--foreground-primary) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-}
-
-.mobile-share-button:hover {
-  background: var(--background-tertiary) !important;
-  border-color: var(--border-strong) !important;
-}
-
-.mobile-join-button {
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-  border: none !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-  font-weight: 600 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Override Tailwind classes specifically for mobile join button */
-.mobile-join-button.bg-primary {
-  background: var(--accent-primary) !important;
-  color: var(--background-main) !important;
-}
-
-.mobile-join-button.text-primary-foreground {
-  color: var(--background-main) !important;
-}
-
-.mobile-join-button:hover {
-  background: var(--accent-primary-hover) !important;
-  color: var(--background-main) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-}
-
-.mobile-details-button {
-  background: var(--background-main) !important;
-  color: var(--foreground-primary) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-}
-
-.mobile-details-button:hover {
-  background: var(--background-tertiary) !important;
-  border-color: var(--border-strong) !important;
-}
-
-.mobile-calendar-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--background-main);
-  color: var(--foreground-primary);
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
-  font-weight: 500;
-  font-size: 0.875rem;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.mobile-calendar-button:hover {
-  background: var(--background-tertiary);
-  border-color: var(--border-strong);
-  text-decoration: none;
-  color: var(--foreground-primary);
-}
-
-/* Animations */
-@keyframes mobile-preview-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes mobile-preview-slide-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes mobile-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  .mobile-event-preview-overlay {
-    padding: var(--space-2);
-  }
-  
-  .mobile-event-preview-container {
-    border-radius: 16px 16px 0 0;
-  }
-  
-  .mobile-event-preview-header,
-  .mobile-event-preview-title,
-  .mobile-event-preview-details,
-  .mobile-event-preview-description,
-  .mobile-event-preview-actions {
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
-  }
-  
-  .mobile-event-title {
-    font-size: 1.125rem;
-  }
 }
 
 /* ========== NEW MOBILE TOP NAVIGATION ========== */
@@ -2134,6 +1800,25 @@
 .mobile-today-text {
     font-size: 14px;
     font-weight: 500;
+}
+
+/* Animations */
+@keyframes mobile-preview-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-preview-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 /* Mobile Quick Date Picker */

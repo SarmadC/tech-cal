@@ -4,8 +4,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { EventClickArg } from '@/types/fullcalendar';
 import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
-import { useEventPreview } from '@/hooks/useEventPreview';
-import EventPreviewCard from './EventPreviewCard';
 import { MonthEventCard } from './MonthEventCard';
 import MonthDayPopover from './MonthDayPopover';
 import '@/app/styles/event-card.css';
@@ -132,6 +130,7 @@ const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
         <button
             type="button"
             className="month-inline-event"
+            style={{ ['--event-accent-color' as string]: accent }}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             onMouseEnter={(e) => onHover(event, e)}
@@ -222,7 +221,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
     const _activeCalendarRef = calendarRef || internalCalendarRef;
     const [_isMobile, setIsMobile] = useState(false);
-    const { hidePreview, previewState, showPreview, cancelHide, forceHidePreview } = useEventPreview();
+    const noop = useCallback(() => {}, []);
     const [expandedDays, setExpandedDays] = useState<Record<string, true>>({});
     const [popoverState, setPopoverState] = useState<{
         isOpen: boolean;
@@ -237,21 +236,11 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         events: []
     });
 
-    // Event click handler - force hide preview immediately to prevent double-click issue
     const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
-        forceHidePreview(); // Immediately hide preview to avoid click interference
         onEventSelect?.(event);
-    }, [onEventSelect, forceHidePreview]);
+    }, [onEventSelect]);
 
-    // Event hover handler
-    const handleEventHover = useCallback((event: Event | MultiDayEventInstance, e: React.MouseEvent) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const position = {
-            x: rect.left + rect.width / 2,
-            y: rect.top
-        };
-        showPreview(event as Event, position);
-    }, [showPreview]);
+    const handleEventHover = useCallback((_event: Event | MultiDayEventInstance, _e: React.MouseEvent) => {}, []);
 
     // Memoize the card style to prevent new object creation on every render
     const cardStyle = useMemo(() => ({
@@ -277,8 +266,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 y: rect.bottom
             }
         });
-        hidePreview();
-    }, [hidePreview]);
+    }, []);
 
     const closeOverflowPopover = useCallback(() => {
         setPopoverState((prev) => ({ ...prev, isOpen: false }));
@@ -337,7 +325,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     event={segment.cardEvent}
                                                     onClick={() => handleEventClick(segment.cardEvent)}
                                                     onHover={(e) => handleEventHover(segment.cardEvent, e)}
-                                                    onLeave={hidePreview}
+                                                    onLeave={noop}
                                                     style={cardStyle}
                                                 />
                                             </div>
@@ -376,7 +364,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                             event={event}
                                                             onSelect={handleEventClick}
                                                             onHover={handleEventHover}
-                                                            onLeave={hidePreview}
+                                                            onLeave={noop}
                                                         />
                                                     </div>
                                                 ))}
@@ -386,8 +374,8 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                         type="button"
                                                         className="month-grid-more-button"
                                                         onClick={(e) => openOverflowPopover(dayData.dateKey, dayData.date, dayData.overflowEvents, e)}
-                                                        onMouseEnter={() => hidePreview()}
-                                                        onFocus={() => hidePreview()}
+                                                        onMouseEnter={noop}
+                                                        onFocus={noop}
                                                         aria-label={`Show ${dayData.overflowEvents.length} more events on ${dayData.date.toLocaleDateString(undefined, {
                                                             weekday: 'long',
                                                             month: 'long',
@@ -1474,18 +1462,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         <div className={`tech-calendar-month-view ${className}`}>
             <CustomMonthGrid />
 
-            {/* Event Preview Card */}
-            {previewState.event && (
-                <EventPreviewCard
-                    event={previewState.event}
-                    isVisible={previewState.isVisible}
-                    position={previewState.position}
-                    onClose={hidePreview}
-                    onHover={cancelHide}
-                    onLeave={hidePreview}
-                />
-            )}
-
             {/* Month Day Overflow Popover */}
             <MonthDayPopover
                 events={popoverState.events}
@@ -1495,7 +1471,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 position={popoverState.position}
                 onEventSelect={handleEventClick}
                 onEventHover={handleEventHover}
-                onEventLeave={hidePreview}
+                onEventLeave={noop}
             />
         </div>
     );

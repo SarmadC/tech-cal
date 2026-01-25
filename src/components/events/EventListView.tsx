@@ -62,11 +62,6 @@ const EventDetailPanelDynamic = dynamic(
     { loading: () => <Loading /> },
 );
 
-const MobileEventDetailPanelDynamic = dynamic(
-    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
-    { loading: () => <Loading /> },
-);
-
 export default function EventListView({ initialCategories, profile, locationOptions }: EventListViewProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -706,43 +701,32 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     </div>
                 </main>
 
-                {selectedEvent && (
-                    <>
-                        {isMobile ? (
-                            <MobileEventDetailPanelDynamic
+                {selectedEvent && !isMobile && (
+                    <div
+                        className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
+                            }`}
+                        onClick={handleCloseDetails}
+                        role="presentation"
+                    >
+                        <div
+                            className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${isClosing
+                                ? 'animate-out slide-out-to-right'
+                                : 'animate-in slide-in-from-right'
+                                }`}
+                            onClick={(event) => event.stopPropagation()}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Event details"
+                        >
+                            <EventDetailPanelDynamic
                                 event={selectedEvent}
                                 categories={initialCategories}
                                 onClose={handleCloseDetails}
                             />
-                        ) : (
-                            <div
-                                className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
-                                    }`}
-                                onClick={handleCloseDetails}
-                                role="presentation"
-                            >
-                                <div
-                                    className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${isClosing
-                                        ? 'animate-out slide-out-to-right'
-                                        : 'animate-in slide-in-from-right'
-                                        }`}
-                                    onClick={(event) => event.stopPropagation()}
-                                    role="dialog"
-                                    aria-modal="true"
-                                    aria-label="Event details"
-                                >
-                                    <EventDetailPanelDynamic
-                                        event={selectedEvent}
-                                        categories={initialCategories}
-                                        onClose={handleCloseDetails}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </>
+                        </div>
+                    </div>
                 )}
             </div>
         </SidebarProvider>
     );
 }
-

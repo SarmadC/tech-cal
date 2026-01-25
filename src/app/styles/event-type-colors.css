@@ -61,6 +61,17 @@
   --event-default-bg: #f1f5f9;
   --event-default-border: #cbd5e1;
   --event-default-text: #475569;
+
+  /* Category Accents - Standard (Light Mode / Default) - Tailwind 500s */
+  --color-category-summit: #3b82f6;
+  --color-category-workshop: #8b5cf6;
+  --color-category-networking: #10b981;
+  --color-category-conference: #0ea5e9;
+  --color-category-webinar: #f97316;
+  --color-category-startup: #ec4899;
+  --color-category-trade-show: #6366f1;
+  --color-category-product-launch: #f59e0b;
+  --color-category-training: #14b8a6;
 }
 
 /* Dark mode overrides */
@@ -124,6 +135,17 @@
   --event-default-bg: #1e293b;
   --event-default-border: #475569;
   --event-default-text: #cbd5e1;
+
+  /* Category Accents - Dark Mode Overrides - Tailwind 700s */
+  --color-category-summit: #1d4ed8;
+  --color-category-workshop: #6d28d9;
+  --color-category-networking: #047857;
+  --color-category-conference: #0369a1;
+  --color-category-webinar: #c2410c;
+  --color-category-startup: #be185d;
+  --color-category-trade-show: #4338ca;
+  --color-category-product-launch: #b45309;
+  --color-category-training: #0f766e;
 }
 
 /* Event type tag classes */

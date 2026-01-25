@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 import Link, { LinkProps } from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import { generateConsistentAvatarUrl } from '@/services/avatarService';
 
 interface MenuRowProps {
-    icon?: string;
+    icon?: IconName;
     label: string;
     subLabel?: string;
     rightContent?: React.ReactNode;
@@ -22,8 +22,8 @@ interface MenuRowProps {
 const MenuRow = ({ icon, label, subLabel, rightContent, href, onClick, danger, className = '' }: MenuRowProps) => {
     const content = (
         <div className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors group select-none cursor-pointer w-full text-left ${danger
-                ? 'hover:bg-red-50 dark:hover:bg-red-950/30'
-                : 'hover:bg-background-secondary'
+            ? 'hover:bg-red-50 dark:hover:bg-red-950/30'
+            : 'hover:bg-background-secondary'
             } ${className}`}>
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 {icon && (
@@ -31,15 +31,15 @@ const MenuRow = ({ icon, label, subLabel, rightContent, href, onClick, danger, c
                         name={icon}
                         size={18}
                         className={`transition-colors ${danger
-                                ? 'text-foreground-tertiary group-hover:text-red-500'
-                                : 'text-foreground-tertiary group-hover:text-foreground-primary'
+                            ? 'text-foreground-tertiary group-hover:text-red-500'
+                            : 'text-foreground-tertiary group-hover:text-foreground-primary'
                             }`}
                     />
                 )}
                 <div className="flex flex-col min-w-0">
                     <span className={`text-sm truncate ${danger
-                            ? 'text-foreground-secondary group-hover:text-red-600 dark:group-hover:text-red-400'
-                            : 'text-foreground-secondary group-hover:text-foreground-primary'
+                        ? 'text-foreground-secondary group-hover:text-red-600 dark:group-hover:text-red-400'
+                        : 'text-foreground-secondary group-hover:text-foreground-primary'
                         }`}>
                         {label}
                     </span>
