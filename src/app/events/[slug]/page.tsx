@@ -178,7 +178,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
         ? event.description.slice(0, 160) + (event.description.length > 160 ? '...' : '')
         : `Join ${event.title} - a tech event happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}.`;
 
-    const ogImage = event.event_image_url || 'https://kure-cal.com/og-default.png';
+    const ogImage = event.event_image_url || 'https://kure-cal.com/og-image.png';
 
     return {
         title: `${event.title} - ${eventDate} | Kure-Cal`,
