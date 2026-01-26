@@ -192,12 +192,8 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
                                             )}
 
                                             <div className="flex items-center gap-3">
-                                                {/* Avatar handling for Profile, Icon for others */}
-                                                {item.id === 'profile' ? (
-                                                    <Avatar url={profile?.avatarUrl} name={profile?.fullName || ''} />
-                                                ) : (
-                                                    <MaterialIcon name={item.icon} size={20} className="text-[var(--mono-text-secondary)]" />
-                                                )}
+
+                                                <MaterialIcon name={item.icon} size={20} className="text-[var(--mono-text-secondary)]" />
 
                                                 <span className="text-[15px] font-medium opacity-90">{item.label}</span>
                                             </div>
