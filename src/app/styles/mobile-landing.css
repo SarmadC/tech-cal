@@ -731,8 +731,7 @@ html.light .mobile-hero {
 
 /* Mobile navbar spacing - add top padding to account for fixed navbar */
 .mobile-landing-main {
-  padding-top: 80px;
-  /* Space for fixed navbar */
+  /* Padding removed as requested */
 }
 
 /* Transparent navbar logo styling - theme-aware colors */

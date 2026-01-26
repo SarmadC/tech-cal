@@ -26,7 +26,7 @@ export interface MultiSelectDropdownProps {
     searchable?: boolean;
     className?: string;
     disabled?: boolean;
-    suggestions?: string[]; 
+    suggestions?: string[];
     suggestionLabel?: string;
     allowCustom?: boolean;
     onDuplicateAttempt?: (value: string) => void;
@@ -256,12 +256,21 @@ export default function MultiSelectDropdown({
     ).slice(0, 5) || [];
 
     return (
-        <div className={twMerge("space-y-4", className)} ref={containerRef}>
+        <div className={twMerge(
+            variant === 'linear' ? "space-y-2" : "space-y-4",
+            className
+        )} ref={containerRef}>
             {/* Header Section */}
             {(label || description) && (
                 <div className="space-y-1">
                     {label && <label className="text-sm font-medium text-foreground/90">{label}</label>}
-                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
+                    {description && (
+                        <p className={clsx(
+                            variant === 'linear' ? "text-[13px] text-[#8A8F98]" : "text-xs text-muted-foreground"
+                        )}>
+                            {description}
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -281,11 +290,15 @@ export default function MultiSelectDropdown({
                         variant === 'minimal'
                             ? "min-h-[42px] px-3 py-2 rounded-xl border bg-transparent border-transparent hover:bg-secondary/50"
                             : variant === 'linear'
-                                ? "min-h-[40px] rounded-lg border bg-[#1D1E21] border-[#36373A] px-2 py-1.5" // Input container
+                                ? "min-h-[40px] rounded-none border-b bg-transparent px-2 py-2.5" // Input container
                                 : "min-h-[42px] px-3 py-2 rounded-xl border bg-[hsl(var(--background))]",
                         isOpen && variant !== 'linear'
                             ? (variant === 'minimal' ? "bg-secondary/50" : "border-border ring-1 ring-border/50 shadow-lg")
-                            : (variant === 'linear' ? "border-[#E3E3E3] shadow-[0_0_0_1px_rgba(227,227,227,0.4)]" : "border-border/50 hover:border-border hover:bg-secondary/30")
+                            : (variant === 'linear'
+                                // Linear Active State: 1px bottom accent #5E6AD2
+                                ? (isOpen ? "border-b-[#5E6AD2]" : "border-b-white/[0.06]")
+                                // Default Hover
+                                : "border-border/50 hover:border-border hover:bg-secondary/30")
                     )}
                 >
                     {(variant !== 'linear') && (
@@ -317,22 +330,22 @@ export default function MultiSelectDropdown({
                                 className={clsx(
                                     "inline-flex items-center gap-1.5 cursor-default transition-colors w-max",
                                     variant === 'linear'
-                                        ? "h-[22px] pl-2 pr-1 rounded-[4px] bg-[#36373A] text-[#EDEDEF] text-[12px] font-normal border border-white/[0.08] min-w-[140px] justify-between"
+                                        ? "h-[22px] pl-2 pr-1 rounded-[4px] bg-white/[0.07] text-[#EDEDEF] text-[13px] font-medium border border-transparent ring-1 ring-inset ring-white/[0.08]"
                                         : "px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-foreground border border-border/50"
                                 )}
                             >
-                                <span className={clsx("truncate", variant === 'linear' ? "max-w-[120px] flex-1" : "")}>{getLabel(value)}</span>
+                                <span className={clsx("truncate", variant === 'linear' ? "max-w-[160px]" : "")}>{getLabel(value)}</span>
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleRemove(value); }}
                                     className={clsx(
                                         "rounded-sm transition-all flex-shrink-0 flex items-center justify-center",
                                         variant === 'linear'
-                                            ? "text-[#8A8F98] opacity-50 hover:opacity-100 hover:text-white ml-auto"
+                                            ? "text-white/50 hover:text-white"
                                             : "hover:bg-white/20 p-0.5"
                                     )}
                                 >
-                                    <X size={variant === 'linear' ? 12 : 10} weight="bold" />
+                                    <X size={variant === 'linear' ? 12 : 10} weight={variant === 'linear' ? "regular" : "bold"} />
                                 </button>
                             </motion.span>
                         ))}
@@ -369,11 +382,11 @@ export default function MultiSelectDropdown({
                     {/* Counter - Centered on right for Linear */}
                     {maxSelections && (
                         <div className={clsx(
-                            variant === 'linear' ? "absolute right-3 top-1/2 -translate-y-1/2" : "flex items-center gap-2"
+                            variant === 'linear' ? "absolute right-2 top-2.5" : "flex items-center gap-2"
                         )}>
                             <span className={clsx(
                                 "text-[10px] font-mono",
-                                variant === 'linear' ? "text-[#5A5B60]" : "text-muted-foreground/40"
+                                variant === 'linear' ? "text-white/35" : "text-muted-foreground/40"
                             )}>
                                 {selectedValues.length}/{maxSelections}
                             </span>

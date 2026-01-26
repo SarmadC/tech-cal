@@ -546,7 +546,7 @@ export default function CareerProfileManager({
                     <SettingRow
                         label="Event Formats"
                         value={formatList(currentCareerProfile.preferredEventTypes || [], (t) => t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}
-                        onSet={() => handleQuickEdit('team')}
+                        onSet={() => handleQuickEdit('networking')}
                     />
                 </SettingSection>
 

@@ -95,11 +95,12 @@
     justify-self: start;
 }
 
+
 .headerCenter {
     justify-self: center;
     font-size: 0.8125rem; /* 13px */
     font-weight: 500;
-    color: rgba(138, 143, 152, 0.95);
+    color: rgba(138, 143, 152, 0.6);
 }
 
 .headerRight {
@@ -342,8 +343,8 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 1rem; /* 16px */
-    background-color: #191A1D;
+    padding: 1rem 1.5rem; /* Increased horizontal padding */
+    background-color: #1D1E21; /* Slightly lighter than page bg */
     /* backdrop-filter: blur(12px); REMOVED */
     border-top: 1px solid #2C2D31;
     z-index: 50;

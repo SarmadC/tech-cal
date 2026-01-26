@@ -17,7 +17,7 @@ import {
     INTEREST_AREAS,
     ROLE_TAXONOMY
 } from '@/types/career';
-import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+import MultiSelectDropdown from '@/components/ui/MobileMultiSelectDropdown';
 import { TeamRoleSelector } from '../TeamRoleSelector';
 
 import { MobileExperienceLevelSelector } from './MobileExperienceLevelSelector';
@@ -509,6 +509,35 @@ export const MobileCareerOnboarding: React.FC<MobileCareerOnboardingProps> = ({
                         type="checkbox"
                     />
                 ))}
+            </div>
+
+            <div className="mt-8 space-y-4">
+                <div className={styles.sectionHeader}>
+                    <h2 className="text-[15px] font-medium text-white">Event Formats</h2>
+                    <p className="text-[13px] text-[#8A8F98]">What types of events do you prefer?</p>
+                </div>
+                <MultiSelectDropdown
+                    options={[
+                        { value: 'conference', label: 'Conference' },
+                        { value: 'workshop', label: 'Workshop' },
+                        { value: 'meetup', label: 'Meetup' },
+                        { value: 'webinar', label: 'Webinar' },
+                        { value: 'hackathon', label: 'Hackathon' },
+                        { value: 'summit', label: 'Summit' },
+                        { value: 'bootcamp', label: 'Bootcamp' },
+                        { value: 'certification', label: 'Certification' },
+                        { value: 'panel', label: 'Panel' },
+                        { value: 'keynote', label: 'Keynote' },
+                        { value: 'networking', label: 'Networking' },
+                        { value: 'trade-show', label: 'Trade Show' },
+                    ]}
+                    selectedValues={data.step5_networking?.preferredEventTypes || []}
+                    onChange={(values) => updateData('step5_networking', { ...data.step5_networking, preferredEventTypes: values })}
+                    label="Preferred Formats"
+                    placeholder="Select formats..."
+                    maxSelections={5}
+                    variant="linear"
+                />
             </div>
         </div>
     );
