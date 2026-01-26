@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Event, EventType, AppProfile } from '@/types';
-import { isProfileEmpty } from '@/utils/profileTypeGuards';
+import { isProfileEmpty, extractCareerProfile } from '@/utils/profileTypeGuards';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 
@@ -48,7 +48,11 @@ export default function DiscoverClientView({
         const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
 
         try {
-            const budget = (profile as unknown as { careerProfile?: { budget?: string } } | null)?.careerProfile?.budget;
+            // Safely extract career profile using the shared utility
+            // This handles the correct path: profile.preferences.careerProfile
+            const careerProfile = extractCareerProfile(profile);
+            const budget = careerProfile?.budget;
+
             if (budget && typeof budget === 'string') {
                 // Validate budget is one of the allowed values
                 const validBudgets = ['all', 'free-only', 'low', 'moderate', 'high', 'unlimited'] as const;
@@ -102,7 +106,8 @@ export default function DiscoverClientView({
     useEffect(() => {
         try {
             const hintEnabled = process.env.NEXT_PUBLIC_SHOW_BUDGET_HINT === 'true';
-            const hasBudgetPreference = Boolean((profile as any)?.careerProfile?.budget); // eslint-disable-line @typescript-eslint/no-explicit-any
+            const careerProfile = extractCareerProfile(profile);
+            const hasBudgetPreference = Boolean(careerProfile?.budget);
             const alreadyShown = typeof window !== 'undefined' && sessionStorage.getItem('usd-budget-hint-shown') === '1';
 
             if (hintEnabled && hasBudgetPreference && !alreadyShown) {
