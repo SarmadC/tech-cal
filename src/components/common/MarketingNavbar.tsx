@@ -48,7 +48,7 @@ export default function MarketingNavbar() {
                             <NavbarThemeToggle />
                             <NavbarButton
                                 variant="secondary"
-                                onClick={() => router.push("/login")}
+                                href="/login"
                             >
                                 Login
                             </NavbarButton>
