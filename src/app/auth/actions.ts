@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { ProfileService } from '@/services/profileService'
 import { OAuthProvider } from '@/types'
+import { getPostHogClient } from '@/lib/posthog-server'
 
 
 import {
@@ -111,6 +112,32 @@ export async function loginAction(
             };
         }
         
+        // Track successful login event server-side
+        try {
+            const posthog = getPostHogClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                posthog.capture({
+                    distinctId: user.id,
+                    event: 'user_logged_in',
+                    properties: {
+                        email: validatedFields.data.email,
+                        method: 'email',
+                        source: 'server_action',
+                    }
+                });
+                posthog.identify({
+                    distinctId: user.id,
+                    properties: {
+                        email: validatedFields.data.email,
+                    }
+                });
+            }
+        } catch (posthogError) {
+            // Don't fail login if PostHog tracking fails
+            console.error('[PostHog] Failed to track login event:', posthogError);
+        }
+
         // Successful login - return success state so AuthForm onSuccess callback can handle redirect
         return {
             success: true,
@@ -178,6 +205,23 @@ export async function signupAction(
         }
         
         if (!session) {
+            // Track signup event (email confirmation pending)
+            try {
+                const posthog = getPostHogClient();
+                posthog.capture({
+                    distinctId: validatedFields.data.email, // Use email as distinct ID until we have user ID
+                    event: 'user_signed_up',
+                    properties: {
+                        email: validatedFields.data.email,
+                        method: 'email',
+                        email_confirmed: false,
+                        source: 'server_action',
+                    }
+                });
+            } catch (posthogError) {
+                console.error('[PostHog] Failed to track signup event:', posthogError);
+            }
+
             // Email confirmation required - return success state with message, stay on page
             return {
                 success: true,
@@ -213,6 +257,33 @@ export async function signupAction(
             // Don't fail signup if profile creation fails - it will be handled by onboarding page
         }
         
+        // Track successful signup event (email confirmed)
+        try {
+            const { data: { user: confirmedUser } } = await supabase.auth.getUser();
+            if (confirmedUser) {
+                const posthog = getPostHogClient();
+                posthog.capture({
+                    distinctId: confirmedUser.id,
+                    event: 'user_signed_up',
+                    properties: {
+                        email: validatedFields.data.email,
+                        method: 'email',
+                        email_confirmed: true,
+                        source: 'server_action',
+                    }
+                });
+                posthog.identify({
+                    distinctId: confirmedUser.id,
+                    properties: {
+                        email: validatedFields.data.email,
+                        name: serviceData.name,
+                    }
+                });
+            }
+        } catch (posthogError) {
+            console.error('[PostHog] Failed to track signup event:', posthogError);
+        }
+
         // Fully signed up and confirmed - return success state so AuthForm onSuccess callback can handle redirect
         return {
             success: true,
@@ -249,6 +320,21 @@ export async function forgotPasswordAction(
     try {
         const baseUrl = await getRequestBaseUrl();
         await AuthService.resetPassword(validatedFields.data.email, supabase, baseUrl);
+
+        // Track password reset request
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: validatedFields.data.email,
+                event: 'password_reset_requested',
+                properties: {
+                    email: validatedFields.data.email,
+                    source: 'server_action',
+                }
+            });
+        } catch (posthogError) {
+            console.error('[PostHog] Failed to track password reset request:', posthogError);
+        }
     } catch (error) {
         console.error("Forgot Password Action Error:", error);
         return {

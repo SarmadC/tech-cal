@@ -11,6 +11,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FAQPageJsonLd } from '@/components/seo';
 import { useAuth } from '@/contexts';
 import { useCheckout } from '@/contexts/CheckoutContext';
+import posthog from 'posthog-js';
 
 // FAQ data for structured data
 const pricingFaqs = [
@@ -209,6 +210,13 @@ export default function PricingPage() {
     }, [searchParams, userLoading, user, isOpen, openCheckout, router, pathname]);
 
     const handleStartTrial = () => {
+        // Track checkout started event
+        posthog.capture('subscription_checkout_started', {
+            billing_cycle: billingCycle,
+            is_authenticated: !!user,
+            plan: 'pro',
+        });
+
         if (!user) {
             const nextUrl = `/pricing?checkout=${billingCycle}`;
             router.push(`/login?next=${encodeURIComponent(nextUrl)}`);

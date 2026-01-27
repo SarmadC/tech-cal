@@ -32,6 +32,10 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AccentProvider } from '@/contexts/AccentContext';
 import { SnackbarProvider } from '@/contexts/SnackbarContext';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/seo';
+import { PostHogProvider } from '@/components/providers/PostHogProvider';
+import PostHogPageView from '@/components/providers/PostHogPageView';
+import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
+import { Suspense } from "react";
 
 
 const inter = Inter({
@@ -108,47 +112,52 @@ export default function RootLayout({
                 <WebsiteJsonLd />
             </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
-
-                {/* Global Error Boundary */}
-                <PageErrorBoundary name="RootLayout">
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="dark"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        <AccentProvider>
-                            {/* 1. SupabaseProvider is the outermost context provider */}
-                            <SupabaseProvider>
-                                {/* 2. AuthProvider is next, it needs supabase client */}
-                                <AuthProvider>
-                                    {/* 3. CheckoutProvider needs Auth info but before Subscription */}
-                                    <CheckoutProvider>
-                                        <CheckoutOverlay />
-                                        {/* 4. SubscriptionProvider depends on AuthProvider for user info */}
-                                        <SubscriptionProvider>
-                                            {/* 5. QueryProvider is next, it might need auth context for queries */}
-                                            <QueryProvider>
-                                                <SnackbarProvider>
-                                                    {/* 3. UI/UX providers can go inside */}
-                                                    {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                                                    {/* <SmoothScrollProvider> */}
-                                                    {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                                                    <IconProvider>
-                                                        <ClientLayout>
-                                                            {children}
-                                                        </ClientLayout>
-                                                    </IconProvider>
-                                                    {/* </SmoothScrollProvider> */}
-                                                </SnackbarProvider>
-                                            </QueryProvider>
-                                        </SubscriptionProvider>
-                                    </CheckoutProvider>
-                                </AuthProvider>
-                            </SupabaseProvider>
-                        </AccentProvider>
-                    </ThemeProvider>
-                </PageErrorBoundary>
+                <PostHogProvider>
+                    <GoogleAnalytics />
+                    <Suspense fallback={null}>
+                        <PostHogPageView />
+                    </Suspense>
+                    {/* Global Error Boundary */}
+                    <PageErrorBoundary name="RootLayout">
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="dark"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <AccentProvider>
+                                {/* 1. SupabaseProvider is the outermost context provider */}
+                                <SupabaseProvider>
+                                    {/* 2. AuthProvider is next, it needs supabase client */}
+                                    <AuthProvider>
+                                        {/* 3. CheckoutProvider needs Auth info but before Subscription */}
+                                        <CheckoutProvider>
+                                            <CheckoutOverlay />
+                                            {/* 4. SubscriptionProvider depends on AuthProvider for user info */}
+                                            <SubscriptionProvider>
+                                                {/* 5. QueryProvider is next, it might need auth context for queries */}
+                                                <QueryProvider>
+                                                    <SnackbarProvider>
+                                                        {/* 3. UI/UX providers can go inside */}
+                                                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                                                        {/* <SmoothScrollProvider> */}
+                                                        {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                                        <IconProvider>
+                                                            <ClientLayout>
+                                                                {children}
+                                                            </ClientLayout>
+                                                        </IconProvider>
+                                                        {/* </SmoothScrollProvider> */}
+                                                    </SnackbarProvider>
+                                                </QueryProvider>
+                                            </SubscriptionProvider>
+                                        </CheckoutProvider>
+                                    </AuthProvider>
+                                </SupabaseProvider>
+                            </AccentProvider>
+                        </ThemeProvider>
+                    </PageErrorBoundary>
+                </PostHogProvider>
             </body>
         </html>
     );

@@ -1,14 +1,15 @@
 /**
  * POST /api/calendar/sync
- * 
+ *
  * Sync a single event to/from Google Calendar
- * 
+ *
  * @server-only
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { CalendarSyncService } from '@/services/calendarSyncService';
+import { getPostHogClient } from '@/lib/posthog-server';
 import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage } from '@/utils/errorHandling';
 import { requireFeature } from '@/lib/subscription';
@@ -47,6 +48,23 @@ export async function POST(request: NextRequest) {
             );
 
             if (result.success) {
+                // Track event sync in PostHog
+                try {
+                    const posthog = getPostHogClient();
+                    posthog.capture({
+                        distinctId: user.id,
+                        event: 'event_synced_to_calendar',
+                        properties: {
+                            event_id: eventId,
+                            provider: 'google',
+                            action: 'sync',
+                            source: 'api_route',
+                        }
+                    });
+                } catch (posthogError) {
+                    console.error('[PostHog] Failed to track event sync:', posthogError);
+                }
+
                 return NextResponse.json({
                     success: true,
                     message: 'Event synced to calendar'

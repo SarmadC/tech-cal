@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Spinner, WarningCircle, ArrowClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
+import posthog from 'posthog-js';
 
 // Maximum time to wait for subscription to become active (30 seconds)
 const MAX_WAIT_TIME_MS = 30000;
@@ -16,9 +17,20 @@ type VerificationStatus = 'checking' | 'success' | 'pending' | 'error';
 export default function BillingSuccessPage() {
   const { subscription, isLoading, refreshSubscription } = useSubscription();
   const [status, setStatus] = useState<VerificationStatus>('checking');
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [_elapsedTime, setElapsedTime] = useState(0);
+  const hasTrackedPageView = useRef(false);
 
   const isSubscriptionActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+
+  // Track billing success page view (only once)
+  useEffect(() => {
+    if (!hasTrackedPageView.current) {
+      hasTrackedPageView.current = true;
+      posthog.capture('billing_success_viewed', {
+        initial_subscription_status: subscription?.status || 'unknown',
+      });
+    }
+  }, [subscription?.status]);
 
   // Poll for subscription status
   const checkSubscription = useCallback(async () => {

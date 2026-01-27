@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/utils/logger';
 import { processPaddleEvent, type PaddleWebhookEvent } from '@/services/paddleWebhookService';
+import { getPostHogClient } from '@/lib/posthog-server';
 import type { Database, Json } from '@/types/supabase';
 import crypto from 'crypto';
 
@@ -241,6 +242,40 @@ export async function POST(request: NextRequest) {
 
     // Record successful event
     await recordEvent(supabase, event, result.subscriptionId);
+
+    // Track subscription events in PostHog for key lifecycle events
+    try {
+      const posthog = getPostHogClient();
+      const customerId = event.data.customer_id;
+
+      if (event.event_type === 'subscription.activated') {
+        posthog.capture({
+          distinctId: customerId || event.event_id,
+          event: 'subscription_activated',
+          properties: {
+            subscription_id: event.data.id,
+            billing_cycle: event.data.billing_cycle?.interval || 'unknown',
+            status: event.data.status,
+            paddle_event_id: event.event_id,
+            source: 'paddle_webhook',
+          }
+        });
+      } else if (event.event_type === 'subscription.canceled') {
+        posthog.capture({
+          distinctId: customerId || event.event_id,
+          event: 'subscription_canceled',
+          properties: {
+            subscription_id: event.data.id,
+            status: event.data.status,
+            paddle_event_id: event.event_id,
+            source: 'paddle_webhook',
+          }
+        });
+      }
+    } catch (posthogError) {
+      // Don't fail webhook processing if PostHog tracking fails
+      logger.error('[PostHog] Failed to track subscription event:', posthogError);
+    }
 
     const duration = Date.now() - startTime;
     logger.info(`Webhook processed successfully in ${duration}ms`, {

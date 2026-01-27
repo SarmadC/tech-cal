@@ -3,6 +3,7 @@
 import { Resend } from 'resend';
 import { ContactFormEmail } from '@/components/emails/ContactFormEmail';
 import { ContactFormSchema } from '@/lib/schemas'; // Import from central location
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -62,6 +63,22 @@ export async function submitContactFormAction(
             replyTo: email, // Your correct setting
             react: <ContactFormEmail name={name} email={email} company={company} subject={subject} message={message} />,
         });
+
+        // Track contact form submission
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: email,
+                event: 'contact_form_submitted',
+                properties: {
+                    subject: subject,
+                    has_company: !!company,
+                    source: 'server_action',
+                }
+            });
+        } catch (posthogError) {
+            console.error('[PostHog] Failed to track contact form submission:', posthogError);
+        }
 
         return {
             success: true,

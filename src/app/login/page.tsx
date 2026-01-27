@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import posthog from 'posthog-js';
 
 import { loginAction, resendVerificationAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
@@ -208,6 +209,12 @@ function LoginPageContent() {
         setOauthStartTime(Date.now());
         setPendingProvider(provider);
 
+        // Track OAuth login initiated
+        posthog.capture('oauth_login_initiated', {
+            provider: provider,
+            page: 'login',
+        });
+
         // Show info message for OAuth redirect
         showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
@@ -229,6 +236,7 @@ function LoginPageContent() {
         } catch (error) {
             // This is an actual error
             console.error('[LoginPage] OAuth sign-in error:', error);
+            posthog.captureException(error);
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
