@@ -159,6 +159,12 @@
     cursor: pointer;
 }
 
+@media (min-width: 1024px) {
+    .useCaseCard {
+        flex: 1;
+    }
+}
+
 @media (max-width: 768px) {
     .useCaseCard {
         flex: 0 0 300px;
@@ -765,4 +771,85 @@
         height: 5px;
         top: 0.6em;
     }
+}
+
+/* Graphic Theme Adaptivity */
+
+.graphicAccentBlueFill {
+    fill: #3b82f6;
+}
+
+.graphicTextContrast {
+    fill: #ffffff;
+}
+
+.graphicAccentGreenFill {
+    fill: #10b981;
+}
+
+.graphicAccentGreenStroke {
+    stroke: #10b981;
+}
+
+.graphicGradientStart {
+    stop-color: #3b82f6;
+}
+
+.graphicGradientEnd {
+    stop-color: #2563eb;
+}
+
+.graphicAccentDarkBlueFill {
+    fill: #2563eb;
+}
+
+/* Light Mode Overrides for Graphics */
+
+:global(:root:not(.dark)) .useCaseGraphic,
+:global(.light) .useCaseGraphic,
+:global(html.light) .useCaseGraphic {
+    color: rgba(0, 0, 0, 0.8); /* Dark base for outlines in light mode */
+}
+
+:global(:root:not(.dark)) .graphicAccentBlueFill,
+:global(.light) .graphicAccentBlueFill,
+:global(html.light) .graphicAccentBlueFill {
+    fill: #2563eb; /* Slightly darker blue for light mode visibility */
+}
+
+:global(:root:not(.dark)) .graphicAccentGreenFill,
+:global(.light) .graphicAccentGreenFill,
+:global(html.light) .graphicAccentGreenFill {
+    fill: #059669; /* Darker emerald */
+}
+
+:global(:root:not(.dark)) .graphicAccentGreenStroke,
+:global(.light) .graphicAccentGreenStroke,
+:global(html.light) .graphicAccentGreenStroke {
+    stroke: #059669;
+}
+
+:global(:root:not(.dark)) .graphicGradientStart,
+:global(.light) .graphicGradientStart,
+:global(html.light) .graphicGradientStart {
+    stop-color: #2563eb;
+}
+
+:global(:root:not(.dark)) .graphicGradientEnd,
+:global(.light) .graphicGradientEnd,
+:global(html.light) .graphicGradientEnd {
+    stop-color: #1d4ed8;
+}
+
+:global(:root:not(.dark)) .graphicAccentDarkBlueFill,
+:global(.light) .graphicAccentDarkBlueFill,
+:global(html.light) .graphicAccentDarkBlueFill {
+    fill: #1d4ed8;
+}
+
+/* Ensure text remains white on colored badges even in light mode, as badges are still colored */
+:global(:root:not(.dark)) .graphicTextContrast,
+:global(.light) .graphicTextContrast,
+:global(html.light) .graphicTextContrast {
+    fill: #ffffff;
 }

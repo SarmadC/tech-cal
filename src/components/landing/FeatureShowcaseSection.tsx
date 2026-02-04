@@ -59,44 +59,29 @@ export function AgendaMockup() {
                     <div className={styles.agendaTitle}>Nvidia GTC 2025</div>
                     <div className={styles.agendaMeta}>
                         <div className={styles.metaItem}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
+                            <CalendarBlank size={14} weight="bold" />
                             <span>Mar 17–21, 2025</span>
                         </div>
                         <div className={styles.metaItem}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
+                            <MapPin size={14} weight="bold" />
                             <span>San Jose, CA</span>
                         </div>
                     </div>
                 </div>
                 <div className={styles.agendaActions}>
                     <button
-                        className={styles.iconButton}
+                        className={`${styles.iconButton} ${bookmarked ? styles.actionActive : ''}`}
                         onClick={() => setBookmarked(!bookmarked)}
-                        style={{ color: bookmarked ? '#FFD700' : undefined }}
                         aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark agenda'}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                        </svg>
+                        <Bookmark size={14} weight={bookmarked ? "fill" : "bold"} />
                     </button>
                     <button
                         className={styles.iconButton}
                         onClick={() => window.open('https://www.nvidia.com/gtc/', '_blank')}
                         aria-label="Open event website"
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                            <polyline points="15 3 21 3 21 9" />
-                            <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
+                        <ArrowSquareOut size={14} weight="bold" />
                     </button>
                 </div>
             </div>
@@ -104,12 +89,7 @@ export function AgendaMockup() {
             {/* Filter Bar */}
             <div className={styles.filterBar}>
                 <div className={styles.sessionCount}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                        <line x1="16" y1="2" x2="16" y2="6" />
-                        <line x1="8" y1="2" x2="8" y2="6" />
-                        <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
+                    <Users size={14} weight="bold" />
                     <span>12 sessions • 3 tracks</span>
                 </div>
                 <div className={styles.viewToggle}>
@@ -123,23 +103,15 @@ export function AgendaMockup() {
                 {/* Item 1 */}
                 <div className={styles.sessionRow} onClick={() => toggleStar(1)}>
                     <div className={styles.sessionMain}>
-                        <span className={styles.sessionTag} style={{ color: '#46A758' }}>Keynote</span>
+                        <span className={`${styles.sessionTag} ${styles.tagKeynote}`}>Keynote</span>
                         <span className={styles.sessionTitle}>The Future of AI Computing</span>
                         <div className={styles.sessionDetails}>
                             <div className={styles.detailItem}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                    <circle cx="12" cy="10" r="3" />
-                                </svg>
+                                <MapPin size={12} weight="fill" />
                                 <span>Hall A</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                </svg>
+                                <Users size={12} weight="fill" />
                                 <span>3 speakers</span>
                             </div>
                         </div>
@@ -147,14 +119,11 @@ export function AgendaMockup() {
                     <div className={styles.sessionMeta}>
                         <span className={styles.sessionTimeBadge}>09:00</span>
                         <button
-                            className={styles.addButton}
+                            className={`${styles.addButton} ${starredSessions.includes(1) ? styles.actionActive : ''}`}
                             onClick={(e) => { e.stopPropagation(); toggleStar(1); }}
-                            style={{ color: starredSessions.includes(1) ? '#FFD700' : undefined }}
                             aria-label={starredSessions.includes(1) ? 'Remove from schedule' : 'Add to schedule'}
                         >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(1) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg>
+                            {starredSessions.includes(1) ? <Check size={12} weight="bold" /> : <Plus size={12} weight="bold" />}
                         </button>
                     </div>
                 </div>
@@ -162,21 +131,15 @@ export function AgendaMockup() {
                 {/* Item 2 */}
                 <div className={styles.sessionRow} onClick={() => toggleStar(2)}>
                     <div className={styles.sessionMain}>
-                        <span className={styles.sessionTag} style={{ color: '#3ECF8E' }}>Workshop</span>
+                        <span className={`${styles.sessionTag} ${styles.tagWorkshop}`}>Workshop</span>
                         <span className={styles.sessionTitle}>Building with CUDA 13</span>
                         <div className={styles.sessionDetails}>
                             <div className={styles.detailItem}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                    <circle cx="12" cy="10" r="3" />
-                                </svg>
+                                <MapPin size={12} weight="fill" />
                                 <span>Room 204</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                </svg>
+                                <Users size={12} weight="fill" />
                                 <span>1 speaker</span>
                             </div>
                         </div>
@@ -184,14 +147,11 @@ export function AgendaMockup() {
                     <div className={styles.sessionMeta}>
                         <span className={styles.sessionTimeBadge}>11:30</span>
                         <button
-                            className={styles.addButton}
+                            className={`${styles.addButton} ${starredSessions.includes(2) ? styles.actionActive : ''}`}
                             onClick={(e) => { e.stopPropagation(); toggleStar(2); }}
-                            style={{ color: starredSessions.includes(2) ? '#FFD700' : undefined }}
                             aria-label={starredSessions.includes(2) ? 'Remove from schedule' : 'Add to schedule'}
                         >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill={starredSessions.includes(2) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg>
+                            {starredSessions.includes(2) ? <Check size={12} weight="bold" /> : <Plus size={12} weight="bold" />}
                         </button>
                     </div>
                 </div>
@@ -352,15 +312,15 @@ export function SpeakersMockup() {
                     <img
                         src="https://upload.wikimedia.org/wikipedia/commons/b/b9/TechCrunch_logo.svg"
                         alt="TechCrunch"
-                        style={{ height: '16px', width: 'auto', display: 'block' }}
+                        className={styles.techCrunchLogo}
                     />
                 </div>
                 <div className={styles.stackContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <div className={styles.speakerPhoto} style={{ background: '#27AE60', color: '#fff' }}>
+                    <div className={styles.speakerRow}>
+                        <div className={`${styles.speakerPhoto} ${styles.speakerGreen}`}>
                             <span>MJ</span>
                         </div>
-                        <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Mike Johnson</span>
+                        <span className={styles.speakerName}>Mike Johnson</span>
                     </div>
                     <span className={styles.stackText}>AI Ethics Panel: Safety, Policy, and Real-World Impact</span>
                     <div className={styles.stackFooter}>
@@ -379,15 +339,15 @@ export function SpeakersMockup() {
                     <img
                         src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
                         alt="OpenAI"
-                        style={{ height: '20px', width: 'auto', display: 'block', filter: 'invert(1)' }}
+                        className={`${styles.logoImage} ${styles.invertLogo}`}
                     />
                 </div>
                 <div className={styles.stackContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <div className={styles.speakerPhoto} style={{ background: '#8E44AD', color: '#fff' }}>
+                    <div className={styles.speakerRow}>
+                        <div className={`${styles.speakerPhoto} ${styles.speakerPurple}`}>
                             <span>SC</span>
                         </div>
-                        <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Sarah Chen</span>
+                        <span className={styles.speakerName}>Sarah Chen</span>
                     </div>
                     <span className={styles.stackText}>Scaling PyTorch from Prototype to Production</span>
                     <div className={styles.stackFooter}>
@@ -406,15 +366,15 @@ export function SpeakersMockup() {
                     <img
                         src="https://mddgtexrnnlctttbcpsy.supabase.co/storage/v1/object/public/logos/nvidia.svg"
                         alt="Nvidia"
-                        style={{ height: '18px', width: 'auto', display: 'block' }}
+                        className={styles.logoImage}
                     />
                 </div>
                 <div className={styles.stackContent}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <div className={styles.speakerPhoto} style={{ width: '24px', height: '24px', fontSize: '10px' }}>
+                    <div className={styles.speakerRow}>
+                        <div className={`${styles.speakerPhoto} ${styles.speakerFront}`}>
                             <span>JH</span>
                         </div>
-                        <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Jensen Huang</span>
+                        <span className={styles.speakerName}>Jensen Huang</span>
                     </div>
                     <span className={styles.stackText}>Opening Keynote: The Next Wave of AI Computing</span>
                     <div className={styles.stackFooter}>

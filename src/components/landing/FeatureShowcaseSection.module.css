@@ -1177,3 +1177,188 @@
         width: 240px;
     }
 }
+
+/* Theme Adaptive Additions */
+
+/* Actions */
+.actionActive {
+    color: #FFD700;
+}
+
+:global(:root:not(.dark)) .actionActive,
+:global(.light) .actionActive {
+    color: #D97706; /* Amber-600 for better visibility on light bg */
+}
+
+/* Tags */
+.tagKeynote {
+    color: #46A758;
+}
+
+.tagWorkshop {
+    color: #3ECF8E;
+}
+
+:global(:root:not(.dark)) .tagKeynote,
+:global(.light) .tagKeynote {
+    color: #16A34A; /* Green-600 */
+}
+
+:global(:root:not(.dark)) .tagWorkshop,
+:global(.light) .tagWorkshop {
+    color: #059669; /* Emerald-600 */
+}
+
+/* Logos */
+.techCrunchLogo {
+    height: 16px; 
+    width: auto; 
+    display: block;
+}
+
+.logoImage {
+    height: 18px; /* Averaging for general logo image class if reused, or specific overrides */
+    width: auto;
+    display: block;
+}
+
+.invertLogo {
+    filter: invert(1);
+}
+
+:global(:root:not(.dark)) .invertLogo,
+:global(.light) .invertLogo {
+    filter: none; /* Assuming logo is dark by default */
+}
+
+/* Speaker Styles */
+.speakerRow {
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-bottom: 8px;
+}
+
+.speakerName {
+    font-size: 13px; 
+    color: #fff; 
+    font-weight: 500;
+}
+
+:global(:root:not(.dark)) .speakerName,
+:global(.light) .speakerName {
+    color: #1a1a1a;
+}
+
+.speakerGreen {
+    background: #27AE60;
+    color: #fff;
+}
+
+.speakerPurple {
+    background: #8E44AD;
+    color: #fff;
+}
+
+.speakerFront {
+    width: 24px; 
+    height: 24px; 
+    font-size: 10px;
+}
+
+/* Light Mode Overrides for Stack Cards */
+
+:global(:root:not(.dark)) .stackCard,
+:global(.light) .stackCard {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 
+        0 4px 24px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+:global(:root:not(.dark)) .stackCardFront,
+:global(.light) .stackCardFront {
+    background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+    box-shadow: 
+        16px 32px 64px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,1);
+    border-color: rgba(0, 0, 0, 0.08); /* Ensure border is visible */
+}
+
+:global(:root:not(.dark)) .stackText,
+:global(.light) .stackText {
+    color: rgba(0, 0, 0, 0.8);
+}
+
+:global(:root:not(.dark)) .stackFooter,
+:global(.light) .stackFooter {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+/* Ensure Logo Visibility in Light Mode */
+/* TechCrunch is usually green/black - visible on light */
+/* Nvidia is usually green/black or white - check visibility */
+/* OpenAI is handled by invertLogo removal */
+
+/* Ensure proper hover states in light mode */
+:global(:root:not(.dark)) .stackContainer .stackCard:hover,
+:global(.light) .stackContainer .stackCard:hover {
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 
+        0 24px 48px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+}
+
+/* Light Mode Overrides for Timeline */
+
+:global(:root:not(.dark)) .trackHeader,
+:global(.light) .trackHeader {
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+:global(:root:not(.dark)) .trackColumn,
+:global(.light) .trackColumn {
+    border-left-color: rgba(0, 0, 0, 0.04);
+}
+
+:global(:root:not(.dark)) .trackName,
+:global(.light) .trackName {
+    color: #4B5563; /* Gray-600 */
+}
+
+:global(:root:not(.dark)) .trackCardActive .trackName,
+:global(.light) .trackCardActive .trackName {
+    color: #1F2937; /* Gray-800 */
+}
+
+:global(:root:not(.dark)) .trackRow,
+:global(.light) .trackRow {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+:global(:root:not(.dark)) .trackEventCell,
+:global(.light) .trackEventCell {
+    border-left-color: rgba(0, 0, 0, 0.04);
+}
+
+:global(:root:not(.dark)) .yellowTimeBadge,
+:global(.light) .yellowTimeBadge {
+    color: #6B7280; /* Gray-500, slightly darker */
+}
+
+:global(:root:not(.dark)) .trackEventType,
+:global(.light) .trackEventType {
+    color: #059669; /* Emerald-600 - darker for visibility */
+}
+
+:global(:root:not(.dark)) .trackEventTitle,
+:global(.light) .trackEventTitle {
+    color: #1F2937; /* Gray-800 */
+}
+
+:global(:root:not(.dark)) .trackEvent:hover,
+:global(.light) .trackEvent:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
