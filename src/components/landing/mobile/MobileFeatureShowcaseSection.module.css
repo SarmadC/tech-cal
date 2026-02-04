@@ -396,16 +396,18 @@
 .webMockup {
     display: flex;
     justify-content: center;
+    align-items: center;
     padding: 10px 0 4px;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 .webMockup > * {
     width: 100%;
     max-width: 520px;
-    transform: scale(0.9);
-    transform-origin: top center;
+    transform: none;
+    transform-origin: center center;
 }
 
 .linearMockup {
