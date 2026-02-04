@@ -1,0 +1,25 @@
+:root {
+  /* Surface Tokens */
+  --bg-surface-primary: #0B0F16;
+  --bg-surface-secondary: #070A10; /* For gradients */
+  --bg-glass-heavy: rgba(255, 255, 255, 0.06);
+  --bg-glass-light: rgba(255, 255, 255, 0.02);
+  
+  /* Border Tokens */
+  --border-transparent: rgba(255, 255, 255, 0.08); /* 1px hairline */
+  --border-highlight: rgba(255, 255, 255, 0.15); /* Hover/Active */
+  
+  /* Text Tokens */
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
+  --text-muted: rgba(255, 255, 255, 0.30);
+  
+  /* Accent Tokens */
+  --accent-success: #22c55e;
+  --accent-brand-primary: #7C5CFF;
+  --accent-brand-secondary: #4C8DFF;
+  
+  /* Shadow Tokens */
+  --shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.55);
+}

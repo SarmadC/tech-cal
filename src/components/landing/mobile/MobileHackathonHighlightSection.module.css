@@ -1,0 +1,1651 @@
+.section {
+    position: relative;
+    padding: 60px 0;
+    width: 100%;
+    background: var(--hackathon-mobile-bg);
+    border-top: 1px solid var(--hackathon-mobile-border);
+    border-bottom: 1px solid var(--hackathon-mobile-border);
+    --hackathon-mobile-bg: #09090b;
+    --hackathon-mobile-border: rgba(255, 255, 255, 0.05);
+    --hackathon-mobile-text: #ededed;
+    --hackathon-mobile-text-muted: #a1a1aa;
+    --hackathon-mobile-label: #a855f7;
+    --hackathon-mobile-card-bg: #121212;
+    --hackathon-mobile-card-border: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-card-visual-bg: rgba(0, 0, 0, 0.2);
+    --hackathon-mobile-card-visual-border: rgba(255, 255, 255, 0.05);
+    --hackathon-mobile-card-visual-emphasis: #1c1c1c;
+    --hackathon-mobile-card-visual-terminal: #09090b;
+    --hackathon-mobile-terminal-bg: #0c0c0c;
+    --hackathon-mobile-terminal-header-bg: #18181b;
+    --hackathon-mobile-terminal-border: rgba(255, 255, 255, 0.05);
+    --hackathon-mobile-code: #a1a1aa;
+    --hackathon-mobile-code-keyword: #c084fc;
+    --hackathon-mobile-code-string: #4ade80;
+    --hackathon-mobile-code-function: #60a5fa;
+    --hackathon-mobile-code-cursor: #a1a1aa;
+    --hackathon-mobile-svg-card-bg: #18181b;
+    --hackathon-mobile-svg-card-stroke: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-svg-live-text: #ededed;
+    --hackathon-mobile-svg-prize-text: #f4f4f5;
+    --hackathon-mobile-svg-subtle-text: #71717a;
+    --hackathon-mobile-svg-pill-bg: rgba(255, 255, 255, 0.06);
+    --hackathon-mobile-svg-pill-text: #a1a1aa;
+    --hackathon-mobile-svg-tag-bg: rgba(255, 255, 255, 0.04);
+    --hackathon-mobile-svg-tag-border: rgba(255, 255, 255, 0.06);
+    --hackathon-mobile-svg-tag-text: #d4d4d8;
+    --hackathon-mobile-svg-progress-track: #27272a;
+    --hackathon-mobile-svg-progress-fill: #f4f4f5;
+    --hackathon-mobile-avatar-border: #18181b;
+    --hackathon-mobile-avatar-bg: #3f3f46;
+    --hackathon-mobile-role-badge-bg: #18181b;
+    --hackathon-mobile-avatar-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --hackathon-mobile-tap-label: #a1a1aa;
+    --hackathon-mobile-cta-bg: #ededed;
+    --hackathon-mobile-cta-text: #09090b;
+    --hackathon-mobile-grid-line: rgba(255, 255, 255, 0.03);
+    --hackathon-mobile-competition-shell-bg: rgba(255, 255, 255, 0.02);
+    --hackathon-mobile-competition-shell-border: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-competition-shell-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    --hackathon-mobile-competition-shell-glow: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.08), transparent 55%);
+    --hackathon-mobile-competition-card-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+    --hackathon-mobile-competition-card-stroke: rgba(255, 255, 255, 0.18);
+    --hackathon-mobile-pill-bg: rgba(255, 255, 255, 0.04);
+    --hackathon-mobile-pill-border: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-pill-text: rgba(255, 255, 255, 0.6);
+    --hackathon-mobile-pill-active-bg: rgba(255, 255, 255, 0.12);
+    --hackathon-mobile-pill-active-text: #ffffff;
+    --hackathon-mobile-track-row-border: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-track-row-hover: rgba(255, 255, 255, 0.04);
+    --hackathon-mobile-track-title: #ededed;
+    --hackathon-mobile-track-prize-bg: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-track-prize-border: rgba(255, 255, 255, 0.1);
+    --hackathon-mobile-track-prize-text: rgba(255, 255, 255, 0.7);
+    --hackathon-mobile-track-violet-bg: rgba(139, 92, 246, 0.18);
+    --hackathon-mobile-track-violet-border: rgba(139, 92, 246, 0.35);
+    --hackathon-mobile-track-violet-text: #c4b5fd;
+    --hackathon-mobile-track-blue-bg: rgba(59, 130, 246, 0.18);
+    --hackathon-mobile-track-blue-border: rgba(59, 130, 246, 0.35);
+    --hackathon-mobile-track-blue-text: #93c5fd;
+    --hackathon-mobile-track-emerald-bg: rgba(16, 185, 129, 0.18);
+    --hackathon-mobile-track-emerald-border: rgba(16, 185, 129, 0.35);
+    --hackathon-mobile-track-emerald-text: #6ee7b7;
+    --hackathon-mobile-track-orange-bg: rgba(249, 115, 22, 0.2);
+    --hackathon-mobile-track-orange-border: rgba(249, 115, 22, 0.4);
+    --hackathon-mobile-track-orange-text: #fdba74;
+
+    /* New Semantic Variables for Hints/Squad/Tracks */
+    --hackathon-mobile-member-name: #ffffff;
+    --hackathon-mobile-member-meta: rgba(255, 255, 255, 0.45);
+    --hackathon-mobile-member-tag: rgba(255, 255, 255, 0.4);
+    --hackathon-mobile-member-row-hover: rgba(255, 255, 255, 0.03);
+    --hackathon-mobile-member-row-active: rgba(255, 255, 255, 0.05);
+    --hackathon-mobile-track-list-title: rgba(255, 255, 255, 0.9);
+    --hackathon-mobile-track-list-meta: rgba(255, 255, 255, 0.5);
+    --hackathon-mobile-segment-text-active: #ffffff;
+    --hackathon-mobile-segment-text-inactive: rgba(255, 255, 255, 0.5);
+    --hackathon-mobile-divider: rgba(255, 255, 255, 0.04);
+    --hackathon-mobile-guide-line: rgba(255, 255, 255, 0.04);
+    
+    /* Prize Pool Card Semantics */
+    --hackathon-mobile-hero-price: #ffffff;
+    --hackathon-mobile-meta-text: rgba(255, 255, 255, 0.4);
+    --hackathon-mobile-primary-text-dimmed: rgba(255, 255, 255, 0.7);
+    --hackathon-mobile-tag-border: rgba(255, 255, 255, 0.06);
+    --hackathon-mobile-progress-track: rgba(255, 255, 255, 0.04);
+
+    /* Squad Card Semantics */
+    --hackathon-mobile-squad-bg: #121212;
+    --hackathon-mobile-member-avatar-bg: #18181b;
+    --hackathon-mobile-member-avatar-border: rgba(255, 255, 255, 0.08);
+    --hackathon-mobile-member-avatar-text: rgba(255, 255, 255, 0.8);
+    --hackathon-mobile-invite-text: rgba(255, 255, 255, 0.4);
+    --hackathon-mobile-invite-hover-bg: rgba(168, 85, 247, 0.1);
+    --hackathon-mobile-invite-hover-text: #d8b4fe;
+    --hackathon-mobile-invite-active-bg: rgba(168, 85, 247, 0.15);
+    
+    /* Role Colors (Dark Mode Defaults) */
+    --hackathon-mobile-role-code-border: rgba(139, 92, 246, 0.2);
+    --hackathon-mobile-role-code-text: #c4b5fd;
+    --hackathon-mobile-role-design-border: rgba(236, 72, 153, 0.2);
+    --hackathon-mobile-role-design-text: #f9a8d4;
+    --hackathon-mobile-role-pm-border: rgba(59, 130, 246, 0.2);
+    --hackathon-mobile-role-pm-text: #93c5fd;
+    --hackathon-mobile-invite-text-row-hover: rgba(255, 255, 255, 0.9);
+}
+
+:global(:root:not(.dark)) .section,
+:global(.light) .section,
+:global(html.light) .section {
+    --hackathon-mobile-bg: var(--background-main);
+    --hackathon-mobile-border: var(--border-subtle);
+    --hackathon-mobile-text: var(--foreground-primary);
+    --hackathon-mobile-text-muted: var(--foreground-tertiary);
+    --hackathon-mobile-card-bg: var(--background-secondary);
+    --hackathon-mobile-card-border: var(--border-default);
+    --hackathon-mobile-card-visual-bg: rgba(0, 0, 0, 0.04);
+    --hackathon-mobile-card-visual-border: var(--border-subtle);
+    --hackathon-mobile-card-visual-emphasis: var(--background-tertiary);
+    --hackathon-mobile-card-visual-terminal: var(--background-secondary);
+    --hackathon-mobile-terminal-bg: var(--background-tertiary);
+    --hackathon-mobile-terminal-header-bg: var(--background-elevated);
+    --hackathon-mobile-terminal-border: var(--border-subtle);
+    --hackathon-mobile-code: var(--foreground-tertiary);
+    --hackathon-mobile-code-cursor: var(--foreground-tertiary);
+    --hackathon-mobile-svg-card-bg: var(--background-elevated);
+    --hackathon-mobile-svg-card-stroke: var(--border-default);
+    --hackathon-mobile-svg-live-text: var(--foreground-primary);
+    --hackathon-mobile-svg-prize-text: var(--foreground-primary);
+    --hackathon-mobile-svg-subtle-text: var(--foreground-tertiary);
+    --hackathon-mobile-svg-pill-bg: rgba(0, 0, 0, 0.06);
+    --hackathon-mobile-svg-pill-text: var(--foreground-tertiary);
+    --hackathon-mobile-svg-tag-bg: rgba(0, 0, 0, 0.04);
+    --hackathon-mobile-svg-tag-border: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-svg-tag-text: var(--foreground-secondary);
+    --hackathon-mobile-svg-progress-track: var(--border-strong);
+    --hackathon-mobile-svg-progress-fill: var(--foreground-primary);
+    --hackathon-mobile-avatar-border: var(--background-elevated);
+    --hackathon-mobile-avatar-bg: var(--background-tertiary);
+    --hackathon-mobile-role-badge-bg: var(--background-elevated);
+    --hackathon-mobile-avatar-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    --hackathon-mobile-tap-label: var(--foreground-muted);
+    --hackathon-mobile-cta-bg: var(--accent-primary);
+    --hackathon-mobile-cta-text: var(--accent-primary-foreground);
+    --hackathon-mobile-grid-line: rgba(0, 0, 0, 0.04);
+    --hackathon-mobile-competition-shell-bg: rgba(0, 0, 0, 0.02);
+    --hackathon-mobile-competition-shell-border: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-competition-shell-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+    --hackathon-mobile-competition-shell-glow: radial-gradient(circle at 20% 0%, rgba(0, 0, 0, 0.08), transparent 55%);
+    --hackathon-mobile-competition-card-shadow: 0 10px 18px rgba(0, 0, 0, 0.16);
+    --hackathon-mobile-competition-card-stroke: rgba(0, 0, 0, 0.12);
+    --hackathon-mobile-pill-bg: rgba(0, 0, 0, 0.05);
+    --hackathon-mobile-pill-border: rgba(0, 0, 0, 0.12);
+    --hackathon-mobile-pill-text: rgba(31, 41, 55, 0.65);
+    --hackathon-mobile-pill-active-bg: rgba(0, 0, 0, 0.14);
+    --hackathon-mobile-pill-active-text: rgba(17, 24, 39, 0.95);
+    --hackathon-mobile-track-row-border: rgba(0, 0, 0, 0.12);
+    --hackathon-mobile-track-row-hover: rgba(0, 0, 0, 0.04);
+    --hackathon-mobile-track-title: rgba(17, 24, 39, 0.9);
+    --hackathon-mobile-track-prize-bg: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-track-prize-border: rgba(0, 0, 0, 0.14);
+    --hackathon-mobile-track-prize-text: rgba(31, 41, 55, 0.7);
+    --hackathon-mobile-track-violet-bg: rgba(139, 92, 246, 0.14);
+    --hackathon-mobile-track-violet-border: rgba(139, 92, 246, 0.3);
+    --hackathon-mobile-track-violet-text: rgba(91, 33, 182, 0.9);
+    --hackathon-mobile-track-blue-bg: rgba(59, 130, 246, 0.14);
+    --hackathon-mobile-track-blue-border: rgba(59, 130, 246, 0.3);
+    --hackathon-mobile-track-blue-text: rgba(30, 64, 175, 0.9);
+    --hackathon-mobile-track-emerald-bg: rgba(16, 185, 129, 0.14);
+    --hackathon-mobile-track-emerald-border: rgba(16, 185, 129, 0.3);
+    --hackathon-mobile-track-emerald-text: rgba(4, 120, 87, 0.9);
+    --hackathon-mobile-track-orange-bg: rgba(249, 115, 22, 0.16);
+    --hackathon-mobile-track-orange-border: rgba(249, 115, 22, 0.34);
+    --hackathon-mobile-track-orange-text: rgba(154, 52, 18, 0.9);
+
+    /* Light Mode Overrides */
+    --hackathon-mobile-member-name: var(--foreground-primary);
+    --hackathon-mobile-member-meta: var(--foreground-tertiary);
+    --hackathon-mobile-member-tag: var(--foreground-tertiary);
+    --hackathon-mobile-member-row-hover: rgba(0, 0, 0, 0.04);
+    --hackathon-mobile-member-row-active: rgba(0, 0, 0, 0.06);
+    --hackathon-mobile-track-list-title: var(--foreground-primary);
+    --hackathon-mobile-track-list-meta: var(--foreground-tertiary);
+    --hackathon-mobile-segment-text-active: var(--foreground-primary);
+    --hackathon-mobile-segment-text-inactive: var(--foreground-tertiary);
+    --hackathon-mobile-divider: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-guide-line: rgba(0, 0, 0, 0.08);
+
+    /* Prize Pool Card Semantics (Light) */
+    --hackathon-mobile-hero-price: var(--foreground-primary);
+    --hackathon-mobile-meta-text: var(--foreground-tertiary);
+    --hackathon-mobile-primary-text-dimmed: var(--foreground-secondary);
+    --hackathon-mobile-tag-border: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-progress-track: rgba(0, 0, 0, 0.06);
+
+    /* Squad Card Semantics (Light) */
+    --hackathon-mobile-squad-bg: var(--background-secondary);
+    --hackathon-mobile-member-avatar-bg: var(--background-tertiary);
+    --hackathon-mobile-member-avatar-border: rgba(0, 0, 0, 0.08);
+    --hackathon-mobile-member-avatar-text: var(--foreground-secondary);
+    --hackathon-mobile-invite-text: var(--foreground-tertiary);
+    --hackathon-mobile-invite-hover-bg: rgba(168, 85, 247, 0.08);
+    --hackathon-mobile-invite-hover-text: #9333ea;
+    --hackathon-mobile-invite-active-bg: rgba(168, 85, 247, 0.12);
+    --hackathon-mobile-invite-text-row-hover: var(--foreground-primary);
+
+    /* Role Colors (Light Mode Overrides) */
+    --hackathon-mobile-role-code-border: rgba(139, 92, 246, 0.3);
+    --hackathon-mobile-role-code-text: #7c3aed;
+    --hackathon-mobile-role-design-border: rgba(236, 72, 153, 0.3);
+    --hackathon-mobile-role-design-text: #db2777;
+    --hackathon-mobile-role-pm-border: rgba(59, 130, 246, 0.3);
+    --hackathon-mobile-role-pm-text: #2563eb;
+}
+
+.container {
+    padding: 0 20px;
+}
+
+.header {
+    margin-bottom: 40px;
+    padding: 0 4px;
+}
+
+.contextBlock {
+    padding: 0 4px 24px;
+}
+
+.contextTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-text);
+    margin: 0 0 6px 0;
+}
+
+.contextDescription {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--hackathon-mobile-text-muted);
+    margin: 0;
+}
+
+.label {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--hackathon-mobile-label);
+    margin-bottom: 12px;
+    display: block;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.title {
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--hackathon-mobile-text);
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+}
+
+.description {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--hackathon-mobile-text-muted);
+}
+
+/* Mobile Stack Layout */
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card {
+    background: var(--hackathon-mobile-card-bg);
+    border: 1px solid var(--hackathon-mobile-card-border); /* Subtler border */
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.competitionCard {
+    background: var(--hackathon-mobile-card-bg);
+    border: 1px solid var(--hackathon-mobile-card-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.competitionCard .cardVisual {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.competitionContent {
+    padding: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+/* Card Content Layouts */
+.cardContent {
+    padding: 24px;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.cardIcon {
+    margin-bottom: 16px;
+    color: var(--hackathon-mobile-text);
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-text);
+    margin-bottom: 8px;
+}
+
+.cardDescription {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--hackathon-mobile-text-muted);
+    margin-bottom: 20px;
+}
+
+.pillRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pill {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-pill-text);
+    background: var(--hackathon-mobile-pill-bg);
+    border: 1px solid var(--hackathon-mobile-pill-border);
+}
+
+.pillActive {
+    color: var(--hackathon-mobile-pill-active-text);
+    background: var(--hackathon-mobile-pill-active-bg);
+}
+
+/* Visual Areas inside cards for mockups */
+.cardVisual {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    background: var(--hackathon-mobile-card-visual-bg);
+    border-top: 1px solid var(--hackathon-mobile-card-visual-border);
+}
+
+.competitionVisual {
+    height: 170px;
+    padding: 0;
+    background: var(--hackathon-mobile-svg-card-bg);
+    border-top: 1px solid var(--hackathon-mobile-card-border);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.competitionSvg {
+    width: 100%;
+    height: 100%;
+}
+
+.tracksList {
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 16px;
+    gap: 6px;
+}
+
+.trackRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--hackathon-mobile-track-row-border);
+    background: transparent;
+    transition: background 150ms ease;
+}
+
+.trackRow:hover {
+    background: var(--hackathon-mobile-track-row-hover);
+}
+
+.trackLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trackBadge {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+}
+
+.trackBadge[data-color="violet"] {
+    background: var(--hackathon-mobile-track-violet-bg);
+    border-color: var(--hackathon-mobile-track-violet-border);
+}
+
+.trackBadge[data-color="blue"] {
+    background: var(--hackathon-mobile-track-blue-bg);
+    border-color: var(--hackathon-mobile-track-blue-border);
+}
+
+.trackBadge[data-color="emerald"] {
+    background: var(--hackathon-mobile-track-emerald-bg);
+    border-color: var(--hackathon-mobile-track-emerald-border);
+}
+
+.trackBadge[data-color="orange"] {
+    background: var(--hackathon-mobile-track-orange-bg);
+    border-color: var(--hackathon-mobile-track-orange-border);
+}
+
+.trackIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trackIcon[data-color="violet"] {
+    color: var(--hackathon-mobile-track-violet-text);
+}
+
+.trackIcon[data-color="blue"] {
+    color: var(--hackathon-mobile-track-blue-text);
+}
+
+.trackIcon[data-color="emerald"] {
+    color: var(--hackathon-mobile-track-emerald-text);
+}
+
+.trackIcon[data-color="orange"] {
+    color: var(--hackathon-mobile-track-orange-text);
+}
+
+.trackTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-track-title);
+}
+
+.trackPrize {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--hackathon-mobile-track-prize-bg);
+    border: 1px solid var(--hackathon-mobile-track-prize-border);
+    color: var(--hackathon-mobile-track-prize-text);
+}
+
+/* --- ENHANCED VISUALS --- */
+
+/* Terminal Window */
+.terminalWindow {
+    background: var(--hackathon-mobile-terminal-bg);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.terminalHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--hackathon-mobile-terminal-border);
+    background: var(--hackathon-mobile-terminal-header-bg);
+}
+
+.terminalDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.terminalDotRed { background: #ef4444; }
+.terminalDotYellow { background: #eab308; }
+.terminalDotGreen { background: #22c55e; }
+
+.codeBlock {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--hackathon-mobile-code);
+    padding: 16px;
+    line-height: 1.6;
+    overflow: hidden;
+}
+
+.codeLine { display: block; margin-bottom: 4px; }
+.codeKeyword { color: var(--hackathon-mobile-code-keyword); }
+.codeString { color: var(--hackathon-mobile-code-string); }
+.codeFunction { color: var(--hackathon-mobile-code-function); }
+.codeCursor {
+    display: inline-block;
+    width: 6px;
+    height: 12px;
+    background: var(--hackathon-mobile-code-cursor);
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* Avatars */
+.teamAvatars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.connectorLine {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px; /* Increased */
+    height: 48px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.connectorLine path {
+    stroke: rgba(168, 85, 247, 0.4);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+}
+
+.avatarGroup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+.avatarWrapper {
+    position: relative;
+    margin: 0 -8px; /* Adjusted overlap */
+}
+
+.avatarWrapper:nth-child(2) {
+    z-index: 10;
+    transform: scale(1.1);
+    margin: 0 4px;
+    box-shadow: var(--hackathon-mobile-avatar-shadow); /* Tighter shadow */
+    border-radius: 50%;
+}
+
+.avatar {
+    width: 46px; /* Enlarged from 40px */
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid var(--hackathon-mobile-avatar-border);
+    background: var(--hackathon-mobile-avatar-bg); /* Better contrast */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hackathon-mobile-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.roleBadge {
+    position: absolute;
+    bottom: -3px; /* Moved outward */
+    right: -3px;
+    width: 18px; /* Slightly larger */
+    height: 18px;
+    background: var(--hackathon-mobile-role-badge-bg);
+    border: 2px solid var(--hackathon-mobile-role-badge-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 10px;
+    z-index: 2;
+}
+
+.roleBadge[data-type="code"] { background: #8b5cf6; }
+.roleBadge[data-type="design"] { background: #ec4899; }
+.roleBadge[data-type="pm"] { background: #3b82f6; }
+
+/* =========================================
+   INTERACTIVE ANIMATIONS
+   ========================================= */
+
+/* Avatar floating bob */
+.avatarFloat {
+    animation: avatarFloat 3s ease-in-out infinite;
+}
+
+@keyframes avatarFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* Role badge pop-in */
+.badgePop {
+    animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes badgePop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Connector line dash scroll */
+.dashAnimated path {
+    stroke-dasharray: 6 4;
+    animation: dashScroll 2s linear infinite;
+}
+
+@keyframes dashScroll {
+    to { stroke-dashoffset: -20; }
+}
+
+/* Tap role label */
+.tapRoleLabel {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-tap-label);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.tapRoleLabelVisible {
+    opacity: 1;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .avatarFloat {
+        animation: none;
+    }
+
+    .badgePop {
+        animation: none;
+        transform: scale(1);
+    }
+
+    .dashAnimated path {
+        animation: none;
+    }
+}
+
+/* Keep second avatar special scaling with float */
+.avatarWrapper:nth-child(2) .avatarFloat {
+    animation: avatarFloatCenter 3s ease-in-out 0.5s infinite;
+}
+
+@keyframes avatarFloatCenter {
+    0%, 100% { transform: scale(1.1) translateY(0); }
+    50% { transform: scale(1.1) translateY(-4px); }
+}
+
+
+
+.ctaButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--hackathon-mobile-cta-bg);
+    color: var(--hackathon-mobile-cta-text);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    width: fit-content;
+}
+
+/* Grid Effect overlay */
+.gridPattern {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(var(--hackathon-mobile-grid-line) 1px, transparent 1px), 
+        linear-gradient(90deg, var(--hackathon-mobile-grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- REDESIGNED COMPETITION CARD --- */
+
+.interactiveCard {
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    padding: 16px; /* Outer padding as requested */
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Vertical spacing between rows */
+    min-height: 200px;
+}
+
+.interactiveCard:active {
+    transform: scale(0.98);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Header */
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.organizerRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.organizerIcon {
+    color: var(--hackathon-mobile-label);
+}
+
+.organizerName {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-text);
+}
+
+.statusPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: var(--hackathon-mobile-pill-bg);
+    border: 1px solid var(--hackathon-mobile-pill-border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-text);
+}
+
+.statusUrgent {
+    background: rgba(239, 68, 68, 0.15); /* Red tinted bg */
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.statusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Body */
+.cardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    padding: 8px 0; /* Slight spacer */
+}
+
+.heroPrice {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--hackathon-mobile-text);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-family: var(--font-mono, monospace);
+}
+
+.priceLabel {
+    font-size: 13px;
+    color: var(--hackathon-mobile-text-muted);
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.contextLine {
+    font-size: 13px;
+    color: var(--hackathon-mobile-text-muted);
+    opacity: 0.8;
+}
+
+.metaRow {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.metaTag {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: var(--hackathon-mobile-svg-tag-bg);
+    border: 1px solid var(--hackathon-mobile-svg-tag-border);
+    color: var(--hackathon-mobile-svg-tag-text);
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Footer */
+.cardFooter {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--hackathon-mobile-grid-line);
+}
+
+.progressBlock {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.progressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.progressLabel {
+    font-size: 11px;
+    color: var(--hackathon-mobile-text-muted);
+    font-weight: 500;
+}
+
+.progressTime {
+    font-size: 11px;
+    color: var(--hackathon-mobile-text);
+    font-weight: 600;
+}
+
+.progressBarTrack {
+    height: 6px;
+    width: 100%;
+    background: var(--hackathon-mobile-svg-progress-track);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progressBarFill {
+    height: 100%;
+    background: var(--hackathon-mobile-label); /* Use primary brand color */
+    border-radius: 99px;
+}
+
+.ctaIconWrapper {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--hackathon-mobile-cta-bg);
+    border-radius: 50%; /* Circle button */
+    color: var(--hackathon-mobile-cta-text);
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.ctaArrow {
+    display: block;
+}
+
+/* --- REFINED COMPETITION CARD STYLES --- */
+
+/* Tighter Spacing for Hero Block */
+.heroBlock {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 4px;
+}
+
+.heroPrice {
+    margin-bottom: -2px; /* Pull label closer */
+}
+
+/* Reduced prominence for metadata chips */
+.metaTag {
+    font-size: 10px; /* Smaller */
+    padding: 2px 8px; /* Compact */
+    background: transparent; /* Remove heavy bg */
+    border: 1px solid var(--hackathon-mobile-border); /* Subtle border */
+    color: var(--hackathon-mobile-text-muted); /* Less contrast */
+    border-radius: 99px;
+    font-weight: 500;
+}
+
+/* Footer refinements */
+.cardFooter {
+    border-top: 1px solid rgba(255, 255, 255, 0.04); /* Lower contrast divider */
+    padding-top: 12px;
+}
+
+/* Labeled CTA Button */
+.ctaButtonPrimary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--hackathon-mobile-cta-bg);
+    color: var(--hackathon-mobile-cta-text);
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 600;
+    height: 36px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease;
+}
+
+.interactiveCard:active .ctaButtonPrimary {
+    transform: scale(0.95);
+}
+
+/* Progress Bar Contrast Check */
+.progressBarFill {
+    background: #a855f7; /* Ensure visual punch */
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); /* Glow for visibility */
+}
+
+/* Progress Time clarity */
+.progressTime {
+    color: var(--hackathon-mobile-text); /* Keep high contrast for readability */
+    opacity: 0.9;
+}
+
+/* --- LINEAR DESIGN REFINEMENTS --- */
+
+/* 1. Typography Hierarchy */
+.heroPrice {
+    font-family: var(--font-dm-sans), sans-serif; /* Use DM Sans */
+    letter-spacing: -0.03em; /* Tighter tracking for big numbers */
+    font-weight: 600; /* Slightly less heavy than 700 */
+}
+
+.priceLabel {
+    font-family: var(--font-dm-sans), sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--hackathon-mobile-text-muted);
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.organizerName {
+    font-weight: 500;
+    opacity: 0.9; /* Slightly quieter than hero */
+}
+
+/* 2. Surfaces & Elevation */
+.interactiveCard {
+    background: #18181b; /* Neutral Zinc-900 tone */
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Subtle elevation */
+}
+
+.interactiveCard:active {
+    background: #27272a; /* Slightly lighter on press */
+    transform: scale(0.99); /* Subtle scale */
+}
+
+/* 3. Refined Chips (Metadata) */
+.metaTag {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    padding: 2px 10px;
+}
+
+/* 4. Progress & CTA */
+.progressBlock {
+    gap: 8px; /* Slightly more space */
+}
+
+.progressBarTrack {
+    height: 4px; /* Thinner */
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.progressBarFill {
+    background: #9333ea; /* Purple-600, slightly less blinding than #a855f7 */
+    box-shadow: none; /* Remove glow for cleaner look */
+}
+
+.ctaButtonPrimary {
+    background: #ededed; /* Near white */
+    color: #09090b; /* Near black */
+    font-family: var(--font-dm-sans), sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid #ffffff; /* Crisp border */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.contextLine {
+    font-family: var(--font-dm-sans), sans-serif;
+    color: rgba(255, 255, 255, 0.4); /* Quieter */
+}
+
+/* --- FINAL LINEAR POLISH --- */
+
+/* 1. Reduce Chrome & Refine Surfaces */
+.interactiveCard {
+    background: #18181b; /* Keep neutral Zinc-900 */
+    border: 1px solid rgba(255, 255, 255, 0.04); /* Lower contrast border */
+    box-shadow: 
+        0 0 0 1px rgba(0,0,0,0.2), /* Inner shadow definition */
+        0 4px 12px rgba(0, 0, 0, 0.2); /* Soft elevation */
+}
+
+.cardFooter {
+    border-top: 1px solid rgba(255, 255, 255, 0.03); /* Extremely subtle divider */
+}
+
+/* 2. Tighten Alignment & Layout */
+.cardHeader, 
+.cardBody, 
+.cardFooter {
+    padding-left: 0;
+    padding-right: 0;
+    /* Ensure internal elements align to the 16px padding set on .interactiveCard */
+}
+
+/* 3. Normalize Type Roles */
+.heroPrice {
+    /* Expressive, but grounded */
+    font-weight: 500; /* Lighter than 600 */
+    color: var(--hackathon-mobile-hero-price);
+    letter-spacing: -0.04em;
+}
+
+.priceLabel {
+    /* Calm label */
+    font-size: 10px;
+    letter-spacing: 0.04em; /* Slightly reversed tracking for sentence case */
+    font-weight: 500;
+    color: var(--hackathon-mobile-meta-text);
+    text-transform: none; /* Reset case */
+    margin-top: 6px; /* Spacing from hero */
+}
+
+.organizerName {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-primary-text-dimmed); /* Reduced from primary text */
+}
+
+.contextLine {
+    color: var(--hackathon-mobile-meta-text); /* Consistent with label */
+    font-size: 12px;
+}
+
+/* 4. Flatten Chips (Metadata) */
+.metaRow {
+    gap: 6px;
+}
+
+.metaTag {
+    border: 1px solid var(--hackathon-mobile-tag-border); /* Even subtler border */
+    color: var(--hackathon-mobile-meta-text); /* Quieter text */
+    font-size: 10px;
+    padding: 1px 8px; /* Tighter padding */
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+/* 5. Refine Progress & CTA */
+.progressBarTrack {
+    height: 3px; /* Ultra thin */
+    background: var(--hackathon-mobile-progress-track);
+}
+
+.progressBarFill {
+    background: #a855f7; /* Keep accent but rely on size for subtlety */
+    opacity: 0.8; /* Slight desaturation via opacity */
+}
+
+.progressLabel, .progressTime {
+    font-size: 10px;
+    color: var(--hackathon-mobile-meta-text);
+}
+
+.progressTime {
+    color: var(--hackathon-mobile-primary-text-dimmed); /* Slightly more readable */
+}
+
+.ctaButtonPrimary {
+    background: #e4e4e7; /* Zinc-200 */
+    color: #09090b;
+    border: none; /* Cleaner */
+    height: 32px; /* Compact */
+    padding: 0 14px;
+    font-size: 12px;
+}
+
+/* --- NVIDIA REBRANDING --- */
+
+.organizerLogo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    opacity: 0.9;
+}
+
+/* --- ACTIONABLE CTA UPDATE --- */
+
+/* Move layout to proper card class */
+.competitionCard {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+    /* Ensure no pointer events on the card itself unless specified */
+    cursor: default;
+}
+
+/* Button specific interaction */
+.ctaButtonPrimary {
+    cursor: pointer;
+    text-decoration: none; /* For Link */
+    display: flex; /* Re-affirm flex for Link */
+    align-items: center;
+    justify-content: center;
+}
+
+.ctaButtonPrimary:active {
+    transform: scale(0.96);
+}
+
+/* Remove interactiveCard styles if no longer needed or repurpose */
+.interactiveCard {
+    /* Deprecated or removed */
+    pointer-events: none; 
+}
+
+/* --- TRACK PRIZES REFINEMENT --- */
+
+/* Reset Card Content Padding for Header */
+.tracksCard .cardContent {
+    padding-bottom: 12px; /* Tighter against list */
+}
+
+/* List Container */
+.tracksList {
+    padding: 0 16px 16px; /* Keep side/bottom padding */
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* No gap for proper borders */
+}
+
+/* Row Styling */
+.trackRow {
+    padding: 12px 0; /* Vertical breathing room */
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 0;
+    background: transparent !important; /* No bg */
+}
+
+.trackRow:first-child {
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.trackRow:last-child {
+    border-bottom: none;
+}
+
+/* Left Section */
+.trackLeft {
+    gap: 12px;
+}
+
+.trackBadge {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.03) !important; /* Unified Subtle BG */
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px;
+}
+
+/* Typography */
+.trackInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.trackTitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-text);
+}
+
+/* Right Section */
+.trackRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.trackPrize {
+    font-family: var(--font-dm-sans), sans-serif;
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.5) !important; /* Quiet meta */
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 0 !important;
+}
+
+.trackArrow {
+    color: rgba(255, 255, 255, 0.2);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+/* Interaction */
+.trackRow:active {
+    opacity: 0.7;
+}
+
+.trackRow:active .trackArrow {
+    transform: translateX(2px);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- TRACK PRIZES: LINEAR POLISH --- */
+
+/* 1. Alignment & Container Softness */
+.tracksCard {
+    border-color: var(--hackathon-mobile-divider) !important; /* Softer container */
+    background: var(--hackathon-mobile-card-bg) !important;
+}
+
+.tracksCard .cardContent {
+    padding: 20px 20px 12px 20px; /* Aligned Gutter */
+}
+
+/* 2. Structured List */
+.tracksList {
+    padding: 0 20px 20px 20px; /* Match header gutter */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. Engineered Rows */
+.trackRow {
+    padding: 0; /* Let height control spacing via flex alignment */
+    height: 64px; /* Normalized Height */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    border: none;
+    border-bottom: 1px solid var(--hackathon-mobile-divider);
+    
+    transition: background 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    cursor: pointer;
+    position: relative; /* For focus ring */
+    outline: none; /* Custom focus */
+}
+
+/* First item border-top to frame the list */
+.trackRow:first-child {
+    border-top: 1px solid var(--hackathon-mobile-divider);
+}
+
+/* 4. Muted Icons */
+.trackBadge {
+    width: 36px;
+    height: 36px; /* Slightly larger touch target fit */
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important; /* Clean surface */
+}
+
+/* Dynamic muted backgrounds based on data-color */
+.trackBadge[data-color="violet"] { background: rgba(139, 92, 246, 0.08) !important; color: #a78bfa; }
+.trackBadge[data-color="blue"] { background: rgba(59, 130, 246, 0.08) !important; color: #60a5fa; }
+.trackBadge[data-color="emerald"] { background: rgba(16, 185, 129, 0.08) !important; color: #34d399; }
+.trackBadge[data-color="orange"] { background: rgba(249, 115, 22, 0.08) !important; color: #fb923c; }
+
+/* 5. Typography & Meta Cluster */
+.trackTitle {
+    font-size: 14px; /* Slightly bumped for legibility */
+    font-weight: 500;
+    color: var(--hackathon-mobile-track-list-title);
+    letter-spacing: -0.01em;
+}
+
+.trackRight {
+    gap: 6px; /* Tighter cluster */
+    padding-right: 4px; /* Slight inset for optical balance with edge */
+}
+
+.trackPrize {
+    color: var(--hackathon-mobile-track-list-meta) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important; /* Lighter weight for meta */
+    font-feature-settings: "tnum"; /* Monospace numbers */
+}
+
+.trackArrow {
+    color: rgba(255, 255, 255, 0.15);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+/* 6. Interaction States (The Polish) */
+.trackRow:hover {
+    background: var(--hackathon-mobile-member-row-hover) !important;
+}
+
+.trackRow:hover .trackArrow {
+    color: var(--hackathon-mobile-track-list-title);
+    transform: translateX(0); /* Subtle non-movement or keep existing */
+}
+
+.trackRow:active {
+    background: var(--hackathon-mobile-member-row-active) !important;
+}
+
+.trackRow:active .trackArrow {
+    transform: translateX(2px);
+    color: var(--hackathon-mobile-member-name);
+}
+
+/* Keyboard Focus */
+.trackRow:focus-visible {
+    z-index: 10;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5) inset; /* Interior focus ring */
+    background: var(--hackathon-mobile-member-row-hover) !important;
+}
+
+/* --- CARD BACKGROUND ALIGNMENT --- */
+
+/* Force Competition Card to match the new Track Prizes Card "Black" */
+.competitionCard {
+    background: var(--hackathon-mobile-card-bg) !important;
+    border-color: var(--hackathon-mobile-divider) !important;
+}
+
+/* Ensure footer lines match new border */
+.cardFooter {
+    border-top-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* --- SQUAD REDESIGN --- */
+
+/* 1. Card Container (Matches Track Prizes) */
+/* 1. Card Container (Matches Track Prizes) */
+.squadCard {
+    background: var(--hackathon-mobile-card-bg) !important;
+    border-color: var(--hackathon-mobile-divider) !important;
+}
+
+.squadCard .cardContent {
+    padding-bottom: 8px; /* Alignment spacing */
+}
+
+/* 2. Segmented Control */
+.segmentedControl {
+    display: flex;
+    background: transparent;
+    padding: 0;
+    margin-top: -4px;
+    margin-bottom: 16px; /* Space out slightly for clarity */
+    position: relative;
+    /* Remove full-width border to reduce noise, rely on whitespace */
+    border-bottom: none; 
+    margin-left: -4px;
+}
+
+.segmentedControl::after {
+    /* Optional very subtle guide line if absolutely needed, otherwise relying on spacing */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 4px;
+    right: 0;
+    height: 1px;
+    background: var(--hackathon-mobile-guide-line);
+}
+
+.segmentBtn {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-segment-text-inactive);
+    padding: 8px 0; /* Taller hit area */
+    text-align: center;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent; 
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    opacity: 1; /* Opacity handled by color var */
+    z-index: 2;
+}
+
+.segmentBtn:hover {
+    color: var(--hackathon-mobile-segment-text-active);
+    opacity: 0.8;
+}
+
+.segmentBtnActive {
+    color: var(--hackathon-mobile-segment-text-active); /* High contrast active */
+    font-weight: 500;
+    border-bottom-color: var(--hackathon-mobile-label); /* The feature accent */
+    opacity: 1;
+}
+
+
+/* 3. People List */
+.squadList {
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px 24px;
+    gap: 0;
+}
+
+.memberRow {
+    padding: 12px 12px;
+    margin: 0 -12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
+    position: relative;
+    outline: none; /* Custom focus */
+}
+
+/* Hover/Focus states for row */
+.memberRow:hover {
+    background: var(--hackathon-mobile-member-row-hover);
+}
+
+.memberRow:active {
+    background: var(--hackathon-mobile-member-row-active);
+    transform: scale(0.99);
+}
+
+.memberRow:focus-visible {
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5) inset;
+    background: var(--hackathon-mobile-member-row-hover);
+}
+
+.memberRowSelected {
+    background: var(--hackathon-mobile-member-row-hover);
+}
+
+.memberRowSelected::before {
+    /* Left accent marker */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: var(--hackathon-mobile-label);
+    border-radius: 0 2px 2px 0;
+}
+
+/* 4. Member Left (Avatar + Info) */
+.memberLeft {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.memberAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--hackathon-mobile-member-avatar-bg);
+    border: 1px solid var(--hackathon-mobile-member-avatar-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-member-avatar-text);
+}
+
+/* Subtler Role Hint Rings */
+.memberAvatar[data-role="code"] { border-color: var(--hackathon-mobile-role-code-border); color: var(--hackathon-mobile-role-code-text); }
+.memberAvatar[data-role="design"] { border-color: var(--hackathon-mobile-role-design-border); color: var(--hackathon-mobile-role-design-text); }
+.memberAvatar[data-role="pm"] { border-color: var(--hackathon-mobile-role-pm-border); color: var(--hackathon-mobile-role-pm-text); }
+
+.memberInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.memberName {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--hackathon-mobile-member-name); /* Explicit high contrast */
+    letter-spacing: -0.01em;
+}
+
+/* Meta Row: Significantly quieter */
+.memberMetaRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--hackathon-mobile-member-meta); /* Lower contrast */
+}
+
+.memberRole {
+    font-weight: 400;
+    color: currentColor;
+}
+
+.metaDivider {
+    color: var(--hackathon-mobile-member-tag);
+    font-size: 10px;
+}
+
+.memberTags {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.memberTag {
+    color: var(--hackathon-mobile-member-tag);
+    font-family: var(--font-dm-sans), sans-serif;
+    font-size: 12px;
+}
+
+.tagSeparator {
+    margin: 0 4px; /* Dash spacing */
+    color: var(--hackathon-mobile-member-tag);
+}
+
+/* 5. Action - True Secondary "Ghost" Style */
+.memberAction {
+    display: flex;
+    align-items: center;
+    padding-right: 0; 
+}
+
+.inviteButton {
+    /* Text Button Style - No Pill by default */
+    font-family: var(--font-dm-sans), sans-serif;
+    font-size: 12px;
+    font-weight: 600; /* Increased weight for legibility without container */
+    color: var(--hackathon-mobile-invite-text); 
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: transparent;
+    border: none; /* Removed border */
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* Interaction States - Reveal Pill on Hover/Active */
+.inviteButton:hover,
+.inviteButton:focus-visible {
+    background: var(--hackathon-mobile-invite-hover-bg);
+    color: var(--hackathon-mobile-invite-hover-text); 
+    outline: none;
+}
+
+.inviteButton:active {
+    transform: scale(0.96);
+    background: var(--hackathon-mobile-invite-active-bg);
+}
+
+/* Row Hover Effect: Make inviting tempting */
+.memberRow:hover .inviteButton {
+    color: var(--hackathon-mobile-invite-text-row-hover); /* Brighter text on row hover */
+}
+
+/* Disabled State */
+.inviteButton:disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+

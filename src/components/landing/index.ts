@@ -10,6 +10,7 @@ export * from './UseCasesSection';
 export * from './FAQSection';
 export * from './CoverageSection';
 export * from './FeatureShowcaseSection';
+export { default as HackathonHighlightSection } from './HackathonHighlightSection';
 export { default as LightRays } from './LightRays';
 
 // Export adaptive renderer and mobile components

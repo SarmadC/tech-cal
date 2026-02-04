@@ -33,7 +33,8 @@ import {
     UseCasesSection,
     FAQSection,
     CoverageSection,
-    FeatureShowcaseSection
+    FeatureShowcaseSection,
+    HackathonHighlightSection
 } from './';
 
 export default function LandingPage() {
@@ -52,7 +53,7 @@ export default function LandingPage() {
         },
         {
             name: "Contact",
-            link: "#contact",
+            link: "/contact",
         },
     ];
 
@@ -176,6 +177,7 @@ export default function LandingPage() {
                 {/* This now renders the dynamically loaded component */}
                 <ProductDemoSection />
                 <FeatureShowcaseSection />
+                <HackathonHighlightSection />
                 <FeaturesGrid />
                 <UseCasesSection />
                 <CoverageSection />

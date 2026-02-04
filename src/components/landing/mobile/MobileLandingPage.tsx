@@ -6,6 +6,7 @@ import MobileHeroSection from './MobileHeroSection';
 import MobileChaosToOrderSection from './MobileChaosToOrderSection';
 import MobileFeatureShowcaseSection from './MobileFeatureShowcaseSection';
 import MobileFeaturesGrid from './MobileFeaturesGrid';
+import MobileHackathonHighlightSection from './MobileHackathonHighlightSection';
 import MobileUseCasesSection from './MobileUseCasesSection';
 import MobileFAQSection from './MobileFAQSection';
 import MobileFooter from './MobileFooter';
@@ -74,6 +75,7 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
                 />
                 <MobileChaosToOrderSection />
                 <MobileFeatureShowcaseSection />
+                <MobileHackathonHighlightSection />
                 <MobileFeaturesGrid />
                 <MobileUseCasesSection />
                 <MobileFAQSection />
