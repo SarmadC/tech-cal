@@ -72,89 +72,99 @@ export function TrialExpiredModal({
     return (
         <div
             className={cn(
-                'fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm',
+                'fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-md animate-in fade-in duration-300',
                 className,
             )}
             role="dialog"
             aria-modal="true"
             aria-labelledby="trial-expired-title"
         >
-            <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl">
+            <div className="relative w-full max-w-[460px] overflow-hidden rounded-2xl border border-zinc-800 bg-[#161618] p-0 shadow-2xl shadow-black/40 animate-in zoom-in-95 duration-300">
                 {/* Only show close button in non-blocking mode */}
                 {!blocking && (
                     <button
                         type="button"
                         onClick={handleClose}
-                        className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground shadow hover:bg-muted/80"
+                        className="absolute right-4 top-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
                         aria-label="Close trial expired dialog"
                     >
-                        <X size={18} weight="bold" />
+                        <X size={18} />
                     </button>
                 )}
 
-                <div className="flex items-center gap-3">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-8 ring-amber-100/40 dark:bg-amber-900/50 dark:text-amber-100 dark:ring-amber-900/30">
-                        <Clock size={22} weight="fill" />
-                    </span>
-                    <div>
-                        <h2 id="trial-expired-title" className="text-lg font-semibold">
-                            Your trial has ended
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                            {blocking
-                                ? 'Your 7-day Pro trial is over. Choose how you\'d like to continue.'
-                                : 'Keep calendar sync, full recommendations, and unlimited history by upgrading to Pro.'}
-                        </p>
+                <div className="p-8 pb-6">
+                    {/* Header Section */}
+                    <div className="flex flex-col items-start gap-4">
+                        <div className="space-y-1">
+                            <h2 id="trial-expired-title" className="text-xl font-medium tracking-tight text-white">
+                                Your trial has ended
+                            </h2>
+                            <p className="text-[14px] leading-relaxed text-zinc-400 max-w-[320px]">
+                                {blocking
+                                    ? 'Your 7-day Pro trial is over. Choose how you\'d like to continue.'
+                                    : 'Keep calendar sync, full recommendations, and unlimited history by upgrading to Pro.'}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div className="mt-5 space-y-3 rounded-xl border border-dashed border-amber-200/70 bg-amber-50/60 p-4 dark:border-amber-200/30 dark:bg-amber-950/30">
-                    <p className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-2">
-                        {blocking ? 'With Pro, you keep:' : 'Pro features you\'ll lose:'}
-                    </p>
-                    <FeatureRow
-                        icon={<CalendarCheck size={18} weight="fill" />}
-                        label="Calendar sync"
-                        helper="Stay auto-updated across Google/Outlook."
-                    />
-                    <FeatureRow
-                        icon={<Sparkle size={18} weight="fill" />}
-                        label="Full career insights"
-                        helper="Unlock detailed analytics and personalized scores."
-                    />
-                    <FeatureRow
-                        icon={<WarningCircle size={18} weight="fill" />}
-                        label="Unlimited history"
-                        helper="Remove the 30-day limit on tracked events."
-                    />
+                {/* Features List - Clean, Monochromatic, Divided */}
+                <div className="border-t border-zinc-800 bg-zinc-900/20">
+                    <div className="px-6 py-3 border-b border-zinc-800/50">
+                        <p className="text-[13px] font-medium text-zinc-500">
+                            {blocking ? 'With Pro, you keep:' : 'Pro features you\'ll lose:'}
+                        </p>
+                    </div>
+
+                    <div className="px-6 flex flex-col">
+                        <FeatureRow
+                            icon={<CalendarCheck size={16} weight="fill" />}
+                            label="Calendar sync"
+                            helper="Stay auto-updated across Google/Outlook."
+                        />
+                        <FeatureRow
+                            icon={<Sparkle size={16} weight="fill" />}
+                            label="Full career insights"
+                            helper="Unlock detailed analytics and personalized scores."
+                        />
+                        <FeatureRow
+                            icon={<WarningCircle size={16} weight="fill" />}
+                            label="Unlimited history"
+                            helper="Remove the 30-day limit on tracked events."
+                            isLast
+                        />
+                    </div>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-3">
-                    <Button
-                        onClick={handleUpgrade}
-                        className="w-full bg-amber-600 text-white hover:bg-amber-600/90"
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? 'Opening checkout...' : 'Upgrade to Pro — $12/month'}
-                    </Button>
+                {/* Actions */}
+                <div className="p-6 bg-[#161618]">
+                    <div className="flex flex-col gap-3">
+                        <Button
+                            onClick={handleUpgrade}
+                            className="h-10 w-full rounded-md bg-zinc-100 text-sm font-medium text-zinc-900 hover:bg-white transition-all shadow active:scale-[0.98]"
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? 'Opening checkout...' : 'Upgrade to Pro — $12/month'}
+                        </Button>
 
-                    {blocking ? (
-                        <Button
-                            variant="outline"
-                            onClick={handleContinueWithFree}
-                            className="w-full text-muted-foreground hover:text-foreground"
-                        >
-                            Continue with Free Plan
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            onClick={onClose}
-                            className="w-full text-muted-foreground hover:text-foreground"
-                        >
-                            Maybe later
-                        </Button>
-                    )}
+                        {blocking ? (
+                            <Button
+                                variant="outline"
+                                onClick={handleContinueWithFree}
+                                className="h-10 w-full rounded-md border-zinc-800 bg-transparent text-sm text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 transition-colors"
+                            >
+                                Continue with Free Plan
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                onClick={onClose}
+                                className="h-10 w-full text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                            >
+                                Maybe later
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -165,19 +175,21 @@ function FeatureRow({
     icon,
     label,
     helper,
+    isLast = false
 }: {
     icon: ReactNode;
     label: string;
     helper: string;
+    isLast?: boolean;
 }) {
     return (
-        <div className="flex items-start gap-3">
-            <span className="mt-1 text-amber-600 dark:text-amber-300">{icon}</span>
-            <div>
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-50">
+        <div className={cn("flex items-center gap-4 py-4", !isLast && "border-b border-zinc-800/50")}>
+            <span className="text-zinc-400 shrink-0">{icon}</span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-medium text-zinc-200">
                     {label}
                 </p>
-                <p className="text-xs text-amber-900/80 dark:text-amber-100/80">{helper}</p>
+                <p className="text-[12px] text-zinc-500 truncate">{helper}</p>
             </div>
         </div>
     );
