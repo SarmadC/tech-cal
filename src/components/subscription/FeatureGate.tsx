@@ -81,7 +81,7 @@ export function FeatureGate({
   className,
   onUpgradeClick,
 }: FeatureGateProps) {
-  const { isPro, isTrialing, canAccessFeature, startTrial, openUpgrade, isLoading } =
+  const { isPro, isTrialing, canAccessFeature, startTrial, openUpgrade, isLoading, hasUsedTrial } =
     useSubscriptionContext();
   const [showModal, setShowModal] = useState(false);
 
@@ -111,8 +111,8 @@ export function FeatureGate({
     (feature === 'pro'
       ? 'Pro features'
       : feature
-          .replace(/_/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase()));
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase()));
 
   // Handle click on fallback
   const handleClick = () => {
@@ -121,8 +121,8 @@ export function FeatureGate({
     setShowModal(true);
   };
 
-  // Determine modal variant
-  const modalVariant = isPro || isTrialing ? 'upgradePrompt' : 'trialStart';
+  // Determine modal variant - show upgrade if user already used trial or is Pro/Trialing
+  const modalVariant = isPro || isTrialing || hasUsedTrial ? 'upgradePrompt' : 'trialStart';
 
   // Default fallback is a blurred placeholder
   const defaultFallback = (
@@ -223,7 +223,7 @@ export function BlurredPremiumCard({
   featureLabel?: string;
   className?: string;
 }) {
-  const { startTrial, openUpgrade, isPro, isTrialing } = useSubscriptionContext();
+  const { startTrial, openUpgrade, isPro, isTrialing, hasUsedTrial } = useSubscriptionContext();
   const [showModal, setShowModal] = useState(false);
 
   const displayLabel =
@@ -231,10 +231,11 @@ export function BlurredPremiumCard({
     (feature === 'pro'
       ? 'Pro features'
       : String(feature)
-          .replace(/_/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase()));
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase()));
 
-  const modalVariant = isPro || isTrialing ? 'upgradePrompt' : 'trialStart';
+  // Show upgrade if user already used trial or is Pro/Trialing
+  const modalVariant = isPro || isTrialing || hasUsedTrial ? 'upgradePrompt' : 'trialStart';
 
   return (
     <>

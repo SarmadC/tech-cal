@@ -39,6 +39,7 @@ export default function CalendarIntegrationSettings() {
         isTrialing,
         startTrial,
         openUpgrade,
+        hasUsedTrial,
     } = useSubscriptionContext();
 
     const fetchStatus = useCallback(async () => {
@@ -69,7 +70,7 @@ export default function CalendarIntegrationSettings() {
 
     const requireProAccess = (): boolean => {
         if (isPro || isTrialing) return true;
-        setUpgradeVariant('trialStart');
+        setUpgradeVariant(hasUsedTrial ? 'upgradePrompt' : 'trialStart');
         setShowUpgradeModal(true);
         return false;
     };

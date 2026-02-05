@@ -31,7 +31,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
     const { data: feedbackData, isLoading } = useEventFeedback(userId);
     const [feedbackEvent, setFeedbackEvent] = React.useState<Event | null>(null);
     const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
-    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
 
     const handleRateClick = (event: Event) => {
@@ -290,7 +290,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                 <UpgradeModal
                     open={showUpgradeModal}
                     onClose={() => setShowUpgradeModal(false)}
-                    variant="trialStart"
+                    variant={hasUsedTrial ? 'upgradePrompt' : 'trialStart'}
                     featureName="Career Insights"
                     onStartTrial={async () => {
                         await startTrial();

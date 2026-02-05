@@ -52,6 +52,7 @@ interface UseSubscriptionReturn {
   gracePeriodDaysLeft: number | null;
   isTrialExpired: boolean;
   isCanceledButActive: boolean;
+  hasUsedTrial: boolean;
 }
 
 import { useCheckout } from '@/contexts/CheckoutContext';
@@ -193,6 +194,11 @@ export function useSubscription(): UseSubscriptionReturn {
       throw new Error('User not authenticated');
     }
 
+    // Prevent users who've already used their trial from starting another one
+    if (subscription?.trial_started_at) {
+      throw new Error('You have already used your free trial. Please upgrade to Pro to continue.');
+    }
+
     // Dynamically import Paddle to avoid SSR issues - Still needed for initialization checks if any
     // const { openProMonthlyCheckout } = await import('@/lib/paddle');
     // await openProMonthlyCheckout(user.id, user.email);
@@ -200,7 +206,7 @@ export function useSubscription(): UseSubscriptionReturn {
     // Set user info for checkout context
     setCheckoutUser(user.id, user.email);
     openCheckout('monthly'); // Standard trial start is monthly
-  }, [user?.id, user?.email, openCheckout, setCheckoutUser]);
+  }, [user?.id, user?.email, openCheckout, setCheckoutUser, subscription?.trial_started_at]);
 
   // Open upgrade checkout
   const openUpgrade = useCallback(async (plan: 'monthly' | 'annual' = 'monthly') => {
@@ -268,6 +274,9 @@ export function useSubscription(): UseSubscriptionReturn {
   const accessEndsAt = getAccessEndsAt(subscription);
   const gracePeriodDaysLeft = getGracePeriodDaysLeft(subscription);
   const trialExpired = checkTrialExpired(subscription);
+  
+  // Check if user has already used a free trial (cannot trial again)
+  const hasUsedTrial = !!(subscription?.trial_started_at);
 
   // Calculate days until renewal for active subscribers
   const daysUntilRenewal = (() => {
@@ -301,6 +310,7 @@ export function useSubscription(): UseSubscriptionReturn {
     gracePeriodDaysLeft,
     isTrialExpired: trialExpired,
     isCanceledButActive,
+    hasUsedTrial,
   };
 }
 

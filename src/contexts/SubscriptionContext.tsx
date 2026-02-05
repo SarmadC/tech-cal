@@ -29,6 +29,7 @@ interface SubscriptionContextType {
   isFree: boolean;
   isTrialExpired: boolean;
   isCanceledButActive: boolean;
+  hasUsedTrial: boolean;
 
   // Trial info
   trialDaysLeft: number | null;
@@ -79,6 +80,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     gracePeriodDaysLeft,
     isTrialExpired,
     isCanceledButActive,
+    hasUsedTrial,
   } = useSubscription();
 
   const value = useMemo<SubscriptionContextType>(
@@ -91,6 +93,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       isFree: !isPro && !isTrialing,
       isTrialExpired,
       isCanceledButActive,
+      hasUsedTrial,
       trialDaysLeft,
       accessEndsAt,
       daysUntilRenewal,
@@ -111,6 +114,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       isTrialing,
       isTrialExpired,
       isCanceledButActive,
+      hasUsedTrial,
       trialDaysLeft,
       accessEndsAt,
       daysUntilRenewal,

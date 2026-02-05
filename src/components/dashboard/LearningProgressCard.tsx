@@ -86,7 +86,7 @@ export function LearningProgressCard({
     const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
-    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
 
     const metrics = useDashboardMetrics({
@@ -303,7 +303,7 @@ export function LearningProgressCard({
                 <UpgradeModal
                     open={showUpgradeModal}
                     onClose={() => setShowUpgradeModal(false)}
-                    variant="trialStart"
+                    variant={hasUsedTrial ? 'upgradePrompt' : 'trialStart'}
                     featureName="Learning Progress"
                     onStartTrial={async () => {
                         await startTrial();

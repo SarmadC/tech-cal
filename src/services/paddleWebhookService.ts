@@ -130,12 +130,33 @@ async function handleSubscriptionCreated(
   const tier = determineTier(data.items?.[0]?.price?.id, data.status);
   const entitlements = getEntitlementsJson(tier);
 
-  // Check if subscription already exists for user
+  // Check if subscription already exists for user (include trial_started_at to detect trial abuse)
   const { data: existingSub } = await supabase
     .from('subscriptions')
-    .select('id')
+    .select('id, trial_started_at')
     .eq('user_id', userId)
     .maybeSingle();
+
+  // Detect trial abuse: user trying to start another trial when they've already had one
+  const isTrialingEvent = data.status === 'trialing';
+  const alreadyUsedTrial = !!(existingSub?.trial_started_at);
+  
+  if (isTrialingEvent && alreadyUsedTrial) {
+    logger.warn('Trial abuse attempt detected: user already used free trial', {
+      userId,
+      existingTrialStartedAt: existingSub.trial_started_at,
+      paddleSubscriptionId: data.id,
+    });
+  }
+
+  // Determine trial dates: only set if this is a new trial AND user hasn't used one before
+  const shouldSetTrialDates = isTrialingEvent && !alreadyUsedTrial;
+  const trialStartedAt = shouldSetTrialDates
+    ? (data.started_at || new Date().toISOString())
+    : (existingSub?.trial_started_at || null);
+  const trialEndsAt = shouldSetTrialDates && data.current_billing_period?.ends_at
+    ? data.current_billing_period.ends_at
+    : null;
 
   if (existingSub) {
     // Update existing subscription
@@ -148,11 +169,8 @@ async function handleSubscriptionCreated(
         paddle_subscription_id: data.id,
         paddle_price_id: data.items?.[0]?.price?.id,
         entitlements,
-        trial_started_at: data.status === 'trialing' ? (data.started_at || new Date().toISOString()) : null,
-        trial_ends_at:
-          data.status === 'trialing' && data.current_billing_period?.ends_at
-            ? data.current_billing_period.ends_at
-            : null,
+        trial_started_at: trialStartedAt,
+        trial_ends_at: trialEndsAt,
         current_period_start: data.current_billing_period?.starts_at,
         current_period_end: data.current_billing_period?.ends_at,
         plan_type:
@@ -180,11 +198,8 @@ async function handleSubscriptionCreated(
       paddle_subscription_id: data.id,
       paddle_price_id: data.items?.[0]?.price?.id,
       entitlements,
-      trial_started_at: data.status === 'trialing' ? (data.started_at || new Date().toISOString()) : null,
-      trial_ends_at:
-        data.status === 'trialing' && data.current_billing_period?.ends_at
-          ? data.current_billing_period.ends_at
-          : null,
+      trial_started_at: trialStartedAt,
+      trial_ends_at: trialEndsAt,
       current_period_start: data.current_billing_period?.starts_at,
       current_period_end: data.current_billing_period?.ends_at,
       plan_type: data.billing_cycle?.interval === 'year' ? 'annual' : 'monthly',

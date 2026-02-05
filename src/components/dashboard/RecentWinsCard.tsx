@@ -40,7 +40,7 @@ export function RecentWinsCard({
     eventTypes = [],
 }: RecentWinsCardProps) {
     const { user } = useAuth();
-    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
 
     const metrics = useDashboardMetrics({
@@ -319,7 +319,7 @@ export function RecentWinsCard({
             <UpgradeModal
                 open={showUpgradeModal}
                 onClose={() => setShowUpgradeModal(false)}
-                variant="trialStart"
+                variant={hasUsedTrial ? 'upgradePrompt' : 'trialStart'}
                 featureName="Full History"
                 onStartTrial={async () => {
                     await startTrial();

@@ -89,7 +89,7 @@ export function CareerProgressCard({
     careerProfile,
 }: CareerProgressCardProps) {
     const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
-    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
 
     const metrics = useDashboardMetrics({
@@ -205,7 +205,7 @@ export function CareerProgressCard({
                 <UpgradeModal
                     open={showUpgradeModal}
                     onClose={() => setShowUpgradeModal(false)}
-                    variant="trialStart"
+                    variant={hasUsedTrial ? 'upgradePrompt' : 'trialStart'}
                     featureName="Goal Tracking"
                     onStartTrial={async () => {
                         await startTrial();
