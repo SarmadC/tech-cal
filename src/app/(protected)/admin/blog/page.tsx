@@ -1,123 +1,97 @@
-'use client';
+import { createClient } from '@/utils/supabase/server';
+import Link from 'next/link';
+import { deletePost } from './actions';
+import { MaterialIcon } from '@/components/ui/Icon';
 
-import { useActionState, useEffect, useRef } from 'react';
-import { createPost, type CreatePostState } from './actions';
-import { useFormStatus } from 'react-dom';
+export const dynamic = 'force-dynamic';
 
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <button
-            type="submit"
-            disabled={pending}
-            className="bg-white text-black hover:bg-zinc-200 font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
-        >
-            {pending ? 'Publishing...' : 'Publish Post'}
-        </button>
-    );
-}
+export default async function AdminBlogListPage() {
+    const supabase = await createClient();
 
-export default function AdminBlogPage() {
-    const initialState: CreatePostState = {};
-    const [state, formAction] = useActionState(createPost, initialState);
-    const formRef = useRef<HTMLFormElement>(null);
-
-    useEffect(() => {
-        if (state.success) {
-            formRef.current?.reset();
-            alert('Post published successfully!');
-        }
-    }, [state.success]);
+    const { data: posts } = await supabase
+        .from('posts')
+        .select('id, title, slug, status, published_at')
+        .order('published_at', { ascending: false });
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-6">
-            <h1 className="text-2xl font-bold text-white mb-8">Write New Blog Post</h1>
+        <div className="max-w-6xl mx-auto py-8 px-6">
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-2xl font-bold text-white">Blog Posts</h1>
+                <Link
+                    href="/admin/blog/new"
+                    className="flex items-center gap-2 bg-white text-black hover:bg-zinc-200 font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                    <MaterialIcon name="add" size={20} className="text-black" />
+                    New Post
+                </Link>
+            </div>
 
-            {state.error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-md mb-6">
-                    {state.error}
-                </div>
-            )}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                <table className="w-full text-left text-sm text-zinc-400">
+                    <thead className="bg-zinc-950 text-zinc-200 font-medium">
+                        <tr>
+                            <th className="px-6 py-4">Title</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Published</th>
 
-            <form ref={formRef} action={formAction} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Title</label>
-                        <input
-                            type="text"
-                            name="title"
-                            required
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
-                            placeholder="e.g. The Future of React"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Slug</label>
-                        <input
-                            type="text"
-                            name="slug"
-                            required
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
-                            placeholder="e.g. future-of-react"
-                        />
-                    </div>
-                </div>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800">
+                        {posts?.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                                    No posts found. Create one to get started.
+                                </td>
+                            </tr>
+                        ) : (
+                            posts?.map((post) => (
+                                <tr key={post.id} className="hover:bg-zinc-800/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-white">{post.title}</div>
+                                        <div className="text-xs text-zinc-500">/{post.slug}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${post.status === 'published'
+                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                            }`}>
+                                            {post.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Draft'}
+                                    </td>
 
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Category</label>
-                        <input
-                            type="text"
-                            name="category"
-                            required
-                            list="categories"
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
-                            placeholder="e.g. Engineering"
-                        />
-                        <datalist id="categories">
-                            <option value="Engineering" />
-                            <option value="Product" />
-                            <option value="Company" />
-                        </datalist>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Read Time (min)</label>
-                        <input
-                            type="number"
-                            name="readTime"
-                            defaultValue="5"
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-400">Excerpt</label>
-                    <textarea
-                        name="excerpt"
-                        required
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700 h-24 resize-none"
-                        placeholder="Short summary for the card preview..."
-                    />
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-400">Content (HTML)</label>
-                    <div className="text-xs text-zinc-500 mb-2">
-                        Tip: You can write HTML directly here. Use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, etc.
-                    </div>
-                    <textarea
-                        name="content"
-                        required
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700 h-96 font-mono text-sm"
-                        placeholder="<p>Start writing your masterpiece...</p>"
-                    />
-                </div>
-
-                <div className="pt-4 border-t border-zinc-800 flex justify-end">
-                    <SubmitButton />
-                </div>
-            </form>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end items-center gap-2">
+                                            <Link
+                                                href={`/admin/blog/${post.id}`}
+                                                className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded transition-colors"
+                                                title="Edit"
+                                            >
+                                                <MaterialIcon name="edit" size={18} />
+                                            </Link>
+                                            <form action={async () => {
+                                                'use server';
+                                                await deletePost(post.id, new FormData());
+                                            }}>
+                                                <button
+                                                    type="submit"
+                                                    className="p-2 hover:bg-red-500/10 text-zinc-400 hover:text-red-500 rounded transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <MaterialIcon name="delete" size={18} />
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
