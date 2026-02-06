@@ -225,10 +225,15 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [user?.id, user?.email, openCheckout, setCheckoutUser]);
 
+  // Store loadSubscription in a ref to avoid dependency issues
+  const loadSubscriptionRef = useRef(loadSubscription);
+  loadSubscriptionRef.current = loadSubscription;
+
   // Load subscription on mount and when user changes
+  // Using primitive dependencies to avoid infinite re-renders
   useEffect(() => {
     isMounted.current = true;
-    loadSubscription();
+    loadSubscriptionRef.current();
 
     return () => {
       isMounted.current = false;
@@ -237,7 +242,8 @@ export function useSubscription(): UseSubscriptionReturn {
         abortControllerRef.current.abort();
       }
     };
-  }, [loadSubscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isReady]);
 
   // Computed values
   const isCanceledButActive = !!(subscription?.status === 'canceled' &&

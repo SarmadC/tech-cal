@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { requireAdmin } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -38,8 +39,14 @@ export async function createPost(prevState: CreatePostState, formData: FormData)
 
     try {
         // 1. Get or Create Category
+        // Use service role client to bypass RLS for category creation
+        const adminClient = createServiceClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
         let categoryId;
-        const { data: category } = await supabase
+        const { data: category } = await adminClient
             .from('post_categories')
             .select('id')
             .eq('name', categoryName)
@@ -48,7 +55,7 @@ export async function createPost(prevState: CreatePostState, formData: FormData)
         if (category) {
             categoryId = category.id;
         } else {
-            const { data: newCategory, error: catError } = await supabase
+            const { data: newCategory, error: catError } = await adminClient
                 .from('post_categories')
                 .insert({ 
                     name: categoryName, 
