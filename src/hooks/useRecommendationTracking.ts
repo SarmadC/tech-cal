@@ -48,6 +48,8 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
   const viewTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const viewStartTimeRef = useRef<number | undefined>(undefined);
   const consentCacheRef = useRef<{ userId: string; hasConsent: boolean | null; cachedAt: number } | null>(null);
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
 
   // Generate session ID once per hook instance
   useEffect(() => {
@@ -83,7 +85,9 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
 
   // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (viewTimerRef.current) {
         clearTimeout(viewTimerRef.current);
       }
@@ -184,11 +188,12 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     if (!user?.id || !options.enableTracking || !viewStartTimeRef.current) return;
 
     const durationMs = Date.now() - viewStartTimeRef.current;
-    
+
     // Only track if viewed for more than 1 second
     if (durationMs > 1000) {
       const hasConsent = await checkConsentCached(user.id);
-      if (!hasConsent) return;
+      // Check if still mounted after async operation
+      if (!hasConsent || !isMountedRef.current) return;
 
       const interaction: UserInteraction = {
         userId: user.id,
@@ -203,7 +208,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       await BehavioralAnalyticsService.trackInteraction(
         user.id,
         interaction.interactionType,
-        { 
+        {
           eventId: interaction.eventId,
           section: interaction.section,
           position: interaction.position,
@@ -237,7 +242,8 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     if (!user?.id || !sessionIdRef.current || !options.enableTracking) return;
 
     const hasConsent = await checkConsentCached(user.id);
-    if (!hasConsent) return;
+    // Check if still mounted after async operation
+    if (!hasConsent || !isMountedRef.current) return;
 
     // TODO: Implement recommendation batch tracking in Phase 2
     // Will require new RPC function or table structure for batch display tracking

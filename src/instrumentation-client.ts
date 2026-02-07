@@ -1,10 +1,16 @@
 // This file configures the initialization of Sentry on the client.
-// The added config here will be used whenever a users loads a page in their browser.
+// Skip Sentry completely in development to prevent memory leaks with Next.js 16+
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from "@sentry/nextjs";
+if (process.env.NODE_ENV !== 'development') {
+  // Import the client config to initialize Sentry with our custom settings
+  import("../sentry.client.config");
+}
 
-// Import the client config to initialize Sentry with our custom settings
-import "../sentry.client.config";
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+// Only export Sentry handler in production
+export const onRouterTransitionStart = process.env.NODE_ENV === 'development'
+  ? undefined
+  : async (...args: Parameters<typeof import('@sentry/nextjs').captureRouterTransitionStart>) => {
+      const Sentry = await import('@sentry/nextjs');
+      return Sentry.captureRouterTransitionStart(...args);
+    };

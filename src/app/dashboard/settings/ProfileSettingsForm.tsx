@@ -197,15 +197,18 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
             );
         };
 
+        // Capture refs at effect setup time to ensure consistent cleanup
         const nameInput = fullNameInputRef.current;
         const timezoneSelect = timezoneSelectRef.current;
 
-        if (nameInput) nameInput.addEventListener('input', checkDirty);
-        if (timezoneSelect) timezoneSelect.addEventListener('change', checkDirty);
+        // Only add listeners if elements exist
+        nameInput?.addEventListener('input', checkDirty);
+        timezoneSelect?.addEventListener('change', checkDirty);
 
         return () => {
-            if (nameInput) nameInput.removeEventListener('input', checkDirty);
-            if (timezoneSelect) timezoneSelect.removeEventListener('change', checkDirty);
+            // Use captured refs for cleanup to ensure we remove the same listeners we added
+            nameInput?.removeEventListener('input', checkDirty);
+            timezoneSelect?.removeEventListener('change', checkDirty);
         };
     }, [profile]);
 

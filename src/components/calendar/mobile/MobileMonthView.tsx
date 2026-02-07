@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { EventClickArg } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
@@ -62,15 +62,16 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
   const [fullSpeakerData, setFullSpeakerData] = useState<Record<string, Array<{ id: string; name: string; photoUrl?: string }>>>({});
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync currentMonth with initialDate changes (e.g., from search)
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('MobileMonthView: Received initialDate change:', initialDate);
     setCurrentMonth(initialDate);
   }, [initialDate]);
 
   // Fetch speaker data for events (same as week view)
-  React.useEffect(() => {
+  useEffect(() => {
     let isCancelled = false;
     const supabase = createClient();
     const fetchSpeakers = async () => {
@@ -113,6 +114,14 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Generate calendar grid for the month with enhanced data
   const calendarGrid = useMemo(() => {
@@ -276,7 +285,10 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     setCurrentMonth(prevMonth);
     onDateChange?.(prevMonth);
     
-    setTimeout(() => setIsTransitioning(false), 300);
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), 300);
   }, [currentMonth, onDateChange]);
 
   const handleNextMonth = useCallback(() => {
@@ -286,7 +298,10 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     setCurrentMonth(nextMonth);
     onDateChange?.(nextMonth);
     
-    setTimeout(() => setIsTransitioning(false), 300);
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), 300);
   }, [currentMonth, onDateChange]);
 
 

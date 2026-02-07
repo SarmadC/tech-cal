@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppProfile } from '@/types';
 
 export interface UserLocation {
@@ -16,9 +16,14 @@ export function useUserLocation(userProfile: AppProfile | null) {
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     const detectLocation = async () => {
+      if (!isMountedRef.current) return;
       setIsLoading(true);
       setError(null);
 
@@ -27,8 +32,9 @@ export function useUserLocation(userProfile: AppProfile | null) {
         if (userProfile?.preferences) {
           const preferences = userProfile.preferences as Record<string, unknown>;
           const profileLocation = preferences?.location as Record<string, unknown>;
-          
+
           if (profileLocation?.city && profileLocation?.country) {
+            if (!isMountedRef.current) return;
             setLocation({
               city: profileLocation.city as string,
               country: profileLocation.country as string,
@@ -47,17 +53,20 @@ export function useUserLocation(userProfile: AppProfile | null) {
               navigator.geolocation.getCurrentPosition(
                 resolve,
                 reject,
-                { 
-                  timeout: 10000, 
+                {
+                  timeout: 10000,
                   enableHighAccuracy: false,
                   maximumAge: 5 * 60 * 1000 // Cache for 5 minutes
                 }
               );
             });
 
+            // Check if still mounted after async geolocation
+            if (!isMountedRef.current) return;
+
             // Reverse geocode to get city/country (in a real app, you'd use a service)
             const { latitude, longitude } = position.coords;
-            
+
             // For now, we'll use a simple timezone-based approach
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             const locationFromTimezone = getLocationFromTimezone(timezone);
@@ -77,10 +86,13 @@ export function useUserLocation(userProfile: AppProfile | null) {
           }
         }
 
+        // Check if still mounted before setting fallback location
+        if (!isMountedRef.current) return;
+
         // 3. Fallback to timezone-based detection
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const locationFromTimezone = getLocationFromTimezone(timezone);
-        
+
         setLocation({
           ...locationFromTimezone,
           timezone,
@@ -88,20 +100,27 @@ export function useUserLocation(userProfile: AppProfile | null) {
         });
 
       } catch (err) {
+        if (!isMountedRef.current) return;
         console.error('Location detection failed:', err);
         setError('Unable to detect location');
-        
+
         // Final fallback
         setLocation({
           timezone: 'UTC',
           source: 'fallback'
         });
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
     detectLocation();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [userProfile]);
 
   return { location, isLoading, error };

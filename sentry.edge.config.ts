@@ -11,8 +11,8 @@ const sentryDebug = process.env.SENTRY_DEBUG === 'true';
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   
-  // Disable Sentry to see console logs
-  enabled: sentryEnabled,
+  // Disable Sentry in development to save memory, or if SENTRY_ENABLED is explicitly false
+  enabled: process.env.NODE_ENV === 'development' ? false : sentryEnabled,
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,

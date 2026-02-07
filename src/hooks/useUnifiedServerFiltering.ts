@@ -486,9 +486,90 @@ export function useUnifiedServerFiltering(
   
   // Location detection state and action
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  // AbortController for external API calls (reverse geocode, IP geolocation)
+  const locationAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup AbortController on unmount
+  useEffect(() => {
+    return () => {
+      if (locationAbortControllerRef.current) {
+        locationAbortControllerRef.current.abort();
+        locationAbortControllerRef.current = null;
+      }
+    };
+  }, []);
   
-  // Timezone to location mapping for fallback location detection
-  const timezoneToLocationMap: Record<string, { city: string; country: string }> = {
+  /**
+   * Reverse geocode coordinates to get city name using free BigDataCloud API
+   */
+  const reverseGeocode = async (latitude: number, longitude: number, signal?: AbortSignal): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+        { signal }
+      );
+
+      if (!response.ok) {
+        console.warn('[NearMe] Reverse geocoding API error:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Try to get the city name from various fields
+      const city = data.city || data.locality || data.principalSubdivision || null;
+
+      if (city) {
+        console.log('[NearMe] Detected location:', city, data.countryName);
+        return city;
+      }
+
+      return null;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return null;
+      console.warn('[NearMe] Reverse geocoding failed:', error);
+      return null;
+    }
+  };
+  
+  /**
+   * Get location from IP address using BigDataCloud's free IP geolocation API
+   * This is useful when browser geolocation is denied but user is traveling
+   */
+  const getLocationFromIP = async (signal?: AbortSignal): Promise<string | null> => {
+    try {
+      console.log('[NearMe] Trying IP-based geolocation...');
+      // Using BigDataCloud client-info - free, no API key required, HTTPS, returns city from IP
+      const response = await fetch('https://api.bigdatacloud.net/data/client-info', { signal });
+
+      if (!response.ok) {
+        console.warn('[NearMe] IP geolocation API error:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('[NearMe] IP geolocation response:', data);
+
+      // BigDataCloud client-info returns location info based on IP
+      const city = data.city || data.locality || data.location?.city || data.location?.locality || data.principalSubdivision || null;
+
+      if (city) {
+        console.log('[NearMe] IP-based location detected:', city, data.countryName || data.country);
+        return city;
+      }
+
+      console.log('[NearMe] IP geolocation returned no city data');
+      return null;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return null;
+      console.warn('[NearMe] IP geolocation failed:', error);
+      return null;
+    }
+  };
+  
+  // Timezone to location mapping for fallback location detection - memoized to avoid recreation on each render
+  const timezoneToLocationMap = useMemo<Record<string, { city: string; country: string }>>(() => ({
     'America/New_York': { city: 'New York', country: 'USA' },
     'America/Los_Angeles': { city: 'Los Angeles', country: 'USA' },
     'America/Chicago': { city: 'Chicago', country: 'USA' },
@@ -503,76 +584,18 @@ export function useUnifiedServerFiltering(
     'Asia/Singapore': { city: 'Singapore', country: 'Singapore' },
     'Asia/Hong_Kong': { city: 'Hong Kong', country: 'Hong Kong' },
     'Australia/Sydney': { city: 'Sydney', country: 'Australia' },
-  };
-  
-  /**
-   * Reverse geocode coordinates to get city name using free BigDataCloud API
-   */
-  const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
-    try {
-      const response = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-      
-      if (!response.ok) {
-        console.warn('[NearMe] Reverse geocoding API error:', response.status);
-        return null;
-      }
-      
-      const data = await response.json();
-      
-      // Try to get the city name from various fields
-      const city = data.city || data.locality || data.principalSubdivision || null;
-      
-      if (city) {
-        console.log('[NearMe] Detected location:', city, data.countryName);
-        return city;
-      }
-      
-      return null;
-    } catch (error) {
-      console.warn('[NearMe] Reverse geocoding failed:', error);
-      return null;
-    }
-  };
-  
-  /**
-   * Get location from IP address using BigDataCloud's free IP geolocation API
-   * This is useful when browser geolocation is denied but user is traveling
-   */
-  const getLocationFromIP = async (): Promise<string | null> => {
-    try {
-      console.log('[NearMe] Trying IP-based geolocation...');
-      // Using BigDataCloud client-info - free, no API key required, HTTPS, returns city from IP
-      const response = await fetch('https://api.bigdatacloud.net/data/client-info');
-      
-      if (!response.ok) {
-        console.warn('[NearMe] IP geolocation API error:', response.status);
-        return null;
-      }
-      
-      const data = await response.json();
-      console.log('[NearMe] IP geolocation response:', data);
-      
-      // BigDataCloud client-info returns location info based on IP
-      const city = data.city || data.locality || data.location?.city || data.location?.locality || data.principalSubdivision || null;
-      
-      if (city) {
-        console.log('[NearMe] IP-based location detected:', city, data.countryName || data.country);
-        return city;
-      }
-      
-      console.log('[NearMe] IP geolocation returned no city data');
-      return null;
-    } catch (error) {
-      console.warn('[NearMe] IP geolocation failed:', error);
-      return null;
-    }
-  };
-  
+  }), []);
+
   const applyNearMe = useCallback(async () => {
     setIsDetectingLocation(true);
-    
+
+    // Cancel any previous location detection request
+    if (locationAbortControllerRef.current) {
+      locationAbortControllerRef.current.abort();
+    }
+    locationAbortControllerRef.current = new AbortController();
+    const signal = locationAbortControllerRef.current.signal;
+
     try {
       // 1. Try browser geolocation with reverse geocoding (most accurate)
       if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
@@ -584,41 +607,50 @@ export function useUnifiedServerFiltering(
               { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
             );
           });
-          
+
+          if (signal.aborted) return;
+
           const { latitude, longitude } = position.coords;
           console.log('[NearMe] Got coordinates:', latitude, longitude);
-          
+
           // Try reverse geocoding to get actual city name
-          const city = await reverseGeocode(latitude, longitude);
-          
+          const city = await reverseGeocode(latitude, longitude, signal);
+
+          if (signal.aborted) return;
+
           if (city) {
             setFilters(prev => ({ ...prev, locations: [city] }));
             return;
           }
-          
+
           console.log('[NearMe] Reverse geocoding returned no city, trying IP geolocation');
         } catch (error) {
+          if (signal.aborted) return;
           console.warn('[NearMe] Geolocation failed:', error);
           // Fall through to IP-based detection
         }
       }
-      
+
       // 2. Try IP-based geolocation (works when traveling, more accurate than timezone)
       try {
-        const ipCity = await getLocationFromIP();
+        const ipCity = await getLocationFromIP(signal);
+        if (signal.aborted) return;
         if (ipCity) {
           setFilters(prev => ({ ...prev, locations: [ipCity] }));
           return;
         }
       } catch (error) {
+        if (signal.aborted) return;
         console.warn('[NearMe] IP geolocation failed:', error);
       }
-      
+
+      if (signal.aborted) return;
+
       // 3. Final fallback: use timezone to guess location
       console.log('[NearMe] Falling back to timezone detection');
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const locationData = timezoneToLocationMap[timezone];
-      
+
       if (locationData) {
         setFilters(prev => ({ ...prev, locations: [locationData.city] }));
       } else {
@@ -632,7 +664,7 @@ export function useUnifiedServerFiltering(
     } finally {
       setIsDetectingLocation(false);
     }
-  }, []);
+  }, [timezoneToLocationMap]);
 
   // Flatten pages and enrich tracking info
   const pagedEvents = useMemo(() => {

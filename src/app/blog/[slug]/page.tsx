@@ -124,7 +124,13 @@ export default async function BlogPostPage({ params }: Props) {
                     prose-a:text-white prose-a:underline hover:prose-a:text-zinc-200
                     prose-strong:text-white
                     prose-code:text-white prose-code:bg-white/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                    prose-pre:bg-[#111] prose-pre:border prose-pre:border-white/10"
+                    prose-pre:bg-[#111] prose-pre:border prose-pre:border-white/10
+                    prose-blockquote:border-l-4 prose-blockquote:border-zinc-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400
+                    prose-table:border-collapse prose-table:w-full
+                    prose-th:border prose-th:border-zinc-700 prose-th:bg-zinc-800/50 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+                    prose-td:border prose-td:border-zinc-700 prose-td:px-4 prose-td:py-2
+                    [&_mark]:bg-yellow-500/30 [&_mark]:text-yellow-200 [&_mark]:px-0.5 [&_mark]:rounded
+                    [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-lg [&_iframe]:my-4"
                         dangerouslySetInnerHTML={{ __html: post.content || '' }}
                     />
 

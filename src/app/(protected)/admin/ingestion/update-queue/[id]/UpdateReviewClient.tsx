@@ -398,6 +398,18 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         }
     }, [focusedFieldIndex]);
 
+    // Clean up fieldRefs Map when fields change to prevent DOM reference leaks
+    useEffect(() => {
+        // Remove refs for indices that no longer exist in the fields array
+        const currentFieldCount = fields.length;
+        const refsMap = fieldRefs.current;
+        for (const index of refsMap.keys()) {
+            if (index >= currentFieldCount) {
+                refsMap.delete(index);
+            }
+        }
+    }, [fields.length]);
+
     const toggleFieldSelection = (fieldName: string) => {
         const newSelected = new Set(selectedFields);
         if (newSelected.has(fieldName)) {

@@ -33,8 +33,18 @@ interface ScoreBreakdownResponse {
 // Simple in-memory rate limiter for dev debugging
 const debugRateLimiter = new Map<string, { count: number; resetAt: number }>();
 
+function pruneExpiredRateLimits(now: number): void {
+  for (const [key, value] of debugRateLimiter) {
+    if (now > value.resetAt) {
+      debugRateLimiter.delete(key);
+    }
+  }
+}
+
 function checkDebugRateLimit(userId: string): boolean {
   const now = Date.now();
+  // Opportunistic cleanup avoids import-time background timers in dev/HMR.
+  pruneExpiredRateLimits(now);
   const key = `debug-${userId}`;
   const limit = debugRateLimiter.get(key);
 

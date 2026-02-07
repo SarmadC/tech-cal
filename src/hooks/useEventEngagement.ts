@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
@@ -36,6 +36,19 @@ export function useEventEngagement() {
   } = useSubscriptionContext();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
+
+  // AbortController ref for calendar sync requests - prevents state updates on unmounted components
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup AbortController on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   // Single source of truth for tracked events (includes is_bookmarked and status)
   const {
@@ -177,15 +190,24 @@ export function useEventEngagement() {
       }
       
       // Trigger calendar sync based on bookmark state
+      // Cancel any previous calendar sync request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+
       if (result.isBookmarked) {
         // Bookmark ON: sync to calendar
         fetch('/api/calendar/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ eventId, action: 'sync' })
+          body: JSON.stringify({ eventId, action: 'sync' }),
+          signal
         })
           .then(async (res) => {
+            if (signal.aborted) return;
             if (res.status === 202) {
               console.log('Calendar sync queued for bookmark');
             } else if (!res.ok) {
@@ -198,6 +220,7 @@ export function useEventEngagement() {
             }
           })
           .catch((err) => {
+            if (err.name === 'AbortError') return; // Ignore abort errors
             console.error('Calendar sync request failed:', err);
           });
       } else {
@@ -213,13 +236,15 @@ export function useEventEngagement() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ 
-              eventId, 
+            body: JSON.stringify({
+              eventId,
               action: 'delete'
               // external_calendar_event_id and external_provider will be looked up by API if not provided
-            })
+            }),
+            signal
           })
             .then(async (res) => {
+              if (signal.aborted) return;
               if (res.ok || res.status === 200) {
                 console.log('Calendar unsync successful');
               } else if (res.status !== 404) {
@@ -228,6 +253,7 @@ export function useEventEngagement() {
               }
             })
             .catch((err) => {
+              if (err.name === 'AbortError') return; // Ignore abort errors
               console.error('Calendar unsync request failed:', err);
             });
         }
@@ -309,13 +335,22 @@ export function useEventEngagement() {
       // Calendar sync: only update if event already exists (from bookmark)
       // Auto-bookmark in RPC will trigger sync creation if needed
       if (status && (status === 'attending' || status === 'attended')) {
+        // Cancel any previous calendar sync request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         fetch('/api/calendar/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ eventId, action: 'sync' })
+          body: JSON.stringify({ eventId, action: 'sync' }),
+          signal
         })
           .then(async (res) => {
+            if (signal.aborted) return;
             if (res.status === 202) {
               console.log('Calendar sync queued for attendance');
             } else if (!res.ok && res.status !== 404) {
@@ -323,6 +358,7 @@ export function useEventEngagement() {
             }
           })
           .catch((err) => {
+            if (err.name === 'AbortError') return; // Ignore abort errors
             console.error('Calendar sync request failed:', err);
           });
       }

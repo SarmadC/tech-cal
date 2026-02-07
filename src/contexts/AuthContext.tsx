@@ -20,6 +20,7 @@ import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { AuthService } from '@/services/authService';
 import { ProfileService } from '@/services/profileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
+import { clearAllSubscriptionCache } from '@/hooks/useSubscription';
 import type {
     AppProfile,
     AuthResponse,
@@ -263,6 +264,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             return;
         }
         try {
+            // Clear subscription cache to prevent memory leaks
+            clearAllSubscriptionCache();
             await AuthService.signOut(supabase);
             // Redirect to home page after successful signout
             window.location.href = '/';
