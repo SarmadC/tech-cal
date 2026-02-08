@@ -3,6 +3,7 @@
 export const revalidate = 3600; // 1 hour
 
 import Link from 'next/link';
+import Image from 'next/image';
 import BlogFilters from './BlogFilters';
 import { createClient } from '@/utils/supabase/server';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
@@ -16,6 +17,7 @@ type PostWithDetails = {
     title: string | null;
     slug: string | null;
     excerpt: string | null;
+    featured_image_url: string | null;
     published_at: string | null;
     read_time_minutes: number | null;
     category: { name: string | null } | null;
@@ -61,6 +63,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             title,
             slug,
             excerpt,
+            featured_image_url,
             published_at,
             read_time_minutes,
             category: post_categories ( name ),
@@ -146,7 +149,17 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
                                         {/* Image/Pattern Side */}
                                         <div className="md:col-span-7 h-full relative min-h-[300px] md:min-h-full bg-zinc-800">
-                                            <GeometricPattern variant="mixed" />
+                                            {featuredPost.featured_image_url ? (
+                                                <Image
+                                                    src={featuredPost.featured_image_url}
+                                                    alt={featuredPost.title || 'Blog header image'}
+                                                    fill
+                                                    sizes="(min-width: 768px) 60vw, 100vw"
+                                                    className="object-cover"
+                                                />
+                                            ) : (
+                                                <GeometricPattern variant="mixed" />
+                                            )}
                                         </div>
                                     </div>
                                 </article>
@@ -168,7 +181,17 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                                 <article className="bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-800/50 hover:border-white/10 transition-all duration-300 h-full flex flex-col">
                                     {/* Image Area */}
                                     <div className="aspect-[4/3] w-full relative bg-zinc-800 border-b border-white/5">
-                                        <GeometricPattern variant={getVariantForId(post.id)} />
+                                        {post.featured_image_url ? (
+                                            <Image
+                                                src={post.featured_image_url}
+                                                alt={post.title || 'Blog header image'}
+                                                fill
+                                                sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <GeometricPattern variant={getVariantForId(post.id)} />
+                                        )}
                                     </div>
 
                                     <div className="p-8 flex flex-col flex-1">

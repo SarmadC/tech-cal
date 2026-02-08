@@ -14,6 +14,8 @@ type BlogPostFormProps = {
         slug: string;
         content: string;
         read_time_minutes: number;
+        featured_image_url?: string | null;
+        cta_event_id?: string | null;
         category_name?: string; // We might need to fetch categories to map this correctly, for now assuming string input
     };
     successMessage?: string;
@@ -49,6 +51,8 @@ export default function BlogPostForm({ action, initialData, successMessage = 'Po
     const [content, setContent] = useState(initialData?.content || '');
     const [category, setCategory] = useState(initialData?.category_name || '');
     const [readTime, setReadTime] = useState(initialData?.read_time_minutes?.toString() || '5');
+    const [featuredImageUrl, setFeaturedImageUrl] = useState(initialData?.featured_image_url || '');
+    const [ctaEventId, setCtaEventId] = useState(initialData?.cta_event_id || '');
     const [isSlugTouched, setIsSlugTouched] = useState(!!initialData?.slug); // If editing, assume touched
 
     useEffect(() => {
@@ -62,6 +66,8 @@ export default function BlogPostForm({ action, initialData, successMessage = 'Po
                 setContent('');
                 setCategory('');
                 setReadTime('5');
+                setFeaturedImageUrl('');
+                setCtaEventId('');
                 setIsSlugTouched(false);
             }
         }
@@ -181,6 +187,46 @@ export default function BlogPostForm({ action, initialData, successMessage = 'Po
                         onChange={setContent}
                     />
                     <input type="hidden" name="content" value={content} />
+                </div>
+
+                <div className="space-y-4">
+                    <label className="text-sm font-medium text-zinc-400">Header Image</label>
+                    <div className="space-y-2">
+                        <label className="text-xs text-zinc-500">Image URL</label>
+                        <input
+                            type="url"
+                            name="featuredImageUrl"
+                            value={featuredImageUrl}
+                            onChange={(e) => setFeaturedImageUrl(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
+                            placeholder="https://example.com/header-image.jpg"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs text-zinc-500">Or upload image file</label>
+                        <input
+                            type="file"
+                            name="headerImageFile"
+                            accept="image/jpeg,image/png"
+                            className="w-full text-sm text-zinc-300 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-zinc-200 hover:file:bg-zinc-700"
+                        />
+                        <p className="text-xs text-zinc-500">If both are provided, uploaded file is used.</p>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-400">CTA Event ID</label>
+                    <input
+                        type="text"
+                        name="ctaEventId"
+                        value={ctaEventId}
+                        onChange={(e) => setCtaEventId(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-white focus:outline-none focus:border-zinc-700"
+                        placeholder="UUID of the linked event (optional)"
+                    />
+                    <p className="text-xs text-zinc-500">
+                        When set, this post shows an event CTA card to drive sign-ups.
+                    </p>
                 </div>
 
                 <div className="pt-4 border-t border-zinc-800 flex justify-end">

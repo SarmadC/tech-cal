@@ -2258,6 +2258,7 @@ export type Database = {
           author_id: string | null
           category_id: string | null
           content: string | null
+          cta_event_id: string | null
           created_at: string
           excerpt: string | null
           featured: boolean
@@ -2275,6 +2276,7 @@ export type Database = {
           author_id?: string | null
           category_id?: string | null
           content?: string | null
+          cta_event_id?: string | null
           created_at?: string
           excerpt?: string | null
           featured?: boolean
@@ -2292,6 +2294,7 @@ export type Database = {
           author_id?: string | null
           category_id?: string | null
           content?: string | null
+          cta_event_id?: string | null
           created_at?: string
           excerpt?: string | null
           featured?: boolean
@@ -2332,6 +2335,27 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "post_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_cta_event_id_fkey"
+            columns: ["cta_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
         ]

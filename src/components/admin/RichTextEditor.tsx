@@ -65,9 +65,13 @@ const ToolbarButton = ({
     </button>
 );
 
-// Table dropdown menu
+// Table dropdown menu with custom size picker
 const TableMenu = ({ editor, disabled }: { editor: any; disabled: boolean }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [rows, setRows] = useState(3);
+    const [cols, setCols] = useState(3);
+    const [hoverRows, setHoverRows] = useState(0);
+    const [hoverCols, setHoverCols] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -80,10 +84,12 @@ const TableMenu = ({ editor, disabled }: { editor: any; disabled: boolean }) => 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const insertTable = () => {
-        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    const insertTable = (r: number, c: number) => {
+        editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: true }).run();
         setIsOpen(false);
     };
+
+    const maxGridSize = 8;
 
     return (
         <div className="relative" ref={menuRef}>
@@ -97,41 +103,96 @@ const TableMenu = ({ editor, disabled }: { editor: any; disabled: boolean }) => 
             </ToolbarButton>
 
             {isOpen && !disabled && (
-                <div className="absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[180px] py-1">
-                    <button
-                        onClick={insertTable}
-                        className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
-                    >
-                        <Plus size={14} />
-                        Insert 3×3 Table
-                    </button>
-                    {editor?.isActive('table') && (
+                <div className="absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 p-3 min-w-[220px]">
+                    {!editor?.isActive('table') ? (
                         <>
-                            <div className="border-t border-zinc-800 my-1" />
+                            <div className="text-xs text-zinc-400 mb-2">Select table size:</div>
+
+                            {/* Visual grid picker */}
+                            <div
+                                className="grid gap-0.5 mb-3"
+                                style={{ gridTemplateColumns: `repeat(${maxGridSize}, 1fr)` }}
+                                onMouseLeave={() => { setHoverRows(0); setHoverCols(0); }}
+                            >
+                                {Array.from({ length: maxGridSize * maxGridSize }).map((_, i) => {
+                                    const r = Math.floor(i / maxGridSize) + 1;
+                                    const c = (i % maxGridSize) + 1;
+                                    const isHighlighted = r <= (hoverRows || rows) && c <= (hoverCols || cols);
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={classNames(
+                                                "w-5 h-5 border rounded-sm cursor-pointer transition-colors",
+                                                isHighlighted
+                                                    ? "bg-blue-500/40 border-blue-500"
+                                                    : "bg-zinc-800 border-zinc-700 hover:border-zinc-500"
+                                            )}
+                                            onMouseEnter={() => { setHoverRows(r); setHoverCols(c); }}
+                                            onClick={() => insertTable(r, c)}
+                                        />
+                                    );
+                                })}
+                            </div>
+
+                            <div className="text-center text-sm text-zinc-300 mb-3">
+                                {hoverRows || rows} × {hoverCols || cols}
+                            </div>
+
+                            {/* Quick presets */}
+                            <div className="flex gap-1 border-t border-zinc-800 pt-2">
+                                <button
+                                    onClick={() => insertTable(2, 2)}
+                                    className="flex-1 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 rounded transition-colors"
+                                >
+                                    2×2
+                                </button>
+                                <button
+                                    onClick={() => insertTable(3, 3)}
+                                    className="flex-1 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 rounded transition-colors"
+                                >
+                                    3×3
+                                </button>
+                                <button
+                                    onClick={() => insertTable(4, 4)}
+                                    className="flex-1 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 rounded transition-colors"
+                                >
+                                    4×4
+                                </button>
+                                <button
+                                    onClick={() => insertTable(5, 3)}
+                                    className="flex-1 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 rounded transition-colors"
+                                >
+                                    5×3
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-xs text-zinc-400 mb-2">Edit table:</div>
                             <button
                                 onClick={() => { editor.chain().focus().addColumnAfter().run(); setIsOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 rounded flex items-center gap-2"
                             >
                                 <Columns size={14} />
                                 Add Column
                             </button>
                             <button
                                 onClick={() => { editor.chain().focus().addRowAfter().run(); setIsOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 rounded flex items-center gap-2"
                             >
                                 <Rows size={14} />
                                 Add Row
                             </button>
                             <button
                                 onClick={() => { editor.chain().focus().deleteColumn().run(); setIsOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 rounded flex items-center gap-2"
                             >
                                 <Minus size={14} />
                                 Delete Column
                             </button>
                             <button
                                 onClick={() => { editor.chain().focus().deleteRow().run(); setIsOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 rounded flex items-center gap-2"
                             >
                                 <Minus size={14} />
                                 Delete Row
@@ -139,7 +200,7 @@ const TableMenu = ({ editor, disabled }: { editor: any; disabled: boolean }) => 
                             <div className="border-t border-zinc-800 my-1" />
                             <button
                                 onClick={() => { editor.chain().focus().deleteTable().run(); setIsOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 rounded flex items-center gap-2"
                             >
                                 <Minus size={14} />
                                 Delete Table
@@ -476,6 +537,66 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
                 toggleSource={() => setIsSourceMode(!isSourceMode)}
             />
 
+            {/* Floating table controls - appears when cursor is in table */}
+            {!isSourceMode && editor?.isActive('table') && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/50 border-b border-zinc-800 text-xs">
+                    <span className="text-zinc-400 font-medium">Table:</span>
+
+                    <div className="flex items-center gap-1">
+                        <span className="text-zinc-500">Rows</span>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().addRowAfter().run()}
+                            className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors"
+                            title="Add row below"
+                        >
+                            <Plus size={12} weight="bold" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().deleteRow().run()}
+                            className="p-1 rounded bg-zinc-700 hover:bg-red-500/50 text-zinc-300 transition-colors"
+                            title="Delete current row"
+                        >
+                            <Minus size={12} weight="bold" />
+                        </button>
+                    </div>
+
+                    <div className="w-px h-4 bg-zinc-700 mx-1" />
+
+                    <div className="flex items-center gap-1">
+                        <span className="text-zinc-500">Columns</span>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().addColumnAfter().run()}
+                            className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors"
+                            title="Add column to right"
+                        >
+                            <Plus size={12} weight="bold" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().deleteColumn().run()}
+                            className="p-1 rounded bg-zinc-700 hover:bg-red-500/50 text-zinc-300 transition-colors"
+                            title="Delete current column"
+                        >
+                            <Minus size={12} weight="bold" />
+                        </button>
+                    </div>
+
+                    <div className="w-px h-4 bg-zinc-700 mx-1" />
+
+                    <button
+                        type="button"
+                        onClick={() => editor.chain().focus().deleteTable().run()}
+                        className="px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors"
+                        title="Delete entire table"
+                    >
+                        Delete Table
+                    </button>
+                </div>
+            )}
+
             {isSourceMode ? (
                 <textarea
                     value={content}
@@ -529,6 +650,31 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
                     margin-left: 0;
                     font-style: italic;
                     color: #a1a1aa;
+                }
+                /* List styles - override Tailwind reset */
+                .ProseMirror ul {
+                    list-style-type: disc;
+                    padding-left: 1.5rem;
+                    margin: 0.5rem 0;
+                }
+                .ProseMirror ol {
+                    list-style-type: decimal;
+                    padding-left: 1.5rem;
+                    margin: 0.5rem 0;
+                }
+                .ProseMirror ul li,
+                .ProseMirror ol li {
+                    margin: 0.25rem 0;
+                }
+                .ProseMirror ul li p,
+                .ProseMirror ol li p {
+                    margin: 0;
+                }
+                .ProseMirror ul ul {
+                    list-style-type: circle;
+                }
+                .ProseMirror ul ul ul {
+                    list-style-type: square;
                 }
                 .ProseMirror iframe {
                     border-radius: 0.5rem;
