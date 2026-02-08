@@ -295,12 +295,12 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className={`relative z-50 mb-8 transition-colors`}>
+        <div className={`relative z-10 mb-8 transition-colors`}>
             {/* Glass strip container */}
             <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-background/40 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/20">
 
                 {/* Search Input - Command Palette Style */}
-                <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
+                <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-20' : ''}`}>
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors z-10 flex items-center">
                         {isSearching ? (
                             <SpinnerGap size={18} className="animate-spin" />
