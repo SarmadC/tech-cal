@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDebounce } from './useDebounce';
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
 import type { SearchSuggestion, ApiResponse } from '@/types';
 
 interface UseRemoteSearchSuggestionsProps {
@@ -49,7 +50,12 @@ export function useRemoteSearchSuggestions({
           throw new Error(result.error || 'Failed to fetch suggestions');
         }
 
-        setSuggestions(result.data?.suggestions ?? []);
+        const suggestions = (result.data?.suggestions ?? []).map((suggestion) => ({
+          ...suggestion,
+          organizerLogoUrl: getLogoUrlFromInput(suggestion.organizerLogoUrl, suggestion.organizer),
+        }));
+
+        setSuggestions(suggestions);
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
         console.warn('[useRemoteSearchSuggestions] Failed to fetch suggestions:', error);

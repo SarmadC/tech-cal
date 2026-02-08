@@ -50,16 +50,9 @@ export default function DiscoverClientView({
         try {
             // Safely extract career profile using the shared utility
             // This handles the correct path: profile.preferences.careerProfile
-            const careerProfile = extractCareerProfile(profile);
-            const budget = careerProfile?.budget;
-
-            if (budget && typeof budget === 'string') {
-                // Validate budget is one of the allowed values
-                const validBudgets = ['all', 'free-only', 'low', 'moderate', 'high', 'unlimited'] as const;
-                if (validBudgets.includes(budget as typeof validBudgets[number])) {
-                    filters.budget = budget as typeof validBudgets[number];
-                }
-            }
+            // Note: We deliberately do NOT set the budget filter here anymore.
+            // Users should start with "All Budgets" and apply filters manually if desired.
+            // This prevents the "No events found for budget tier" message on initial load.
         } catch {
             // no-op
         }

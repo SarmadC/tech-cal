@@ -230,6 +230,8 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
         .map((e) => ({ slug: e.slug }));
 }
 
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
+
 export default async function PublicEventPage({ params }: EventPageProps) {
     const { slug } = await params;
     const result = await getEventBySlug(slug);
@@ -246,7 +248,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
     }
 
     const eventType = event.event_type as { id: string; name: string; color: string } | null;
-    const organizer = event.organizer as { id: string; name: string; logo_url?: string } | null;
+    const rawOrganizer = event.organizer as { id: string; name: string; logo_url?: string } | null;
+    const organizer = rawOrganizer ? {
+        ...rawOrganizer,
+        logo_url: getLogoUrlFromInput(rawOrganizer.logo_url, rawOrganizer.name)
+    } : null;
 
     const eventUrl = `https://kure-cal.com/events/${event.slug}`;
 

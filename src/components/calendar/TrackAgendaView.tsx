@@ -252,43 +252,81 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 pr-2">
-                    {(isExpanded ? allTrackNames : allTrackNames.slice(0, 12)).map(track => {
-                        const accent = getTrackAccent(track);
-                        const isSelected = selectedTrackNames === null || selectedTrackNames.has(track);
+                    {(() => {
+                        const TRACK_COLLAPSED_COUNT = 5;
+                        const isFiltered = selectedTrackNames !== null && selectedTrackNames.size > 0;
+
+                        // Determine which tracks to show based on state
+                        let tracksToRender = allTrackNames;
+
+                        if (!isExpanded) {
+                            if (isFiltered) {
+                                // If filtered, prioritize showing selected tracks first
+                                // But maintain original sort order for consistency
+                                const selectedTracks = allTrackNames.filter(t => selectedTrackNames.has(t));
+
+                                // If we have selected tracks, show them (up to limit)
+                                // If the number of selected tracks is small, we might want to fill with unselected?
+                                // User said: "only show the active filter" implies hiding unselected.
+                                tracksToRender = selectedTracks;
+
+                                // However, if the user selected > limit, we should probably cap it to keep "single line"
+                                // But maybe showing all selected is better UX? 
+                                // Let's cap it to respect "single line" request mostly, they can expand to see all selected.
+                                if (tracksToRender.length > TRACK_COLLAPSED_COUNT) {
+                                    tracksToRender = tracksToRender.slice(0, TRACK_COLLAPSED_COUNT);
+                                }
+                            } else {
+                                // Default state: Show first N
+                                tracksToRender = allTrackNames.slice(0, TRACK_COLLAPSED_COUNT);
+                            }
+                        }
+
+                        const hiddenCount = allTrackNames.length - tracksToRender.length;
 
                         return (
-                            <button
-                                key={track}
-                                onClick={() => toggleTrack(track)}
-                                className={`
-                                    inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all duration-200
-                                    ${isSelected
-                                        ? `${accent.bg} ${accent.border} ${accent.text} ring-1 ring-offset-0 ${accent.border}`
-                                        : `bg-transparent border-white/10 ${theme.textMuted} hover:border-white/20`}
-                                `}
-                            >
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                                {formatTrackName(track)}
-                            </button>
-                        );
-                    })}
+                            <>
+                                {tracksToRender.map(track => {
+                                    const accent = getTrackAccent(track);
+                                    const isSelected = selectedTrackNames === null || selectedTrackNames.has(track);
 
-                    {allTrackNames.length > 12 && (
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-white/10 hover:bg-white/5 transition-colors ${theme.textMuted}`}
-                        >
-                            {isExpanded ? (
-                                <>
-                                    Show Less <CaretUp size={12} />
-                                </>
-                            ) : (
-                                <>
-                                    Show {allTrackNames.length - 12} More <CaretDown size={12} />
-                                </>
-                            )}
-                        </button>
-                    )}
+                                    return (
+                                        <button
+                                            key={track}
+                                            onClick={() => toggleTrack(track)}
+                                            className={`
+                                                inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all duration-200
+                                                ${isSelected
+                                                    ? `${accent.bg} ${accent.border} ${accent.text} ring-1 ring-offset-0 ${accent.border}`
+                                                    : `bg-transparent border-white/10 ${theme.textMuted} hover:border-white/20`}
+                                            `}
+                                        >
+                                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                            {formatTrackName(track)}
+                                        </button>
+                                    );
+                                })}
+
+                                {(hiddenCount > 0 || isExpanded) && (
+                                    <button
+                                        onClick={() => setIsExpanded(!isExpanded)}
+                                        className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-white/10 hover:bg-white/5 transition-colors ${theme.textMuted}`}
+                                    >
+                                        {isExpanded ? (
+                                            <>
+                                                Show Less <CaretUp size={12} />
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* If filters are active, we might be hiding unselected ones. Context "More" is fine. */}
+                                                Show {hiddenCount} More <CaretDown size={12} />
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
             </div>
 
