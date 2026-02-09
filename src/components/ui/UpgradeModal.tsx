@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, type JSX } from 'react';
 import { X, Check, ArrowRight, Command } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useSubscriptionContext } from '@/contexts';
 
 type UpgradeVariant = 'trialStart' | 'trialExpired' | 'featureLocked' | 'upgradePrompt';
 
@@ -47,8 +48,15 @@ export function UpgradeModal({
         }
     }, [open]);
 
+    const { hasUsedTrial, openUpgrade: contextOpenUpgrade } = useSubscriptionContext();
+
+    // Determine effective variant - override trialStart if trial already used
+    const effectiveVariant = (variant === 'trialStart' && hasUsedTrial)
+        ? 'upgradePrompt'
+        : variant;
+
     const content = useMemo<VariantContent>(() => {
-        switch (variant) {
+        switch (effectiveVariant) {
             case 'trialStart':
                 return {
                     title: 'Start your 7-day free trial',
@@ -73,6 +81,22 @@ export function UpgradeModal({
                         'Unlock this feature plus calendar sync and unlimited history.',
                     primaryLabel: ctaLabel ?? 'Upgrade to Pro',
                 };
+            case 'upgradePrompt':
+                // Special handling if coming from a failed trial start
+                if (variant === 'trialStart' && hasUsedTrial) {
+                    return {
+                        title: 'Your trial has ended',
+                        description: 'You have already used your free trial. Please upgrade to Pro to continue.',
+                        primaryLabel: 'Upgrade to Pro',
+                    };
+                }
+                return {
+                    title: 'Upgrade to Pro',
+                    description:
+                        description ??
+                        'Get calendar sync, full recommendations, and unlimited history.',
+                    primaryLabel: ctaLabel ?? 'Upgrade now',
+                };
             default:
                 return {
                     title: 'Upgrade to Pro',
@@ -82,17 +106,20 @@ export function UpgradeModal({
                     primaryLabel: ctaLabel ?? 'Upgrade now',
                 };
         }
-    }, [variant, featureName, ctaLabel, description]);
+    }, [effectiveVariant, variant, featureName, ctaLabel, description, hasUsedTrial]);
 
     const handlePrimary = async () => {
         if (isProcessing) return;
         setIsProcessing(true);
         setError(null);
         try {
-            if (variant === 'trialStart' && onStartTrial) {
+            if (effectiveVariant === 'trialStart' && onStartTrial) {
                 await onStartTrial();
             } else if (onUpgrade) {
                 await onUpgrade();
+            } else if (effectiveVariant === 'upgradePrompt' && contextOpenUpgrade) {
+                // Fallback to context upgrade if no specific handler passed
+                await contextOpenUpgrade();
             }
         } catch (err) {
             console.error('Upgrade action failed', err);
