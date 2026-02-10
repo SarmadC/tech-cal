@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://kure-cal.com'
+    const baseUrl = 'https://www.kure-cal.com'
 
     // Static pages with their priorities and change frequencies
     const staticPages: MetadataRoute.Sitemap = [
@@ -12,6 +12,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 1,
+        },
+        {
+            url: `${baseUrl}/events`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.8,
         },
         {
             url: `${baseUrl}/pricing`,
@@ -24,6 +30,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/about`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.6,
         },
         {
             url: `${baseUrl}/contact`,

@@ -85,7 +85,9 @@ export function Footer() {
                                 (e.target as HTMLFormElement).reset();
                             }
                         }} className="mt-4 mb-6 flex gap-2">
+                            <label htmlFor="footer-email" className="sr-only">Email address</label>
                             <input
+                                id="footer-email"
                                 type="email"
                                 name="email"
                                 placeholder="Enter your email"

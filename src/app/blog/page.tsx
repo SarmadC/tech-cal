@@ -2,7 +2,24 @@
 // ISR for blog page - revalidate every hour for fresh content
 export const revalidate = 3600; // 1 hour
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+    title: 'Tech Events Insights, Tutorials, and News',
+    description: 'Stay informed with the Kure-Cal blog. Insights, tutorials, and news from the tech events world. Learn about conferences, developer meetups, and industry trends.',
+    keywords: ['tech blog', 'developer news', 'conference insights', 'tech events blog', 'programming tutorials'],
+    openGraph: {
+        title: 'Tech Events Insights, Tutorials, and News | Kure-Cal',
+        description: 'Stay informed with insights, tutorials, and news from the tech events world.',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Tech Events Insights, Tutorials, and News | Kure-Cal',
+        description: 'Stay informed with insights, tutorials, and news from the tech events world.',
+    },
+};
 import Image from 'next/image';
 import BlogFilters from './BlogFilters';
 import { createClient } from '@/utils/supabase/server';
@@ -107,7 +124,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     }
 
     return (
-        <main className="min-h-screen bg-[#0B0C0E] relative overflow-hidden pt-32 pb-24">
+        <main id="main-content" className="min-h-screen bg-[#0B0C0E] relative overflow-hidden pt-32 pb-24">
             {/* Top Glow Effect */}
             <div
                 className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] opacity-30 pointer-events-none"
@@ -181,6 +198,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                 )}
 
                 {/* Post Grid */}
+                <h2 className="sr-only">All Posts</h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
                     {filteredPosts.length > 0 ? filteredPosts.map((post) => (
                         <Link href={`/blog/${post.slug}`} key={post.id} className="group block h-full">

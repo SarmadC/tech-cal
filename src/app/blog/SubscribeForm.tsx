@@ -53,7 +53,9 @@ export default function SubscribeForm() {
 
             <div className="flex flex-col items-end gap-6 w-full md:w-auto">
                 <form action={formAction} ref={formRef} className="flex w-full md:w-auto gap-2">
+                    <label htmlFor="subscribe-email" className="sr-only">Email address</label>
                     <input
+                        id="subscribe-email"
                         type="email"
                         name="email"
                         placeholder="Enter your email"

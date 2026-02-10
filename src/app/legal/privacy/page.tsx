@@ -6,17 +6,17 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy',
-    description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+    title: 'Privacy Policy - Your Data, Our Commitment',
+    description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
     openGraph: {
-        title: 'Privacy Policy | Kure-Cal',
-        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+        title: 'Privacy Policy - Your Data, Our Commitment | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
         type: 'website',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Privacy Policy | Kure-Cal',
-        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+        title: 'Privacy Policy - Your Data, Our Commitment | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
     },
 };
 

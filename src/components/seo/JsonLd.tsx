@@ -32,9 +32,8 @@ function JsonLd({ data }: JsonLdProps) {
  */
 export function OrganizationJsonLd() {
     const sameAs = [
-        // Add social media URLs when available
-        // 'https://twitter.com/kurecal',
-        // 'https://linkedin.com/company/kurecal',
+        'https://twitter.com/kure_cal',
+        'https://linkedin.com/company/kure-cal',
     ].filter(Boolean);
 
     const data = {
@@ -43,12 +42,7 @@ export function OrganizationJsonLd() {
         '@id': 'https://kure-cal.com/#organization',
         name: 'Kure-Cal',
         url: 'https://kure-cal.com',
-        logo: {
-            '@type': 'ImageObject',
-            url: 'https://kure-cal.com/logo.svg',
-            width: 512,
-            height: 512,
-        },
+        logo: 'https://kure-cal.com/logo.svg',
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         ...(sameAs.length > 0 && { sameAs }),
     };
@@ -69,7 +63,7 @@ export function WebsiteJsonLd() {
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         potentialAction: {
             '@type': 'SearchAction',
-            target: 'https://kure-cal.com/discover?q={search_term_string}',
+            target: 'https://kure-cal.com/events?q={search_term_string}',
             'query-input': 'required name=search_term_string',
         },
         publisher: {
@@ -146,20 +140,14 @@ export function ArticleJsonLd({
         publisher: {
             '@type': 'Organization',
             name: 'Kure-Cal',
-            logo: {
-                '@type': 'ImageObject',
-                url: 'https://kure-cal.com/logo.svg',
-            },
+            logo: 'https://kure-cal.com/logo.svg',
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
             '@id': `https://kure-cal.com/blog/${slug}`,
         },
         ...(imageUrl && {
-            image: {
-                '@type': 'ImageObject',
-                url: imageUrl,
-            },
+            image: imageUrl,
         }),
     };
 

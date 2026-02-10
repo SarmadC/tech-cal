@@ -1,16 +1,44 @@
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatDate } from '@/utils/dateUtils';
 import type { Metadata } from 'next';
-import { ArticleJsonLd } from '@/components/seo';
+import { ArticleJsonLd, BreadcrumbJsonLd } from '@/components/seo';
 import { EventService } from '@/services/eventServices';
 import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import type { AgendaItem } from '@/types/events';
 
 // Revalidate every hour
 export const revalidate = 3600;
+
+// Enable dynamic params with ISR - pages generated on-demand and cached
+export const dynamicParams = true;
+
+// Pre-render recent published posts at build time for faster TTFB
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+        return [];
+    }
+
+    const supabase = createServiceClient(supabaseUrl, serviceKey);
+
+    const { data: posts } = await supabase
+        .from('posts')
+        .select('slug')
+        .eq('status', 'published')
+        .not('slug', 'is', null)
+        .order('published_at', { ascending: false })
+        .limit(30);
+
+    return (posts || [])
+        .filter((p): p is { slug: string } => p.slug !== null)
+        .map((p) => ({ slug: p.slug }));
+}
 
 type Props = {
     params: Promise<{ slug: string }>;
@@ -45,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const { data: post } = await supabase
         .from('posts')
-        .select('title, excerpt, featured_image_url')
+        .select('title, excerpt, featured_image_url, published_at, updated_at, slug')
         .eq('slug', slug)
         .single();
 
@@ -55,20 +83,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         };
     }
 
+    const description = post.excerpt || 'Read the latest insights from the Kure-Cal blog covering tech events, developer conferences, meetups, and strategies for professional growth.';
+    const ogImage = post.featured_image_url || '/og-image.png';
+
     return {
         title: post.title,
-        description: post.excerpt || 'Read the latest insights from the Kure-Cal blog on tech events, conferences, and developer growth.',
+        description,
+        alternates: {
+            canonical: `https://kure-cal.com/blog/${slug}`,
+        },
         openGraph: {
             title: post.title,
-            description: post.excerpt || 'Read the latest insights from the Kure-Cal blog on tech events, conferences, and developer growth.',
+            description,
             type: 'article',
-            images: ['/og-image.png'],
+            images: [ogImage],
+            ...(post.published_at && { publishedTime: post.published_at }),
+            ...(post.updated_at && { modifiedTime: post.updated_at }),
         },
         twitter: {
             card: 'summary_large_image',
             title: post.title,
-            description: post.excerpt || 'Read the latest insights from the Kure-Cal blog on tech events, conferences, and developer growth.',
-            images: ['/og-image.png'],
+            description,
+            images: [ogImage],
         },
     };
 }
@@ -173,7 +209,12 @@ export default async function BlogPostPage({ params }: Props) {
                 slug={post.slug}
                 imageUrl={post.featured_image_url || undefined}
             />
-            <main className="min-h-screen bg-[#0B0C0E] relative overflow-hidden pt-32 pb-24">
+            <BreadcrumbJsonLd items={[
+                { name: 'Home', url: 'https://kure-cal.com' },
+                { name: 'Blog', url: 'https://kure-cal.com/blog' },
+                { name: post.title },
+            ]} />
+            <main id="main-content" className="min-h-screen bg-[#0B0C0E] relative overflow-hidden pt-32 pb-24">
 
 
                 <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
@@ -184,7 +225,7 @@ export default async function BlogPostPage({ params }: Props) {
                             {/* Header */}
                             <div className="mb-12">
                                 <div className="flex items-center gap-3 mb-8">
-                                    <Link href="/blog" className="flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-all">
+                                    <Link href="/blog" aria-label="Back to blog" className="flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-all">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                                             <path fillRule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7.25h8.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z" clipRule="evenodd" />
                                         </svg>
@@ -326,6 +367,7 @@ export default async function BlogPostPage({ params }: Props) {
                                             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://kure-cal.com/blog/${post.slug}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
+                                            aria-label="Share on X (Twitter)"
                                             className="p-2 rounded-md bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
                                         >
                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -336,6 +378,7 @@ export default async function BlogPostPage({ params }: Props) {
                                             href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://kure-cal.com/blog/${post.slug}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
+                                            aria-label="Share on LinkedIn"
                                             className="p-2 rounded-md bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
                                         >
                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 22.227.792 23 1.771 23h20.451C23.2 23 24 22.227 24 21.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
