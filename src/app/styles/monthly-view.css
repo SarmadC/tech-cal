@@ -457,6 +457,27 @@
   outline-offset: 1px;
 }
 
+/* Dark mode override for "Pastel" look - solid light background, dark text */
+.dark .month-event-card {
+  background: var(--event-accent-color);
+  color: #0c0a09; /* Dark text for contrast against pastel */
+  border-color: transparent;
+}
+
+.dark .month-event-card:hover {
+  background: color-mix(in srgb, var(--event-accent-color), white 15%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.dark .month-event-card-label,
+.dark .month-event-card .month-event-card-meta-text {
+  color: #0c0a09;
+}
+
+.dark .month-event-card .month-event-card-accent {
+  background: rgba(0, 0, 0, 0.2); /* Subtle contrast for the accent pill */
+}
+
 .month-event-card--past {
   opacity: 0.65;
 }

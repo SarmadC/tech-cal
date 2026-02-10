@@ -86,6 +86,32 @@ export interface TechCalendarMonthViewProps {
 type InlineEvent = Event | MultiDayEventInstance;
 
 const getInlineAccent = (event: InlineEvent) => {
+    const categoryName = event.category?.name?.toLowerCase();
+
+    // Map categories to CSS variables for dark mode support
+    // Prioritize this over data colors to enforce the theme
+    switch (categoryName) {
+        case 'tech summit':
+        case 'summit':
+            return 'var(--color-category-summit, #3b82f6)';
+        case 'workshop':
+            return 'var(--color-category-workshop, #8b5cf6)';
+        case 'networking':
+            return 'var(--color-category-networking, #10b981)';
+        case 'conference':
+            return 'var(--color-category-conference, #0ea5e9)';
+        case 'webinar':
+            return 'var(--color-category-webinar, #f97316)';
+        case 'startup':
+            return 'var(--color-category-startup, #ec4899)';
+        case 'trade show':
+            return 'var(--color-category-trade-show, #6366f1)';
+        case 'product launch':
+            return 'var(--color-category-product-launch, #f59e0b)';
+        case 'training':
+            return 'var(--color-category-training, #14b8a6)';
+    }
+
     if (event.category?.color) return event.category.color;
     if ('color' in event && event.color) return event.color;
     return 'var(--accent-primary)';
@@ -221,7 +247,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
     const _activeCalendarRef = calendarRef || internalCalendarRef;
     const [_isMobile, setIsMobile] = useState(false);
-    const noop = useCallback(() => {}, []);
+    const noop = useCallback(() => { }, []);
     const [expandedDays, setExpandedDays] = useState<Record<string, true>>({});
     const [popoverState, setPopoverState] = useState<{
         isOpen: boolean;
@@ -240,7 +266,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         onEventSelect?.(event);
     }, [onEventSelect]);
 
-    const handleEventHover = useCallback((_event: Event | MultiDayEventInstance, _e: React.MouseEvent) => {}, []);
+    const handleEventHover = useCallback((_event: Event | MultiDayEventInstance, _e: React.MouseEvent) => { }, []);
 
     // Memoize the card style to prevent new object creation on every render
     const cardStyle = useMemo(() => ({
@@ -283,15 +309,15 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 {/* Header */}
                 <div className="month-grid-header">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => (
-                        <div 
-                            key={dayName} 
+                        <div
+                            key={dayName}
                             className={`month-grid-day-header ${index === 0 || index === 6 ? 'weekend' : ''}`}
                         >
                             {dayName}
                         </div>
                     ))}
                 </div>
-                
+
                 {/* Days grid */}
                 <div className="month-grid-weeks">
                     {weeks.map((week, weekIndex) => (
@@ -418,12 +444,12 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 for (let dayOffset = 0; dayOffset <= daysDiff; dayOffset++) {
                     const dayDate = new Date(startDate);
                     dayDate.setDate(startDate.getDate() + dayOffset);
-                    
+
                     const year = dayDate.getFullYear();
                     const month = String(dayDate.getMonth() + 1).padStart(2, '0');
                     const day = String(dayDate.getDate()).padStart(2, '0');
                     const dateStr = `${year}-${month}-${day}`;
-                    
+
                     // Create day instance
                     const dayInstance: MultiDayEventInstance = {
                         ...event,
@@ -438,11 +464,11 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                             totalDays: daysDiff + 1,
                             isFirstDay: dayOffset === 0,
                             isLastDay: dayOffset === daysDiff,
-                            continuationType: dayOffset === 0 ? 'start' : 
-                                            dayOffset === daysDiff ? 'end' : 'middle'
+                            continuationType: dayOffset === 0 ? 'start' :
+                                dayOffset === daysDiff ? 'end' : 'middle'
                         }
                     };
-                    
+
                     processed.push(dayInstance);
                 }
             } else {
@@ -450,7 +476,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 processed.push(event);
             }
         });
-        
+
         return processed;
     }, [events]);
 
@@ -517,7 +543,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         // GLOBAL PASS: Identify multi-day events that will be visible in ribbons in ANY week
         // This ensures cross-week unification - if visible in one week, visible in all weeks
         const globallyVisibleMultiDayEvents = new Set<string>();
-        
+
         // First, do a preliminary pass to see which multi-day events get ribbons in any week
         for (let weekIndex = 0; weekIndex < 6; weekIndex++) {
             const weekDays = monthDays.slice(weekIndex * 7, weekIndex * 7 + 7);
@@ -749,83 +775,24 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 return a.event.title.localeCompare(b.event.title);
             });
 
-        const occupancy = Array.from({ length: MAX_RIBBON_ROWS }, () => new Array(7).fill(false));
-        const segments: WeekSegment[] = [];
-        let rowsUsed = 0;
-        const overflowMultiDayMap = new Map<string, MultiDayEventInstance[]>();
+            const occupancy = Array.from({ length: MAX_RIBBON_ROWS }, () => new Array(7).fill(false));
+            const segments: WeekSegment[] = [];
+            let rowsUsed = 0;
+            const overflowMultiDayMap = new Map<string, MultiDayEventInstance[]>();
 
-        segmentsInput.forEach((segment) => {
-            let placed = false;
+            segmentsInput.forEach((segment) => {
+                let placed = false;
 
-            // CRITICAL: If this is a globally visible multi-day event, it MUST be placed in ribbons
-            // Force placement even if it means displacing other events
-            const isGloballyVisible = globallyVisibleMultiDayEvents.has(segment.event.id);
+                // CRITICAL: If this is a globally visible multi-day event, it MUST be placed in ribbons
+                // Force placement even if it means displacing other events
+                const isGloballyVisible = globallyVisibleMultiDayEvents.has(segment.event.id);
 
-            // Check if this event has a pre-allocated row for multi-day events
-            const preallocatedRow = multiDayAllocation.get(segment.event.id);
+                // Check if this event has a pre-allocated row for multi-day events
+                const preallocatedRow = multiDayAllocation.get(segment.event.id);
 
-            if (preallocatedRow !== undefined) {
-                // Try to place in pre-allocated row first
-                const row = preallocatedRow;
-                let canPlace = true;
-                for (let offset = 0; offset < segment.span; offset++) {
-                    const dayIndex = segment.startIndex + offset;
-                    if (dayIndex >= 7 || occupancy[row][dayIndex]) {
-                        canPlace = false;
-                        break;
-                    }
-                }
-
-                if (canPlace) {
-                    for (let offset = 0; offset < segment.span; offset++) {
-                        const dayIndex = segment.startIndex + offset;
-                        if (dayIndex < 7) {
-                            occupancy[row][dayIndex] = true;
-                        }
-                    }
-
-                    const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
-                    const continuationType = segment.isFirstSegment
-                        ? 'start'
-                        : segment.isLastSegment
-                            ? 'end'
-                            : 'middle';
-
-                    const cardEvent: MultiDayEventInstance = {
-                        ...segment.event,
-                        id: baseId,
-                        isInstance: true,
-                        originalEventId: segment.event.id,
-                        instanceDate: segment.segmentStart.toISOString().split('T')[0],
-                        dayInfo: {
-                            currentDay: segment.currentDay,
-                            totalDays: segment.totalDays,
-                            isFirstDay: segment.isFirstSegment,
-                            isLastDay: segment.isLastSegment,
-                            continuationType
-                        },
-                        isMultiDay: true,
-                        multiDaySpan: segment.totalDays,
-                        multiDayStart: new Date(segment.eventStart),
-                        multiDayEnd: new Date(segment.eventEnd)
-                    };
-
-                    segments.push({
-                        id: cardEvent.id ?? baseId,
-                        startIndex: segment.startIndex,
-                        span: Math.min(segment.span, 7 - segment.startIndex),
-                        row,
-                        cardEvent
-                    });
-
-                    rowsUsed = Math.max(rowsUsed, row + 1);
-                    placed = true;
-                }
-            }
-
-            // If not pre-allocated or didn't fit, try other rows
-            if (!placed) {
-                for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
+                if (preallocatedRow !== undefined) {
+                    // Try to place in pre-allocated row first
+                    const row = preallocatedRow;
                     let canPlace = true;
                     for (let offset = 0; offset < segment.span; offset++) {
                         const dayIndex = segment.startIndex + offset;
@@ -835,130 +802,15 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         }
                     }
 
-                    if (!canPlace) {
-                        continue;
-                    }
-
-                    for (let offset = 0; offset < segment.span; offset++) {
-                        const dayIndex = segment.startIndex + offset;
-                        if (dayIndex < 7) {
-                            occupancy[row][dayIndex] = true;
-                        }
-                    }
-
-                    const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
-                    const continuationType = segment.isFirstSegment
-                        ? 'start'
-                        : segment.isLastSegment
-                            ? 'end'
-                            : 'middle';
-
-                    const cardEvent: MultiDayEventInstance = {
-                        ...segment.event,
-                        id: baseId,
-                        isInstance: true,
-                        originalEventId: segment.event.id,
-                        instanceDate: segment.segmentStart.toISOString().split('T')[0],
-                        dayInfo: {
-                            currentDay: segment.currentDay,
-                            totalDays: segment.totalDays,
-                            isFirstDay: segment.isFirstSegment,
-                            isLastDay: segment.isLastSegment,
-                            continuationType
-                        },
-                        isMultiDay: true,
-                        multiDaySpan: segment.totalDays,
-                        multiDayStart: new Date(segment.eventStart),
-                        multiDayEnd: new Date(segment.eventEnd)
-                    };
-
-                    segments.push({
-                        id: cardEvent.id ?? baseId,
-                        startIndex: segment.startIndex,
-                        span: Math.min(segment.span, 7 - segment.startIndex),
-                        row,
-                        cardEvent
-                    });
-
-                    rowsUsed = Math.max(rowsUsed, row + 1);
-                    placed = true;
-                    break;
-                }
-            }
-
-            if (!placed) {
-                // CRITICAL: If this is a globally visible multi-day event, we MUST place it in ribbons
-                // Force placement even if it means displacing other events or using additional rows
-                if (isGloballyVisible) {
-                    // Find any available row, or create space by displacing non-global events
-                    let forcedRow = -1;
-                    
-                    // First, try to find an empty row
-                    for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
-                        let canPlace = true;
-                        for (let offset = 0; offset < segment.span; offset++) {
-                            const dayIndex = segment.startIndex + offset;
-                            if (dayIndex >= 7) continue;
-                            if (occupancy[row][dayIndex]) {
-                                // Check if the conflicting segment is also globally visible
-                                const conflictingSeg = segments.find(s => 
-                                    s.row === row && 
-                                    s.startIndex <= dayIndex && 
-                                    dayIndex < s.startIndex + s.span
-                                );
-                                if (conflictingSeg && 'originalEventId' in conflictingSeg.cardEvent && 
-                                    conflictingSeg.cardEvent.originalEventId &&
-                                    globallyVisibleMultiDayEvents.has(conflictingSeg.cardEvent.originalEventId)) {
-                                    canPlace = false;
-                                    break;
-                                }
-                                // If conflicting segment is not globally visible, we can displace it
-                            }
-                        }
-                        if (canPlace) {
-                            // Remove any conflicting non-global segments
-                            for (let offset = 0; offset < segment.span; offset++) {
-                                const dayIndex = segment.startIndex + offset;
-                                if (dayIndex >= 7) continue;
-                                const conflictingSegs = segments.filter(s => 
-                                    s.row === row && 
-                                    s.startIndex <= dayIndex && 
-                                    dayIndex < s.startIndex + s.span
-                                );
-                                conflictingSegs.forEach(confSeg => {
-                                    if ('originalEventId' in confSeg.cardEvent && confSeg.cardEvent.originalEventId) {
-                                        if (!globallyVisibleMultiDayEvents.has(confSeg.cardEvent.originalEventId)) {
-                                            // Remove this conflicting segment
-                                            const index = segments.indexOf(confSeg);
-                                            if (index > -1) {
-                                                segments.splice(index, 1);
-                                                // Clear its occupancy
-                                                for (let o = 0; o < confSeg.span; o++) {
-                                                    const dIdx = confSeg.startIndex + o;
-                                                    if (dIdx < 7) {
-                                                        occupancy[confSeg.row][dIdx] = false;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            forcedRow = row;
-                            break;
-                        }
-                    }
-                    
-                    // If we found a row, place the segment
-                    if (forcedRow >= 0) {
+                    if (canPlace) {
                         for (let offset = 0; offset < segment.span; offset++) {
                             const dayIndex = segment.startIndex + offset;
                             if (dayIndex < 7) {
-                                occupancy[forcedRow][dayIndex] = true;
+                                occupancy[row][dayIndex] = true;
                             }
                         }
 
-                        const baseId = `${segment.event.id}-week${weekIndex}-row${forcedRow}-start${segment.startIndex}`;
+                        const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
                         const continuationType = segment.isFirstSegment
                             ? 'start'
                             : segment.isLastSegment
@@ -988,74 +840,248 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                             id: cardEvent.id ?? baseId,
                             startIndex: segment.startIndex,
                             span: Math.min(segment.span, 7 - segment.startIndex),
-                            row: forcedRow,
+                            row,
                             cardEvent
                         });
 
-                        rowsUsed = Math.max(rowsUsed, forcedRow + 1);
+                        rowsUsed = Math.max(rowsUsed, row + 1);
                         placed = true;
                     }
                 }
-                
-                // If still not placed, add to overflow (only for non-globally-visible events)
+
+                // If not pre-allocated or didn't fit, try other rows
                 if (!placed) {
-                    for (let offset = 0; offset < segment.span; offset++) {
-                        const dayIndex = segment.startIndex + offset;
-                        if (dayIndex >= 7) continue;
-                        const day = weekDays[dayIndex];
-                        const dateKey = day.toISOString().split('T')[0];
-                        const overflowList = overflowMultiDayMap.get(dateKey) ?? [];
+                    for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
+                        let canPlace = true;
+                        for (let offset = 0; offset < segment.span; offset++) {
+                            const dayIndex = segment.startIndex + offset;
+                            if (dayIndex >= 7 || occupancy[row][dayIndex]) {
+                                canPlace = false;
+                                break;
+                            }
+                        }
 
-                        const expectedDayNumber = segment.currentDay + offset;
-                        const dayEvents = processedEventsByDate.get(dateKey) ?? [];
-                        const targetInstance = dayEvents.find((evt) => {
-                            if (!('isInstance' in evt) || !evt.isInstance) return false;
-                            const instance = evt as MultiDayEventInstance;
-                            if (instance.originalEventId !== segment.event.id) return false;
-                            return instance.dayInfo?.currentDay === expectedDayNumber;
-                        }) as MultiDayEventInstance | undefined;
+                        if (!canPlace) {
+                            continue;
+                        }
 
-                        if (targetInstance) {
-                            overflowList.push(targetInstance);
-                            overflowMultiDayMap.set(dateKey, overflowList);
+                        for (let offset = 0; offset < segment.span; offset++) {
+                            const dayIndex = segment.startIndex + offset;
+                            if (dayIndex < 7) {
+                                occupancy[row][dayIndex] = true;
+                            }
+                        }
+
+                        const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
+                        const continuationType = segment.isFirstSegment
+                            ? 'start'
+                            : segment.isLastSegment
+                                ? 'end'
+                                : 'middle';
+
+                        const cardEvent: MultiDayEventInstance = {
+                            ...segment.event,
+                            id: baseId,
+                            isInstance: true,
+                            originalEventId: segment.event.id,
+                            instanceDate: segment.segmentStart.toISOString().split('T')[0],
+                            dayInfo: {
+                                currentDay: segment.currentDay,
+                                totalDays: segment.totalDays,
+                                isFirstDay: segment.isFirstSegment,
+                                isLastDay: segment.isLastSegment,
+                                continuationType
+                            },
+                            isMultiDay: true,
+                            multiDaySpan: segment.totalDays,
+                            multiDayStart: new Date(segment.eventStart),
+                            multiDayEnd: new Date(segment.eventEnd)
+                        };
+
+                        segments.push({
+                            id: cardEvent.id ?? baseId,
+                            startIndex: segment.startIndex,
+                            span: Math.min(segment.span, 7 - segment.startIndex),
+                            row,
+                            cardEvent
+                        });
+
+                        rowsUsed = Math.max(rowsUsed, row + 1);
+                        placed = true;
+                        break;
+                    }
+                }
+
+                if (!placed) {
+                    // CRITICAL: If this is a globally visible multi-day event, we MUST place it in ribbons
+                    // Force placement even if it means displacing other events or using additional rows
+                    if (isGloballyVisible) {
+                        // Find any available row, or create space by displacing non-global events
+                        let forcedRow = -1;
+
+                        // First, try to find an empty row
+                        for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
+                            let canPlace = true;
+                            for (let offset = 0; offset < segment.span; offset++) {
+                                const dayIndex = segment.startIndex + offset;
+                                if (dayIndex >= 7) continue;
+                                if (occupancy[row][dayIndex]) {
+                                    // Check if the conflicting segment is also globally visible
+                                    const conflictingSeg = segments.find(s =>
+                                        s.row === row &&
+                                        s.startIndex <= dayIndex &&
+                                        dayIndex < s.startIndex + s.span
+                                    );
+                                    if (conflictingSeg && 'originalEventId' in conflictingSeg.cardEvent &&
+                                        conflictingSeg.cardEvent.originalEventId &&
+                                        globallyVisibleMultiDayEvents.has(conflictingSeg.cardEvent.originalEventId)) {
+                                        canPlace = false;
+                                        break;
+                                    }
+                                    // If conflicting segment is not globally visible, we can displace it
+                                }
+                            }
+                            if (canPlace) {
+                                // Remove any conflicting non-global segments
+                                for (let offset = 0; offset < segment.span; offset++) {
+                                    const dayIndex = segment.startIndex + offset;
+                                    if (dayIndex >= 7) continue;
+                                    const conflictingSegs = segments.filter(s =>
+                                        s.row === row &&
+                                        s.startIndex <= dayIndex &&
+                                        dayIndex < s.startIndex + s.span
+                                    );
+                                    conflictingSegs.forEach(confSeg => {
+                                        if ('originalEventId' in confSeg.cardEvent && confSeg.cardEvent.originalEventId) {
+                                            if (!globallyVisibleMultiDayEvents.has(confSeg.cardEvent.originalEventId)) {
+                                                // Remove this conflicting segment
+                                                const index = segments.indexOf(confSeg);
+                                                if (index > -1) {
+                                                    segments.splice(index, 1);
+                                                    // Clear its occupancy
+                                                    for (let o = 0; o < confSeg.span; o++) {
+                                                        const dIdx = confSeg.startIndex + o;
+                                                        if (dIdx < 7) {
+                                                            occupancy[confSeg.row][dIdx] = false;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                                forcedRow = row;
+                                break;
+                            }
+                        }
+
+                        // If we found a row, place the segment
+                        if (forcedRow >= 0) {
+                            for (let offset = 0; offset < segment.span; offset++) {
+                                const dayIndex = segment.startIndex + offset;
+                                if (dayIndex < 7) {
+                                    occupancy[forcedRow][dayIndex] = true;
+                                }
+                            }
+
+                            const baseId = `${segment.event.id}-week${weekIndex}-row${forcedRow}-start${segment.startIndex}`;
+                            const continuationType = segment.isFirstSegment
+                                ? 'start'
+                                : segment.isLastSegment
+                                    ? 'end'
+                                    : 'middle';
+
+                            const cardEvent: MultiDayEventInstance = {
+                                ...segment.event,
+                                id: baseId,
+                                isInstance: true,
+                                originalEventId: segment.event.id,
+                                instanceDate: segment.segmentStart.toISOString().split('T')[0],
+                                dayInfo: {
+                                    currentDay: segment.currentDay,
+                                    totalDays: segment.totalDays,
+                                    isFirstDay: segment.isFirstSegment,
+                                    isLastDay: segment.isLastSegment,
+                                    continuationType
+                                },
+                                isMultiDay: true,
+                                multiDaySpan: segment.totalDays,
+                                multiDayStart: new Date(segment.eventStart),
+                                multiDayEnd: new Date(segment.eventEnd)
+                            };
+
+                            segments.push({
+                                id: cardEvent.id ?? baseId,
+                                startIndex: segment.startIndex,
+                                span: Math.min(segment.span, 7 - segment.startIndex),
+                                row: forcedRow,
+                                cardEvent
+                            });
+
+                            rowsUsed = Math.max(rowsUsed, forcedRow + 1);
+                            placed = true;
+                        }
+                    }
+
+                    // If still not placed, add to overflow (only for non-globally-visible events)
+                    if (!placed) {
+                        for (let offset = 0; offset < segment.span; offset++) {
+                            const dayIndex = segment.startIndex + offset;
+                            if (dayIndex >= 7) continue;
+                            const day = weekDays[dayIndex];
+                            const dateKey = day.toISOString().split('T')[0];
+                            const overflowList = overflowMultiDayMap.get(dateKey) ?? [];
+
+                            const expectedDayNumber = segment.currentDay + offset;
+                            const dayEvents = processedEventsByDate.get(dateKey) ?? [];
+                            const targetInstance = dayEvents.find((evt) => {
+                                if (!('isInstance' in evt) || !evt.isInstance) return false;
+                                const instance = evt as MultiDayEventInstance;
+                                if (instance.originalEventId !== segment.event.id) return false;
+                                return instance.dayInfo?.currentDay === expectedDayNumber;
+                            }) as MultiDayEventInstance | undefined;
+
+                            if (targetInstance) {
+                                overflowList.push(targetInstance);
+                                overflowMultiDayMap.set(dateKey, overflowList);
+                            }
                         }
                     }
                 }
-            }
-            // Segments that cannot be placed within MAX_RIBBON_ROWS are redirected to overflow.
-        });
+                // Segments that cannot be placed within MAX_RIBBON_ROWS are redirected to overflow.
+            });
 
             // CRITICAL: Post-placement collision detection and resolution
             // Check for any segments that overlap in the same grid position (same row, overlapping columns)
             const collisionResolvedIds = new Set<string>();
             const processedSegIds = new Set<string>();
-            
+
             // For each segment, check if it overlaps with any other segment in the same row
             segments.forEach((seg, segIndex) => {
                 if (processedSegIds.has(seg.id) || collisionResolvedIds.has(seg.id)) return;
-                
+
                 const segStart = seg.startIndex;
                 const segEnd = seg.startIndex + seg.span - 1;
-                
+
                 // Find all other segments that overlap with this one in the same row
                 const overlappingSegs: WeekSegment[] = [seg];
-                
+
                 segments.forEach((otherSeg, otherIndex) => {
                     if (segIndex === otherIndex) return;
                     if (processedSegIds.has(otherSeg.id) || collisionResolvedIds.has(otherSeg.id)) return;
                     if (seg.row !== otherSeg.row) return; // Different rows, no collision
-                    
+
                     const otherStart = otherSeg.startIndex;
                     const otherEnd = otherSeg.startIndex + otherSeg.span - 1;
-                    
+
                     // Check if column ranges overlap
                     const overlaps = !(segEnd < otherStart || segStart > otherEnd);
-                    
+
                     if (overlaps) {
                         overlappingSegs.push(otherSeg);
                     }
                 });
-                
+
                 // If we found overlaps, resolve them
                 if (overlappingSegs.length > 1) {
                     // Sort by priority:
@@ -1063,37 +1089,37 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     // 2. Longer spans (more days)
                     // 3. Earlier start index
                     overlappingSegs.sort((a, b) => {
-                        const aIsGlobal = 'originalEventId' in a.cardEvent && a.cardEvent.originalEventId && 
-                                         globallyVisibleMultiDayEvents.has(a.cardEvent.originalEventId);
-                        const bIsGlobal = 'originalEventId' in b.cardEvent && b.cardEvent.originalEventId && 
-                                         globallyVisibleMultiDayEvents.has(b.cardEvent.originalEventId);
-                        
+                        const aIsGlobal = 'originalEventId' in a.cardEvent && a.cardEvent.originalEventId &&
+                            globallyVisibleMultiDayEvents.has(a.cardEvent.originalEventId);
+                        const bIsGlobal = 'originalEventId' in b.cardEvent && b.cardEvent.originalEventId &&
+                            globallyVisibleMultiDayEvents.has(b.cardEvent.originalEventId);
+
                         if (aIsGlobal !== bIsGlobal) return aIsGlobal ? -1 : 1;
-                        
+
                         // If both are global or both are not, prefer longer spans
                         const spanDiff = b.span - a.span;
                         if (spanDiff !== 0) return spanDiff;
-                        
+
                         // Finally, prefer earlier start
                         return a.startIndex - b.startIndex;
                     });
-                    
+
                     // Keep the first (highest priority), mark the rest for removal
                     for (let i = 1; i < overlappingSegs.length; i++) {
                         collisionResolvedIds.add(overlappingSegs[i].id);
                         processedSegIds.add(overlappingSegs[i].id);
                     }
                 }
-                
+
                 processedSegIds.add(seg.id);
             });
-            
+
             // Remove colliding segments from the segments array and add to overflow
             if (collisionResolvedIds.size > 0) {
                 for (let i = segments.length - 1; i >= 0; i--) {
                     if (collisionResolvedIds.has(segments[i].id)) {
                         const seg = segments[i];
-                        
+
                         // Clear occupancy for removed segment
                         for (let offset = 0; offset < seg.span; offset++) {
                             const dayIndex = seg.startIndex + offset;
@@ -1101,7 +1127,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                 occupancy[seg.row][dayIndex] = false;
                             }
                         }
-                        
+
                         // Add removed segment to overflow for each day it spans
                         for (let offset = 0; offset < seg.span; offset++) {
                             const dayIndex = seg.startIndex + offset;
@@ -1109,9 +1135,9 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                             const day = weekDays[dayIndex];
                             const dateKey = day.toISOString().split('T')[0];
                             const overflowList = overflowMultiDayMap.get(dateKey) ?? [];
-                            
+
                             // Check if this is a multi-day event instance
-                            if ('isInstance' in seg.cardEvent && seg.cardEvent.isInstance && 
+                            if ('isInstance' in seg.cardEvent && seg.cardEvent.isInstance &&
                                 'originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
                                 const cardEventInstance = seg.cardEvent as MultiDayEventInstance;
                                 const expectedDayNumber = cardEventInstance.dayInfo?.currentDay ?? (offset + 1);
@@ -1122,16 +1148,16 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                     if (!instance.originalEventId || instance.originalEventId !== cardEventInstance.originalEventId) return false;
                                     return instance.dayInfo?.currentDay === expectedDayNumber;
                                 }) as MultiDayEventInstance | undefined;
-                                
-                                if (targetInstance && !overflowList.some(e => 
-                                    ('isInstance' in e && e.isInstance && 'originalEventId' in e && 
-                                     e.originalEventId === targetInstance.originalEventId && 
-                                     'instanceDate' in e && e.instanceDate === targetInstance.instanceDate)
+
+                                if (targetInstance && !overflowList.some(e =>
+                                ('isInstance' in e && e.isInstance && 'originalEventId' in e &&
+                                    e.originalEventId === targetInstance.originalEventId &&
+                                    'instanceDate' in e && e.instanceDate === targetInstance.instanceDate)
                                 )) {
                                     overflowList.push(targetInstance);
                                     overflowMultiDayMap.set(dateKey, overflowList);
                                 }
-                        } else {
+                            } else {
                                 // Single-day event - add the cardEvent itself (cast to MultiDayEventInstance for type compatibility)
                                 const cardEventAsInstance = seg.cardEvent as unknown as MultiDayEventInstance;
                                 if (!overflowList.some(e => e.id === seg.cardEvent.id)) {
@@ -1140,7 +1166,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                 }
                             }
                         }
-                        
+
                         segments.splice(i, 1);
                     }
                 }
@@ -1237,14 +1263,14 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     const hiddenRibbonSegments = ribbonSegmentsOnDay.slice(visibleRibbonRows);
                     // Only add to overflow if this is the starting day of the event
                     // (don't show the same event in overflow on multiple days it spans)
-                const addedEventIds = new Set<string>();
+                    const addedEventIds = new Set<string>();
                     hiddenRibbonEvents = hiddenRibbonSegments
-                    .filter(seg => seg.startIndex === dayIndexInWeek)
-                    .filter(seg => {
-                        // Avoid adding the same event multiple times
-                        if (addedEventIds.has(seg.cardEvent.id)) {
-                            return false;
-                        }
+                        .filter(seg => seg.startIndex === dayIndexInWeek)
+                        .filter(seg => {
+                            // Avoid adding the same event multiple times
+                            if (addedEventIds.has(seg.cardEvent.id)) {
+                                return false;
+                            }
                             // Don't add multi-day events that are already in ribbons (they should be unified)
                             // Also exclude globally visible multi-day events (cross-week unification)
                             if ('originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
@@ -1252,11 +1278,11 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                     globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId)) {
                                     return false;
                                 }
-                        }
-                        addedEventIds.add(seg.cardEvent.id);
-                        return true;
-                    })
-                    .map(seg => seg.cardEvent);
+                            }
+                            addedEventIds.add(seg.cardEvent.id);
+                            return true;
+                        })
+                        .map(seg => seg.cardEvent);
                 }
 
                 // Build overflow events, but EXCLUDE globally visible multi-day events
@@ -1299,12 +1325,12 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             });
 
             const hiddenSegmentIds = new Set<string>();
-            
+
             // First pass: identify which multi-day events will be visible on at least one day
             // This ensures we keep them unified across all days
             // Start with globally visible events (from cross-week unification)
             const multiDayEventsVisibleOnAnyDay = new Set<string>(globallyVisibleMultiDayEvents);
-            
+
             weekDays.forEach((day, dayIndexInWeek) => {
                 const ribbonSegmentsOnDay = segments.filter(segment =>
                     segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
@@ -1375,7 +1401,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 
                     // Get all unique rows
                     const allUniqueRows = [...new Set(sortedSegments.map(s => s.row))];
-                    
+
                     // CRITICAL: First, add ALL rows that contain segments of multi-day events
                     // that are visible on ANY day (including globally visible from other weeks).
                     // This ensures unification across all days AND across week boundaries.
@@ -1390,7 +1416,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                             }
                         }
                     });
-                    
+
                     // Build prioritized rows: unified multi-day events get priority but count toward limit
                     // All ribbons (multi-day + single-day) must respect the MAX_VISIBLE_EVENTS_PER_DAY limit
                     const prioritizedRows = new Set<number>();
@@ -1418,15 +1444,15 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     // Hide segments on non-visible rows
                     // Multi-day events that are unified should never be hidden
                     const segmentsToHide = sortedSegments.filter(s => !visibleRows.has(s.row));
-                    
+
                     segmentsToHide.forEach(seg => {
                         // Never hide segments of unified multi-day events
                         // Check both per-week and global cross-week visibility
-                        const isUnifiedMultiDay = 'originalEventId' in seg.cardEvent && 
-                            seg.cardEvent.originalEventId && 
+                        const isUnifiedMultiDay = 'originalEventId' in seg.cardEvent &&
+                            seg.cardEvent.originalEventId &&
                             (multiDayEventsVisibleOnAnyDay.has(seg.cardEvent.originalEventId) ||
-                             globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId));
-                        
+                                globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId));
+
                         if (!isUnifiedMultiDay) {
                             hiddenSegmentIds.add(seg.id);
                         }
@@ -1452,7 +1478,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         const checkMobile = () => {
             setIsMobile(window.innerWidth <= 768);
         };
-        
+
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);

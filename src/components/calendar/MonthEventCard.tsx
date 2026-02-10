@@ -17,13 +17,10 @@ interface MonthEventCardProps {
 
 const FALLBACK_ACCENT = 'var(--accent-primary)';
 const getCategoryColor = (event: Event | MultiDayEventInstance) => {
-    // If the event has a specific color override, use it (assumed to be correct)
-    if (event.category?.color) return event.category.color;
-    if (event.color) return event.color;
-
     const categoryName = event.category?.name?.toLowerCase();
 
     // Return CSS variables instead of hardcoded hex values to support dark mode overrides
+    // We prioritize these over event.category.color to ensure the theme is respected
     switch (categoryName) {
         case 'tech summit':
         case 'summit':
@@ -44,9 +41,13 @@ const getCategoryColor = (event: Event | MultiDayEventInstance) => {
             return 'var(--color-category-product-launch, #f59e0b)';
         case 'training':
             return 'var(--color-category-training, #14b8a6)';
-        default:
-            return FALLBACK_ACCENT;
     }
+
+    // If the event has a specific color override, use it (assumed to be correct)
+    if (event.category?.color) return event.category.color;
+    if (event.color) return event.color;
+
+    return FALLBACK_ACCENT;
 };
 
 const formatDateRange = (start: Date, end: Date) => {
