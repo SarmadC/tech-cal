@@ -129,4 +129,32 @@ describe('EventService.applyEnhancedFilters - Budget tier price filters', () => 
   });
 });
 
+describe('EventService.applyEnhancedFilters - Cost filters', () => {
+  let mockQuery: MockQueryBuilder;
 
+  beforeEach(() => {
+    mockQuery = buildMockQuery();
+  });
+
+  it('applies strict free expression aligned with UI pricing classifier', () => {
+    const filters: EventFilters = { cost: 'free' } as EventFilters;
+    (EventService as any).applyEnhancedFilters(mockQuery, filters);
+
+    const orCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'or');
+    expect(orCalls.some((c: { method: string; args: unknown[] }) =>
+      String(c.args[0]).includes('price_min.eq.0') &&
+      String(c.args[0]).includes('price_max')
+    )).toBe(true);
+  });
+
+  it('applies paid expression that excludes explicit free labels', () => {
+    const filters: EventFilters = { cost: 'paid' } as EventFilters;
+    (EventService as any).applyEnhancedFilters(mockQuery, filters);
+
+    const orCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'or');
+    expect(orCalls.some((c: { method: string; args: unknown[] }) =>
+      String(c.args[0]).includes('price_min.gt.0') &&
+      String(c.args[0]).includes('price_max.gt.0')
+    )).toBe(true);
+  });
+});

@@ -261,14 +261,14 @@ export function useUnifiedServerFiltering(
     isPlaceholderData: pagedIsPlaceholder,
     error: pagedError,
     refetch: pagedRefetch,
-  } = useQuery({
+  } = useQuery<{ success: true; data: FilteredEventsData }>({
     queryKey: createFilterQueryKey('paged'),
     enabled: isPagedMode,
     placeholderData: (previousData) => previousData,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false, // Always refetch in dev
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
         ? globalThis.crypto.randomUUID()
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -287,6 +287,7 @@ export function useUnifiedServerFiltering(
           'X-Request-Timestamp': requestTimestamp
         },
         body: JSON.stringify(fetchFilters),
+        signal,
       });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -313,7 +314,7 @@ export function useUnifiedServerFiltering(
     refetch: infiniteRefetch,
     fetchNextPage,
     hasNextPage,
-  } = useInfiniteQuery({
+  } = useInfiniteQuery<{ success: true; data: FilteredEventsData }>({
     queryKey: createFilterQueryKey('infinite'),
     enabled: autoLoadAllPages,
     initialPageParam: 1,
@@ -321,7 +322,7 @@ export function useUnifiedServerFiltering(
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false,
-    queryFn: async ({ pageParam = 1 }) => {
+    queryFn: async ({ pageParam = 1, signal }) => {
       const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
         ? globalThis.crypto.randomUUID()
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -335,6 +336,7 @@ export function useUnifiedServerFiltering(
           'X-Request-Timestamp': requestTimestamp
         },
         body: JSON.stringify({ ...fetchFilters, page: pageParam }),
+        signal,
       });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -451,7 +453,7 @@ export function useUnifiedServerFiltering(
   // Quick filter actions (from original useSmartFilters)
   const applyQuickFilter = useCallback((filterType: string) => {
     switch (filterType) {
-      case 'this-week':
+      case 'this-week': {
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - weekStart.getDay());
         const weekEnd = new Date(weekStart);
@@ -461,6 +463,7 @@ export function useUnifiedServerFiltering(
           dateRange: { start: weekStart, end: weekEnd }
         }));
         break;
+      }
 
       case 'free-events':
         setFilters(prev => ({ ...prev, cost: 'free' }));
@@ -662,7 +665,9 @@ export function useUnifiedServerFiltering(
         }
       }
     } finally {
-      setIsDetectingLocation(false);
+      if (!signal.aborted) {
+        setIsDetectingLocation(false);
+      }
     }
   }, [timezoneToLocationMap]);
 

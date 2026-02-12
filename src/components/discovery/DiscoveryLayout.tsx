@@ -8,11 +8,15 @@ interface DiscoveryLayoutProps {
     children: React.ReactNode;
     resultCount?: number;
     sortOption?: React.ReactNode;
+    rankingControls?: React.ReactNode;
+    actionControls?: React.ReactNode;
+    activeFilterRail?: React.ReactNode;
     isSidebarOpen?: boolean;
     onSidebarClose?: () => void;
-    className?: string; // Add className prop
+    className?: string;
     minHeightClassName?: string;
     gridClassName?: string;
+    layout?: 'grid' | 'sections';
 }
 
 const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
@@ -21,11 +25,15 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     children,
     resultCount,
     sortOption,
+    rankingControls,
+    actionControls,
+    activeFilterRail,
     isSidebarOpen,
     onSidebarClose,
-    className = '', // swift-default
+    className = '',
     minHeightClassName = 'min-h-screen',
-    gridClassName = ''
+    gridClassName = '',
+    layout = 'grid'
 }) => {
     return (
         <div className={`${minHeightClassName} bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
@@ -73,21 +81,35 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
 
                     {/* Main Content */}
                     <div className="flex-1 min-w-0 px-1 md:px-0 pb-6 lg:pb-7 pt-2 lg:pt-0 transition-colors">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-                            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                Events <span className="text-muted-foreground/60">({resultCount || 0})</span>
-                            </h2>
+                        <div className="mb-4 space-y-3">
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                                <h2 className="text-sm font-medium text-muted-foreground">
+                                    Events <span className="text-muted-foreground/60">({resultCount || 0})</span>
+                                </h2>
 
-                            {sortOption && (
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    {sortOption}
+                                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                                    {rankingControls}
+                                    {sortOption && (
+                                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                                            {sortOption}
+                                        </div>
+                                    )}
+                                    {actionControls}
                                 </div>
-                            )}
+                            </div>
+
+                            {activeFilterRail}
                         </div>
 
-                        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ${gridClassName}`}>
-                            {children}
-                        </div>
+                        {layout === 'sections' ? (
+                            <div className={`flex flex-col gap-8 ${gridClassName}`}>
+                                {children}
+                            </div>
+                        ) : (
+                            <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ${gridClassName}`}>
+                                {children}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

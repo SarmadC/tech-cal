@@ -22,6 +22,7 @@ export function useRemoteSearchSuggestions({
   const debouncedSearchTerm = useDebounce(searchTerm, debounceMs);
 
   useEffect(() => {
+    let isActive = true;
     const term = debouncedSearchTerm.trim();
     if (term.length < 2) {
       setSuggestions((prev) => (prev.length ? [] : prev));
@@ -55,17 +56,24 @@ export function useRemoteSearchSuggestions({
           organizerLogoUrl: getLogoUrlFromInput(suggestion.organizerLogoUrl, suggestion.organizer),
         }));
 
+        if (!isActive) return;
         setSuggestions(suggestions);
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
+        if (!isActive) return;
         console.warn('[useRemoteSearchSuggestions] Failed to fetch suggestions:', error);
         setSuggestions([]);
       } finally {
-        setIsLoading(false);
+        if (isActive) {
+          setIsLoading(false);
+        }
       }
     })();
 
-    return () => controller.abort();
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
   }, [debouncedSearchTerm, maxSuggestions]);
 
   return { suggestions, isLoading, searchTerm: debouncedSearchTerm };

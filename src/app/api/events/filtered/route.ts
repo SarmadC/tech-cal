@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
       surface: requestSurface
     };
 
-    const cacheKey = `fe2:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
+    const cacheKey = `fe3:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
 
     // Attempt to serve from cache for a short TTL window
     try {

@@ -1,5 +1,9 @@
 // src/types/events.ts
 
+// Re-export AlignmentReason so consumers can import from types
+export type { AlignmentReason } from '@/lib/recommendation/baseScorer';
+import type { AlignmentReason } from '@/lib/recommendation/baseScorer';
+
 // Forward declaration to avoid circular imports
 export interface CareerImpactScore {
   overall: number;
@@ -17,6 +21,8 @@ export interface CareerImpactScore {
     speakerHighlights: string[];
     careerImpactCategory: 'transformative' | 'high' | 'moderate' | 'low';
     confidenceFactors: string[];
+    alignmentReasons?: AlignmentReason[];
+    matchedGoals?: string[];
   };
   metadata: {
     algorithmVersion: string;

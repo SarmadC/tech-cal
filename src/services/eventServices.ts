@@ -32,7 +32,7 @@ import { DiversityEnhancementService } from './diversityEnhancementService';
 import { DIVERSITY_CONFIG } from '@/utils/diversityUtils';
 import * as Sentry from "@sentry/nextjs";
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
-import { FilterCounts, normalizeEventFormat } from '@/utils/filterCountUtils';
+import { FilterCounts, normalizeEventFormat, isEventFreeFromPricing } from '@/utils/filterCountUtils';
 
 export class EventService {
     /**
@@ -138,7 +138,7 @@ export class EventService {
             // Run count queries in parallel for better performance
             const [formatResult, categoryResult, tagResult] = await Promise.all([
                 // Format and cost counts query - exclude format filter so users can see all format options
-                buildFilteredQuery('event_format, price_min', true).limit(10000),
+                buildFilteredQuery('event_format, price_min, price_max', true).limit(10000),
                 // Category counts query - include format filter so counts reflect current selection
                 buildFilteredQuery('event_type_id', false).not('event_type_id', 'is', null).limit(10000),
                 // Tag counts query - sample significant number of events to build representative tag cloud
@@ -153,7 +153,8 @@ export class EventService {
                     counts.format[formatKey] += 1;
 
                     const priceMin = row.price_min as number | null | undefined;
-                    const isFree = priceMin === null || priceMin === undefined || priceMin === 0;
+                    const priceMax = row.price_max as number | null | undefined;
+                    const isFree = isEventFreeFromPricing(priceMin, null, { priceMax });
                     counts.cost[isFree ? 'free' : 'paid'] += 1;
                 });
             }
@@ -589,7 +590,7 @@ export class EventService {
     static async getEventIdsByTags(
         tags: string[],
         supabaseClient: SupabaseClientType,
-        filters: EventFilters = {}
+        _filters: EventFilters = {}
     ): Promise<string[]> {
         try {
             if (!tags || tags.length === 0) {
@@ -1586,13 +1587,14 @@ export class EventService {
         if (filters.cost && filters.cost !== 'all') {
             switch (filters.cost) {
                 case 'free':
-                    // Free: price_min must be explicitly 0 (not null, as null defaults to paid)
-                    query = query.eq('price_min', 0);
+                    // Free only when explicitly zero-cost (price_min = 0 and no positive max).
+                    query = query.or('and(price_min.eq.0,or(price_max.is.null,price_max.eq.0))');
                     break;
                 case 'paid':
-                    // Paid: price_min > 0 OR price_max > 0 OR price_min is null (defaults to paid)
-                    // This covers: explicit prices, or null (which we treat as paid by default)
-                    query = query.or('price_min.gt.0,price_max.gt.0,price_min.is.null');
+                    // Paid includes explicit paid prices and unknown pricing.
+                    query = query.or(
+                        'price_min.gt.0,price_max.gt.0,and(price_min.is.null,price_max.is.null),and(price_min.is.null,price_max.eq.0),and(price_min.eq.0,price_max.gt.0)'
+                    );
                     break;
             }
         }

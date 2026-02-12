@@ -208,6 +208,7 @@ export async function enrichEventsWithCareerImpact(
               reasons,
               alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
               matchedSkills: alignment.matchedSkills,
+              matchedGoals: alignment.matchedGoals,
               speakerHighlights: [],
               careerImpactCategory: getAlignmentCategory(adjustedOverall),
               confidenceFactors: isColdStart 
@@ -242,6 +243,7 @@ export async function enrichEventsWithCareerImpact(
               reasons: ['Scoring failed'],
               alignmentReasons: [],
               matchedSkills: [],
+              matchedGoals: [],
               speakerHighlights: [],
               careerImpactCategory: 'low' as const,
               confidenceFactors: ['Scoring error']
@@ -513,6 +515,5 @@ export class CareerImpactEnrichmentService {
     );
   }
 }
-
 
 

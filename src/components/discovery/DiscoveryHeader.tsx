@@ -27,6 +27,8 @@ interface DiscoveryHeaderProps {
     isAutocompletLoading?: boolean;
     onSuggestionSelect?: (suggestion: SearchSuggestion | SearchHistoryItem) => void;
     onHistorySelect?: (item: SearchHistoryItem) => void;
+    rankingControls?: React.ReactNode;
+    actionControls?: React.ReactNode;
 }
 
 // Timezone to location mapping for fallback location detection
@@ -171,12 +173,15 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     suggestions = [],
     searchHistory = [],
     isAutocompletLoading = false,
-    onSuggestionSelect
+    onSuggestionSelect,
+    rankingControls,
+    actionControls
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isLocalDetecting, setIsLocalDetecting] = useState(false);
     const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Show autocomplete when typing and there are suggestions or history
     const hasAutocompleteContent = suggestions.length > 0 || searchHistory.length > 0;
@@ -201,6 +206,15 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+                blurTimeoutRef.current = null;
+            }
+        };
     }, []);
 
     // Handle suggestion selection
@@ -316,10 +330,24 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         className="w-full pl-11 pr-16 py-2.5 bg-muted/50 focus:bg-transparent border border-transparent focus:border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
+                        onFocus={() => {
+                            if (blurTimeoutRef.current) {
+                                clearTimeout(blurTimeoutRef.current);
+                                blurTimeoutRef.current = null;
+                            }
+                            if (hasAutocompleteContent && searchTerm.length >= 2) {
+                                setIsAutocompleteOpen(true);
+                            }
+                        }}
                         onBlur={(e) => {
                             onSearchChange(e.target.value.trim());
-                            setTimeout(() => setIsAutocompleteOpen(false), 350);
+                            if (blurTimeoutRef.current) {
+                                clearTimeout(blurTimeoutRef.current);
+                            }
+                            blurTimeoutRef.current = setTimeout(() => {
+                                setIsAutocompleteOpen(false);
+                                blurTimeoutRef.current = null;
+                            }, 350);
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -427,6 +455,17 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
             </div>
 
+            {(rankingControls || actionControls) && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {rankingControls}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {actionControls}
+                    </div>
+                </div>
+            )}
+
             {/* Date Range Picker */}
             <QuickDatePicker
                 currentDate={dateRange.start || new Date()}
@@ -465,6 +504,8 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         prevProps.isDetectingLocation === nextProps.isDetectingLocation &&
         prevProps.isSearching === nextProps.isSearching &&
         prevProps.isAutocompletLoading === nextProps.isAutocompletLoading &&
+        prevProps.rankingControls === nextProps.rankingControls &&
+        prevProps.actionControls === nextProps.actionControls &&
         dateRangeEqual &&
         suggestionsEqual &&
         historyEqual
