@@ -27,11 +27,39 @@ const RecommendationContext: React.FC<RecommendationContextProps> = ({ careerImp
         const skillsToShow = matchedSkills.slice(0, 3);
         const hasSkillReason = compactHighlights.some((line) => line.toLowerCase().startsWith('skill match:'));
 
+        // Color logic based on score
+        let badgeStyle = 'text-blue-400';
+        let barColor = 'bg-blue-400';
+        let barBg = 'bg-blue-900/40';
+
+        if (careerImpact.overall >= 80) {
+            badgeStyle = 'text-emerald-400';
+            barColor = 'bg-emerald-400';
+            barBg = 'bg-emerald-900/40';
+        } else if (careerImpact.overall >= 50) {
+            badgeStyle = 'text-blue-400';
+            barColor = 'bg-blue-400';
+            barBg = 'bg-blue-900/40';
+        } else if (careerImpact.overall >= 25) {
+            badgeStyle = 'text-amber-400';
+            barColor = 'bg-amber-400';
+            barBg = 'bg-amber-900/40';
+        } else {
+            badgeStyle = 'text-rose-400';
+            barColor = 'bg-rose-400';
+            barBg = 'bg-rose-900/40';
+        }
+
         return (
             <div className="relative group/recommendation mb-3 inline-block">
-                {/* Simplified Percentage Badge */}
-                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-medium font-mono cursor-help transition-colors hover:bg-blue-500/20">
-                    <Sparkle size={12} weight="fill" className="text-blue-400" />
+                {/* Simplified Percentage Badge with Progress Bar - Minimal (No Background) */}
+                <div className={`inline-flex items-center gap-2 py-0.5 rounded-md ${badgeStyle} text-[11px] font-medium font-mono cursor-help transition-opacity hover:opacity-80`}>
+                    <div className={`w-12 h-1.5 rounded-sm ${barBg} overflow-hidden`}>
+                        <div
+                            className={`h-full ${barColor} rounded-sm`}
+                            style={{ width: `${careerImpact.overall}%` }}
+                        />
+                    </div>
                     <span>{careerImpact.overall}% Match</span>
                 </div>
 
@@ -74,6 +102,7 @@ const RecommendationContext: React.FC<RecommendationContextProps> = ({ careerImp
                 </div>
             </div>
         );
+
     }
 
     // Expanded variant

@@ -126,7 +126,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     return (
         <div
-            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-border dark:border-border bg-card dark:bg-[#0a0a0a] hover:shadow-md dark:hover:shadow-none hover:bg-accent/10 hover:border-border-strong text-foreground ${accentClass}`}
+            className={`flex flex-col rounded-[6px] p-5 transition-all duration-300 cursor-pointer group relative border border-white/5 bg-card dark:bg-[#0a0a0a] shadow-none hover:border-gray-600 hover:-translate-y-1 hover:shadow-xl text-foreground ${accentClass}`}
             onClick={onClick}
             role="article"
         >
@@ -160,7 +160,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 relative" ref={actionMenuRef}>
+                <div className={`flex items-center gap-1 relative transition-opacity duration-200 ${isActionMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} ref={actionMenuRef}>
                     <button
                         type="button"
                         onClick={(e) => {
