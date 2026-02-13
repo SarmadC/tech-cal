@@ -29,7 +29,7 @@ export default function ClientLayout({
     useAuthNotifications();
 
     // Pages that should never show navbar (they have their own navigation)
-    const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard', '/discover', '/events'];
+    const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard', '/discover', '/events', '/embed'];
 
     // Marketing pages that should always show navbar (excluding landing page which has custom nav)
     const marketingPaths = ['/pricing', '/blog', '/contact', '/legal'];
@@ -52,12 +52,15 @@ export default function ClientLayout({
     // 1. Marketing pages (always) - excluding landing page
     // 2. Unauthenticated users on non-excluded pages
     // 3. Note: Landing page uses its own custom resizable navbar
+    const isEmbedPage = pathname.startsWith('/embed');
     const shouldShowNavbar =
-        marketingPaths.includes(pathname) ||
-        (!user && !loading && !excludedPaths.includes(pathname));
+        !isEmbedPage && (
+            marketingPaths.includes(pathname) ||
+            (!user && !loading && !excludedPaths.includes(pathname))
+        );
 
     const shouldShowLegalFooter =
-        pathname !== '/' && !pathname.startsWith('/calendar');
+        pathname !== '/' && !pathname.startsWith('/calendar') && !pathname.startsWith('/embed');
 
     if (!shouldShowNavbar) {
         return (

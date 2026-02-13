@@ -4,9 +4,10 @@ import { createClient } from '@/utils/supabase/server';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import EventListView from '@/components/events/EventListView';
-import { BreadcrumbJsonLd } from '@/components/seo';
+import { BreadcrumbJsonLd, ItemListJsonLd } from '@/components/seo';
 import { formatDate } from '@/utils/dateUtils';
 import { generateEventSlug } from '@/utils/slugUtils';
+import { SITE_URL } from '@/config/site';
 
 export const metadata: Metadata = {
     title: 'Tech Events Calendar 2026 — Conferences, Meetups & Hackathons | Kure-Cal',
@@ -15,17 +16,17 @@ export const metadata: Metadata = {
         title: 'Tech Events Calendar 2026 — Conferences, Meetups & Hackathons',
         description: 'Browse upcoming tech conferences, developer meetups, hackathons, and workshops. The curated tech events calendar for serious engineering careers.',
         type: 'website',
-        url: 'https://kure-cal.com/events',
-        images: [{ url: 'https://kure-cal.com/og-image.png' }],
+        url: `${SITE_URL}/events`,
+        images: [{ url: `${SITE_URL}/og-image.png` }],
     },
     twitter: {
         card: 'summary_large_image',
         title: 'Tech Events Calendar 2026 — Conferences, Meetups & Hackathons',
         description: 'Browse upcoming tech conferences, developer meetups, hackathons, and workshops. The curated tech events calendar for serious engineering careers.',
-        images: ['https://kure-cal.com/og-image.png'],
+        images: [`${SITE_URL}/og-image.png`],
     },
     alternates: {
-        canonical: 'https://kure-cal.com/events',
+        canonical: `${SITE_URL}/events`,
     },
 };
 
@@ -99,45 +100,27 @@ export default async function EventsPage() {
         }
     }
 
-    // Build ItemList JSON-LD for SSR events
-    const itemListJsonLd = ssrEvents.length > 0 ? {
-        '@context': 'https://schema.org',
-        '@type': 'ItemList',
-        itemListElement: ssrEvents.map((event, index) => ({
-            '@type': 'ListItem',
-            position: index + 1,
-            item: {
-                '@type': 'Event',
-                name: event.title,
-                startDate: event.start_time,
-                ...(event.end_time ? { endDate: event.end_time } : {}),
-                ...(event.location ? {
-                    location: event.event_format === 'Online'
-                        ? { '@type': 'VirtualLocation', url: `https://kure-cal.com/events/${event.slug || event.id}` }
-                        : { '@type': 'Place', name: event.location }
-                } : {}),
-                ...(event.description ? { description: event.description.slice(0, 200) } : {}),
-                url: `https://kure-cal.com/events/${event.slug || event.id}`,
-                ...(event.organizer ? { organizer: { '@type': 'Organization', name: event.organizer.name } } : {}),
-            },
-        })),
-    } : null;
-
     return (
         <>
             {/* Structured data */}
             <BreadcrumbJsonLd
                 items={[
-                    { name: 'Home', url: 'https://kure-cal.com' },
+                    { name: 'Home', url: SITE_URL },
                     { name: 'Events' },
                 ]}
             />
-            {itemListJsonLd && (
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
-                />
-            )}
+            <ItemListJsonLd
+                items={ssrEvents.map((event) => ({
+                    title: event.title,
+                    startDate: event.start_time,
+                    endDate: event.end_time,
+                    location: event.location,
+                    isOnline: event.event_format === 'Online',
+                    description: event.description,
+                    url: `${SITE_URL}/events/${event.slug || event.id}`,
+                    organizerName: event.organizer?.name,
+                }))}
+            />
 
             {/* SSR event content for crawlers — hidden once client hydrates */}
             {ssrEvents.length > 0 && (

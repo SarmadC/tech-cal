@@ -124,7 +124,7 @@ export default function SettingsMobileIntegration() {
     const isConnected = true;
     const mockStatus = {
         connected: true,
-        calendarId: 'sarmad@techcal.com',
+        calendarId: 'your-google-calendar-id',
         // 2 hours + 5 mins ago
         lastSyncAt: new Date(Date.now() - (125 * 60000)).toISOString(),
         isActive: true,
@@ -229,7 +229,7 @@ export default function SettingsMobileIntegration() {
                             <div className="flex flex-col">
                                 <span className="text-[14px] font-medium text-[var(--mono-text-primary)] leading-tight">Google Calendar</span>
                                 <span className="text-[12px] text-[var(--mono-text-secondary)] leading-tight">
-                                    {currentStatus?.calendarId || 'sarmad@techcal.com'}
+                                    {currentStatus?.calendarId || 'your Google calendar ID'}
                                 </span>
                             </div>
                         </div>

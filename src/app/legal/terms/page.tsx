@@ -1,6 +1,7 @@
 // src/app/legal/terms/page.tsx
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 // Static generation for legal pages - static content
 export const dynamic = 'force-static';
@@ -109,7 +110,7 @@ export default function TermsOfServicePage() {
 
             <h2>14. Contact</h2>
             <p>
-                Email: <a href="mailto:support@kurecal.app">support@kurecal.app</a>
+                Use our <Link href="/contact">contact form</Link>, or write to support [at] kurecal [dot] app.
             </p>
         </main>
     );

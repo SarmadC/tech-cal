@@ -1,14 +1,7 @@
 'use client';
 
-import type { FormEvent } from 'react';
-
-import { useEffect, useRef, useActionState, useState, useMemo, useCallback } from 'react';
-import { useFormStatus } from 'react-dom';
-import { submitContactFormAction, type ContactFormState } from './actions';
-import { useSnackbar } from '@/contexts/SnackbarContext';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState, useCallback, type FormEvent } from 'react';
 import {
-    CircleNotchIcon,
     GithubLogo,
     DiscordLogo,
     Bug,
@@ -18,7 +11,7 @@ import {
     Command,
     ArrowUpRight,
 } from '@phosphor-icons/react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ContactForm } from './ContactForm';
 
 type SupportShortcut = {
     id: string;
@@ -89,31 +82,9 @@ const supportShortcuts: SupportShortcut[] = [
 
 const defaultShortcut = supportShortcuts[0];
 
-type SubmitButtonProps = {
-    disabled?: boolean;
-};
-
-function SubmitButton({ disabled = false }: SubmitButtonProps) {
-    const { pending } = useFormStatus();
-    return (
-        <Button
-            type="submit"
-            disabled={pending || disabled}
-            className="w-full bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground h-10 font-medium"
-        >
-            {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? 'Sending...' : 'Send Message'}
-        </Button>
-    );
-}
 export default function ContactPage() {
-    const formRef = useRef<HTMLFormElement>(null);
-    const { showSuccess, showError } = useSnackbar();
-    const initialState: ContactFormState = { message: '', success: false, errors: {} };
-    const [state, formAction] = useActionState(submitContactFormAction, initialState);
     const [showForm, setShowForm] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState('');
-    const formSectionRef = useRef<HTMLDivElement>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredShortcuts = useMemo(() => {
@@ -129,39 +100,16 @@ export default function ContactPage() {
             .slice(0, SEARCH_RESULTS_LIMIT);
     }, [searchQuery]);
 
-    const focusFormSection = useCallback(() => {
-        if (formSectionRef.current) {
-            formSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, []);
-
-    useEffect(() => {
-        if (state.message) {
-            if (state.success) {
-                showSuccess(`Message Sent! ${state.message}`);
-                formRef.current?.reset();
-                setSelectedSubject('');
-            } else {
-                const errorDescription = Object.values(state.errors || {}).flat().join(' ');
-                showError(`Submission Failed: ${errorDescription || state.message}`);
-            }
-        }
-    }, [state, showSuccess, showError]);
-
-    useEffect(() => {
-        if (showForm) {
-            focusFormSection();
-        }
-    }, [showForm, focusFormSection]);
-
     const handleOpenForm = useCallback((subject?: string) => {
         setSelectedSubject(subject ?? '');
         if (!showForm) {
             setShowForm(true);
-            return;
         }
-        focusFormSection();
-    }, [focusFormSection, showForm]);
+        // Smooth scroll to form if needed, but with the new design it's likely prominent enough
+        setTimeout(() => {
+            document.getElementById('contact-form-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }, [showForm]);
 
     const handleShortcutAction = useCallback((shortcut: SupportShortcut) => {
         if (shortcut.type === 'form' && shortcut.subject) {
@@ -193,6 +141,7 @@ export default function ContactPage() {
     }, [handleShortcutAction]);
 
     const searchResultsVisible = searchQuery.trim().length > 0;
+
     return (
         <main className="min-h-screen bg-background text-foreground-primary selection:bg-neutral-800 font-sans">
             <section className="pt-32 pb-16 px-6 relative">
@@ -248,7 +197,10 @@ export default function ContactPage() {
                 </div>
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-neutral-900/20 blur-[120px] rounded-full -z-0 pointer-events-none" />
             </section>
-            <div className="max-w-[1200px] mx-auto px-6 pb-24">
+
+            <div className="max-w-[1200px] mx-auto px-6 pb-24 space-y-24">
+
+                {/* Contact Options Cards */}
                 <div className="grid md:grid-cols-3 gap-6">
                     <div className="group p-6 rounded-xl bg-neutral-900/30 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/50 transition-all duration-300">
                         <div className="flex items-start justify-between mb-4">
@@ -318,7 +270,8 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                <div className="mt-12 p-8 rounded-2xl bg-neutral-900/20 border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                {/* Additional Help Section */}
+                <div className="p-8 rounded-2xl bg-neutral-900/20 border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="max-w-xl">
                         <h2 className="text-xl font-semibold text-foreground-primary mb-2">
                             Can't find what you're looking for?
@@ -346,105 +299,23 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                {showForm && (
-                    <div ref={formSectionRef} className="mt-16 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="max-w-2xl mx-auto">
-                            <div className="text-center mb-10">
-                                <h2 className="text-2xl font-semibold text-foreground-primary mb-2">Send us a message</h2>
-                                <p className="text-neutral-400">We'll get back to you as soon as possible.</p>
-                            </div>
-                            <div className="bg-neutral-900/30 rounded-2xl p-8 border border-neutral-800 backdrop-blur-sm">
-                                <form ref={formRef} action={formAction} className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="name" className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wide">Name</label>
-                                            <input
-                                                type="text"
-                                                id="name"
-                                                name="name"
-                                                required
-                                                className="w-full px-4 py-2.5 bg-black/50 border border-neutral-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-accent-primary focus:border-accent-primary placeholder:text-neutral-700 transition-all hover:border-neutral-700"
-                                                placeholder="John Doe"
-                                            />
-                                            {state.errors?.name && <p className="text-red-500 text-xs mt-1">{state.errors.name[0]}</p>}
-                                        </div>
-                                        <div>
-                                            <label htmlFor="email" className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wide">Email</label>
-                                            <input
-                                                type="email"
-                                                id="email"
-                                                name="email"
-                                                required
-                                                className="w-full px-4 py-2.5 bg-black/50 border border-neutral-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-accent-primary focus:border-accent-primary placeholder:text-neutral-700 transition-all hover:border-neutral-700"
-                                                placeholder="john@company.com"
-                                            />
-                                            {state.errors?.email && <p className="text-red-500 text-xs mt-1">{state.errors.email[0]}</p>}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="company" className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wide">Company</label>
-                                            <input
-                                                type="text"
-                                                id="company"
-                                                name="company"
-                                                className="w-full px-4 py-2.5 bg-black/50 border border-neutral-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-accent-primary focus:border-accent-primary placeholder:text-neutral-700 transition-all hover:border-neutral-700"
-                                                placeholder="Acme Inc."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label id="subject-label" htmlFor="subject" className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wide">Subject</label>
-                                            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                                                <SelectTrigger
-                                                    id="subject"
-                                                    aria-required="true"
-                                                    className="w-full bg-black/50 border-neutral-800 text-white h-[42px] focus:ring-accent-primary focus:ring-1"
-                                                >
-                                                    <SelectValue placeholder="Select a subject..." />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
-                                                    <SelectItem value="general">General Inquiry</SelectItem>
-                                                    <SelectItem value="sales">Enterprise Sales</SelectItem>
-                                                    <SelectItem value="support">Technical Support</SelectItem>
-                                                    <SelectItem value="feedback">Feature Request / Feedback</SelectItem>
-                                                    <SelectItem value="partnership">Partnership</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <input type="hidden" name="subject" value={selectedSubject} />
-                                            {state.errors?.subject && <p className="text-red-500 text-xs mt-1">{state.errors.subject[0]}</p>}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="message" className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wide">Message</label>
-                                        <textarea
-                                            id="message"
-                                            name="message"
-                                            required
-                                            rows={4}
-                                            className="w-full px-4 py-2.5 bg-black/50 border border-neutral-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-accent-primary focus:border-accent-primary placeholder:text-neutral-700 resize-none transition-all hover:border-neutral-700"
-                                            placeholder="How can we help you today?"
-                                        />
-                                        {state.errors?.message && <p className="text-red-500 text-xs mt-1">{state.errors.message[0]}</p>}
-                                    </div>
-
-                                    <SubmitButton disabled={!selectedSubject} />
-
-                                    {state.errors?._form && (
-                                        <div className="mt-2 text-sm text-red-500 text-center" aria-live="polite">
-                                            {state.errors._form[0]}
-                                        </div>
-                                    )}
-                                </form>
-                            </div>
+                {/* Contact Form Section */}
+                <div id="contact-form-section" className="scroll-mt-32">
+                    {showForm ? (
+                        <div className="animate-in slide-in-from-bottom-4 duration-500 fade-in">
+                            <ContactForm initialSubject={selectedSubject} onClose={() => setShowForm(false)} />
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-neutral-500 text-sm">
+                                Select an option above to contact us.
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="border-t border-neutral-900 mx-auto max-w-[1200px]" />
         </main>
     );
 }
-

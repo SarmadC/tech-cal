@@ -7,3 +7,5 @@ export {
     EventJsonLd,
     BreadcrumbJsonLd,
 } from './JsonLd';
+
+export { ItemListJsonLd } from './ItemListJsonLd';

@@ -5,7 +5,10 @@ import type { Database } from '@/types/supabase'
 
 // Routes that require authentication
 const PROTECTED_ROUTES = [
+  '/discover',
+  '/calendar',
   '/dashboard',
+  '/hackathons',
   '/settings',
   '/onboarding',
 ]
@@ -13,12 +16,32 @@ const PROTECTED_ROUTES = [
 // Routes that should redirect authenticated users away
 const AUTH_ROUTES = ['/login', '/signup']
 
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+// Public landing/index routes that must remain crawlable.
+const CRAWLABLE_PUBLIC_PREFIXES = [
+  '/events',
+  '/resources',
+  '/blog',
+  '/pricing',
+  '/contact',
+  '/about',
+  '/legal',
+  '/embed',
+]
+
+export function pathMatchesPrefix(pathname: string, routePrefix: string): boolean {
+  return pathname === routePrefix || pathname.startsWith(`${routePrefix}/`)
 }
 
-function isAuthRoute(pathname: string): boolean {
-  return AUTH_ROUTES.some(route => pathname === route)
+export function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some(route => pathMatchesPrefix(pathname, route))
+}
+
+export function isAuthRoute(pathname: string): boolean {
+  return AUTH_ROUTES.some(route => pathMatchesPrefix(pathname, route))
+}
+
+export function isCrawlablePublicRoute(pathname: string): boolean {
+  return CRAWLABLE_PUBLIC_PREFIXES.some(route => pathMatchesPrefix(pathname, route))
 }
 
 export async function proxy(request: NextRequest) {
@@ -67,7 +90,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // If user is not authenticated and trying to access protected route
-  if (!user && isProtectedRoute(pathname)) {
+  if (!user && isProtectedRoute(pathname) && !isCrawlablePublicRoute(pathname)) {
     const redirectPath = `${pathname}${request.nextUrl.search}`
     const redirectUrl = new URL('/login', request.url)
     // Keep both params during transition since some pages still read `next`.

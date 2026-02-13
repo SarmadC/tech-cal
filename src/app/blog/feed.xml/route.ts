@@ -1,5 +1,6 @@
 // src/app/blog/feed.xml/route.ts
 import { createClient } from '@/utils/supabase/server';
+import { SITE_URL } from '@/config/site';
 
 export const revalidate = 3600; // 1 hour
 
@@ -14,7 +15,7 @@ export async function GET() {
         .order('published_at', { ascending: false })
         .limit(50);
 
-    const siteUrl = 'https://kure-cal.com';
+    const siteUrl = SITE_URL;
 
     const escapeXml = (str: string) =>
         str

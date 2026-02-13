@@ -9,6 +9,7 @@ import { ArticleJsonLd, BreadcrumbJsonLd } from '@/components/seo';
 import { EventService } from '@/services/eventServices';
 import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import type { AgendaItem } from '@/types/events';
+import { SITE_URL } from '@/config/site';
 
 // Revalidate every hour
 export const revalidate = 3600;
@@ -90,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: post.title,
         description,
         alternates: {
-            canonical: `https://kure-cal.com/blog/${slug}`,
+            canonical: `${SITE_URL}/blog/${slug}`,
         },
         openGraph: {
             title: post.title,
@@ -210,8 +211,8 @@ export default async function BlogPostPage({ params }: Props) {
                 imageUrl={post.featured_image_url || undefined}
             />
             <BreadcrumbJsonLd items={[
-                { name: 'Home', url: 'https://kure-cal.com' },
-                { name: 'Blog', url: 'https://kure-cal.com/blog' },
+                { name: 'Home', url: SITE_URL },
+                { name: 'Blog', url: `${SITE_URL}/blog` },
                 { name: post.title },
             ]} />
             <main id="main-content" className="min-h-screen bg-[#0B0C0E] relative overflow-hidden pt-32 pb-24">
@@ -364,7 +365,7 @@ export default async function BlogPostPage({ params }: Props) {
                                     </p>
                                     <div className="flex gap-2">
                                         <a
-                                            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://kure-cal.com/blog/${post.slug}`)}`}
+                                            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`${SITE_URL}/blog/${post.slug}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             aria-label="Share on X (Twitter)"
@@ -375,7 +376,7 @@ export default async function BlogPostPage({ params }: Props) {
                                             </svg>
                                         </a>
                                         <a
-                                            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://kure-cal.com/blog/${post.slug}`)}`}
+                                            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${SITE_URL}/blog/${post.slug}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             aria-label="Share on LinkedIn"

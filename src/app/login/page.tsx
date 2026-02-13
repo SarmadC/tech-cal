@@ -309,7 +309,7 @@ function LoginPageContent() {
                                     required
                                     defaultValue={verificationEmail}
                                     className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                    placeholder="you@example.com"
+                                    placeholder="Enter your email"
                                     aria-describedby={state.errors?.email ? "email-error" : undefined}
                                     aria-invalid={state.errors?.email ? "true" : "false"}
                                 />

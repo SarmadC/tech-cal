@@ -13,6 +13,9 @@ import {
     Globe
 } from '@phosphor-icons/react/dist/ssr';
 import BookmarkEventButton from '@/components/events/BookmarkEventButton';
+import { ShareButtons } from '@/components/social/ShareButtons';
+import { EmbedButton } from '@/components/social/EmbedButton';
+import { SITE_URL } from '@/config/site';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -178,7 +181,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
         ? event.description.slice(0, 160) + (event.description.length > 160 ? '...' : '')
         : `Join ${event.title} - a tech event happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}.`;
 
-    const ogImage = event.event_image_url || 'https://kure-cal.com/og-image.png';
+    const ogImage = event.event_image_url || `${SITE_URL}/og-image.png`;
 
     return {
         title: `${event.title} - ${eventDate} | Kure-Cal`,
@@ -187,7 +190,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             title: `${event.title} - ${eventDate}`,
             description,
             type: 'website',
-            url: `https://kure-cal.com/events/${event.slug}`,
+            url: `${SITE_URL}/events/${event.slug}`,
             images: [{ url: ogImage }],
         },
         twitter: {
@@ -197,7 +200,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             images: [ogImage],
         },
         alternates: {
-            canonical: `https://kure-cal.com/events/${event.slug}`,
+            canonical: `${SITE_URL}/events/${event.slug}`,
         },
     };
 }
@@ -254,7 +257,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
         logo_url: getLogoUrlFromInput(rawOrganizer.logo_url, rawOrganizer.name)
     } : null;
 
-    const eventUrl = `https://kure-cal.com/events/${event.slug}`;
+    const eventUrl = `${SITE_URL}/events/${event.slug}`;
 
     return (
         <>
@@ -277,8 +280,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
             />
             <BreadcrumbJsonLd
                 items={[
-                    { name: 'Home', url: 'https://kure-cal.com' },
-                    { name: 'Events', url: 'https://kure-cal.com/events' },
+                    { name: 'Home', url: SITE_URL },
+                    { name: 'Events', url: `${SITE_URL}/events` },
                     { name: event.title },
                 ]}
             />
@@ -436,6 +439,15 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                 )}
                             </div>
 
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <span className="text-[11px] text-foreground-tertiary/70 block mb-2">Share</span>
+                                <ShareButtons url={eventUrl} title={event.title} />
+                            </div>
+
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <EmbedButton slug={event.slug} title={event.title} />
+                            </div>
+
                         </div>
                     </aside>
 
@@ -502,6 +514,17 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                 Website
                             </a>
                         )}
+                        <a
+                            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(event.title)}&url=${encodeURIComponent(eventUrl)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Share on X"
+                            className="h-11 w-11 flex items-center justify-center border border-border-default rounded-lg text-foreground-secondary"
+                        >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM16.482 19.333h1.833L7.084 4.126H5.117z" />
+                            </svg>
+                        </a>
                     </div>
                 </div>
             </div>

@@ -58,9 +58,9 @@ export function Footer() {
                     <div className="footer-card">
                         <h3 className="footer-section-title">Contact & Legal</h3>
                         <nav className="footer-nav">
-                            <Link href="mailto:hello@kure-cal.com" className="footer-link footer-email">
+                            <Link href="/contact" className="footer-link footer-email" aria-label="Contact Kure-Cal">
                                 <EnvelopeSimpleIcon size={16} />
-                                hello@kure-cal.com
+                                Contact Support
                             </Link>
                             <Link href="/legal/privacy" className="footer-link">Privacy Policy</Link>
                             <Link href="/legal/terms" className="footer-link">Terms & Conditions</Link>

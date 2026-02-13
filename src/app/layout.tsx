@@ -36,6 +36,7 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
+import { SITE_URL } from '@/config/site';
 
 
 const inter = Inter({
@@ -50,7 +51,7 @@ const dmSans = DM_Sans({
 
 // Refined Metadata for a more professional look
 export const metadata: Metadata = {
-    metadataBase: new URL('https://kure-cal.com'),
+    metadataBase: new URL(SITE_URL),
     title: {
         default: "Kure‑Cal: The All‑in‑One Tech Events Calendar",
         template: "%s | Kure‑Cal",
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
         type: 'website',
         locale: 'en_US',
         siteName: 'Kure-Cal',
-        url: 'https://kure-cal.com',
+        url: SITE_URL,
         images: [
             {
                 url: '/og-image.png',
@@ -94,7 +95,7 @@ export const metadata: Metadata = {
         },
     },
     alternates: {
-        canonical: 'https://kure-cal.com',
+        canonical: SITE_URL,
     },
 };
 

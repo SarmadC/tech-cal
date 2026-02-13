@@ -123,11 +123,11 @@ export default function BillingSuccessPage() {
 
           <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              If your subscription isn't active within a few minutes, please contact{' '}
-              <a href="mailto:support@kure-cal.com" className="font-medium underline">
-                support@kure-cal.com
-              </a>
-              {' '}with your order details.
+              If your subscription is not active within a few minutes, use our{' '}
+              <Link href="/contact" className="font-medium underline">
+                contact form
+              </Link>
+              {' '}and include your order details.
             </p>
           </div>
 
@@ -174,7 +174,12 @@ export default function BillingSuccessPage() {
             <h2 className="text-sm font-semibold text-foreground-primary">Need help?</h2>
             <ul className="mt-3 space-y-2 text-sm text-foreground-secondary">
               <li>• Manage billing anytime from Settings → Billing</li>
-              <li>• Questions? Contact support@kure-cal.com</li>
+              <li>
+                • Questions?{' '}
+                <Link href="/contact" className="underline">
+                  Contact support
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
