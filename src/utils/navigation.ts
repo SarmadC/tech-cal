@@ -39,7 +39,7 @@ export class NavigationUtils {
      * Navigate to discover page
      */
     toDiscover() {
-        this.router.push('/discover');
+        this.router.push('/events');
     }
 
     /**

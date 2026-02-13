@@ -13,6 +13,9 @@ import { CareerProgressCard } from '@/components/dashboard/CareerProgressCard';
 import { LearningProgressCard } from '@/components/dashboard/LearningProgressCard';
 import { PipelineColumn } from '@/components/dashboard/PipelineColumn';
 import { RecentWinsCard } from '@/components/dashboard/RecentWinsCard';
+import { OverviewPanel } from '@/components/dashboard/OverviewPanel';
+import { CareerImpactInsightsCard } from '@/components/dashboard/CareerImpactInsightsCard';
+import { CareerAnalyticsSection } from '@/components/dashboard/CareerAnalyticsSection';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { usePastEventAttendancePrompt } from '@/hooks/usePastEventAttendancePrompt';
@@ -168,6 +171,16 @@ export default function DashboardClientView({
                                         </SectionErrorBoundary>
                                     )}
 
+                                    {/* Career Overview Metrics */}
+                                    {careerProfile && hasCompletedOnboarding && (
+                                        <SectionErrorBoundary name="OverviewPanel">
+                                            <OverviewPanel
+                                                allEvents={allUpcomingEvents}
+                                                trackedEvents={trackedEvents}
+                                            />
+                                        </SectionErrorBoundary>
+                                    )}
+
                                     {/* Main Content Grid - 60/40 Split */}
                                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                         {/* Left Column (60%) - Progress & Analytics */}
@@ -191,6 +204,16 @@ export default function DashboardClientView({
                                                         upcomingEvents={allUpcomingEvents}
                                                         careerProfile={careerProfile}
                                                         eventTypes={initialEventTypes}
+                                                    />
+                                                </SectionErrorBoundary>
+                                            )}
+
+                                            {/* Career Impact Insights */}
+                                            {careerProfile && hasCompletedOnboarding && (
+                                                <SectionErrorBoundary name="CareerImpactInsightsCard">
+                                                    <CareerImpactInsightsCard
+                                                        trackedEvents={trackedEvents}
+                                                        careerProfile={careerProfile}
                                                     />
                                                 </SectionErrorBoundary>
                                             )}
@@ -229,6 +252,17 @@ export default function DashboardClientView({
                                             </SectionErrorBoundary>
                                         </div>
                                     </div>
+
+                                    {/* Progressive Analytics + Recommendations */}
+                                    {profile && hasCompletedOnboarding && (
+                                        <SectionErrorBoundary name="CareerAnalyticsSection">
+                                            <CareerAnalyticsSection
+                                                userProfile={profile}
+                                                trackedEvents={trackedEvents}
+                                                events={allUpcomingEvents}
+                                            />
+                                        </SectionErrorBoundary>
+                                    )}
                                 </div>
                             </div>
                         </PageErrorBoundary>

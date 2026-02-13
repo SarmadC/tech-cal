@@ -278,7 +278,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
             <BreadcrumbJsonLd
                 items={[
                     { name: 'Home', url: 'https://kure-cal.com' },
-                    { name: 'Events', url: 'https://kure-cal.com/discover' },
+                    { name: 'Events', url: 'https://kure-cal.com/events' },
                     { name: event.title },
                 ]}
             />
@@ -290,7 +290,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                     <div className="max-w-7xl mx-auto px-6 sm:px-8">
                         {/* Minimal Breadcrumb */}
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-5">
-                            <Link href="/discover" className="hover:text-foreground-tertiary transition-colors">
+                            <Link href="/events" className="hover:text-foreground-tertiary transition-colors">
                                 Events
                             </Link>
                             <span className="text-foreground-tertiary/30">/</span>
@@ -487,7 +487,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-main/95 backdrop-blur-md border-t border-border-subtle lg:hidden z-50">
                     <div className="flex gap-2 max-w-md mx-auto">
                         <Link
-                            href="/login?redirect=/discover"
+                            href="/login?redirect=/events"
                             className="flex-1 h-11 flex items-center justify-center bg-foreground-primary text-background-main font-medium rounded-lg text-[14px]"
                         >
                             Track

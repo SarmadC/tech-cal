@@ -7,7 +7,7 @@
  * Includes caching for fallback scoring and observability/logging.
  */
 
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo } from 'react';
 import { calculateEventAlignment } from '@/utils/uiScoringAdapter';
 import { doesEventMatchGoal, getGoalTarget } from '@/utils/eventGoalAlignment';
 import { getCanonicalSkillMeta } from '@/utils/skillTaxonomy';
@@ -61,23 +61,6 @@ function getCareerImpact(
 }
 
 /**
- * Simple hash function for profile + event cache key
- */
-function createCacheKey(eventId: string, careerProfile: CareerProfile | null): string {
-  if (!careerProfile) return `${eventId}-no-profile`;
-  
-  // Hash relevant profile fields
-  const profileHash = [
-    careerProfile.currentRole,
-    careerProfile.careerGoals.join(','),
-    careerProfile.skillsToLearn.join(','),
-    careerProfile.primarySkills.join(','),
-  ].join('|');
-  
-  return `${eventId}-${profileHash}`;
-}
-
-/**
  * Goal progress data for Career Progress Card
  */
 export interface GoalProgress {
@@ -91,7 +74,41 @@ export interface GoalProgress {
     title: string;
     attendedDate: string;
   }>;
-  suggestedAction?: string; // Placeholder for now - will be computed once targets validated
+  suggestedAction?: string;
+}
+
+function truncateEventTitle(title: string, maxLength: number = 44): string {
+  if (title.length <= maxLength) return title;
+  return `${title.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function buildSuggestedGoalAction(params: {
+  goal: string;
+  progress: number;
+  eventCount: number;
+  targetEventCount: number;
+  nextRecommendedEventTitle?: string;
+}): string | undefined {
+  const { goal, progress, eventCount, targetEventCount, nextRecommendedEventTitle } = params;
+
+  if (progress >= 100) return undefined;
+
+  const eventsNeeded = Math.max(0, targetEventCount - eventCount);
+  if (eventsNeeded <= 0) return undefined;
+
+  if (nextRecommendedEventTitle) {
+    const eventLabel = truncateEventTitle(nextRecommendedEventTitle);
+    if (eventCount === 0) {
+      return `Start this goal with "${eventLabel}"`;
+    }
+    return `Attend ${eventsNeeded} more event${eventsNeeded === 1 ? '' : 's'} (next: "${eventLabel}")`;
+  }
+
+  if (eventCount === 0) {
+    return `Add your first ${goal.replace(/-/g, ' ')} event to your pipeline`;
+  }
+
+  return `Attend ${eventsNeeded} more ${goal.replace(/-/g, ' ')} event${eventsNeeded === 1 ? '' : 's'}`;
 }
 
 /**
@@ -165,34 +182,48 @@ export function useDashboardMetrics({
   upcomingEvents,
   careerProfile,
 }: UseDashboardMetricsOptions): DashboardMetrics {
-  // Cache for computed alignment scores (keyed by eventId + profileHash)
-  const alignmentCacheRef = useRef<Map<string, { score: number; reasons: string[]; matchedSkills?: string[]; matchedGoals?: string[] }>>(new Map());
-  const previousProfileHashRef = useRef<string>('');
-  
-  // Clear cache if profile hash changes (useEffect ensures side effect always runs)
-  useEffect(() => {
+  const computedAlignmentByEventId = useMemo(() => {
+    const alignmentMap = new Map<string, {
+      score: number;
+      reasons: string[];
+      matchedSkills: string[];
+      matchedGoals: string[];
+    }>();
+
     if (!careerProfile) {
-      previousProfileHashRef.current = '';
-      alignmentCacheRef.current.clear();
-      return;
+      return alignmentMap;
     }
-    
-    const profileHash = [
-      careerProfile.currentRole,
-      careerProfile.careerGoals.join(','),
-      careerProfile.skillsToLearn.join(','),
-      careerProfile.primarySkills.join(','),
-    ].join('|');
-    
-    if (previousProfileHashRef.current !== profileHash) {
-      alignmentCacheRef.current.clear();
-      previousProfileHashRef.current = profileHash;
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[useDashboardMetrics] Profile changed, cleared alignment cache');
+
+    const eventsToCompute = new Map<string, Event>();
+    const collectEventForComputation = (event: Event | null | undefined) => {
+      if (!event) return;
+      if (getCareerImpactScore(event) > 0) return;
+      eventsToCompute.set(event.id, event);
+    };
+
+    upcomingEvents.forEach(collectEventForComputation);
+    trackedEvents.forEach(te => collectEventForComputation(te.event));
+
+    eventsToCompute.forEach((event, eventId) => {
+      try {
+        const alignment = calculateEventAlignment(event, careerProfile);
+        alignmentMap.set(eventId, {
+          score: alignment.alignmentScore,
+          reasons: alignment.alignmentReasons.map(reason => reason.reason),
+          matchedSkills: alignment.matchedSkills,
+          matchedGoals: alignment.matchedGoals,
+        });
+      } catch (error) {
+        console.error('[useDashboardMetrics] Error computing alignment:', error);
       }
+    });
+
+    if (process.env.NODE_ENV !== 'production' && alignmentMap.size > 0) {
+      console.log('[useDashboardMetrics] Computed fallback alignments:', alignmentMap.size);
     }
-  }, [careerProfile]);
+
+    return alignmentMap;
+  }, [careerProfile, upcomingEvents, trackedEvents]);
   
   // Helper to get or compute alignment
   const getOrComputeAlignment = useMemo(() => {
@@ -216,65 +247,30 @@ export function useDashboardMetrics({
         return { score: 0, computed: false };
       }
       
-      // Check cache
-      const cacheKey = createCacheKey(event.id, careerProfile);
-      const cached = alignmentCacheRef.current.get(cacheKey);
-      if (cached) {
+      const cached = computedAlignmentByEventId.get(event.id);
+      if (cached != null) {
         return {
           score: cached.score,
           computed: true,
           reason: cached.reasons[0],
         };
       }
-      
-      // Compute alignment and cache it
-      try {
-        const alignment = calculateEventAlignment(event, careerProfile);
-        alignmentCacheRef.current.set(cacheKey, {
-          score: alignment.alignmentScore,
-          reasons: alignment.alignmentReasons.map(r => r.reason),
-          matchedSkills: alignment.matchedSkills,
-          matchedGoals: alignment.matchedGoals,
-        });
-        
-        // Log fallback usage in dev
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[useDashboardMetrics] Computed alignment for event:', event.id, 'score:', alignment.alignmentScore);
-        }
-        
-        return {
-          score: alignment.alignmentScore,
-          computed: true,
-          reason: alignment.alignmentReasons[0]?.reason,
-        };
-      } catch (error) {
-        console.error('[useDashboardMetrics] Error computing alignment:', error);
-        return { score: 0, computed: false };
-      }
+
+      return { score: 0, computed: false };
     };
-  }, [careerProfile]);
+  }, [careerProfile, computedAlignmentByEventId]);
   
-  // Helper to get event's matched skills (from pre-computed or fallback cache)
+  // Helper to get event's matched skills (from pre-computed impact or memoized fallback)
   const getEventMatchedSkills = useMemo(() => {
     return (event: Event): string[] => {
-      // Try pre-computed first
       const impact = getCareerImpact(event);
       if (impact?.explanation?.matchedSkills) {
         return impact.explanation.matchedSkills;
       }
       
-      // Try fallback cache
-      if (careerProfile) {
-        const cacheKey = createCacheKey(event.id, careerProfile);
-        const cached = alignmentCacheRef.current.get(cacheKey);
-        if (cached?.matchedSkills) {
-          return cached.matchedSkills;
-        }
-      }
-      
-      return [];
+      return computedAlignmentByEventId.get(event.id)?.matchedSkills ?? [];
     };
-  }, [careerProfile]);
+  }, [computedAlignmentByEventId]);
 
   // Check if components data is available (in both upcoming and tracked events)
   const hasComponentsData = useMemo(() => {
@@ -454,6 +450,13 @@ export function useDashboardMetrics({
           progress,
           targetEventCount: target,
           matchedEvents,
+          suggestedAction: buildSuggestedGoalAction({
+            goal,
+            progress,
+            eventCount: goalEvents.length,
+            targetEventCount: target,
+            nextRecommendedEventTitle: scoredUpcoming.find(item => doesEventMatchGoal(item.event, goal))?.event.title,
+          }),
         });
       });
     }

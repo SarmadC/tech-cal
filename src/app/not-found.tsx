@@ -36,7 +36,7 @@ export default function NotFound() {
                         Go to Homepage
                     </Link>
                     <Link
-                        href="/discover"
+                        href="/events"
                         className="bg-background-secondary hover:bg-background-tertiary text-foreground-primary font-semibold py-3 px-6 rounded-lg transition-all border border-border-color"
                     >
                         Discover Events
@@ -52,7 +52,7 @@ export default function NotFound() {
                         <Link href="/" className="text-accent-primary hover:underline">
                             Home
                         </Link>
-                        <Link href="/discover" className="text-accent-primary hover:underline">
+                        <Link href="/events" className="text-accent-primary hover:underline">
                             Discover
                         </Link>
                         <Link href="/calendar?view=month" className="text-accent-primary hover:underline">

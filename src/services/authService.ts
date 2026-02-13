@@ -59,7 +59,7 @@ export class AuthService {
 
             // Get the email confirmation redirect URL
             const { getEmailConfirmationUrl } = await import('@/utils/authUtils');
-            const emailRedirectTo = getEmailConfirmationUrl('/discover', baseUrl);
+            const emailRedirectTo = getEmailConfirmationUrl('/events', baseUrl);
 
             const { data: authData, error } = await supabaseClient.auth.signUp({
                 email: data.email,

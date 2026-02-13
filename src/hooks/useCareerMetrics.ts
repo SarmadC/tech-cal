@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { PeerCohortService } from '@/services/peerCohortService';
@@ -25,6 +26,20 @@ interface CareerMetrics {
   };
 }
 
+function isValidPeerComparisonSnapshot(
+  value: unknown
+): value is CareerMetrics['peerComparison'] {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Record<string, unknown>;
+  return (
+    typeof snapshot.percentile === 'number' &&
+    (snapshot.comparison === 'above' || snapshot.comparison === 'below' || snapshot.comparison === 'average') &&
+    typeof snapshot.sampleSize === 'number' &&
+    (snapshot.confidence === 'high' || snapshot.confidence === 'medium' || snapshot.confidence === 'low') &&
+    typeof snapshot.recommendation === 'string'
+  );
+}
+
 /**
  * Enhanced hook for career-focused dashboard metrics
  * Consolidates career impact, learning streak, and peer comparison
@@ -34,11 +49,48 @@ export function useCareerMetrics(
   trackedEvents: TrackedEventRecord[] = []
 ): CareerMetrics {
   const { profile } = useAuth();
+  const careerProfile = useMemo(
+    () => CareerProfileService.getCareerProfileFromPreferences(profile),
+    [profile]
+  );
+  const profileFingerprint = useMemo(() => {
+    if (!careerProfile) return null;
+
+    return [
+      careerProfile.currentRole,
+      careerProfile.seniority,
+      careerProfile.industry,
+      [...careerProfile.careerGoals].sort().join(','),
+      [...careerProfile.networkingGoals].sort().join(','),
+      [...careerProfile.skillsToLearn].sort().join(',')
+    ].join('|');
+  }, [careerProfile]);
+
+  const { data: serverPeerComparison } = useQuery<CareerMetrics['peerComparison'] | null>({
+    queryKey: ['careerPeerComparison', profile?.id, profileFingerprint],
+    queryFn: async () => {
+      const response = await fetch('/api/dashboard/peer-comparison');
+      if (!response.ok) return null;
+
+      const payload = await response.json() as {
+        success?: boolean;
+        data?: {
+          peerComparison?: unknown;
+        };
+      };
+      const peerComparison = payload?.data?.peerComparison;
+      return payload?.success && isValidPeerComparisonSnapshot(peerComparison)
+        ? peerComparison
+        : null;
+    },
+    enabled: Boolean(profile?.id && profileFingerprint),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
 
   return useMemo(() => {
     try {
-      const careerProfile = CareerProfileService.getCareerProfileFromPreferences(profile);
-
       if (!careerProfile || !profile) {
         return getEmptyMetrics();
       }
@@ -53,8 +105,9 @@ export function useCareerMetrics(
       // 2. Learning Streak
       const learningStreak = calculateLearningStreak(trackedEvents);
 
-      // 3. Enhanced Peer Comparison (simplified for sync hook)
-      const peerComparison = calculateEnhancedPeerComparison(trackedEvents, careerProfile);
+      // 3. Enhanced Peer Comparison (server-aggregated, fallback to local modeled baseline)
+      const localPeerComparison = PeerCohortService.calculatePeerComparison(careerProfile, trackedEvents);
+      const peerComparison = serverPeerComparison ?? localPeerComparison;
 
       return {
         careerImpactScore: {
@@ -70,7 +123,7 @@ export function useCareerMetrics(
       console.warn('Error calculating career metrics:', error);
       return getEmptyMetrics();
     }
-  }, [trackedEvents, profile]);
+  }, [trackedEvents, profile, careerProfile, serverPeerComparison]);
 }
 
 /**
@@ -196,80 +249,6 @@ function calculateSimpleEventScore(events: Event[]): number {
   });
 
   return scores.reduce((sum, score) => sum + score, 0) / scores.length;
-}
-
-/**
- * Calculate enhanced peer comparison with role-aware cohorts
- */
-function calculateEnhancedPeerComparison(
-  trackedEvents: TrackedEventRecord[],
-  careerProfile: { currentRole: string; seniority: string }
-): CareerMetrics['peerComparison'] {
-  // Simplified version for synchronous operation
-  // In production, would use PeerCohortService.findUserCohorts()
-
-  const monthlyEventCount = trackedEvents.length / 12;
-
-  // Role-specific baselines
-  const roleBaselines = {
-    'Frontend Engineer': 2.2,
-    'Backend Engineer': 2.0,
-    'Full Stack Engineer': 2.4,
-    'Data Scientist': 2.8,
-    'Product Manager': 2.5,
-    'Engineering Manager': 3.0,
-    'default': 2.0
-  };
-
-  const baseline = roleBaselines[careerProfile.currentRole as keyof typeof roleBaselines] || roleBaselines.default;
-
-  // Calculate percentile with role-specific baseline
-  const rawPercentile = (monthlyEventCount / baseline) * 50;
-  const percentile = Math.min(Math.max(Math.round(rawPercentile), 5), 95);
-
-  let comparison: 'above' | 'below' | 'average' = 'average';
-  if (percentile > 65) comparison = 'above';
-  else if (percentile < 35) comparison = 'below';
-
-  // Determine confidence based on available data
-  const confidence = trackedEvents.length > 12 ? 'medium' : 'low';
-
-  // Use actual tracked events count as sample size
-  const sampleSize = trackedEvents.length;
-
-  const recommendation = getRecommendationText(comparison, confidence, sampleSize);
-
-  return {
-    percentile,
-    comparison,
-    sampleSize,
-    confidence,
-    recommendation
-  };
-}
-
-/**
- * Generate recommendation text based on comparison results
- */
-function getRecommendationText(
-  comparison: 'above' | 'below' | 'average',
-  confidence: 'high' | 'medium' | 'low',
-  sampleSize: number
-): string {
-  if (confidence === 'low') {
-    return 'Building your peer group... More activity needed for reliable comparison';
-  }
-
-  const sampleText = sampleSize < 50 ? ' (small sample)' : '';
-
-  switch (comparison) {
-    case 'above':
-      return `You're more active than most peers in your role${sampleText}`;
-    case 'below':
-      return `Consider attending more events to match peer activity${sampleText}`;
-    default:
-      return `Your learning activity matches your peer group${sampleText}`;
-  }
 }
 
 /**

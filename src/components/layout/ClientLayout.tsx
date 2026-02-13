@@ -83,7 +83,7 @@ export default function ClientLayout({
     // Add authenticated links for mobile
     if (user) {
         mobileNavItems.push(
-            { name: 'Discover', href: '/discover' },
+            { name: 'Discover', href: '/events' },
             { name: 'Calendar', href: '/calendar?view=month' },
             { name: 'Dashboard', href: '/dashboard' }
         );

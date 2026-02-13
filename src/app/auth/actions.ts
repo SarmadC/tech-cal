@@ -400,7 +400,7 @@ export async function resendVerificationAction(email: string): Promise<AuthFormS
 
     try {
         const { getEmailConfirmationUrl } = await import('@/utils/authUtils');
-        const emailRedirectTo = getEmailConfirmationUrl('/discover');
+        const emailRedirectTo = getEmailConfirmationUrl('/events');
 
         const { error } = await supabase.auth.resend({
             type: 'signup',
@@ -434,7 +434,7 @@ export async function resendVerificationAction(email: string): Promise<AuthFormS
     }
 }
 
-export async function oauthSignInAction(provider: OAuthProvider, nextPath: string = '/discover') {
+export async function oauthSignInAction(provider: OAuthProvider, nextPath: string = '/events') {
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
 
     const redirectTo = getOAuthRedirectUrl(nextPath);

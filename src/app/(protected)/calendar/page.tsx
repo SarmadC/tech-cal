@@ -27,7 +27,7 @@ export default async function CalendarPage({
     
     // Redirect discover view to the dedicated discover page
     if (view === 'discover') {
-        redirect('/discover');
+        redirect('/events');
     }
 
     try {

@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOAuthRedirectUrl } from '@/utils/authUtils'
 import type { OAuthProvider } from '@/types'
 
+function getRequestOrigin(request: NextRequest): string {
+    const requestUrl = new URL(request.url)
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const forwardedProto = request.headers.get('x-forwarded-proto')
+
+    if (forwardedHost) {
+        const protocol = forwardedProto || requestUrl.protocol.replace(':', '')
+        return `${protocol}://${forwardedHost}`
+    }
+
+    return requestUrl.origin
+}
+
 export async function GET(
     request: NextRequest,
     context: { params: Promise<{ provider: string }> }
@@ -10,7 +23,7 @@ export async function GET(
     try {
         const { provider } = await context.params
         const { searchParams } = new URL(request.url)
-        const nextPath = searchParams.get('next') || '/discover'
+        const nextPath = searchParams.get('next') || '/events'
 
         // Validate provider
         if (provider !== 'google' && provider !== 'github') {
@@ -20,14 +33,12 @@ export async function GET(
             )
         }
 
-        // Determine the request origin dynamically to handle domain mismatches
-        // This ensures the callback URL matches the domain the user is currently on
-        const origin = request.headers.get('origin') || 
-            (request.headers.get('x-forwarded-host') ? `https://${request.headers.get('x-forwarded-host')}` : null) || 
-            (request.headers.get('host') ? `https://${request.headers.get('host')}` : null);
+        // Build callback origin from the current request/proxy headers.
+        // Avoid hardcoding https so localhost callbacks remain http in local dev.
+        const origin = getRequestOrigin(request)
 
         // Get the redirect URL for the callback
-        const redirectTo = getOAuthRedirectUrl(nextPath, origin || undefined);
+        const redirectTo = getOAuthRedirectUrl(nextPath, origin);
 
         if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
             const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`
@@ -126,4 +137,3 @@ export async function GET(
         )
     }
 }
-

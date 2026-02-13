@@ -119,11 +119,6 @@ const TagCloud: React.FC<TagCloudProps> = ({
         return null;
     }
 
-    // Debug logging for selected tags
-    if (process.env.NODE_ENV === 'development' && selectedTags.length > 0) {
-        console.log('[TagCloud] selectedTags:', selectedTags);
-    }
-
     return (
         <div className={`space-y-3 ${className}`}>
             <div className="flex flex-wrap gap-2">
@@ -136,7 +131,6 @@ const TagCloud: React.FC<TagCloudProps> = ({
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                console.log('[TagCloud] Tag clicked:', tag.value);
                                 onTagClick(tag.value);
                             }}
                             className={`

@@ -38,7 +38,7 @@ export const NavigationUtils = {
   /**
    * Navigate to calendar discovery
    */
-  goToDiscovery: () => '/discover',
+  goToDiscovery: () => '/events',
   
   
   /**

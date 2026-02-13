@@ -111,7 +111,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         });
     }, [onUpdateFilter, metrics, activeFilterCount]);
 
-    const applyRankingMode = useCallback((mode: DiscoveryRankingMode, trackTelemetry = true) => {
+    const applyRankingMode = useCallback((
+        mode: DiscoveryRankingMode,
+        trackTelemetry = true,
+        allowNearMeDetection = true
+    ) => {
         setRankingMode(mode);
 
         if (trackTelemetry) {
@@ -138,7 +142,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         if (mode === 'near-me') {
             onUpdateFilter('sortBy', 'date');
             onUpdateFilter('sortDirection', 'asc');
-            if (!filters.locations[0]) {
+            if (allowNearMeDetection && !filters.locations[0]) {
                 void onNearMeClick?.();
             }
             return;
@@ -162,7 +166,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         }
 
         rankingInitializedRef.current = true;
-        applyRankingMode(rankingMode, false);
+        applyRankingMode(rankingMode, false, false);
     }, [applyRankingMode, rankingMode]);
 
     const rankedEvents = useMemo(() => {

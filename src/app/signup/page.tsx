@@ -34,7 +34,7 @@ export default function SignupPage() {
         try {
             // Use route handler instead of server action for proper cookie handling
             const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
-            oauthUrl.searchParams.set('next', '/discover');
+            oauthUrl.searchParams.set('next', '/events');
 
             // Navigate to route handler which will handle OAuth initiation and redirect
             window.location.href = oauthUrl.toString();
@@ -50,7 +50,7 @@ export default function SignupPage() {
     // If already confirmed (rare), redirect to discover
     const handleSignupSuccess = (state: AuthFormState) => {
         if (state?.shouldRedirect) {
-            router.push('/discover');
+            router.push('/events');
             return;
         }
 

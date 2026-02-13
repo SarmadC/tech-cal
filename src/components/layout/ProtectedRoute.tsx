@@ -46,7 +46,7 @@ export default function ProtectedRoute({
     // 2. Handle the case where a LOGGED-IN user tries to access a page
     // meant for LOGGED-OUT users (e.g., /login, /signup).
     if (isAuthenticated && allowUnauthenticated) {
-        return <Redirect to="/discover" />; // Redirect them to the main app page.
+        return <Redirect to="/events" />; // Redirect them to the main app page.
     }
 
     // 3. Handle the case where a LOGGED-OUT user tries to access a

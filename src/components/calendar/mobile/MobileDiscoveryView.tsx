@@ -54,6 +54,67 @@ function appendUnique(values: string[], value: string): string[] {
     return [...values, value].slice(-150);
 }
 
+function toDateInputValue(date: Date | null): string {
+    if (!date) {
+        return '';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function parseDateInputValue(value: string, endOfDay = false): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const parsed = endOfDay
+        ? new Date(year, month - 1, day, 23, 59, 59, 999)
+        : new Date(year, month - 1, day, 0, 0, 0, 0);
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const BUDGET_OPTIONS: Array<{ value: UnifiedFilterOptions['budget']; label: string }> = [
+    { value: 'all', label: 'Any budget' },
+    { value: 'free-only', label: 'Free only' },
+    { value: 'low', label: 'Low' },
+    { value: 'moderate', label: 'Moderate' },
+    { value: 'high', label: 'High' },
+    { value: 'unlimited', label: 'Unlimited' },
+];
+
+const DIFFICULTY_OPTIONS: Array<{ value: UnifiedFilterOptions['difficulty']; label: string }> = [
+    { value: 'all', label: 'Any level' },
+    { value: 'beginner', label: 'Beginner' },
+    { value: 'intermediate', label: 'Intermediate' },
+    { value: 'advanced', label: 'Advanced' },
+];
+
+const AVAILABILITY_OPTIONS: Array<{ value: UnifiedFilterOptions['availability']; label: string }> = [
+    { value: 'all', label: 'Any availability' },
+    { value: 'available', label: 'Available' },
+    { value: 'no-conflicts', label: 'No conflicts' },
+];
+
+const DURATION_OPTIONS: Array<{ value: UnifiedFilterOptions['duration']; label: string }> = [
+    { value: 'all', label: 'Any duration' },
+    { value: 'short', label: 'Short' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'long', label: 'Long' },
+    { value: 'multi-day', label: 'Multi-day' },
+];
+
+const POPULARITY_OPTIONS: Array<{ value: UnifiedFilterOptions['popularity']; label: string }> = [
+    { value: 'all', label: 'Any popularity' },
+    { value: 'trending', label: 'Trending' },
+    { value: 'high-attendance', label: 'High attendance' },
+    { value: 'niche', label: 'Niche' },
+];
+
 const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     events,
     categories,
@@ -73,6 +134,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [feedbackHint, setFeedbackHint] = useState<string | null>(null);
     const [explainEvent, setExplainEvent] = useState<EventWithImpact | null>(null);
+    const filterDialogRef = useRef<HTMLDivElement | null>(null);
 
     const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>('mobile-discovery-ranking-mode', 'best-match');
     const [hiddenEventIds, setHiddenEventIds] = useLocalStorage<string[]>('mobile-discovery-hidden-events', []);
@@ -91,6 +153,10 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         initialRankingMode: rankingMode,
     });
 
+    const updateFilterWithoutTelemetry: UpdateFilterHandler = useCallback((key, value) => {
+        onUpdateFilter(key, value);
+    }, [onUpdateFilter]);
+
     const updateFilterTracked: UpdateFilterHandler = useCallback((key, value) => {
         onUpdateFilter(key, value);
         metrics.trackFilterChange({
@@ -99,7 +165,11 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         });
     }, [activeFilterCount, metrics, onUpdateFilter]);
 
-    const applyRankingMode = useCallback((mode: DiscoveryRankingMode, trackTelemetry = true) => {
+    const applyRankingMode = useCallback((
+        mode: DiscoveryRankingMode,
+        trackTelemetry = true,
+        allowNearMeDetection = true
+    ) => {
         setRankingMode(mode);
 
         if (trackTelemetry) {
@@ -126,7 +196,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         if (mode === 'near-me') {
             onUpdateFilter('sortBy', 'date');
             onUpdateFilter('sortDirection', 'asc');
-            if (!filters.locations[0]) {
+            if (allowNearMeDetection && !filters.locations[0]) {
                 void onNearMeClick?.();
             }
             return;
@@ -142,7 +212,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
             return;
         }
         rankingInitializedRef.current = true;
-        applyRankingMode(rankingMode, false);
+        applyRankingMode(rankingMode, false, false);
     }, [applyRankingMode, rankingMode]);
 
     const typedEvents = useMemo(() => events as EventWithImpact[], [events]);
@@ -248,14 +318,32 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         metrics.trackShortlistAction('clear', 0);
     }, [metrics, setShortlistIds]);
 
+    const resetPersonalization = useCallback(() => {
+        setHiddenEventIds([]);
+        setCategoryPenalty({});
+        setFeedbackHint(null);
+        metrics.trackFilterChange({ activeFilterCount, changedFilter: 'reset-personalization' });
+        showInfo('Discovery personalization reset.');
+    }, [activeFilterCount, metrics, setCategoryPenalty, setHiddenEventIds, showInfo]);
+
     const resetFiltersTracked = useCallback(() => {
         onResetFilters();
+        if (rankingMode !== 'best-match') {
+            setRankingMode('best-match');
+            metrics.trackRankingChange('best-match');
+        }
+        onUpdateFilter('popularity', 'all');
+        onUpdateFilter('sortBy', 'career-impact');
+        onUpdateFilter('sortDirection', 'desc');
+        setHiddenEventIds([]);
+        setCategoryPenalty({});
+        setFeedbackHint(null);
         metrics.trackFilterChange({ activeFilterCount: 0, changedFilter: 'reset-all' });
-    }, [metrics, onResetFilters]);
+    }, [metrics, onResetFilters, onUpdateFilter, rankingMode, setCategoryPenalty, setHiddenEventIds, setRankingMode]);
 
     const handleSearchChange = useCallback((value: string) => {
-        updateFilterTracked('searchTerm', value);
-    }, [updateFilterTracked]);
+        updateFilterWithoutTelemetry('searchTerm', value);
+    }, [updateFilterWithoutTelemetry]);
 
     const removeFilterChip = useCallback((chip: DiscoveryFilterChip) => {
         switch (chip.filterKey) {
@@ -312,6 +400,60 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         }));
     }, [filterChips, removeFilterChip]);
 
+    const locationValue = filters.locations[0] ?? '';
+    const hiddenCategoryCount = Object.keys(categoryPenalty).length;
+    const hasPersonalizationOverrides = hiddenEventIds.length > 0 || hiddenCategoryCount > 0;
+
+    const handleDateFilterChange = useCallback((boundary: 'start' | 'end', value: string) => {
+        const parsed = parseDateInputValue(value, boundary === 'end');
+        const currentStart = filters.dateRange.start;
+        const currentEnd = filters.dateRange.end;
+
+        if (boundary === 'start') {
+            if (parsed && currentEnd && parsed > currentEnd) {
+                updateFilterTracked('dateRange', { start: parsed, end: parsed });
+                return;
+            }
+            updateFilterTracked('dateRange', { start: parsed, end: currentEnd });
+            return;
+        }
+
+        if (parsed && currentStart && parsed < currentStart) {
+            updateFilterTracked('dateRange', { start: parsed, end: parsed });
+            return;
+        }
+
+        updateFilterTracked('dateRange', { start: currentStart, end: parsed });
+    }, [filters.dateRange.end, filters.dateRange.start, updateFilterTracked]);
+
+    useEffect(() => {
+        if (!isFilterOpen || typeof document === 'undefined') {
+            return;
+        }
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const frameId = window.requestAnimationFrame(() => {
+            filterDialogRef.current?.focus();
+        });
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                setIsFilterOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleEscape);
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            window.removeEventListener('keydown', handleEscape);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isFilterOpen]);
+
     return (
         <div className="min-h-screen bg-[var(--background-main)] pb-24 mobile-discovery-view">
             <UnifiedMobileNavbar
@@ -333,7 +475,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             maxLength={200}
                             value={filters.searchTerm}
                             onChange={(e) => handleSearchChange(e.target.value)}
-                            onBlur={(e) => handleSearchChange(e.target.value.trim())}
+                            onBlur={(e) => updateFilterTracked('searchTerm', e.target.value.trim())}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     updateFilterTracked('searchTerm', filters.searchTerm.trim());
@@ -412,9 +554,16 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                         onClick={() => setIsFilterOpen(false)}
                     />
 
-                    <div className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
+                    <div
+                        ref={filterDialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="mobile-discovery-filters-title"
+                        tabIndex={-1}
+                        className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300"
+                    >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                            <h2 className="text-xl font-semibold text-foreground">Filters</h2>
+                            <h2 id="mobile-discovery-filters-title" className="text-xl font-semibold text-foreground">Filters</h2>
                             <button
                                 type="button"
                                 onClick={() => setIsFilterOpen(false)}
@@ -441,6 +590,167 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                 counts={counts}
                                 mobileMode={true}
                             />
+
+                            <div className="mt-6 space-y-4">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-foreground">Advanced filters</h3>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Manage restored location, date, and preference filters.
+                                    </p>
+                                </div>
+
+                                {hasPersonalizationOverrides && (
+                                    <button
+                                        type="button"
+                                        onClick={resetPersonalization}
+                                        className="w-full rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-left text-xs text-foreground hover:bg-muted/50 transition-colors"
+                                    >
+                                        Reset hidden and recommendation tuning
+                                        <span className="ml-1 text-muted-foreground">
+                                            ({hiddenEventIds.length} hidden, {hiddenCategoryCount} tuned categories)
+                                        </span>
+                                    </button>
+                                )}
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="mobile-discovery-location" className="text-xs font-medium text-muted-foreground">Location</label>
+                                    <input
+                                        id="mobile-discovery-location"
+                                        type="text"
+                                        value={locationValue}
+                                        onChange={(e) => updateFilterWithoutTelemetry('locations', e.target.value ? [e.target.value] : [])}
+                                        onBlur={(e) => {
+                                            const trimmed = e.target.value.trim();
+                                            updateFilterTracked('locations', trimmed ? [trimmed] : []);
+                                        }}
+                                        placeholder="City or region"
+                                        maxLength={100}
+                                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border-strong"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-start-date" className="text-xs font-medium text-muted-foreground">Start date</label>
+                                        <input
+                                            id="mobile-discovery-start-date"
+                                            type="date"
+                                            value={toDateInputValue(filters.dateRange.start)}
+                                            onChange={(e) => handleDateFilterChange('start', e.target.value)}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-end-date" className="text-xs font-medium text-muted-foreground">End date</label>
+                                        <input
+                                            id="mobile-discovery-end-date"
+                                            type="date"
+                                            value={toDateInputValue(filters.dateRange.end)}
+                                            onChange={(e) => handleDateFilterChange('end', e.target.value)}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-budget" className="text-xs font-medium text-muted-foreground">Budget</label>
+                                        <select
+                                            id="mobile-discovery-budget"
+                                            value={filters.budget}
+                                            onChange={(e) => updateFilterTracked('budget', e.target.value as UnifiedFilterOptions['budget'])}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        >
+                                            {BUDGET_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-difficulty" className="text-xs font-medium text-muted-foreground">Difficulty</label>
+                                        <select
+                                            id="mobile-discovery-difficulty"
+                                            value={filters.difficulty}
+                                            onChange={(e) => updateFilterTracked('difficulty', e.target.value as UnifiedFilterOptions['difficulty'])}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        >
+                                            {DIFFICULTY_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-availability" className="text-xs font-medium text-muted-foreground">Availability</label>
+                                        <select
+                                            id="mobile-discovery-availability"
+                                            value={filters.availability}
+                                            onChange={(e) => updateFilterTracked('availability', e.target.value as UnifiedFilterOptions['availability'])}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        >
+                                            {AVAILABILITY_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="mobile-discovery-duration" className="text-xs font-medium text-muted-foreground">Duration</label>
+                                        <select
+                                            id="mobile-discovery-duration"
+                                            value={filters.duration}
+                                            onChange={(e) => updateFilterTracked('duration', e.target.value as UnifiedFilterOptions['duration'])}
+                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                        >
+                                            {DURATION_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="mobile-discovery-popularity" className="text-xs font-medium text-muted-foreground">Popularity</label>
+                                    <select
+                                        id="mobile-discovery-popularity"
+                                        value={filters.popularity}
+                                        onChange={(e) => updateFilterTracked('popularity', e.target.value as UnifiedFilterOptions['popularity'])}
+                                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
+                                    >
+                                        {POPULARITY_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
+                                        <span>Recommended only</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.recommended}
+                                            onChange={(e) => updateFilterTracked('recommended', e.target.checked)}
+                                            className="h-4 w-4 rounded border-border"
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
+                                        <span>Tracked events only</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.myTracked}
+                                            onChange={(e) => updateFilterTracked('myTracked', e.target.checked)}
+                                            className="h-4 w-4 rounded border-border"
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
+                                        <span>My network only</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.myNetwork}
+                                            onChange={(e) => updateFilterTracked('myNetwork', e.target.checked)}
+                                            className="h-4 w-4 rounded border-border"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="p-4 border-t border-border bg-card pb-8 flex gap-3">

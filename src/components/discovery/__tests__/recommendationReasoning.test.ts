@@ -3,14 +3,28 @@ import type { AlignmentReason, CareerImpactScore, Event } from '@/types';
 import { buildEvent } from '@/tests/factories/eventFactories';
 import { buildRecommendationHighlights } from '../recommendationReasoning';
 
-function buildCareerImpact(overrides: Partial<CareerImpactScore> = {}): CareerImpactScore {
+type CareerImpactOverrides =
+  Omit<Partial<CareerImpactScore>, 'components' | 'explanation' | 'metadata'> & {
+    components?: Partial<CareerImpactScore['components']>;
+    explanation?: Partial<CareerImpactScore['explanation']>;
+    metadata?: Partial<CareerImpactScore['metadata']>;
+  };
+
+function buildCareerImpact(overrides: CareerImpactOverrides = {}): CareerImpactScore {
+  const {
+    components: componentOverrides,
+    explanation: explanationOverrides,
+    metadata: metadataOverrides,
+    ...scalarOverrides
+  } = overrides;
+
   const defaultAlignmentReasons: AlignmentReason[] = [
     { type: 'skill', reason: 'Learn Python', contribution: 25 },
     { type: 'goal', reason: 'Build in-demand skills', contribution: 18 },
     { type: 'learning-style', reason: 'Hands-on workshop format', contribution: 8 },
   ];
 
-  const explanation = {
+  const explanation: CareerImpactScore['explanation'] = {
     reasons: ['Learn Python', 'Advance Python skills', 'Build in-demand skills'],
     matchedSkills: ['Python', 'FastAPI'],
     matchedGoals: ['skill-development'],
@@ -18,19 +32,19 @@ function buildCareerImpact(overrides: Partial<CareerImpactScore> = {}): CareerIm
     careerImpactCategory: 'high' as const,
     confidenceFactors: [],
     alignmentReasons: defaultAlignmentReasons,
-    ...overrides.explanation,
+    ...explanationOverrides,
   };
 
   return {
-    overall: 86,
-    confidence: 1,
+    overall: scalarOverrides.overall ?? 86,
+    confidence: scalarOverrides.confidence ?? 1,
     components: {
       skillRelevance: 40,
       careerStageMatch: 18,
       networkingValue: 0,
       industryRelevance: 0,
       timingBonus: 0,
-      ...(overrides.components ?? {}),
+      ...componentOverrides,
     },
     explanation,
     metadata: {
@@ -38,9 +52,9 @@ function buildCareerImpact(overrides: Partial<CareerImpactScore> = {}): CareerIm
       calculatedAt: new Date().toISOString(),
       careerProfileHash: 'test',
       eventDataHash: 'test',
-      ...(overrides.metadata ?? {}),
+      ...metadataOverrides,
     },
-    ...overrides,
+    ...scalarOverrides,
   };
 }
 

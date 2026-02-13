@@ -34,11 +34,10 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
                 {/* Left-aligned text block */}
                 <div className="hero-text-block">
                     <h1 className="hero-headline">
-                        Your Calendar,<br />
-                        <span className="hero-headline-accent">Reimagined.</span>
+                        The <span className="hero-headline-accent">Professional</span> Tech Calendar
                     </h1>
                     <p className="hero-subtext">
-                        Discover, track, and attend tech events that move your career forward.
+                        Curated conferences, effortless filtering, and zero noise. The only calendar designed for serious engineering careers.
                     </p>
                 </div>
 
@@ -52,7 +51,7 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
 
             {/* Sticky bottom CTA bar */}
             <div className="hero-sticky-cta-bar">
-                <Link href="/discover" className="hero-cta-button">
+                <Link href="/events" className="hero-cta-button">
                     <span className="hero-cta-text">Discover Events</span>
                     <span className="hero-cta-arrow-chip" aria-hidden="true">
                         <svg

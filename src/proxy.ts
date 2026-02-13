@@ -13,33 +13,12 @@ const PROTECTED_ROUTES = [
 // Routes that should redirect authenticated users away
 const AUTH_ROUTES = ['/login', '/signup']
 
-// Routes that are always public
-const PUBLIC_ROUTES = [
-  '/',
-  '/discover',
-  '/events',
-  '/hackathons',
-  '/pricing',
-  '/legal',
-  '/about',
-  '/contact',
-  '/forgot-password',
-  '/auth/callback',
-  '/auth/reset-password',
-  '/auth/confirm',
-  '/api',
-]
-
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_ROUTES.some(route => pathname.startsWith(route))
 }
 
 function isAuthRoute(pathname: string): boolean {
   return AUTH_ROUTES.some(route => pathname === route)
-}
-
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => pathname.startsWith(route))
 }
 
 export async function proxy(request: NextRequest) {
@@ -83,20 +62,23 @@ export async function proxy(request: NextRequest) {
 
   // Refresh session if expired - this is important for keeping the session alive
   // Using getUser() instead of getSession() for security (validates with Supabase server)
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
 
   // If user is not authenticated and trying to access protected route
   if (!user && isProtectedRoute(pathname)) {
+    const redirectPath = `${pathname}${request.nextUrl.search}`
     const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('next', pathname)
+    // Keep both params during transition since some pages still read `next`.
+    redirectUrl.searchParams.set('redirect', redirectPath)
+    redirectUrl.searchParams.set('next', redirectPath)
     return NextResponse.redirect(redirectUrl)
   }
 
   // If user is authenticated and trying to access auth routes (login/signup)
   if (user && isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL('/discover', request.url))
+    return NextResponse.redirect(new URL('/events', request.url))
   }
 
   return response

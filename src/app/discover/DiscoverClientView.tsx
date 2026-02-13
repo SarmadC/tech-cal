@@ -17,7 +17,7 @@ import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { useIsMobile } from '@/hooks/useDeviceDetection';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
 // IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
 const MobileDiscoveryViewDynamic = dynamic(
@@ -28,6 +28,11 @@ const MobileDiscoveryViewDynamic = dynamic(
 // Shared Desktop Sidebar
 const EventDetailSidebarDynamic = dynamic(
     () => import('@/components/calendar/EventDetailSidebar'),
+    { ssr: false }
+);
+
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
     { ssr: false }
 );
 
@@ -77,7 +82,7 @@ export default function DiscoverClientView({
 }: DiscoverClientViewProps) {
     const router = useRouter();
     const nav = useNavigation(router);
-    const isMobile = useIsMobile();
+    const { isMobile, isReady: isDeviceReady } = useDeviceDetection();
 
     const initialFilters = useMemo(() => {
         const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
@@ -259,7 +264,7 @@ export default function DiscoverClientView({
     const loadingSkeleton = <EventsLoadingSkeleton />;
 
     // Main content - Unified responsive view
-    const mainContent = isMobile ? (
+    const mainContent = !isDeviceReady ? loadingSkeleton : isMobile ? (
         <MobileDiscoveryViewDynamic
             events={eventData.filteredEvents}
             categories={initialCategories}
@@ -402,12 +407,20 @@ export default function DiscoverClientView({
                     </main>
 
                     {/* Event Detail Panel */}
-                    {selectedEvent && !isMobile && (
-                        <EventDetailSidebarDynamic
-                            event={selectedEvent}
-                            onClose={handleCloseEventDetail}
-                            categories={initialCategories}
-                        />
+                    {selectedEvent && isDeviceReady && (
+                        isMobile ? (
+                            <MobileEventDetailPanelDynamic
+                                event={selectedEvent}
+                                onClose={handleCloseEventDetail}
+                                categories={initialCategories}
+                            />
+                        ) : (
+                            <EventDetailSidebarDynamic
+                                event={selectedEvent}
+                                onClose={handleCloseEventDetail}
+                                categories={initialCategories}
+                            />
+                        )
                     )}
                 </div>
             </SidebarProvider>

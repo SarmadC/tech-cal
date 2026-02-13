@@ -1,6 +1,6 @@
-export function getOAuthRedirectUrl(nextPath: string = '/discover', baseUrl?: string): string {
+export function getOAuthRedirectUrl(nextPath: string = '/events', baseUrl?: string): string {
     // Ensure nextPath is a safe, absolute path within the app
-    const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/discover';
+    const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/events';
 
     if (baseUrl) {
         const url = new URL('/auth/callback', baseUrl);
@@ -59,8 +59,8 @@ export function getPasswordResetUrl(baseUrl?: string): string {
  * Get the redirect URL for email confirmation after signup.
  * This uses the /auth/callback route which handles the code exchange.
  */
-export function getEmailConfirmationUrl(nextPath: string = '/discover', baseUrl?: string): string {
-    const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/discover';
+export function getEmailConfirmationUrl(nextPath: string = '/events', baseUrl?: string): string {
+    const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/events';
     const resolvedBaseUrl = baseUrl || getBaseUrl();
     const url = new URL('/auth/callback', resolvedBaseUrl);
     url.searchParams.set('next', safeNext);
