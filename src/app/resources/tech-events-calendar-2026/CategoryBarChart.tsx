@@ -20,21 +20,24 @@ export function CategoryBarChart({ categories }: CategoryBarChartProps) {
     const maxCount = Math.max(...displayCategories.map(c => c.eventCount), 1);
 
     return (
-        <div className="w-full space-y-3">
+        <div className="w-full space-y-4">
             {displayCategories.map((category, index) => (
                 <div key={category.id} className="relative group">
-                    <div className="flex items-center justify-between text-xs mb-1">
+                    <div className="flex items-end justify-between text-xs mb-2">
                         <span className="font-medium text-foreground-secondary group-hover:text-foreground-primary transition-colors truncate pr-2">
                             {category.name}
                         </span>
-                        <span className="font-mono text-foreground-tertiary">
+                        <span className="font-medium text-foreground-primary">
                             {category.eventCount}
                         </span>
                     </div>
-                    <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                    {/* Increased contrast for track: bg-white/5 */}
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${(category.eventCount / maxCount) * 100}%` }}
+                            // Ensure minimum width of 4px for visibility
+                            animate={{ width: `Math.max(${(category.eventCount / maxCount) * 100}%, 2px)` }}
+                            style={{ width: `${Math.max((category.eventCount / maxCount) * 100, 1)}%` }}
                             transition={{ duration: 0.8, ease: "easeOut", delay: index * 0.05 }}
                             className="h-full bg-gradient-to-r from-primary/85 to-primary/55 rounded-full group-hover:from-primary group-hover:to-primary/70 transition-all duration-300"
                         />
