@@ -1,10 +1,13 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { EventTypeService } from '@/services/eventTypeService';
-import { BreadcrumbJsonLd, FAQPageJsonLd } from '@/components/seo';
-import { categoryNameToSlug, cityNameToSlug } from '@/utils/categorySlugUtils';
+import { BreadcrumbJsonLd } from '@/components/seo';
+import { cityNameToSlug } from '@/utils/categorySlugUtils';
 import { SITE_URL } from '@/config/site';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr';
+import { AnimatedHero } from './AnimatedHero';
+import { InteractiveGlobeSection } from './InteractiveGlobeSection';
+import { CategoryDonutChart } from './CategoryDonutChart';
 
 export const revalidate = 3600;
 
@@ -32,30 +35,25 @@ export const metadata: Metadata = {
     },
 };
 
-const FAQS = [
-    {
-        question: 'How many tech events are happening in 2026?',
-        answer: 'Kure-Cal tracks hundreds of tech events across conferences, meetups, hackathons, and workshops happening worldwide in 2026. Our calendar is updated daily as new events are announced.',
-    },
-    {
-        question: 'What types of tech events does Kure-Cal cover?',
-        answer: 'We cover conferences, hackathons, meetups, workshops, webinars, summits, and product launches across all technology domains including software engineering, AI/ML, cloud, DevOps, and more.',
-    },
-    {
-        question: 'How do I stay updated on new tech events in 2026?',
-        answer: 'Create a free Kure-Cal account to bookmark events, get deadline reminders, and receive personalized event recommendations based on your interests and location.',
-    },
-    {
-        question: 'Can I submit a tech event to be listed on Kure-Cal?',
-        answer: 'Yes! Organizers can submit their tech events through our platform. All submissions are reviewed for quality before being added to the calendar.',
-    },
-];
-
-interface CityCount {
-    name: string;
-    slug: string;
-    count: number;
+interface CategoryEventRow {
+    event_type_id: string | null;
+    event_type: { name: string | null } | null;
 }
+
+const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+    'San Francisco': { lat: 37.7749, lng: -122.4194 },
+    'New York': { lat: 40.7128, lng: -74.0060 },
+    'London': { lat: 51.5074, lng: -0.1278 },
+    'Berlin': { lat: 52.5200, lng: 13.4050 },
+    'Singapore': { lat: 1.3521, lng: 103.8198 },
+    'Austin': { lat: 30.2672, lng: -97.7431 },
+    'Seattle': { lat: 47.6062, lng: -122.3321 },
+    'Toronto': { lat: 43.65107, lng: -79.347015 },
+    'Bengaluru': { lat: 12.9716, lng: 77.5946 },
+    'Paris': { lat: 48.8566, lng: 2.3522 },
+    'Amsterdam': { lat: 52.3676, lng: 4.9041 },
+    'Dubai': { lat: 25.2048, lng: 55.2708 },
+};
 
 export default async function TechEventsCalendar2026Page() {
     const supabase = await createClient();
@@ -64,9 +62,14 @@ export default async function TechEventsCalendar2026Page() {
     const year2026End = '2026-12-31T23:59:59.999Z';
 
     // Parallel data fetching
-    const [categories, { count: totalCount }, { data: cityRows }, { data: monthlyRows }] =
+    const [{ data: categoryRows }, { count: totalCount }, { data: cityRows }, { data: monthlyRows }] =
         await Promise.all([
-            EventTypeService.getEventTypesWithCounts(supabase),
+            supabase
+                .from('events')
+                .select('event_type_id, event_type:event_type_id(name)')
+                .eq('status', 'confirmed')
+                .gte('start_time', year2026Start)
+                .lte('start_time', year2026End),
             supabase
                 .from('events')
                 .select('id', { count: 'exact', head: true })
@@ -75,7 +78,7 @@ export default async function TechEventsCalendar2026Page() {
                 .lte('start_time', year2026End),
             supabase
                 .from('events')
-                .select('location_city')
+                .select('location_city, location_latitude, location_longitude, title, slug, start_time')
                 .eq('status', 'confirmed')
                 .not('location_city', 'is', null)
                 .gte('start_time', year2026Start)
@@ -89,24 +92,68 @@ export default async function TechEventsCalendar2026Page() {
                 .order('start_time', { ascending: true }),
         ]);
 
-    // Group cities and take top 15
-    const cityMap = new Map<string, number>();
+    // Group cities and take top 15. Counts include all events with a city.
+    // Coordinates are only required for map marker rendering.
+    const cityMap = new Map<
+        string,
+        {
+            count: number;
+            lat: number | null;
+            lng: number | null;
+            events: { title: string; slug: string; date: string }[];
+        }
+    >();
     if (cityRows) {
         for (const row of cityRows) {
-            const city = (row as { location_city: string | null }).location_city;
+            const city = row.location_city;
+            let lat = row.location_latitude;
+            let lng = row.location_longitude;
+            const eventData = {
+                title: row.title,
+                slug: row.slug,
+                date: row.start_time,
+            };
+
             if (city && city.trim()) {
-                cityMap.set(city, (cityMap.get(city) || 0) + 1);
+                const cityName = city.trim();
+
+                // Use fallback if coordinates are missing
+                if (lat == null || lng == null) {
+                    const fallback = CITY_COORDINATES[cityName];
+                    if (fallback) {
+                        lat = fallback.lat;
+                        lng = fallback.lng;
+                    }
+                }
+
+                const existing = cityMap.get(cityName) || { count: 0, lat: null, lng: null, events: [] };
+                existing.events.push(eventData);
+                cityMap.set(cityName, {
+                    count: existing.count + 1,
+                    lat: existing.lat ?? lat ?? null,
+                    lng: existing.lng ?? lng ?? null,
+                    events: existing.events,
+                });
             }
         }
     }
-    const topCities: CityCount[] = Array.from(cityMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 15)
-        .map(([name, count]) => ({
-            name,
+    const allCitiesSorted = Array.from(cityMap.entries())
+        .map(([name, data]) => ({
+            city: name,
             slug: cityNameToSlug(name),
-            count,
-        }));
+            count: data.count,
+            lat: data.lat,
+            lng: data.lng,
+            events: data.events
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .slice(0, 24),
+        }))
+        .sort((a, b) => b.count - a.count);
+
+    // The globe should always display top mapped hubs (up to 10).
+    const topCities = allCitiesSorted
+        .filter((city) => city.lat != null && city.lng != null)
+        .slice(0, 10);
 
     // Group by month for timeline
     const monthCounts = new Array(12).fill(0);
@@ -134,6 +181,38 @@ export default async function TechEventsCalendar2026Page() {
     }
     const maxMonthCount = Math.max(...monthCounts, 1);
 
+    const categoryMap = new Map<
+        string,
+        {
+            id: string;
+            name: string;
+            eventCount: number;
+        }
+    >();
+    if (categoryRows) {
+        for (const row of categoryRows as CategoryEventRow[]) {
+            const categoryId = row.event_type_id || 'uncategorized';
+            const categoryName = row.event_type?.name || 'Uncategorized';
+            const existing = categoryMap.get(categoryId);
+
+            if (existing) {
+                existing.eventCount += 1;
+            } else {
+                categoryMap.set(categoryId, {
+                    id: categoryId,
+                    name: categoryName,
+                    eventCount: 1,
+                });
+            }
+        }
+    }
+    const categoryBreakdown = Array.from(categoryMap.values())
+        .filter((category) => category.eventCount > 0)
+        .sort((a, b) => b.eventCount - a.eventCount);
+    const categories = categoryBreakdown;
+
+
+
     return (
         <>
             <BreadcrumbJsonLd
@@ -143,159 +222,120 @@ export default async function TechEventsCalendar2026Page() {
                     { name: 'Tech Events Calendar 2026' },
                 ]}
             />
-            <FAQPageJsonLd faqs={FAQS} />
 
-            <div className="min-h-screen bg-background-main pb-24">
-                {/* Hero */}
-                <header className="border-b border-border-subtle">
-                    <div className="max-w-5xl mx-auto px-6 sm:px-8 py-16">
-                        <p className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-4">
-                            Resource
-                        </p>
-                        <h1 className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-foreground-primary leading-tight mb-5">
-                            {totalCount || 0} Tech Events in 2026
-                        </h1>
-                        <p className="text-[16px] text-foreground-secondary leading-relaxed max-w-2xl">
-                            The complete directory of tech conferences, developer
-                            meetups, hackathons, and workshops happening in 2026.
-                            Updated daily so you never miss a deadline.
-                        </p>
-                        <div className="mt-6">
-                            <Link
-                                href="/events"
-                                className="inline-flex items-center h-10 px-5 rounded-lg bg-foreground-primary text-background-main text-[14px] font-medium hover:opacity-90 transition-opacity"
-                            >
-                                Browse All Events
-                            </Link>
-                        </div>
-                    </div>
-                </header>
+            <div className="min-h-screen bg-background-main pb-32">
+                {/* Enhanced Hero Section - Extracted to Client Component */}
+                <AnimatedHero totalCount={totalCount} />
 
-                <main className="max-w-5xl mx-auto px-6 sm:px-8 py-12 space-y-16">
-                    {/* Category Breakdown */}
-                    {categories.length > 0 && (
-                        <section>
-                            <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
-                                Events by Category
-                            </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {categories.map((cat) => (
-                                    <Link
-                                        key={cat.id}
-                                        href={`/events/category/${categoryNameToSlug(cat.name)}`}
-                                        className="group p-4 rounded-lg border border-border-subtle hover:border-border-default transition-colors"
-                                    >
-                                        <span className="text-[15px] font-medium text-foreground-primary group-hover:text-accent-primary transition-colors block">
-                                            {cat.name}s
-                                        </span>
-                                        <span className="text-[13px] text-foreground-tertiary mt-1 block">
-                                            {cat.eventCount || 0} events
-                                        </span>
-                                    </Link>
-                                ))}
+
+
+                <main className="max-w-[1600px] mx-auto px-6 sm:px-8 -mt-8 relative z-10 space-y-16 sm:space-y-20">
+
+
+                    {/* Bento Grid Layout */}
+                    {/* Bento Grid Layout - Dashboard Lines Style */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-border rounded-2xl overflow-hidden shadow-sm">
+                        {/* 1. Monthly Distribution (Full Width) */}
+                        <section className="relative col-span-1 lg:col-span-12 bg-background p-6 sm:p-8">
+                            <div className="flex items-end justify-between mb-8">
+                                <h2 className="text-lg font-semibold text-foreground-primary">Event Distribution</h2>
+
                             </div>
-                        </section>
-                    )}
-
-                    {/* Monthly Timeline */}
-                    <section>
-                        <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
-                            Events by Month
-                        </h2>
-                        <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
-                            {monthCounts.map((count, i) => (
-                                <div key={i} className="text-center">
-                                    <div className="relative h-24 flex items-end justify-center mb-1">
-                                        <div
-                                            className="w-full rounded-sm bg-accent-primary/20"
-                                            style={{
-                                                height: `${Math.max((count / maxMonthCount) * 100, 4)}%`,
-                                            }}
-                                        />
+                            <div
+                                role="list"
+                                aria-label="Confirmed events by month in 2026"
+                                className="relative z-10 grid grid-cols-6 sm:grid-cols-12 gap-4 h-80 items-end"
+                            >
+                                {monthCounts.map((count, i) => (
+                                    <div key={monthNames[i]} role="listitem" className="relative flex flex-col items-center gap-3 h-full justify-end">
+                                        <button
+                                            type="button"
+                                            aria-label={`${monthNames[i]}: ${count} confirmed events`}
+                                            className="group relative w-full flex items-end justify-center h-full rounded-md cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background-secondary"
+                                        >
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-foreground-secondary font-medium whitespace-nowrap">
+                                                {count}
+                                            </div>
+                                            {count === maxMonthCount && count > 0 && (
+                                                <span className="absolute -top-11 left-1/2 -translate-x-1/2 rounded-full border border-border-default bg-background-main/90 px-2 py-0.5 text-[10px] font-semibold text-foreground-secondary">
+                                                    Peak
+                                                </span>
+                                            )}
+                                            <div
+                                                className="w-full rounded-md bg-gradient-to-t from-primary/85 to-primary/55 group-hover:from-primary group-hover:to-primary/70 group-focus-visible:from-primary group-focus-visible:to-primary/70 transition-all duration-300 relative overflow-hidden"
+                                                style={{
+                                                    height: `${Math.max((count / maxMonthCount) * 100, 4)}%`,
+                                                }}
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                            </div>
+                                            {/* Tooltip */}
+                                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground-primary text-background-main text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg z-20">
+                                                {count} events
+                                            </div>
+                                        </button>
+                                        <span className="text-[11px] font-medium text-foreground-secondary uppercase tracking-wider">
+                                            {monthNames[i]}
+                                        </span>
                                     </div>
-                                    <span className="text-[10px] text-foreground-tertiary">
-                                        {monthNames[i]}
-                                    </span>
-                                    <span className="text-[10px] text-foreground-tertiary/50 block">
-                                        {count}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Top Cities */}
-                    {topCities.length > 0 && (
-                        <section>
-                            <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
-                                Top Cities
-                            </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                                {topCities.map((city) => (
-                                    <Link
-                                        key={city.slug}
-                                        href={`/events/cities/${city.slug}`}
-                                        className="group p-3 rounded-lg border border-border-subtle hover:border-border-default transition-colors"
-                                    >
-                                        <span className="text-[13px] font-medium text-foreground-primary group-hover:text-accent-primary transition-colors block truncate">
-                                            {city.name}
-                                        </span>
-                                        <span className="text-[11px] text-foreground-tertiary mt-0.5 block">
-                                            {city.count} events
-                                        </span>
-                                    </Link>
                                 ))}
                             </div>
+                            <div aria-hidden className="pointer-events-none absolute inset-x-8 sm:inset-x-10 top-20 sm:top-[5.5rem] bottom-14 sm:bottom-[3.6rem] z-0 grid grid-rows-4">
+                                <div className="border-t border-border-subtle opacity-70" />
+                                <div className="border-t border-border-subtle opacity-50" />
+                                <div className="border-t border-border-subtle opacity-40" />
+                                <div className="border-t border-border-subtle opacity-70" />
+                            </div>
                         </section>
-                    )}
 
-                    {/* FAQ Section */}
-                    <section>
-                        <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
-                            Frequently Asked Questions
-                        </h2>
-                        <dl className="divide-y divide-border-subtle">
-                            {FAQS.map((faq, i) => (
-                                <div key={i} className="py-5">
-                                    <dt className="text-[15px] font-medium text-foreground-primary mb-2">
-                                        {faq.question}
-                                    </dt>
-                                    <dd className="text-[14px] text-foreground-secondary leading-relaxed">
-                                        {faq.answer}
-                                    </dd>
+                        {/* 2. Top Hubs Map (Col Span 7) */}
+                        {topCities.length > 0 && (
+                            <InteractiveGlobeSection topCities={topCities} className="col-span-1 lg:col-span-7 bg-background border-none rounded-none shadow-none" />
+                        )}
+
+                        {/* 3. Category Donut (Col Span 5) */}
+                        {categories.length > 0 && (
+                            <section className="col-span-1 lg:col-span-5 bg-background p-6 flex flex-col overflow-hidden">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-lg font-semibold text-foreground-primary">Categories</h2>
+                                    <Link href="/events" className="text-xs text-foreground-tertiary hover:text-foreground-primary transition-colors flex items-center gap-1">
+                                        View all <ArrowRightIcon />
+                                    </Link>
                                 </div>
-                            ))}
-                        </dl>
-                    </section>
+                                <div className="flex-grow flex items-start justify-center min-h-[360px] sm:min-h-[400px]">
+                                    <div className="w-full relative">
+                                        <CategoryDonutChart categories={categories} />
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+                    </div>
 
-                    {/* Cross-links */}
-                    <section className="pt-6 border-t border-border-subtle">
-                        <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-4">
-                            More Resources
-                        </h2>
-                        <div className="flex flex-wrap gap-3">
-                            <Link
-                                href="/resources/cfp-calendar"
-                                className="px-4 py-2 rounded-md border border-border-subtle text-[13px] text-foreground-secondary hover:text-foreground-primary hover:border-border-default transition-colors"
-                            >
-                                CFP Deadlines Calendar
-                            </Link>
-                            <Link
-                                href="/events"
-                                className="px-4 py-2 rounded-md border border-border-subtle text-[13px] text-foreground-secondary hover:text-foreground-primary hover:border-border-default transition-colors"
-                            >
-                                Browse All Events
-                            </Link>
-                            <Link
-                                href="/blog"
-                                className="px-4 py-2 rounded-md border border-border-subtle text-[13px] text-foreground-secondary hover:text-foreground-primary hover:border-border-default transition-colors"
-                            >
-                                Blog
-                            </Link>
+                    {/* Navigation Footer */}
+                    <section className="border-t border-border-subtle pt-12 pb-8">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div>
+                                <h3 className="text-sm font-medium text-foreground-secondary mb-1">Looking for something else?</h3>
+                                <p className="text-sm text-foreground-tertiary">Check out our other resources.</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <Link
+                                    href="/resources/cfp-calendar"
+                                    className="px-4 py-2 rounded-md bg-background-secondary border border-border-subtle text-sm font-medium text-foreground-secondary hover:text-foreground-primary hover:border-border-strong transition-all"
+                                >
+                                    CFP Deadlines
+                                </Link>
+                                <Link
+                                    href="/blog"
+                                    className="px-4 py-2 rounded-md bg-background-secondary border border-border-subtle text-sm font-medium text-foreground-secondary hover:text-foreground-primary hover:border-border-strong transition-all"
+                                >
+                                    Read Blog
+                                </Link>
+                            </div>
                         </div>
                     </section>
                 </main>
-            </div>
+            </div >
         </>
     );
 }

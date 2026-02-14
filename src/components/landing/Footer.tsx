@@ -51,7 +51,14 @@ export function Footer() {
                             <Link href="/dashboard" className="footer-link">Dashboard</Link>
                             <Link href="/pricing" className="footer-link">Pricing</Link>
                             <Link href="/blog" className="footer-link">Blog</Link>
-                            <Link href="/contact" className="footer-link">Contact</Link>
+                        </nav>
+                    </div>
+
+                    <div className="footer-card">
+                        <h3 className="footer-section-title">Resources</h3>
+                        <nav className="footer-nav">
+                            <Link href="/resources/tech-events-calendar-2026" className="footer-link">Events Calendar 2026</Link>
+                            <Link href="/resources/cfp-calendar" className="footer-link">CFP Calendar</Link>
                         </nav>
                     </div>
 
