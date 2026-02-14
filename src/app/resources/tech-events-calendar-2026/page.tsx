@@ -7,7 +7,7 @@ import { SITE_URL } from '@/config/site';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr';
 import { AnimatedHero } from './AnimatedHero';
 import { InteractiveGlobeSection } from './InteractiveGlobeSection';
-import { CategoryDonutChart } from './CategoryDonutChart';
+import { CategoryBarChart } from './CategoryBarChart';
 
 export const revalidate = 3600;
 
@@ -304,7 +304,7 @@ export default async function TechEventsCalendar2026Page() {
                                 </div>
                                 <div className="flex-grow flex items-start justify-center min-h-[360px] sm:min-h-[400px]">
                                     <div className="w-full relative">
-                                        <CategoryDonutChart categories={categories} />
+                                        <CategoryBarChart categories={categories} />
                                     </div>
                                 </div>
                             </section>

@@ -117,7 +117,7 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                                                 className={cn(
                                                     'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0',
                                                     idx < 3
-                                                        ? 'bg-foreground-primary text-background-main'
+                                                        ? 'bg-white text-black'
                                                         : 'bg-background-tertiary text-foreground-tertiary'
                                                 )}
                                             >
