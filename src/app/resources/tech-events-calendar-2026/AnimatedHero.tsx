@@ -49,9 +49,6 @@ export function AnimatedHero({ totalCount }: AnimatedHeroProps) {
                         transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
                         className="flex items-center gap-3"
                     >
-                        <span className="hidden sm:inline-flex items-center rounded-full border border-border-default bg-background-secondary/70 px-3 py-1.5 text-xs font-medium text-foreground-secondary">
-                            {(totalCount || 0).toLocaleString()} confirmed events
-                        </span>
                         <Link
                             href="/events"
                             className="inline-flex items-center gap-2 h-12 px-8 rounded-full bg-foreground-primary text-background-main text-[15px] font-medium hover:opacity-90 hover:scale-[1.02] transition-all duration-200"

@@ -7,7 +7,8 @@ import { SITE_URL } from '@/config/site';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr';
 import { AnimatedHero } from './AnimatedHero';
 import { InteractiveGlobeSection } from './InteractiveGlobeSection';
-import { CategoryBarChart } from './CategoryBarChart';
+import { CategoryBarChart } from './category-bar-chart';
+import { PriceHistogram } from './PriceHistogram';
 
 export const revalidate = 3600;
 
@@ -38,6 +39,8 @@ export const metadata: Metadata = {
 interface CategoryEventRow {
     event_type_id: string | null;
     event_type: { name: string | null } | null;
+    pricing_type?: string | null;
+    price_min?: number | null;
 }
 
 const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
@@ -66,7 +69,7 @@ export default async function TechEventsCalendar2026Page() {
         await Promise.all([
             supabase
                 .from('events')
-                .select('event_type_id, event_type:event_type_id(name)')
+                .select('event_type_id, event_type:event_type_id(name), pricing_type, price_min')
                 .eq('status', 'confirmed')
                 .gte('start_time', year2026Start)
                 .lte('start_time', year2026End),
@@ -187,6 +190,8 @@ export default async function TechEventsCalendar2026Page() {
             id: string;
             name: string;
             eventCount: number;
+            totalPrice: number;
+            countWithPrice: number;
         }
     >();
     if (categoryRows) {
@@ -195,13 +200,27 @@ export default async function TechEventsCalendar2026Page() {
             const categoryName = row.event_type?.name || 'Uncategorized';
             const existing = categoryMap.get(categoryId);
 
+            // Only count price if it exists and is not 0 (unless we want to include free events as 0? 
+            // The user asked for "paid amount breakdown", implies excluding free? 
+            // "just show the paid amount breakdown, not free, the avg price by breakdown"
+            // Interpreting as: Average price of PAID events.
+
+            const price = row.price_min ?? null;
+            const paidPrice = typeof price === 'number' && price > 0 ? price : null;
+
             if (existing) {
                 existing.eventCount += 1;
+                if (paidPrice !== null) {
+                    existing.totalPrice += paidPrice;
+                    existing.countWithPrice += 1;
+                }
             } else {
                 categoryMap.set(categoryId, {
                     id: categoryId,
                     name: categoryName,
                     eventCount: 1,
+                    totalPrice: paidPrice ?? 0,
+                    countWithPrice: paidPrice !== null ? 1 : 0,
                 });
             }
         }
@@ -209,7 +228,43 @@ export default async function TechEventsCalendar2026Page() {
     const categoryBreakdown = Array.from(categoryMap.values())
         .filter((category) => category.eventCount > 0)
         .sort((a, b) => b.eventCount - a.eventCount);
-    const categories = categoryBreakdown;
+
+    // Transform for component
+    const categories = categoryBreakdown.map(c => ({
+        ...c,
+        avgPrice: c.countWithPrice > 0 ? Math.round(c.totalPrice / c.countWithPrice) : 0
+    }));
+
+
+
+    // Price Histogram Logic
+    const priceBins = [
+        { label: 'Free', count: 0, range: 'Free' },
+        { label: '<$100', count: 0, range: '<$100' },
+        { label: '$100-$500', count: 0, range: '$100-$500' },
+        { label: '$500-$1k', count: 0, range: '$500-$1k' },
+        { label: '$1k+', count: 0, range: '$1k+' },
+        { label: 'Unknown', count: 0, range: 'No price data' },
+    ];
+
+    if (categoryRows) {
+        for (const row of categoryRows as CategoryEventRow[]) {
+            const price = row.price_min ?? null;
+            const pricingType = (row.pricing_type || '').toLowerCase();
+            const isFree = pricingType.includes('free') || price === 0;
+
+            if (isFree) {
+                priceBins[0].count++;
+            } else if (price !== null && price > 0) {
+                if (price < 100) priceBins[1].count++;
+                else if (price < 500) priceBins[2].count++;
+                else if (price < 1000) priceBins[3].count++;
+                else priceBins[4].count++;
+            } else {
+                priceBins[5].count++;
+            }
+        }
+    }
 
 
 
@@ -297,15 +352,16 @@ export default async function TechEventsCalendar2026Page() {
                         {categories.length > 0 && (
                             <section className="col-span-1 lg:col-span-5 bg-background p-6 flex flex-col overflow-hidden">
                                 <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-lg font-semibold text-foreground-primary">Categories</h2>
+                                    <h2 className="text-lg font-semibold text-foreground-primary">Event Category</h2>
                                     <Link href="/events" className="text-xs text-foreground-tertiary hover:text-foreground-primary transition-colors flex items-center gap-1">
                                         View all <ArrowRightIcon />
                                     </Link>
                                 </div>
-                                <div className="flex-grow flex items-start justify-center min-h-[360px] sm:min-h-[400px]">
+                                <div className="flex-grow flex flex-col justify-start">
                                     <div className="w-full relative">
                                         <CategoryBarChart categories={categories} />
                                     </div>
+                                    <PriceHistogram bins={priceBins} />
                                 </div>
                             </section>
                         )}
