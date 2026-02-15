@@ -31,7 +31,7 @@ export default function Navbar() {
 
     // Add authenticated-only links
     const authenticatedLinks = [
-        { href: '/events', label: 'Discover' },
+        { href: '/discover', label: 'Discover' },
         { href: '/calendar?view=month', label: 'Calendar' },
         { href: '/events', label: 'Events' },
         { href: '/dashboard', label: 'Dashboard' },

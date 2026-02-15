@@ -1,8 +1,8 @@
-// src/app/sitemap.ts
 import { MetadataRoute } from 'next'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { categoryNameToSlug, cityNameToSlug } from '@/utils/categorySlugUtils'
 import { SITE_URL } from '@/config/site'
+import { Database } from '@/types/supabase'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = SITE_URL
@@ -52,7 +52,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     let eventPages: MetadataRoute.Sitemap = []
     
     try {
-        const supabase = await createClient()
+        // Use a direct client for sitemap generation to avoid cookie dependencies
+        // which cause "Dynamic server usage" errors during static build
+        const supabase = createClient<Database>(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
         
         // Fetch blog posts
         const { data: posts } = await supabase

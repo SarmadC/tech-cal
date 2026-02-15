@@ -11,6 +11,7 @@ import { UserLocation } from '@/services/locationScoringService';
 import { FilterCounts } from '@/utils/filterCountUtils';
 import { logger } from '@/utils/logger';
 import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
+import { rankEventsWithCanonicalPipeline } from '@/services/recommendations/canonicalRankingService';
 
 /**
  * Extract city from a location string (e.g., "San Francisco, CA, USA" -> "San Francisco")
@@ -627,100 +628,61 @@ export async function POST(request: NextRequest) {
           logger.debug('[API] Skipping enrichment - shouldEnrich:', shouldEnrich, 'page:', page, 'ENRICH_MAX_PAGE:', ENRICH_MAX_PAGE);
         }
       } else {
-        // Always enrich - enrichment service handles cold start internally
-        // Check if events already have careerImpact scores to avoid double enrichment
-        const needsEnrichment = filteredEvents.some(event => {
-          const hasScore = (event as { careerImpact?: { overall: number } }).careerImpact?.overall !== undefined;
-          return !hasScore;
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug('[API] Ranking events with canonical pipeline:', {
+            count: filteredEvents.length,
+            isCareerImpactSort,
+            recommended,
+            surface: requestSurface,
+            hasCareerProfile: !!careerProfile,
+            eventIds: filteredEvents.slice(0, 5).map(e => e.id)
+          });
+        }
+
+        enrichedEvents = await rankEventsWithCanonicalPipeline({
+          events: filteredEvents,
+          careerProfile,
+          supabaseClient: supabase,
+          userId: user.id,
+          userLocation,
+          applyDiversityEnhancement: false, // Keep full result set for filtered route
+          allowRerank: isCareerImpactSort,
+          sortByCareerImpact: isCareerImpactSort,
+          careerImpactSortDirection: effectiveSortDirection
         });
-        
-        if (needsEnrichment) {
-          if (process.env.NODE_ENV !== 'production') {
-            logger.debug('[API] Enriching events:', {
-              count: filteredEvents.length,
-              isCareerImpactSort,
-              recommended,
-              surface: requestSurface,
-              hasCareerProfile: !!careerProfile,
-              eventIds: filteredEvents.slice(0, 5).map(e => e.id) // Sample of event IDs
-            });
-          }
-          
-          enrichedEvents = await EventService.enrichEventsWithCareerImpact(
-            filteredEvents,
-            careerProfile,
-            supabase,
-            user.id,
-            false, // Disable diversity enhancement for calendar - we want all events, not curated top 20
-            userLocation, // Pass user location for proximity scoring
-            { allowRerank: isCareerImpactSort }
-          );
-          
-          // Debug: log enrichment results with detailed breakdown
-          if (process.env.NODE_ENV !== 'production') {
-            const eventsWithScores = enrichedEvents.filter(e => {
-              const score = (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
-              return score > 0;
-            });
-            const eventsWithoutScores = enrichedEvents.filter(e => {
-              const score = (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
-              return score === 0;
-            });
-            
-            logger.debug('[API] Enrichment complete:', {
-              totalEvents: enrichedEvents.length,
-              eventsWithScores: eventsWithScores.length,
-              eventsWithoutScores: eventsWithoutScores.length,
-              scoreRange: enrichedEvents.length > 0 ? {
-                min: Math.min(...enrichedEvents.map(e => (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0)),
-                max: Math.max(...enrichedEvents.map(e => (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0)),
-                avg: enrichedEvents.reduce((sum, e) => sum + ((e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0), 0) / enrichedEvents.length
-              } : null,
-              sampleWithoutScores: eventsWithoutScores.slice(0, 3).map(e => ({
-                id: e.id,
-                title: e.title?.substring(0, 50),
-                hasStartTime: !!e.startTime,
-                hasDescription: !!e.description
-              }))
-            });
-          }
-        } else {
-          // Events already enriched (e.g., from lookalike recommendations)
-          enrichedEvents = filteredEvents;
-          if (process.env.NODE_ENV !== 'production') {
-            logger.debug('[API] Events already enriched, skipping');
-          }
+
+        if (process.env.NODE_ENV !== 'production') {
+          const eventsWithScores = enrichedEvents.filter(e => {
+            const score = (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
+            return score > 0;
+          });
+          const eventsWithoutScores = enrichedEvents.filter(e => {
+            const score = (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
+            return score === 0;
+          });
+
+          logger.debug('[API] Canonical ranking complete:', {
+            totalEvents: enrichedEvents.length,
+            eventsWithScores: eventsWithScores.length,
+            eventsWithoutScores: eventsWithoutScores.length,
+            scoreRange: enrichedEvents.length > 0 ? {
+              min: Math.min(...enrichedEvents.map(e => (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0)),
+              max: Math.max(...enrichedEvents.map(e => (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0)),
+              avg: enrichedEvents.reduce((sum, e) => sum + ((e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0), 0) / enrichedEvents.length
+            } : null,
+            sampleWithoutScores: eventsWithoutScores.slice(0, 3).map(e => ({
+              id: e.id,
+              title: e.title?.substring(0, 50),
+              hasStartTime: !!e.startTime,
+              hasDescription: !!e.description
+            }))
+          });
         }
       }
     } catch (error) {
       console.error('Error enriching events with career impact:', error);
       // Fallback to using events without enrichment
       enrichedEvents = filteredEvents;
-    }
-
-    // Post-enrichment sorting: if sortBy is 'career-impact', sort by career impact scores
-    // This must happen after enrichment since scores are calculated during enrichment
-    if (sortBy === 'career-impact' && enrichedEvents.length > 0) {
-      enrichedEvents = [...enrichedEvents].sort((a, b) => {
-        const aScore = (a as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
-        const bScore = (b as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
-        
-        // Respect sortDirection parameter (already defaulted to desc for career-impact)
-        const isDescending = effectiveSortDirection !== 'asc';
-        
-        if (isDescending) {
-          // Descending: higher scores first (default for career impact)
-          if (bScore !== aScore) return bScore - aScore;
-        } else {
-          // Ascending: lower scores first (respect user choice)
-          if (aScore !== bScore) return aScore - bScore;
-        }
-        
-        // Tie-breaker: sort by start_time (earlier events first)
-        const aStart = new Date(a.startTime).getTime();
-        const bStart = new Date(b.startTime).getTime();
-        return aStart - bStart;
-      });
     }
     
     // Apply recommended filter after enrichment (if not already applied server-side)

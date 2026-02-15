@@ -267,6 +267,7 @@ describe('GET /api/events/recommendations telemetry behavior', () => {
 
     expect(mockEnrichEventsWithCareerImpact).toHaveBeenCalledTimes(2);
     expect(mockEnrichEventsWithCareerImpact.mock.calls[0][4]).toBe(true);
+    expect(mockEnrichEventsWithCareerImpact.mock.calls[0][6]).toEqual({ allowRerank: true });
     expect(mockEnrichEventsWithCareerImpact.mock.calls[1][4]).toBe(false);
     expect(mockEnrichEventsWithCareerImpact.mock.calls[1][6]).toEqual({ allowRerank: false });
 

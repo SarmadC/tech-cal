@@ -7,6 +7,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
 import { Event } from '@/types';
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
+import { rankEventsWithCanonicalPipeline } from '@/services/recommendations/canonicalRankingService';
 
 // Rate limiter for recommendations
 const ratelimit = new Ratelimit({
@@ -168,13 +169,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
 
         try {
           const tagRankedEvents = events;
-          const enrichedEvents = await EventService.enrichEventsWithCareerImpact(
-            tagRankedEvents,
+          const enrichedEvents = await rankEventsWithCanonicalPipeline({
+            events: tagRankedEvents,
             careerProfile,
-            supabase,
-            user.id,
-            true
-          );
+            supabaseClient: supabase,
+            userId: user.id,
+            applyDiversityEnhancement: true,
+            allowRerank: true
+          });
 
           events = enrichedEvents.map((event, index) => {
             const eventWithImpact = event as EventWithCareerImpact;
@@ -206,15 +208,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
             try {
               // Compare tag-ranking order against pure score ranking from advanced scoring.
               // Keep diversity and rerank disabled here so telemetry reflects score divergence only.
-              const advancedScoredForTelemetry = await EventService.enrichEventsWithCareerImpact(
-                tagRankedEvents,
+              const advancedScoredForTelemetry = await rankEventsWithCanonicalPipeline({
+                events: tagRankedEvents,
                 careerProfile,
-                supabase,
-                user.id,
-                false,
-                undefined,
-                { allowRerank: false }
-              );
+                supabaseClient: supabase,
+                userId: user.id,
+                applyDiversityEnhancement: false,
+                allowRerank: false
+              });
 
               const advancedSortedIds = [...advancedScoredForTelemetry]
                 .sort((a, b) => {

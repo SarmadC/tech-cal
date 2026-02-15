@@ -209,4 +209,57 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     expect(mockEnrichEventsWithCareerImpact).not.toHaveBeenCalled();
     expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['at-threshold', 'above-threshold']);
   });
+
+  it('keeps advanced reranked order for descending career-impact sort', async () => {
+    const previousRerank = process.env.DISCOVERY_RERANK;
+    process.env.DISCOVERY_RERANK = 'advanced';
+
+    try {
+      mockGetEventsWithColdStartHandling.mockReset();
+      mockEnrichEventsWithCareerImpact.mockReset();
+
+      mockGetEventsWithColdStartHandling.mockResolvedValue({
+        events: [
+          { id: 'a', title: 'A', startTime: '2026-01-01T10:00:00Z', description: '' },
+          { id: 'b', title: 'B', startTime: '2026-01-02T10:00:00Z', description: '' }
+        ],
+        totalCount: 2,
+        isColdStart: false
+      });
+
+      // Simulate canonical enrichment + rerank output order (b before a),
+      // where raw careerImpact scores would otherwise sort as a before b.
+      mockEnrichEventsWithCareerImpact.mockResolvedValue([
+        {
+          id: 'b',
+          title: 'B',
+          startTime: '2026-01-02T10:00:00Z',
+          description: '',
+          careerImpact: { overall: 80 }
+        },
+        {
+          id: 'a',
+          title: 'A',
+          startTime: '2026-01-01T10:00:00Z',
+          description: '',
+          careerImpact: { overall: 95 }
+        }
+      ]);
+
+      const req = buildRequest({ sortBy: 'career-impact', sortDirection: 'desc', page: 1, pageSize: 10 });
+      const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+      const data = await res.json();
+
+      expect(res.ok).toBe(true);
+      expect(data.success).toBe(true);
+      expect(mockEnrichEventsWithCareerImpact).toHaveBeenCalledTimes(1);
+      expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['b', 'a']);
+    } finally {
+      if (previousRerank === undefined) {
+        delete process.env.DISCOVERY_RERANK;
+      } else {
+        process.env.DISCOVERY_RERANK = previousRerank;
+      }
+    }
+  });
 });
