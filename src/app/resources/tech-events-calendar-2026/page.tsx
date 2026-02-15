@@ -293,7 +293,7 @@ export default async function TechEventsCalendar2026Page() {
                         {/* 1. Monthly Distribution (Full Width) */}
                         <section className="relative col-span-1 lg:col-span-12 bg-background p-6 sm:p-8">
                             <div className="flex items-end justify-between mb-8">
-                                <h2 className="text-lg font-semibold text-foreground-primary">Event Distribution</h2>
+                                <h2 className="text-sm font-semibold text-foreground-primary">Event Distribution</h2>
 
                             </div>
                             <div
@@ -301,39 +301,39 @@ export default async function TechEventsCalendar2026Page() {
                                 aria-label="Confirmed events by month in 2026"
                                 className="relative z-10 grid grid-cols-6 sm:grid-cols-12 gap-4 h-80 items-end"
                             >
-                                {monthCounts.map((count, i) => (
-                                    <div key={monthNames[i]} role="listitem" className="relative flex flex-col items-center gap-3 h-full justify-end">
-                                        <button
-                                            type="button"
-                                            aria-label={`${monthNames[i]}: ${count} confirmed events`}
-                                            className="group relative w-full flex items-end justify-center h-full rounded-md cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background-secondary"
-                                        >
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-foreground-secondary font-medium whitespace-nowrap">
-                                                {count}
-                                            </div>
-                                            {count === maxMonthCount && count > 0 && (
-                                                <span className="absolute -top-11 left-1/2 -translate-x-1/2 rounded-full border border-border-default bg-background-main/90 px-2 py-0.5 text-[10px] font-semibold text-foreground-secondary">
-                                                    Peak
-                                                </span>
-                                            )}
-                                            <div
-                                                className="w-full rounded-md bg-gradient-to-t from-primary/85 to-primary/55 group-hover:from-primary group-hover:to-primary/70 group-focus-visible:from-primary group-focus-visible:to-primary/70 transition-all duration-300 relative overflow-hidden"
-                                                style={{
-                                                    height: `${Math.max((count / maxMonthCount) * 100, 4)}%`,
-                                                }}
+                                {monthCounts.map((count, i) => {
+                                    const barHeight = Math.max((count / maxMonthCount) * 100, 4);
+
+                                    return (
+                                        <div key={monthNames[i]} role="listitem" className="relative flex flex-col items-center gap-3 h-full justify-end">
+                                            <button
+                                                type="button"
+                                                aria-label={`${monthNames[i]}: ${count} confirmed events`}
+                                                className="group relative w-full flex items-end justify-center h-full rounded-md cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background-secondary"
                                             >
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                                            </div>
-                                            {/* Tooltip */}
-                                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground-primary text-background-main text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg z-20">
-                                                {count} events
-                                            </div>
-                                        </button>
-                                        <span className="text-[11px] font-medium text-foreground-secondary uppercase tracking-wider">
-                                            {monthNames[i]}
-                                        </span>
-                                    </div>
-                                ))}
+                                                <div
+                                                    className="absolute left-1/2 -translate-x-1/2 text-xs text-foreground-primary font-semibold whitespace-nowrap"
+                                                    style={{ bottom: `calc(${barHeight}% + 0.45rem)` }}
+                                                >
+                                                    {count}
+                                                </div>
+                                                <div
+                                                    className="w-full rounded-md bg-gradient-to-t from-primary/85 to-primary/55 group-hover:from-primary group-hover:to-primary/70 group-focus-visible:from-primary group-focus-visible:to-primary/70 transition-all duration-300 relative overflow-hidden"
+                                                    style={{ height: `${barHeight}%` }}
+                                                >
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                                </div>
+                                                {/* Tooltip */}
+                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground-primary text-background-main text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg z-20">
+                                                    {count} events
+                                                </div>
+                                            </button>
+                                            <span className="text-[11px] font-medium text-foreground-secondary uppercase tracking-wider">
+                                                {monthNames[i]}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <div aria-hidden className="pointer-events-none absolute inset-x-8 sm:inset-x-10 top-20 sm:top-[5.5rem] bottom-14 sm:bottom-[3.6rem] z-0 grid grid-rows-4">
                                 <div className="border-t border-border-subtle opacity-70" />
@@ -352,7 +352,7 @@ export default async function TechEventsCalendar2026Page() {
                         {categories.length > 0 && (
                             <section className="col-span-1 lg:col-span-5 bg-background p-6 flex flex-col overflow-hidden">
                                 <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-lg font-semibold text-foreground-primary">Event Category</h2>
+                                    <h2 className="text-sm font-semibold text-foreground-primary">Event Category</h2>
                                     <Link href="/events" className="text-xs text-foreground-tertiary hover:text-foreground-primary transition-colors flex items-center gap-1">
                                         View all <ArrowRightIcon />
                                     </Link>

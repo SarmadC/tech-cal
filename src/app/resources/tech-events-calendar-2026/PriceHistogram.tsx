@@ -9,7 +9,6 @@ import {
     ResponsiveContainer,
     Tooltip,
     XAxis,
-    YAxis,
 } from 'recharts';
 
 interface PriceHistogramBin {
@@ -58,8 +57,6 @@ export function PriceHistogram({ bins }: PriceHistogramProps) {
         [histogramBins, totalKnown]
     );
 
-    const maxCount = Math.max(...chartData.map((bin) => bin.count), 1);
-
     if (chartData.length === 0) {
         return null;
     }
@@ -67,7 +64,7 @@ export function PriceHistogram({ bins }: PriceHistogramProps) {
     return (
         <div className="w-full space-y-4 mt-8 pt-6 border-t border-border-subtle">
             <div className="flex items-center justify-between gap-3">
-                <h3 className="text-xs font-medium text-foreground-secondary uppercase tracking-wider">
+                <h3 className="text-sm font-semibold text-foreground-primary">
                     Price Distribution
                 </h3>
                 {unknownCount > 0 && (
@@ -100,14 +97,6 @@ export function PriceHistogram({ bins }: PriceHistogramProps) {
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fill: '#a1a1aa', fontSize: 11 }}
-                            />
-                            <YAxis
-                                axisLine={false}
-                                tickLine={false}
-                                width={30}
-                                tick={{ fill: '#71717a', fontSize: 11 }}
-                                allowDecimals={false}
-                                domain={[0, Math.max(maxCount, 1)]}
                             />
                             <Tooltip
                                 cursor={{ fill: 'rgba(113, 113, 122, 0.12)' }}

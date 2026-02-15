@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, CartesianGrid, LabelList, XAxis } from 'recharts';
 import { ChartPie, TrendUp } from '@phosphor-icons/react';
 import { DISTRIBUTION_CHART_CONFIG } from '@/utils/chartConfigs';
 import type { Event } from '@/types';
@@ -66,7 +66,6 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
     };
 
     const data = generateDistributionData();
-    const totalEvents = data.reduce((sum, item) => sum + item.count, 0);
     const topType = data[0];
     const hasVariety = data.length > 1;
     const shouldUseBarChart = data.length > 4 || (data.length === 1 && data[0].type !== 'other');
@@ -77,7 +76,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
             <Card className={className}>
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                     <div className="space-y-1">
-                        <CardTitle className="text-lg">Event Types</CardTitle>
+                        <CardTitle className="text-sm font-semibold text-foreground-primary">Event Types</CardTitle>
                         <CardDescription>Breakdown by category</CardDescription>
                     </div>
                     <ChartPie className="w-4 h-4 text-muted-foreground" />
@@ -102,8 +101,8 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
             <Card className={className}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="space-y-1">
-                        <CardTitle className="text-lg">Event Types</CardTitle>
-                        <CardDescription>{totalEvents} {config.label.toLowerCase()}</CardDescription>
+                        <CardTitle className="text-sm font-semibold text-foreground-primary">Event Types</CardTitle>
+                        <CardDescription>{config.label}</CardDescription>
                     </div>
                     <div className="flex items-center space-x-2">
                         <div
@@ -136,10 +135,8 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
         <Card className={className}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <div className="space-y-1">
-                    <CardTitle className="text-lg">Event Types</CardTitle>
-                    <CardDescription>
-                        {totalEvents} events • {topType && `${topType.percentage}% ${DISTRIBUTION_CHART_CONFIG[topType.type as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'}`}
-                    </CardDescription>
+                    <CardTitle className="text-sm font-semibold text-foreground-primary">Event Types</CardTitle>
+                    <CardDescription>Breakdown by category</CardDescription>
                 </div>
                 <div className="flex items-center space-x-1 text-sm">
                     {hasVariety && (
@@ -152,32 +149,59 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
             </CardHeader>
             <CardContent>
                 {shouldUseBarChart ? (
-                    <ChartContainer config={DISTRIBUTION_CHART_CONFIG} className="h-[160px] w-full">
-                        <BarChart data={data} layout="horizontal" margin={{ left: 60, right: 12 }}>
-                            <XAxis type="number" hide />
-                            <YAxis
-                                type="category"
+                    <ChartContainer config={DISTRIBUTION_CHART_CONFIG} className="h-[190px] w-full">
+                        <BarChart
+                            data={data}
+                            margin={{ top: 18, right: 8, left: 8, bottom: 28 }}
+                            barCategoryGap="20%"
+                        >
+                            <CartesianGrid
+                                stroke="hsl(var(--border) / 0.4)"
+                                vertical={false}
+                            />
+                            <XAxis
                                 dataKey="type"
+                                axisLine={false}
+                                tickLine={false}
+                                interval={0}
+                                height={40}
                                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                                tickFormatter={(value) => DISTRIBUTION_CHART_CONFIG[value as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'}
-                                width={55}
+                                tickFormatter={(value) =>
+                                    DISTRIBUTION_CHART_CONFIG[
+                                        value as keyof typeof DISTRIBUTION_CHART_CONFIG
+                                    ]?.label || 'Other'
+                                }
                             />
                             <ChartTooltip
                                 cursor={false}
-                                content={<ChartTooltipContent
-                                    formatter={(value, name) => [
-                                        `${value} events (${data.find(d => d.type === name)?.percentage}%)`,
-                                        DISTRIBUTION_CHART_CONFIG[name as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'
-                                    ]}
-                                />}
+                                content={
+                                    <ChartTooltipContent
+                                        formatter={(value, _name, item) => {
+                                            const type = String(item.payload?.type || 'other');
+                                            const label =
+                                                DISTRIBUTION_CHART_CONFIG[
+                                                    type as keyof typeof DISTRIBUTION_CHART_CONFIG
+                                                ]?.label || 'Other';
+                                            const count = typeof value === 'number' ? value : Number(value) || 0;
+                                            return `${label}: ${count} events`;
+                                        }}
+                                    />
+                                }
                             />
                             <Bar
                                 dataKey="count"
-                                radius={[0, 2, 2, 0]}
+                                radius={[6, 6, 0, 0]}
+                                maxBarSize={52}
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
+                                <LabelList
+                                    dataKey="count"
+                                    position="top"
+                                    fill="hsl(var(--foreground))"
+                                    fontSize={11}
+                                />
                             </Bar>
                         </BarChart>
                     </ChartContainer>

@@ -1,0 +1,131 @@
+{
+  "_instructions": "Extract ALL available data from the event website. Use null for fields not found. Follow enum values exactly. All timestamps must be ISO 8601 format.",
+
+  "event": {
+    "title": "Full official event title",
+    "description": "Complete event description (HTML or plain text, preserve formatting)",
+    "start_time": "ISO 8601 (e.g. 2026-03-15T09:00:00)",
+    "end_time": "ISO 8601 (e.g. 2026-03-17T17:00:00)",
+    "timezone": "IANA timezone (e.g. America/New_York, America/Los_Angeles)",
+    "location": "Human-readable location string (e.g. 'San Francisco, CA, USA')",
+    "event_format": "Online | In-person | Hybrid",
+    "language": "ISO 639-1 code (e.g. en, es, fr)",
+    "status": "scheduled | cancelled | postponed | completed",
+    "is_multi_day": false,
+    "difficulty_level": "beginner | intermediate | advanced | null",
+    "capacity": null,
+    "attendee_count": null,
+    "certificate_offered": false,
+    "recording_available": false,
+    "social_media_hashtag": "#EventHashtag or null",
+    "virtual_platform": "Platform name if virtual/hybrid (e.g. Zoom, Hopin)",
+    "target_audience": "Who is this event for (e.g. 'Software engineers, DevOps professionals')",
+    "prerequisites": "Any prerequisites for attending"
+  },
+
+  "urls": {
+    "source_url": "URL of the page being extracted from",
+    "registration_url": "Direct registration/ticket purchase URL",
+    "livestream_url": "URL for livestream if available",
+    "event_image_url": "URL of the main event banner/hero image",
+    "agenda_url": "URL of the dedicated agenda/schedule page if separate"
+  },
+
+  "pricing": {
+    "pricing_type": "Free | Paid | Varies",
+    "price_min": null,
+    "price_max": null,
+    "currency": "USD",
+    "registration_deadline": "ISO 8601 or null",
+    "tiers": [
+      {
+        "_note": "Extract all visible pricing tiers/ticket types",
+        "name": "Tier name (e.g. Early Bird, General Admission, VIP)",
+        "price": 0,
+        "currency": "USD",
+        "description": "What's included",
+        "availability": "available | sold-out | limited"
+      }
+    ]
+  },
+
+  "venue": {
+    "name": "Venue name (e.g. Moscone Center)",
+    "address": "Street address",
+    "city": "City name",
+    "state_province": "State or province",
+    "country": "Country name (full, e.g. United States)",
+    "venue_type": "convention-center | hotel | university | office | online | other",
+    "capacity": null,
+    "latitude": null,
+    "longitude": null
+  },
+
+  "organizer": {
+    "name": "Organization name",
+    "description": "Brief description of organizer",
+    "website_url": "Organizer website URL",
+    "logo_url": "URL to organizer's logo",
+    "social_media": {
+      "twitter": "URL or handle",
+      "linkedin": "URL",
+      "youtube": "URL"
+    }
+  },
+
+  "speakers": [
+    {
+      "_note": "Extract ALL speakers/presenters/panelists found. Include keynote speakers, session speakers, panelists, and workshop leaders.",
+      "name": "Full name (required)",
+      "title": "Job title (e.g. Senior Software Engineer)",
+      "company": "Company or organization name",
+      "bio": "Speaker biography text",
+      "photo_url": "URL to speaker headshot",
+      "linkedin_url": "LinkedIn profile URL",
+      "twitter_url": "Twitter/X profile URL",
+      "website_url": "Personal website URL"
+    }
+  ],
+
+  "agenda": [
+    {
+      "_note": "Extract ALL sessions, talks, workshops, panels, breaks, and networking events. Each session is one item.",
+      "title": "Session title (required)",
+      "description": "Session description/abstract",
+      "start_time": "ISO 8601 with date (e.g. 2026-03-15T09:00:00)",
+      "end_time": "ISO 8601 with date (e.g. 2026-03-15T10:00:00)",
+      "day_number": 1,
+      "agenda_type": "keynote | talk | workshop | panel | networking | break | registration | lunch | other",
+      "track": "Track name if multi-track (e.g. 'AI/ML', 'Backend', 'Main Stage')",
+      "location": "Room or stage name within the venue",
+      "speakers": ["Speaker Full Name 1", "Speaker Full Name 2"],
+      "difficulty_level": "beginner | intermediate | advanced | null",
+      "capacity": null,
+      "is_required": false,
+      "prerequisites": null
+    }
+  ],
+
+  "daily_schedule": [
+    {
+      "_note": "High-level day-by-day schedule for multi-day events",
+      "day_number": 1,
+      "date": "2026-03-15",
+      "start_time": "09:00",
+      "end_time": "17:00",
+      "day_label": "Day 1 - Workshops",
+      "notes": "Optional notes about the day"
+    }
+  ],
+
+  "tags": [
+    "Tag names describing the event topics (e.g. 'AI', 'Cloud', 'DevOps', 'React', 'Security')"
+  ],
+
+  "series": {
+    "_note": "If this event is part of a recurring series (e.g. KubeCon, re:Invent)",
+    "name": "Series name",
+    "description": "Series description",
+    "website_url": "Series website"
+  }
+}

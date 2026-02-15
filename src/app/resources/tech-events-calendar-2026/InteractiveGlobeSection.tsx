@@ -73,7 +73,7 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                 )}
             >
                 <div className="p-0 bg-transparent pointer-events-auto">
-                    <h2 className="text-xl font-bold text-foreground-primary mb-1 px-2">
+                    <h2 className="text-sm font-semibold text-foreground-primary mb-1 px-2">
                         Global Tech Hubs
                     </h2>
                     <p className="text-sm text-foreground-secondary mb-6 px-2">
