@@ -22,6 +22,11 @@ interface EventCardProps {
     onExplainRecommendation?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
     onShortlistToggle?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
     isInShortlist?: boolean;
+    showWeekday?: boolean;
+    whiteLogoBackgroundInDark?: boolean;
+    showActionControls?: boolean;
+    showHoverMetaChips?: boolean;
+    showShortlistAction?: boolean;
 }
 
 const CARD_ACCENTS = [
@@ -45,12 +50,17 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
     onExplainRecommendation,
     onShortlistToggle,
     isInShortlist = false,
+    showWeekday = true,
+    whiteLogoBackgroundInDark = false,
+    showActionControls = true,
+    showHoverMetaChips = false,
+    showShortlistAction = true,
 }) => {
     const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
     const accentClass = CARD_ACCENTS[colorIndex];
 
     const startDate = new Date(event.startTime);
-    const dateLabel = format(startDate, 'EEE, MMM d');
+    const dateLabel = format(startDate, showWeekday ? 'EEE, MMM d' : 'MMM d');
     const timeLabel = format(startDate, 'h:mm a');
     const isFree = isEventFree(event);
 
@@ -126,91 +136,70 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     return (
         <div
-            className={`flex flex-col rounded-[6px] p-5 transition-all duration-300 cursor-pointer group relative border border-white/5 bg-card dark:bg-[#0a0a0a] shadow-none hover:border-gray-600 hover:-translate-y-1 hover:shadow-xl text-foreground ${accentClass}`}
+            className={`group/event-card relative flex flex-col rounded-[6px] border border-white/5 bg-card p-5 text-foreground shadow-none transition-all duration-300 cursor-pointer dark:bg-[#0a0a0a] hover:border-gray-600 hover:-translate-y-1 hover:shadow-xl ${accentClass}`}
             onClick={onClick}
+            onMouseLeave={() => setIsActionMenuOpen(false)}
             role="article"
         >
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-[6px] bg-card border border-border flex items-center justify-center overflow-hidden shadow-sm">
-                        {activeLogoSrc ? (
-                            <Image
-                                src={activeLogoSrc}
-                                alt={logoAltText}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-contain"
-                                onError={handleLogoError}
-                            />
-                        ) : (
-                            <div className="text-lg font-bold text-gray-400">
-                                {event.title.charAt(0)}
-                            </div>
+            {showActionControls && (
+                <div
+                    className="absolute right-4 top-4 z-20"
+                    ref={actionMenuRef}
+                >
+                    <div className="flex items-center gap-1 rounded-md border border-border/70 bg-background/80 p-0.5 shadow-sm backdrop-blur-sm transition-all duration-200 opacity-0 pointer-events-none translate-y-1 group-hover/event-card:opacity-100 group-hover/event-card:pointer-events-auto group-hover/event-card:translate-y-0 group-focus-within/event-card:opacity-100 group-focus-within/event-card:pointer-events-auto group-focus-within/event-card:translate-y-0">
+                        {showShortlistAction && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShortlistToggle?.(event);
+                                }}
+                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'}`}
+                                aria-pressed={isInShortlist}
+                                aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
+                            >
+                                <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                            </button>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onBookmark?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isBookmarked}
+                            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
+                            disabled={isBookmarking}
+                            aria-busy={isBookmarking}
+                        >
+                            <BookmarkSimple
+                                size={16}
+                                weight={isBookmarked ? 'fill' : 'regular'}
+                                className="transition-all duration-200"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsActionMenuOpen((prev) => !prev);
+                            }}
+                            className="p-1.5 rounded-md transition-all text-muted-foreground/50 hover:text-foreground hover:bg-accent/10"
+                            aria-haspopup="menu"
+                            aria-expanded={isActionMenuOpen}
+                            aria-label="More actions"
+                        >
+                            <DotsThree size={16} weight="bold" />
+                        </button>
                     </div>
-                    <div className="flex flex-col min-w-0">
-                        <h3 className="text-[15px] font-medium text-foreground leading-tight group-hover:text-foreground transition-colors truncate" title={event.title}>
-                            {event.title}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
-                            <span>{dateLabel}</span>
-                            <span>·</span>
-                            <span>{timeLabel}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className={`flex items-center gap-1 relative transition-opacity duration-200 ${isActionMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} ref={actionMenuRef}>
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onShortlistToggle?.(event);
-                        }}
-                        className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'}`}
-                        aria-pressed={isInShortlist}
-                        aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
-                    >
-                        <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onBookmark?.(event);
-                        }}
-                        className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        aria-pressed={isBookmarked}
-                        aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
-                        disabled={isBookmarking}
-                        aria-busy={isBookmarking}
-                    >
-                        <BookmarkSimple
-                            size={16}
-                            weight={isBookmarked ? 'fill' : 'regular'}
-                            className="transition-all duration-200"
-                        />
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsActionMenuOpen((prev) => !prev);
-                        }}
-                        className="p-1.5 rounded-md transition-all text-muted-foreground/50 hover:text-foreground hover:bg-accent/10"
-                        aria-haspopup="menu"
-                        aria-expanded={isActionMenuOpen}
-                        aria-label="More actions"
-                    >
-                        <DotsThree size={16} weight="bold" />
-                    </button>
 
                     {isActionMenuOpen && (
                         <div
                             role="menu"
-                            className="absolute right-0 top-8 z-30 w-44 rounded-lg border border-border bg-popover p-1.5 shadow-xl"
+                            className="absolute right-0 top-10 z-30 w-44 rounded-lg border border-border bg-popover p-1.5 shadow-xl"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
@@ -246,6 +235,51 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                             </button>
                         </div>
                     )}
+                </div>
+            )}
+
+            {showHoverMetaChips && !showActionControls && (
+                <div className="pointer-events-none absolute right-4 top-4 z-10 flex items-center gap-1.5 opacity-0 translate-y-1 transition-all duration-200 group-hover/event-card:opacity-100 group-hover/event-card:translate-y-0">
+                    <span className="px-1.5 py-0.5 rounded-[4px] bg-blue-50 dark:bg-blue-500/10 text-[10px] font-mono text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                        {formatDisplay}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider ${isFree
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
+                        }`}>
+                        {priceDisplay}
+                    </span>
+                </div>
+            )}
+
+            <div className="mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-11 w-11 shrink-0 rounded-[8px] bg-card border border-border flex items-center justify-center overflow-hidden p-1.5 shadow-sm ${whiteLogoBackgroundInDark ? 'dark:bg-white dark:border-white/25' : ''}`}>
+                        {activeLogoSrc ? (
+                            <Image
+                                src={activeLogoSrc}
+                                alt={logoAltText}
+                                width={28}
+                                height={28}
+                                className="h-7 w-7 object-contain"
+                                onError={handleLogoError}
+                            />
+                        ) : (
+                            <div className={`text-base font-bold ${whiteLogoBackgroundInDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {event.title.charAt(0)}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <h3 className="text-[15px] font-medium text-foreground leading-tight group-hover/event-card:text-foreground transition-colors truncate" title={event.title}>
+                            {event.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
+                            <span>{dateLabel}</span>
+                            <span>·</span>
+                            <span>{timeLabel}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -310,6 +344,11 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         prevProps.isBookmarking === nextProps.isBookmarking &&
         prevProps.showRecommendationContext === nextProps.showRecommendationContext &&
         prevProps.isInShortlist === nextProps.isInShortlist &&
+        prevProps.showWeekday === nextProps.showWeekday &&
+        prevProps.whiteLogoBackgroundInDark === nextProps.whiteLogoBackgroundInDark &&
+        prevProps.showActionControls === nextProps.showActionControls &&
+        prevProps.showHoverMetaChips === nextProps.showHoverMetaChips &&
+        prevProps.showShortlistAction === nextProps.showShortlistAction &&
         badgesEqual &&
         prevProps.onFeedbackAction === nextProps.onFeedbackAction &&
         prevProps.onExplainRecommendation === nextProps.onExplainRecommendation &&
