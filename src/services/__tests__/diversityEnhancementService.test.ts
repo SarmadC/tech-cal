@@ -171,8 +171,73 @@ describe('DiversityEnhancementService', () => {
       ];
 
       const result = DiversityEnhancementService.enhanceRecommendations(events, 4);
-      
+
       expect(result.diversityMetrics.needsEnhancement).toBe(true);
+    });
+  });
+
+  describe('hybrid event detection', () => {
+    it('should classify event with livestreamUrl AND physical location as hybrid, not virtual', () => {
+      // Event with both a livestream and a physical location (not virtual-sounding)
+      const events = [
+        createMockEvent('1', 'conference', 'San Francisco Convention Center', 'https://stream.example.com'),
+        createMockEvent('2', 'conference', 'San Francisco, CA'),
+        createMockEvent('3', 'conference', 'New York, NY'),
+        createMockEvent('4', 'meetup', 'Boston, MA'),
+      ];
+
+      const result = DiversityEnhancementService.enhanceRecommendations(events, 4);
+
+      // The hybrid event MUST appear in the hybrid bucket, NOT the virtual bucket
+      expect(result.diversityMetrics.formatDistribution.get('hybrid')).toBe(1);
+      expect(result.diversityMetrics.formatDistribution.has('virtual')).toBe(false);
+    });
+
+    it('should classify event with livestreamUrl and virtual location as virtual, not hybrid', () => {
+      // Use enough same-type events to trigger enhancement and get real metrics
+      const events = [
+        createMockEvent('1', 'webinar', 'Online', 'https://zoom.us/123', 0.9),
+        createMockEvent('2', 'webinar', 'Virtual', 'https://stream.example.com', 0.85),
+        createMockEvent('3', 'webinar', 'San Francisco, CA', null, 0.8),
+        createMockEvent('4', 'webinar', 'New York, NY', null, 0.7),
+        createMockEvent('5', 'conference', 'Boston, MA', null, 0.5),
+      ];
+
+      const result = DiversityEnhancementService.enhanceRecommendations(events, 5);
+
+      // When enhancement is needed, metrics are calculated
+      // Virtual-location + livestream should be virtual, not hybrid
+      expect(result.diversityMetrics.formatDistribution.get('virtual')).toBe(2);
+      expect(result.diversityMetrics.formatDistribution.has('hybrid')).toBe(false);
+    });
+  });
+
+  describe('diversity swap with underrepresented types', () => {
+    it('should swap in underrepresented types, not just completely novel ones', () => {
+      // Set up: 8 conferences, 1 workshop, 1 meetup in top 10
+      // Workshop and meetup are underrepresented (10% each < 30% threshold)
+      // Remaining events include more workshops that should be eligible for swap
+      const topEvents = [
+        ...Array.from({ length: 8 }, (_, i) =>
+          createMockEvent(`conf-${i}`, 'conference', `City ${i}`, null, 90 - i)
+        ),
+        createMockEvent('ws-1', 'workshop', 'City A', null, 70),
+        createMockEvent('mu-1', 'meetup', 'City B', null, 65),
+      ];
+      const remainingEvents = [
+        createMockEvent('ws-2', 'workshop', 'City C', null, 80),
+        createMockEvent('mu-2', 'meetup', 'City D', null, 75),
+      ];
+      const allEvents = [...topEvents, ...remainingEvents];
+
+      const result = DiversityEnhancementService.enhanceRecommendations(allEvents, 10);
+
+      expect(result.diversityMetrics.needsEnhancement).toBe(true);
+      // At least one swap must occur — conferences are overrepresented at 80%
+      expect(result.swapsApplied.length).toBeGreaterThan(0);
+      // The swapped-in event should be a workshop or meetup (underrepresented, not absent)
+      const swappedInTypes = result.swapsApplied.map(s => s.reason);
+      expect(swappedInTypes.every(r => r.includes('workshop') || r.includes('meetup'))).toBe(true);
     });
   });
 });

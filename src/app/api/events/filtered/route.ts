@@ -10,6 +10,7 @@ import { requireOnboardedApi } from '@/utils/onboarding';
 import { UserLocation } from '@/services/locationScoringService';
 import { FilterCounts } from '@/utils/filterCountUtils';
 import { logger } from '@/utils/logger';
+import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 
 /**
  * Extract city from a location string (e.g., "San Francisco, CA, USA" -> "San Francisco")
@@ -447,7 +448,7 @@ export async function POST(request: NextRequest) {
         const useOrganizerSearch = queryLength > 10 && !isCommonTerm;
 
         const parallelSearchStart = Date.now();
-        const searchPromises: Promise<string[]>[] = [];
+        const searchTasks: Array<{ source: 'tag' | 'organizer'; promise: Promise<string[]> }> = [];
 
         if (useTagSearch) {
           // Add tag searches for all expanded terms
@@ -461,7 +462,7 @@ export async function POST(request: NextRequest) {
                 resolve([]); // Return empty on timeout
               }, 1000);
             });
-            searchPromises.push(Promise.race([tagSearchPromise, timeoutPromise]));
+            searchTasks.push({ source: 'tag', promise: Promise.race([tagSearchPromise, timeoutPromise]) });
           });
         }
 
@@ -477,36 +478,27 @@ export async function POST(request: NextRequest) {
                 resolve([]); // Return empty on timeout
               }, 1000);
             });
-            searchPromises.push(Promise.race([orgSearchPromise, timeoutPromise]));
+            searchTasks.push({ source: 'organizer', promise: Promise.race([orgSearchPromise, timeoutPromise]) });
           });
         }
 
         // Execute queries in parallel (if any)
-        const results = searchPromises.length > 0 
-          ? await Promise.all(searchPromises)
+        const results = searchTasks.length > 0 
+          ? await Promise.all(searchTasks.map(task => task.promise))
           : [];
         const parallelSearchTime = Date.now() - parallelSearchStart;
 
-        // Separate tag and organizer results based on which searches were executed
+        // Separate tag and organizer results based on their declared source
         const tagResults: string[][] = [];
         const orgResults: string[][] = [];
-
-        if (useTagSearch && useOrganizerSearch) {
-          // Both searches executed - alternate pattern
-          results.forEach((ids, index) => {
-            if (index % 2 === 0) {
-              tagResults.push(ids);
-            } else {
-              orgResults.push(ids);
-            }
-          });
-        } else if (useTagSearch) {
-          // Only tag searches executed
-          results.forEach(ids => tagResults.push(ids));
-        } else if (useOrganizerSearch) {
-          // Only organizer searches executed
-          results.forEach(ids => orgResults.push(ids));
-        }
+        results.forEach((ids, index) => {
+          const source = searchTasks[index]?.source;
+          if (source === 'tag') {
+            tagResults.push(ids);
+          } else if (source === 'organizer') {
+            orgResults.push(ids);
+          }
+        });
 
         // DEDUPLICATION: Flatten and deduplicate results
         const dedupeStart = Date.now();
@@ -514,7 +506,7 @@ export async function POST(request: NextRequest) {
         organizerMatchedEventIds = orgResults.length > 0 ? [...new Set(orgResults.flat())] : [];
         const dedupeTime = Date.now() - dedupeStart;
 
-        const totalQueries = searchPromises.length;
+        const totalQueries = searchTasks.length;
 
         // Performance metrics for multi-query optimization
         const avgQueryTime = totalQueries > 0 ? Math.round(parallelSearchTime / totalQueries) : 0;
@@ -555,9 +547,14 @@ export async function POST(request: NextRequest) {
 
     // Add matched event IDs to filters to include them in results
     if (additionalEventIds.length > 0) {
-      // Merge with existing eventIds filter if present
+      // If tags were explicitly selected, keep AND semantics between tags and search.
       const existingIds = eventFilters.eventIds || [];
-      eventFilters.eventIds = [...new Set([...existingIds, ...additionalEventIds])];
+      if (tags.length > 0 && existingIds.length > 0) {
+        const additionalIdSet = new Set(additionalEventIds);
+        eventFilters.eventIds = existingIds.filter(id => additionalIdSet.has(id));
+      } else {
+        eventFilters.eventIds = [...new Set([...existingIds, ...additionalEventIds])];
+      }
       logger.debug('[DEBUG Merge] Final eventIds filter:', eventFilters.eventIds.length, 'IDs:', eventFilters.eventIds.slice(0, 5));
     }
 
@@ -655,7 +652,8 @@ export async function POST(request: NextRequest) {
             supabase,
             user.id,
             false, // Disable diversity enhancement for calendar - we want all events, not curated top 20
-            userLocation // Pass user location for proximity scoring
+            userLocation, // Pass user location for proximity scoring
+            { allowRerank: isCareerImpactSort }
           );
           
           // Debug: log enrichment results with detailed breakdown
@@ -730,7 +728,7 @@ export async function POST(request: NextRequest) {
     if (recommended && enrichedEvents.length > 0) {
       enrichedEvents = enrichedEvents.filter(event => {
         const score = (event as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
-        return score >= 50; // RECOMMENDATION_THRESHOLDS.RECOMMENDED
+        return score >= RECOMMENDATION_THRESHOLDS.RECOMMENDED;
       });
     }
     

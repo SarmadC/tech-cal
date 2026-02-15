@@ -213,9 +213,9 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
     });
   }
   
-  // Normalize to 20-40% range for cold start
-  // This ensures events are visible but clearly differentiated from personalized scores
-  const normalizedScore = Math.min(40, Math.max(20, score));
+  // Normalize to 15-55 range for cold start
+  // Wider range provides better differentiation among anonymous/new users
+  const normalizedScore = Math.min(55, Math.max(15, score));
   
   return {
     overall: normalizedScore,
@@ -365,54 +365,104 @@ export function calculateBaseScore(
   let networkingValue = 0;
   let industryRelevance = 0;
 
-  // 1. Skills to Learn (highest priority)
-  careerProfile.skillsToLearn.forEach(skill => {
-    if (skillMatches(skill)) {
-      const contribution = ALIGNMENT_WEIGHTS.skillsToLearn;
-      alignmentScore += contribution;
-      skillRelevance += contribution;
-      matchedSkills.push(skill);
-      alignmentReasons.push({
-        type: 'skill',
-        reason: `Learn ${skill}`,
-        contribution
-      });
-    }
-  });
+  // Per-component caps to prevent score saturation
+  // Each component can contribute a bounded max, ensuring top-end granularity
+  const COMPONENT_CAPS = {
+    skillsToLearn: 60,   // max ~2-3 full matches worth
+    primarySkills: 45,   // max ~3 full matches worth
+    careerGoals: 36,     // max ~2 full matches worth
+    interests: 30,       // max ~2-3 full matches worth
+    learningStyle: 16,   // max ~2 full matches worth
+    networking: 15,      // unchanged (already flat)
+    role: 10,            // unchanged (already flat)
+  } as const;
 
-  // 2. Primary Skills (maintenance/advancement)
-  careerProfile.primarySkills.slice(0, 5).forEach(skill => {
-    if (skillMatches(skill)) {
-      const contribution = ALIGNMENT_WEIGHTS.primarySkills;
-      alignmentScore += contribution;
-      skillRelevance += contribution;
-      matchedSkills.push(skill);
-      alignmentReasons.push({
-        type: 'skill',
-        reason: `Advance ${skill} skills`,
-        contribution
-      });
+  // Helper: collect matches for a component, then cap and adjust reason contributions.
+  // Uses largest-remainder method to distribute the capped total across reasons
+  // so that individual rounded contributions sum to exactly the capped total.
+  const collectAndCap = (
+    rawReasons: AlignmentReason[],
+    rawTotal: number,
+    cap: number
+  ): { cappedTotal: number } => {
+    const cappedTotal = Math.min(rawTotal, cap);
+    if (rawTotal > cap && rawReasons.length > 0) {
+      const scale = cap / rawTotal;
+      // Step 1: floor each contribution
+      const floored = rawReasons.map(r => Math.floor(r.contribution * scale));
+      // Step 2: compute remainder to distribute
+      const flooredSum = floored.reduce((s, v) => s + v, 0);
+      let remainder = cappedTotal - flooredSum;
+      // Step 3: distribute remainder to entries with largest fractional parts
+      const fractionals = rawReasons.map((r, i) => ({
+        i,
+        frac: (r.contribution * scale) - floored[i]
+      }));
+      fractionals.sort((a, b) => b.frac - a.frac);
+      for (const { i } of fractionals) {
+        if (remainder <= 0) break;
+        floored[i] += 1;
+        remainder -= 1;
+      }
+      // Step 4: assign corrected contributions
+      rawReasons.forEach((r, i) => { r.contribution = floored[i]; });
     }
-  });
+    alignmentReasons.push(...rawReasons);
+    return { cappedTotal };
+  };
+
+  // 1. Skills to Learn (highest priority) — evaluate ALL, then cap contribution
+  {
+    let rawTotal = 0;
+    const reasons: AlignmentReason[] = [];
+    careerProfile.skillsToLearn.forEach(skill => {
+      if (skillMatches(skill)) {
+        const contribution = ALIGNMENT_WEIGHTS.skillsToLearn;
+        rawTotal += contribution;
+        matchedSkills.push(skill);
+        reasons.push({ type: 'skill', reason: `Learn ${skill}`, contribution });
+      }
+    });
+    const { cappedTotal } = collectAndCap(reasons, rawTotal, COMPONENT_CAPS.skillsToLearn);
+    alignmentScore += cappedTotal;
+    skillRelevance += cappedTotal;
+  }
+
+  // 2. Primary Skills (maintenance/advancement) — evaluate ALL, then cap
+  {
+    let rawTotal = 0;
+    const reasons: AlignmentReason[] = [];
+    careerProfile.primarySkills.forEach(skill => {
+      if (skillMatches(skill)) {
+        const contribution = ALIGNMENT_WEIGHTS.primarySkills;
+        rawTotal += contribution;
+        matchedSkills.push(skill);
+        reasons.push({ type: 'skill', reason: `Advance ${skill} skills`, contribution });
+      }
+    });
+    const { cappedTotal } = collectAndCap(reasons, rawTotal, COMPONENT_CAPS.primarySkills);
+    alignmentScore += cappedTotal;
+    skillRelevance += cappedTotal;
+  }
 
   // 3. Career Goals
-  careerProfile.careerGoals.forEach(goal => {
-    const keywords = GOAL_KEYWORDS[goal as keyof typeof GOAL_KEYWORDS] || [];
-    const hasMatch = keywords.some(matchesKeyword);
-
-    if (hasMatch) {
-      const contribution = ALIGNMENT_WEIGHTS.careerGoals;
-      alignmentScore += contribution;
-      careerStageMatch += contribution;
-      matchedGoals.push(goal);
-      
-      alignmentReasons.push({
-        type: 'goal',
-        reason: getGoalReason(goal),
-        contribution
-      });
-    }
-  });
+  {
+    let rawTotal = 0;
+    const reasons: AlignmentReason[] = [];
+    careerProfile.careerGoals.forEach(goal => {
+      const keywords = GOAL_KEYWORDS[goal as keyof typeof GOAL_KEYWORDS] || [];
+      const hasMatch = keywords.some(matchesKeyword);
+      if (hasMatch) {
+        const contribution = ALIGNMENT_WEIGHTS.careerGoals;
+        rawTotal += contribution;
+        matchedGoals.push(goal);
+        reasons.push({ type: 'goal', reason: getGoalReason(goal), contribution });
+      }
+    });
+    const { cappedTotal } = collectAndCap(reasons, rawTotal, COMPONENT_CAPS.careerGoals);
+    alignmentScore += cappedTotal;
+    careerStageMatch += cappedTotal;
+  }
 
   // 4. Current Role Alignment
   if (careerProfile.currentRole) {
@@ -431,49 +481,58 @@ export function calculateBaseScore(
   }
 
   // 5. Interests
-  careerProfile.interests.slice(0, 5).forEach(interest => {
-    if (matchesKeyword(interest)) {
-      const contribution = ALIGNMENT_WEIGHTS.interests;
-      alignmentScore += contribution;
-      industryRelevance += contribution;
-      alignmentReasons.push({
-        type: 'interest',
-        reason: `Matches interest: ${interest}`,
-        contribution
-      });
-    }
-  });
+  {
+    let rawTotal = 0;
+    const reasons: AlignmentReason[] = [];
+    careerProfile.interests.forEach(interest => {
+      if (matchesKeyword(interest)) {
+        const contribution = ALIGNMENT_WEIGHTS.interests;
+        rawTotal += contribution;
+        reasons.push({ type: 'interest', reason: `Matches interest: ${interest}`, contribution });
+      }
+    });
+    const { cappedTotal } = collectAndCap(reasons, rawTotal, COMPONENT_CAPS.interests);
+    alignmentScore += cappedTotal;
+    industryRelevance += cappedTotal;
+  }
 
   // 6. Learning Style
-  careerProfile.learningStyle.forEach(style => {
-    const keywords = LEARNING_STYLE_KEYWORDS[style] || [];
-    const hasMatch = keywords.some(matchesKeyword);
+  {
+    let rawTotal = 0;
+    const reasons: AlignmentReason[] = [];
+    careerProfile.learningStyle.forEach(style => {
+      const keywords = LEARNING_STYLE_KEYWORDS[style] || [];
+      const hasMatch = keywords.some(matchesKeyword);
+      if (hasMatch) {
+        const contribution = ALIGNMENT_WEIGHTS.learningStyle;
+        rawTotal += contribution;
+        reasons.push({ type: 'learning-style', reason: getLearningStyleReason(style), contribution });
+      }
+    });
+    const { cappedTotal } = collectAndCap(reasons, rawTotal, COMPONENT_CAPS.learningStyle);
+    alignmentScore += cappedTotal;
+    // Learning style contributes to career stage match (finding right format for growth)
+    careerStageMatch += cappedTotal;
+  }
 
-    if (hasMatch) {
-      const contribution = ALIGNMENT_WEIGHTS.learningStyle;
+  // 7. Networking — proportional scoring based on keyword match count
+  if (careerProfile.networkingGoals.length > 0) {
+    const networkingKeywords = GOAL_KEYWORDS.networking;
+    const matchCount = networkingKeywords.filter(matchesKeyword).length;
+    if (matchCount > 0) {
+      // Scale: 5 points per keyword match, capped at the networking weight
+      const contribution = Math.min(
+        matchCount * 5,
+        ALIGNMENT_WEIGHTS.networking
+      );
       alignmentScore += contribution;
-      // Learning style contributes to career stage match (finding right format for growth)
-      careerStageMatch += contribution;
-      
+      networkingValue += contribution;
       alignmentReasons.push({
-        type: 'learning-style',
-        reason: getLearningStyleReason(style),
+        type: 'networking',
+        reason: matchCount >= 3 ? 'High-value networking opportunity' : 'Community engagement opportunity',
         contribution
       });
     }
-  });
-
-  // 7. Networking
-  if (careerProfile.networkingGoals.length > 0 &&
-      GOAL_KEYWORDS.networking.some(matchesKeyword)) {
-    const contribution = ALIGNMENT_WEIGHTS.networking;
-    alignmentScore += contribution;
-    networkingValue += contribution;
-    alignmentReasons.push({
-      type: 'networking',
-      reason: 'High-value community access',
-      contribution
-    });
   }
 
   // Normalize score to 0-100

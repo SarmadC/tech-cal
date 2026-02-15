@@ -20,6 +20,7 @@ import { rerankWithBehavioral } from '@/services/recommendations/behavioralReran
 import { LocationScoringService, UserLocation } from './locationScoringService';
 import * as Sentry from '@sentry/nextjs';
 import { envConfig } from '@/utils/envConfig';
+import { createHash } from 'crypto';
 
 // Safe KV client - only initialize if KV is configured
 // @vercel/kv throws an error if env vars are missing, so we need to catch during import
@@ -45,6 +46,9 @@ if (envConfig.isKvAvailable()) {
  */
 export type ScoringStrategy = 'server' | 'legacy' | 'shadow';
 type RerankStrategy = 'off' | 'advanced' | 'shadow';
+export interface EnrichmentOptions {
+  allowRerank?: boolean;
+}
 
 /**
  * Get scoring strategy from environment or default to 'server'
@@ -85,13 +89,75 @@ interface ScoringTelemetry {
  * Cache configuration
  */
 const CACHE_TTL_SECONDS = 3600; // 1 hour
-const CACHE_PREFIX = 'career-impact:v1';
+const CACHE_PREFIX = 'career-impact:v2';
+const LOCATION_NEUTRAL_SCORE = 0.8;
+
+interface CacheScope {
+  strategyFingerprint: string;
+  profileFingerprint: string;
+  locationFingerprint: string;
+}
+
+function getStrategyFingerprint(strategy: ScoringStrategy): string {
+  return strategy === 'legacy' ? 'legacy' : 'alignment-core-v1';
+}
+
+function getProfileFingerprint(careerProfile: CareerProfile | null): string {
+  if (!careerProfile) return 'cold-start';
+
+  const payload = JSON.stringify({
+    role: careerProfile.currentRole || '',
+    seniority: careerProfile.seniority || '',
+    industry: careerProfile.industry || '',
+    primarySkills: (careerProfile.primarySkills || []).slice(0, 8),
+    skillsToLearn: (careerProfile.skillsToLearn || []).slice(0, 8),
+    interests: (careerProfile.interests || []).slice(0, 8),
+    goals: (careerProfile.careerGoals || []).slice(0, 6),
+    learningStyle: (careerProfile.learningStyle || []).slice(0, 6),
+    networkingGoals: (careerProfile.networkingGoals || []).slice(0, 6),
+    preferredEventTypes: (careerProfile.preferredEventTypes || []).slice(0, 6),
+  });
+
+  return createHash('sha1').update(payload).digest('hex').slice(0, 16);
+}
+
+function getLocationFingerprint(userLocation?: UserLocation | null): string {
+  if (!userLocation) return 'none';
+
+  const normalize = (value?: string) => value?.trim().toLowerCase() || '';
+  const payload = JSON.stringify({
+    city: normalize(userLocation.city),
+    country: normalize(userLocation.country),
+    timezone: normalize(userLocation.timezone),
+  });
+
+  return createHash('sha1').update(payload).digest('hex').slice(0, 12);
+}
+
+function getEventFingerprint(event: Event): string {
+  const payload = JSON.stringify({
+    id: event.id,
+    title: event.title,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    eventTypeId: event.eventTypeId,
+  });
+
+  return createHash('sha1').update(payload).digest('hex').slice(0, 12);
+}
 
 /**
  * Generate cache key for a user-event pair
  */
-function getCacheKey(userId: string, eventId: string): string {
-  return `${CACHE_PREFIX}:${userId}:${eventId}`;
+function getCacheKey(userId: string, eventId: string, cacheScope: CacheScope): string {
+  return [
+    CACHE_PREFIX,
+    userId,
+    cacheScope.strategyFingerprint,
+    cacheScope.profileFingerprint,
+    cacheScope.locationFingerprint,
+    eventId
+  ].join(':');
 }
 
 /**
@@ -111,7 +177,8 @@ export async function enrichEventsWithCareerImpact(
   careerProfile: CareerProfile | null,
   _supabaseClient: SupabaseClientType,
   userId?: string,
-  userLocation?: UserLocation | null
+  userLocation?: UserLocation | null,
+  options: EnrichmentOptions = {}
 ): Promise<EventWithCareerImpact[]> {
   // Early return only if no events
   if (events.length === 0) {
@@ -122,6 +189,13 @@ export async function enrichEventsWithCareerImpact(
   const strategy = getScoringStrategy();
   const rerank = getRerankStrategy();
   const isColdStart = !careerProfile;
+  const allowRerank = options.allowRerank ?? false;
+  const profileFingerprint = getProfileFingerprint(careerProfile);
+  const cacheScope: CacheScope = {
+    strategyFingerprint: getStrategyFingerprint(strategy),
+    profileFingerprint,
+    locationFingerprint: getLocationFingerprint(userLocation),
+  };
   
   // Track cache stats
   let cacheHitCount = 0;
@@ -134,7 +208,7 @@ export async function enrichEventsWithCareerImpact(
 
     if (userId && !isColdStart && kv) {
       try {
-        const cacheKeys = events.map(e => getCacheKey(userId, e.id));
+        const cacheKeys = events.map(e => getCacheKey(userId, e.id, cacheScope));
         
         // Batch fetch from Redis
         // kv.mget returns (T | null)[]
@@ -176,56 +250,92 @@ export async function enrichEventsWithCareerImpact(
       console.log(`[Enrichment] Cache stats: ${cacheHitCount} hits, ${cacheMissCount} misses`);
     }
 
-    // 2. Calculate scores for misses
-    const newlyEnrichedEvents: EventWithCareerImpact[] = eventsToCalculate.map(event => {
+    const applyLocationAdjustment = (scoredEvent: EventWithCareerImpact): EventWithCareerImpact => {
+      if (!scoredEvent.careerImpact) {
+        return scoredEvent;
+      }
+
+      const locationResult = LocationScoringService.calculateLocationScore(scoredEvent, userLocation);
+      const locationAdjustment = (locationResult.score - LOCATION_NEUTRAL_SCORE) * 10;
+      const adjustedOverall = Math.max(0, Math.min(100, (scoredEvent.careerImpact.overall ?? 0) + locationAdjustment));
+
+      const currentExplanation = (scoredEvent.careerImpact.explanation ?? {}) as Record<string, unknown>;
+      const currentReasons = Array.isArray(currentExplanation['reasons'])
+        ? [...(currentExplanation['reasons'] as string[])]
+        : [];
+
+      if (!locationResult.isVirtual && locationResult.score < 1.0) {
+        currentReasons.push(locationResult.reason);
+      }
+
+      return {
+        ...scoredEvent,
+        careerImpact: {
+          ...scoredEvent.careerImpact,
+          overall: adjustedOverall,
+          explanation: {
+            reasons: currentReasons,
+            matchedSkills: Array.isArray(currentExplanation['matchedSkills'])
+              ? (currentExplanation['matchedSkills'] as string[])
+              : [],
+            speakerHighlights: Array.isArray(currentExplanation['speakerHighlights'])
+              ? (currentExplanation['speakerHighlights'] as string[])
+              : [],
+            careerImpactCategory: getAlignmentCategory(adjustedOverall),
+            confidenceFactors: Array.isArray(currentExplanation['confidenceFactors'])
+              ? (currentExplanation['confidenceFactors'] as string[])
+              : [],
+            ...(Array.isArray(currentExplanation['alignmentReasons'])
+              ? { alignmentReasons: currentExplanation['alignmentReasons'] }
+              : {}),
+            ...(Array.isArray(currentExplanation['matchedGoals'])
+              ? { matchedGoals: currentExplanation['matchedGoals'] as string[] }
+              : {}),
+          },
+          metadata: {
+            ...(scoredEvent.careerImpact.metadata ?? {}),
+            careerProfileHash: profileFingerprint,
+            eventDataHash: getEventFingerprint(scoredEvent)
+          }
+        },
+      };
+    };
+
+    const scoreWithAlignmentCore = (event: Event): EventWithCareerImpact => {
       try {
         const alignment = calculateBaseScore(event, careerProfile);
-        
-        // Calculate location score (0-1 scale, affects final score by ~10%)
-        const locationResult = LocationScoringService.calculateLocationScore(event, userLocation);
-        const locationAdjustment = (locationResult.score - 0.8) * 10; // Neutral at 0.8, bonus/penalty around it
-        
-        // Adjust overall score with location (cap at 0-100 range)
-        const adjustedOverall = Math.max(0, Math.min(100, alignment.overall + locationAdjustment));
-        
-        // Add location reason if applicable (in-person events not in user's city)
-        const reasons = [...alignment.alignmentReasons.map(r => r.reason)];
-        if (!locationResult.isVirtual && locationResult.score < 1.0) {
-          reasons.push(locationResult.reason);
-        }
-        
-        return {
+
+        const baseScoredEvent: EventWithCareerImpact = {
           ...event,
           careerImpact: {
-            overall: adjustedOverall,
-            confidence: isColdStart ? 0.6 : 1.0, // Lower confidence for cold start scores
+            overall: alignment.overall,
+            confidence: isColdStart ? 0.6 : 1.0,
             components: {
               ...alignment.components,
-              locationRelevance: locationResult.score * 100, // Store location score as 0-100
             },
             explanation: {
-              // Maintain legacy shape while preserving detailed reasons
-              reasons,
-              alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
+              reasons: alignment.alignmentReasons.map(r => r.reason),
+              alignmentReasons: alignment.alignmentReasons,
               matchedSkills: alignment.matchedSkills,
               matchedGoals: alignment.matchedGoals,
               speakerHighlights: [],
-              careerImpactCategory: getAlignmentCategory(adjustedOverall),
-              confidenceFactors: isColdStart 
+              careerImpactCategory: getAlignmentCategory(alignment.overall),
+              confidenceFactors: isColdStart
                 ? ['Cold start scoring - complete your profile for better recommendations']
                 : ['Alignment core v1.0'],
             },
             metadata: {
               algorithmVersion: isColdStart ? 'alignment-core-v1-coldstart' : 'alignment-core-v1',
               calculatedAt: new Date().toISOString(),
-              careerProfileHash: '', // Could add profile fingerprint for debugging
-              eventDataHash: ''
+              careerProfileHash: profileFingerprint,
+              eventDataHash: getEventFingerprint(event)
             }
           },
           isCareerScored: true
         };
+
+        return applyLocationAdjustment(baseScoredEvent);
       } catch (error) {
-        // If scoring fails for an event, still return it with 0 score rather than crashing
         console.error('[Enrichment] Error scoring event:', event.id, error);
         return {
           ...event,
@@ -251,14 +361,90 @@ export async function enrichEventsWithCareerImpact(
             metadata: {
               algorithmVersion: 'error',
               calculatedAt: new Date().toISOString(),
-              careerProfileHash: '',
-              eventDataHash: ''
+              careerProfileHash: profileFingerprint,
+              eventDataHash: getEventFingerprint(event)
             }
           },
           isCareerScored: false
         };
       }
-    });
+    };
+
+    // 2. Calculate scores for misses
+    let newlyEnrichedEvents: EventWithCareerImpact[] = [];
+    if (eventsToCalculate.length > 0) {
+      if (strategy === 'legacy' && !isColdStart && careerProfile) {
+        try {
+          const legacyEnriched = await EnhancedScoringService.enrichEventsWithScores(
+            eventsToCalculate,
+            careerProfile,
+            { userId, supabaseClient: _supabaseClient, enableBehavioralBoost: false }
+          );
+
+          newlyEnrichedEvents = (legacyEnriched as EventWithCareerImpact[]).map((event) => {
+            const normalizedLegacyEvent: EventWithCareerImpact = {
+              ...event,
+              careerImpact: {
+                ...(event.careerImpact ?? {
+                  overall: 0,
+                  confidence: 0,
+                  components: {
+                    skillRelevance: 0,
+                    careerStageMatch: 0,
+                    networkingValue: 0,
+                    industryRelevance: 0,
+                    timingBonus: 0
+                  },
+                  explanation: {
+                    reasons: [],
+                    matchedSkills: [],
+                    speakerHighlights: [],
+                    careerImpactCategory: 'low' as const,
+                    confidenceFactors: []
+                  },
+                  metadata: {}
+                }),
+                components: {
+                  skillRelevance: event.careerImpact?.components?.skillRelevance ?? 0,
+                  careerStageMatch: event.careerImpact?.components?.careerStageMatch ?? 0,
+                  networkingValue: event.careerImpact?.components?.networkingValue ?? 0,
+                  industryRelevance: event.careerImpact?.components?.industryRelevance ?? 0,
+                  timingBonus: event.careerImpact?.components?.timingBonus ?? 0
+                },
+                explanation: {
+                  reasons: event.careerImpact?.explanation?.reasons ?? [],
+                  matchedSkills: event.careerImpact?.explanation?.matchedSkills ?? [],
+                  speakerHighlights: event.careerImpact?.explanation?.speakerHighlights ?? [],
+                  careerImpactCategory: event.careerImpact?.explanation?.careerImpactCategory ?? 'low',
+                  confidenceFactors: event.careerImpact?.explanation?.confidenceFactors ?? [],
+                  ...(event.careerImpact?.explanation?.alignmentReasons
+                    ? { alignmentReasons: event.careerImpact.explanation.alignmentReasons }
+                    : {}),
+                  ...(event.careerImpact?.explanation?.matchedGoals
+                    ? { matchedGoals: event.careerImpact.explanation.matchedGoals }
+                    : {}),
+                },
+                metadata: {
+                  ...(event.careerImpact?.metadata ?? {}),
+                  algorithmVersion: event.careerImpact?.metadata?.algorithmVersion || 'legacy-v2.0.0',
+                  calculatedAt: new Date().toISOString(),
+                  careerProfileHash: profileFingerprint,
+                  eventDataHash: getEventFingerprint(event)
+                }
+              },
+              isCareerScored: true
+            };
+
+            return applyLocationAdjustment(normalizedLegacyEvent);
+          });
+        } catch (legacyError) {
+          console.warn('[Enrichment] Legacy strategy failed, falling back to alignment core', legacyError);
+          newlyEnrichedEvents = eventsToCalculate.map(scoreWithAlignmentCore);
+        }
+      } else {
+        newlyEnrichedEvents = eventsToCalculate.map(scoreWithAlignmentCore);
+      }
+    }
 
     // 3. Cache new scores (if we have a userId and not cold start and KV is available)
     if (userId && !isColdStart && newlyEnrichedEvents.length > 0 && kv) {
@@ -266,7 +452,7 @@ export async function enrichEventsWithCareerImpact(
         const pipeline = kv.pipeline();
         newlyEnrichedEvents.forEach(event => {
           if (event.careerImpact) {
-            pipeline.set(getCacheKey(userId, event.id), event.careerImpact, { ex: CACHE_TTL_SECONDS });
+            pipeline.set(getCacheKey(userId, event.id, cacheScope), event.careerImpact, { ex: CACHE_TTL_SECONDS });
           }
         });
         await pipeline.exec();
@@ -368,7 +554,7 @@ export async function enrichEventsWithCareerImpact(
     // Optional advanced reranking stage
     // Skip reranking for cold start users (no behavioral data available)
     try {
-      if (rerank === 'advanced' && !isColdStart) {
+      if (allowRerank && rerank === 'advanced' && !isColdStart) {
         const reranked = await rerankWithBehavioral(
           finalEnrichedEvents,
           careerProfile!,
@@ -378,7 +564,7 @@ export async function enrichEventsWithCareerImpact(
         return reranked as EventWithCareerImpact[];
       }
 
-      if (rerank === 'shadow' && !isColdStart) {
+      if (allowRerank && rerank === 'shadow' && !isColdStart) {
         // Compute advanced order but return original order; log deltas
         const startShadow = Date.now();
         const reranked = await rerankWithBehavioral(
@@ -515,5 +701,3 @@ export class CareerImpactEnrichmentService {
     );
   }
 }
-
-

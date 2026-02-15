@@ -329,11 +329,17 @@ export class DiversityEnhancementService {
       }
     }
     
+    const totalEvents = currentEvents.length;
     for (const event of remainingEvents) {
       const eventType = this.getEventType(event);
-      if (eventType !== overRepresentedType && 
-          !diversityMetrics.eventTypeDistribution.has(eventType)) {
-        candidatesToAdd.push(event);
+      if (eventType !== overRepresentedType) {
+        const typeCount = diversityMetrics.eventTypeDistribution.get(eventType) || 0;
+        const typeRatio = totalEvents > 0 ? typeCount / totalEvents : 0;
+        // Include completely novel types OR underrepresented types
+        if (!diversityMetrics.eventTypeDistribution.has(eventType) ||
+            typeRatio < DIVERSITY_CONSTANTS.UNDERREPRESENTED_THRESHOLD) {
+          candidatesToAdd.push(event);
+        }
       }
     }
 
@@ -474,20 +480,17 @@ export class DiversityEnhancementService {
       return 'unknown';
     }
 
-    // Check for virtual indicators
-    if (event.livestreamUrl) {
-      return 'virtual';
-    }
-    
-    // Check location for virtual indicators
     const location = (event.location || '').toLowerCase();
-    if (location.includes('online') || location.includes('virtual') || location.includes('zoom') || location.includes('teams')) {
-      return 'virtual';
-    }
-    
-    // Check for hybrid indicators
-    if (event.livestreamUrl && event.location && !location.includes('online')) {
+    const isVirtualLocation = location.includes('online') || location.includes('virtual') || location.includes('zoom') || location.includes('teams');
+
+    // Check for hybrid first: has livestream AND a physical location
+    if (event.livestreamUrl && event.location && !isVirtualLocation) {
       return 'hybrid';
+    }
+
+    // Check for virtual indicators
+    if (event.livestreamUrl || isVirtualLocation) {
+      return 'virtual';
     }
     
     // Default to in-person if location exists

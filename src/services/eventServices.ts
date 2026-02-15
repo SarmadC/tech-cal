@@ -47,7 +47,7 @@ export class EventService {
                 .from('events')
                 .select('id', { count: 'exact', head: true });
 
-            // Apply same filters as getEvents but only count
+            // Apply the same filtering pipeline as getEventsWithMultiDay
             if (filters.startDate) {
                 query = query.gte('start_time', filters.startDate.toISOString());
             }
@@ -58,9 +58,20 @@ export class EventService {
                 query = query.in('event_type_id', filters.categories);
             }
             query = applyLocationFilter(query, filters.locations);
-            if (filters.searchTerm) {
-                query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
+            if (filters.searchTerm?.trim()) {
+                query = query.textSearch('fts', filters.searchTerm.trim(), {
+                    type: 'websearch',
+                    config: 'english'
+                });
             }
+            if (filters.status?.length) {
+                query = query.in('status', filters.status);
+            }
+            if (filters.eventIds?.length) {
+                query = query.in('id', filters.eventIds);
+            }
+
+            query = this.applyEnhancedFilters(query, filters);
 
             const { count, error } = await query;
             if (error) throw error;
@@ -2232,7 +2243,8 @@ export class EventService {
         supabaseClient: SupabaseClientType,
         userId?: string,
         applyDiversityEnhancement: boolean = true,
-        userLocation?: UserLocation | null
+        userLocation?: UserLocation | null,
+        enrichmentOptions: { allowRerank?: boolean } = {}
     ): Promise<Event[]> {
         if (!careerProfile || events.length === 0) {
             return events;
@@ -2245,7 +2257,8 @@ export class EventService {
                 careerProfile,
                 supabaseClient,
                 userId,
-                userLocation
+                userLocation,
+                enrichmentOptions
             );
 
             // Apply diversity enhancement if requested and we have enough events

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { CareerProfileService } from '@/services/careerProfileService';
@@ -41,6 +41,26 @@ type RecommendationMetadata = {
   [key: string]: unknown;
 };
 
+const DEFAULT_MATCHING_TELEMETRY_SAMPLE_RATE = 0.01; // 1%
+
+function getMatchingTelemetrySampleRate(): number {
+  const raw = process.env.MATCHING_TELEMETRY_SAMPLE_RATE;
+  if (!raw) return DEFAULT_MATCHING_TELEMETRY_SAMPLE_RATE;
+
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) return DEFAULT_MATCHING_TELEMETRY_SAMPLE_RATE;
+  return Math.min(1, Math.max(0, parsed));
+}
+
+function isSampledForMatchingTelemetry(userId: string, sampleRate: number): boolean {
+  if (sampleRate <= 0) return false;
+  if (sampleRate >= 1) return true;
+
+  const hash = createHash('sha1').update(userId).digest('hex');
+  const bucket = Number.parseInt(hash.slice(0, 8), 16) % 10000;
+  return bucket < Math.floor(sampleRate * 10000);
+}
+
 /**
  * GET /api/events/recommendations
  * Get tag-based recommended events for the authenticated user
@@ -69,7 +89,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const rawLimit = Number.parseInt(searchParams.get('limit') || '10', 10);
+    if (Number.isNaN(rawLimit) || rawLimit <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid limit. Must be a positive integer.' },
+        { status: 400 }
+      );
+    }
+    const limit = Math.min(rawLimit, 50);
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
     const sessionId = searchParams.get('sessionId');
     const requestId = request.headers.get('x-request-id') || randomUUID();
@@ -106,6 +133,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
 
     let events: Event[] = [];
     let matchedTags: string[] = [];
+    let tau: number | null = null;
+    let divergenceCount: number | null = null;
 
     if (tags.length > 0) {
       // Search by specific tags
@@ -121,31 +150,35 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
       );
 
       if (events.length > 0) {
+        const matchingTelemetryEnabled = process.env.MATCHING_TELEMETRY_ENABLED === 'true';
+        const matchingTelemetrySampleRate = getMatchingTelemetrySampleRate();
+        const matchingTelemetrySampled =
+          matchingTelemetryEnabled &&
+          hasTelemetryConsent &&
+          isSampledForMatchingTelemetry(user.id, matchingTelemetrySampleRate);
         const recommendationMetadataMap = new Map<string, RecommendationMetadata>();
-        const originalOrderMap = new Map<string, { index: number; tagScore: number }>();
+        const originalOrderMap = new Map<string, { index: number }>();
         events.forEach((event, index) => {
           const metadata = (event as { recommendationMetadata?: RecommendationMetadata }).recommendationMetadata;
           if (metadata) {
             recommendationMetadataMap.set(event.id, { ...metadata });
-            originalOrderMap.set(event.id, { index, tagScore: metadata.totalScore ?? 0 });
+            originalOrderMap.set(event.id, { index });
           }
         });
 
         try {
+          const tagRankedEvents = events;
           const enrichedEvents = await EventService.enrichEventsWithCareerImpact(
-            events,
+            tagRankedEvents,
             careerProfile,
             supabase,
             user.id,
             true
           );
 
-          const rankShiftSamples: Array<{ id: string; from: number; to: number; delta: number; tagScore: number; alignmentScore: number | null }> = [];
-
           events = enrichedEvents.map((event, index) => {
             const eventWithImpact = event as EventWithCareerImpact;
             const metadata = recommendationMetadataMap.get(event.id);
-            const original = originalOrderMap.get(event.id);
 
             if (metadata) {
               const alignmentScore = eventWithImpact.careerImpact?.overall ?? null;
@@ -162,21 +195,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
                 alignmentRank: index + 1
               };
 
-              if (original) {
-                const delta = original.index - index;
-                updatedMetadata.rankDelta = delta;
-                if (delta !== 0) {
-                  rankShiftSamples.push({
-                    id: event.id,
-                    from: original.index,
-                    to: index,
-                    delta,
-                    tagScore: original.tagScore,
-                    alignmentScore
-                  });
-                }
-              }
-
               recommendationMetadataMap.set(event.id, updatedMetadata);
               return { ...event, recommendationMetadata: updatedMetadata } as Event;
             }
@@ -184,11 +202,65 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
             return event;
           });
 
-          if (rankShiftSamples.length > 0) {
-            console.info('[Recommendations] Alignment vs tag ranking shifts', {
-              userId: user.id,
-              sample: rankShiftSamples.slice(0, 5)
-            });
+          if (matchingTelemetrySampled) {
+            try {
+              // Compare tag-ranking order against pure score ranking from advanced scoring.
+              // Keep diversity and rerank disabled here so telemetry reflects score divergence only.
+              const advancedScoredForTelemetry = await EventService.enrichEventsWithCareerImpact(
+                tagRankedEvents,
+                careerProfile,
+                supabase,
+                user.id,
+                false,
+                undefined,
+                { allowRerank: false }
+              );
+
+              const advancedSortedIds = [...advancedScoredForTelemetry]
+                .sort((a, b) => {
+                  const scoreA = (a as EventWithCareerImpact).careerImpact?.overall ?? 0;
+                  const scoreB = (b as EventWithCareerImpact).careerImpact?.overall ?? 0;
+                  if (scoreB !== scoreA) return scoreB - scoreA;
+
+                  // Stable deterministic tie-breaker based on original tag order.
+                  const originalA = originalOrderMap.get(a.id)?.index ?? Number.MAX_SAFE_INTEGER;
+                  const originalB = originalOrderMap.get(b.id)?.index ?? Number.MAX_SAFE_INTEGER;
+                  return originalA - originalB;
+                })
+                .map(event => event.id)
+                .filter(id => originalOrderMap.has(id));
+
+              if (advancedSortedIds.length > 1) {
+                let concordant = 0;
+                let discordant = 0;
+
+                for (let i = 0; i < advancedSortedIds.length; i++) {
+                  for (let j = i + 1; j < advancedSortedIds.length; j++) {
+                    const originalA = originalOrderMap.get(advancedSortedIds[i])!;
+                    const originalB = originalOrderMap.get(advancedSortedIds[j])!;
+                    if (originalA.index < originalB.index) {
+                      concordant++;
+                    } else if (originalA.index > originalB.index) {
+                      discordant++;
+                    }
+                  }
+                }
+
+                const totalPairs = concordant + discordant;
+                divergenceCount = discordant;
+                tau = totalPairs > 0 ? (concordant - discordant) / totalPairs : null;
+              }
+
+              if (divergenceCount !== null && divergenceCount > 0) {
+                console.info('[Recommendations] Alignment vs tag ranking divergence', {
+                  userId: user.id,
+                  tau: tau?.toFixed(3),
+                  divergences: divergenceCount
+                });
+              }
+            } catch (telemetryError) {
+              console.warn('Failed to compute recommendation divergence telemetry:', telemetryError);
+            }
           }
         } catch (enrichmentError) {
           console.warn('Failed to enrich personalized recommendations with alignment core:', enrichmentError);
@@ -245,6 +317,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
           returnedCount: events.length,
           processingTimeMs: processingTime,
           matchedTags,
+          tau,
+          divergences: divergenceCount,
           recommendationSummary,
           recommendationIds: events.map(event => event.id),
           enrichmentAttempted: tags.length === 0,

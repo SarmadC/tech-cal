@@ -282,3 +282,162 @@ export function getLearningStyleReason(style: string): string {
 
   return styleMap[style] ?? `Fits ${style.replace('-', ' ')} learning`;
 }
+
+// ============================================
+// TAG MATCHING CONFIGURATION (v1.0.0)
+// ============================================
+
+/**
+ * Configuration for TagBasedMatchingService
+ * Consolidates all inline constants for match scoring, boosting, and penalties.
+ * Deep-frozen for runtime immutability to ensure parity during refactors.
+ */
+function deepFreeze<T>(obj: T): Readonly<T> {
+  if (obj === null || typeof obj !== 'object' || Object.isFrozen(obj)) {
+    return obj as Readonly<T>;
+  }
+
+  Object.freeze(obj);
+  const record = obj as Record<string, unknown>;
+
+  Object.keys(record).forEach((key) => {
+    const value = record[key];
+    if (value && typeof value === 'object') {
+      deepFreeze(value as Record<string, unknown>);
+    }
+  });
+
+  return obj as Readonly<T>;
+}
+
+export const TAG_MATCHING_CONFIG = deepFreeze({
+  // Raw bidirectional map seeds (normalized at runtime)
+  RAW_TAG_SIMILARITIES: {
+    // Programming Languages
+    'javascript': ['js', 'node.js', 'nodejs', 'typescript', 'ts'],
+    'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy'],
+    'react': ['jsx', 'next.js', 'nextjs', 'frontend', 'javascript'],
+    'ai': ['artificial intelligence', 'machine learning', 'ml', 'deep learning'],
+    'machine learning': ['ai', 'artificial intelligence', 'data science', 'ml'],
+    'data science': ['machine learning', 'ai', 'analytics', 'data analysis'],
+    
+    // Event Types
+    'workshop': ['training', 'bootcamp', 'masterclass', 'hands-on'],
+    'conference': ['summit', 'convention', 'symposium'],
+    'meetup': ['networking', 'social', 'community'],
+    'webinar': ['online', 'virtual', 'livestream'],
+    
+    // Difficulty Levels
+    'beginner': ['intro', '101', 'fundamentals', 'basics'],
+    'intermediate': ['advanced', 'experienced', 'professional'],
+    'advanced': ['expert', 'senior', 'master', 'specialist'],
+    
+    // Industry Context
+    'fintech': ['financial technology', 'banking', 'payments'],
+    'healthcare': ['health tech', 'medical', 'biotech'],
+    'ecommerce': ['online retail', 'marketplace', 'shopping'],
+    'startup': ['entrepreneurship', 'founder', 'venture'],
+    
+    // Soft Skills
+    'leadership': ['management', 'team lead', 'director'],
+    'communication': ['presentation', 'public speaking', 'writing'],
+    'project management': ['agile', 'scrum', 'planning']
+  },
+
+  // Base weights for different tag categories
+  CATEGORY_WEIGHTS: {
+    'Programming': 1.0,
+    'Framework': 0.9,
+    'Tech': 0.8,
+    'Development': 0.8,
+    'Methodology': 0.7,
+    'Platform': 0.7,
+    'Business': 0.6,
+    'Industry': 0.5,
+    'Event-Type': 0.4,
+    'Difficulty': 0.3,
+    'Soft-Skills': 0.6,
+    'Career-Stage': 0.5,
+    'Community': 0.4,
+    'Agenda': 0.7
+  },
+  DEFAULT_CATEGORY_WEIGHT: 0.5,
+
+  // Points awarded for different types of tag matches
+  MATCH_POINTS: {
+    DIRECT: 30,
+    SIMILARITY: 20,
+    CATEGORY: 10
+  },
+
+  // Weight multipliers for experience levels
+  // [Primary Skills, Skills To Learn]
+  EXPERIENCE_WEIGHTS: {
+    BEGINNER: { PRIMARY: 0.6, LEARN: 1.0 },
+    STANDARD: { PRIMARY: 1.0, LEARN: 0.4 },
+  },
+
+  // Multiplier for role alignment matches
+  ROLE_MATCH_MULTIPLIER: 0.5,
+
+  // Main Recommendation Path Weights (getRecommendedEventsByTags)
+  RECOMMENDATION: {
+    WEIGHTS: {
+      MATCH_SCORE: 0.55,
+      IMPACT_SCORE: 0.22,
+      LOCATION_SCALE: 8, // Multiplier for 0-1 location score
+      TEXT_MATCH_TITLE: 5,
+      TEXT_MATCH_AGENDA: 3,
+    }
+  },
+
+  // Discovery Fallback Path Weights (getDiscoveryEventsOnly)
+  DISCOVERY: {
+    WEIGHTS: {
+      MATCH_SCORE: 0.55,
+      IMPACT_SCORE: 0.22,
+      LOCATION_SCALE: 10, // Note: Discovery uses 10x multiplier vs 8x in Recommendation
+    }
+  },
+
+  // Profile-based Boosts
+  PROFILE_BOOSTS: {
+    PREFERRED_EVENT_TYPE: 8,
+    ROLE_MATCH: 5,
+    SENIORITY_MATCH: 4,
+    GOALS: {
+      NETWORKING: 6,
+      SKILL_DEVELOPMENT: 5,
+      LEADERSHIP: 5,
+      ENTREPRENEURSHIP: 4,
+    },
+    LEARNING_STYLE: {
+      HANDS_ON: 5,
+      INTERACTIVE: 3,
+      THEORETICAL: 2,
+    },
+    NETWORKING: {
+      EXECUTIVE: 4,
+      PEER: 3,
+    }
+  },
+
+  // Recency Boosts (days -> points)
+  RECENCY_BOOSTS: [
+    { maxDays: 7, points: 6 },
+    { maxDays: 14, points: 4 },
+    { maxDays: 30, points: 2 },
+  ],
+
+  // Popularity Boosts (attendees -> points)
+  POPULARITY_BOOSTS: [
+    { minAttendees: 1000, points: 6 },
+    { minAttendees: 500, points: 4 },
+    { minAttendees: 100, points: 2 },
+    { minAttendees: 0, points: 1 },
+  ],
+  
+  // Maximum number of candidates to process in memory
+  MAX_CANDIDATES: 100,
+
+} as const);

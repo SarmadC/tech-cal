@@ -1,0 +1,622 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TagBasedMatchingService Parity (Golden Master) > generates identical discovery-only results 1`] = `
+[
+  {
+    "event": {
+      "_matchLocation": "agenda",
+      "attendee_count": 150,
+      "description": "Deep dive into React performance and internals.",
+      "end_time": "2024-06-01T17:00:00Z",
+      "event_agenda": [
+        {
+          "agenda_type": "session",
+          "description": "Understanding closures",
+          "end_time": "2024-06-01T11:00:00Z",
+          "id": "a1",
+          "start_time": "2024-06-01T10:00:00Z",
+          "title": "Hooks Deep Dive",
+        },
+      ],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-1-perfect-match",
+      "organizer": {
+        "name": "React Corp",
+      },
+      "start_time": "2024-06-01T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Framework",
+          "color": "#6b7280",
+          "id": "t1",
+          "name": "React",
+        },
+        {
+          "category": "Tech",
+          "color": "#6b7280",
+          "id": "t2",
+          "name": "Performance",
+        },
+      ],
+      "title": "Advanced React Workshop",
+    },
+    "impactScore": 53,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: React",
+      "matchedCategories": [
+        "Framework",
+        "Tech",
+      ],
+      "matchedTags": [
+        "React",
+        "Performance",
+      ],
+      "score": 40.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 18,
+    "reasons": [
+      "Exact match: React",
+      "Matches your preferred event type",
+      "Hands-on skill development opportunity",
+      "Hands-on workshop matches your learning style",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 62.1,
+  },
+  {
+    "event": {
+      "attendee_count": 20,
+      "description": "Networking in London.",
+      "end_time": "2024-06-04T20:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "meetup",
+        "name": "Meetup",
+      },
+      "id": "event-4-location-mismatch",
+      "location": "London, UK",
+      "organizer": {
+        "name": "London Tech",
+      },
+      "start_time": "2024-06-04T18:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Framework",
+          "color": "#6b7280",
+          "id": "t1",
+          "name": "React",
+        },
+      ],
+      "title": "Local Meetup London",
+    },
+    "impactScore": 61,
+    "locationScore": 0.5,
+    "match": {
+      "explanation": "Exact match: React",
+      "matchedCategories": [
+        "Framework",
+        "Agenda",
+      ],
+      "matchedTags": [
+        "React",
+        "networking",
+        "meetup",
+      ],
+      "score": 46.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 9,
+    "reasons": [
+      "Exact match: React",
+      "Supports your networking goal",
+      "Great fit for expanding your peer network",
+      "International event",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 53.160000000000004,
+  },
+  {
+    "event": {
+      "attendee_count": 50,
+      "description": "Learn Rust from scratch.",
+      "end_time": "2024-06-03T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-3-skill-to-learn",
+      "organizer": {
+        "name": "Rust Foundation",
+      },
+      "start_time": "2024-06-03T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t4",
+          "name": "Rust",
+        },
+      ],
+      "title": "Rust for Beginners",
+    },
+    "impactScore": 37,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Learning: Exact match: Rust",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "Rust",
+      ],
+      "score": 30,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Learning: Exact match: Rust",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 42.64,
+  },
+  {
+    "event": {
+      "attendee_count": 500,
+      "description": "All about types.",
+      "end_time": "2024-06-02T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "conference",
+        "name": "Conference",
+      },
+      "id": "event-2-partial-match",
+      "organizer": {
+        "name": "TS Org",
+      },
+      "start_time": "2024-06-02T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t3",
+          "name": "TypeScript",
+        },
+      ],
+      "title": "TypeScript Symposium",
+    },
+    "impactScore": 31,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: TypeScript",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "TypeScript",
+      ],
+      "score": 24,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Exact match: TypeScript",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 38.02,
+  },
+  {
+    "event": {
+      "_matchLocation": "agenda",
+      "attendee_count": 1000,
+      "description": "A day of tech talks.",
+      "end_time": "2024-06-05T17:00:00Z",
+      "event_agenda": [
+        {
+          "agenda_type": "session",
+          "description": "CSS Layouts",
+          "end_time": "2024-06-05T11:00:00Z",
+          "id": "a2",
+          "start_time": "2024-06-05T10:00:00Z",
+          "title": "Intro to CSSGrid",
+        },
+      ],
+      "event_type": {
+        "id": "conference",
+        "name": "Conference",
+      },
+      "id": "event-5-agenda-match-only",
+      "organizer": {
+        "name": "Tech World",
+      },
+      "start_time": "2024-06-05T09:00:00Z",
+      "status": "confirmed",
+      "tags": [],
+      "title": "General Tech Day",
+    },
+    "impactScore": 22,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: CSS",
+      "matchedCategories": [
+        "Agenda",
+      ],
+      "matchedTags": [
+        "CSS",
+      ],
+      "score": 16.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Exact match: CSS",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 32.08,
+  },
+  {
+    "event": {
+      "attendee_count": 10,
+      "description": "Learn marketing.",
+      "end_time": "2024-06-06T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "webinar",
+        "name": "Webinar",
+      },
+      "id": "event-6-no-match-discovery",
+      "organizer": {
+        "name": "Marketing Pro",
+      },
+      "start_time": "2024-06-06T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Business",
+          "color": "#6b7280",
+          "id": "t5",
+          "name": "Marketing",
+        },
+      ],
+      "title": "Marketing 101",
+    },
+    "impactScore": 0,
+    "locationScore": 1,
+    "match": {
+      "explanation": "No specific matches found",
+      "matchedCategories": [],
+      "matchedTags": [],
+      "score": 0,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 0,
+    "reasons": [
+      "No specific matches found",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 10,
+  },
+]
+`;
+
+exports[`TagBasedMatchingService Parity (Golden Master) > generates identical recommendation results 1`] = `
+[
+  {
+    "event": {
+      "attendee_count": 150,
+      "description": "Deep dive into React performance and internals.",
+      "end_time": "2024-06-01T17:00:00Z",
+      "event_agenda": [
+        {
+          "agenda_type": "session",
+          "description": "Understanding closures",
+          "end_time": "2024-06-01T11:00:00Z",
+          "id": "a1",
+          "start_time": "2024-06-01T10:00:00Z",
+          "title": "Hooks Deep Dive",
+        },
+      ],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-1-perfect-match",
+      "organizer": {
+        "name": "React Corp",
+      },
+      "start_time": "2024-06-01T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Framework",
+          "color": "#6b7280",
+          "id": "t1",
+          "name": "React",
+        },
+        {
+          "category": "Tech",
+          "color": "#6b7280",
+          "id": "t2",
+          "name": "Performance",
+        },
+      ],
+      "title": "Advanced React Workshop",
+    },
+    "impactScore": 53,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: React",
+      "matchedCategories": [
+        "Framework",
+        "Tech",
+      ],
+      "matchedTags": [
+        "React",
+        "Performance",
+      ],
+      "score": 40.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 18,
+    "reasons": [
+      "Exact match: React",
+      "Matches your preferred event type",
+      "Hands-on skill development opportunity",
+      "Hands-on workshop matches your learning style",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 60.1,
+  },
+  {
+    "event": {
+      "attendee_count": 20,
+      "description": "Networking in London.",
+      "end_time": "2024-06-04T20:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "meetup",
+        "name": "Meetup",
+      },
+      "id": "event-4-location-mismatch",
+      "location": "London, UK",
+      "organizer": {
+        "name": "London Tech",
+      },
+      "start_time": "2024-06-04T18:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Framework",
+          "color": "#6b7280",
+          "id": "t1",
+          "name": "React",
+        },
+      ],
+      "title": "Local Meetup London",
+    },
+    "impactScore": 61,
+    "locationScore": 0.5,
+    "match": {
+      "explanation": "Exact match: React",
+      "matchedCategories": [
+        "Framework",
+        "Agenda",
+      ],
+      "matchedTags": [
+        "React",
+        "networking",
+        "meetup",
+      ],
+      "score": 46.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 9,
+    "reasons": [
+      "Exact match: React",
+      "Supports your networking goal",
+      "Great fit for expanding your peer network",
+      "International event",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 52.160000000000004,
+  },
+  {
+    "event": {
+      "attendee_count": 50,
+      "description": "Learn Rust from scratch.",
+      "end_time": "2024-06-03T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-3-skill-to-learn",
+      "organizer": {
+        "name": "Rust Foundation",
+      },
+      "start_time": "2024-06-03T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t4",
+          "name": "Rust",
+        },
+      ],
+      "title": "Rust for Beginners",
+    },
+    "impactScore": 37,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Learning: Exact match: Rust",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "Rust",
+      ],
+      "score": 30,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Learning: Exact match: Rust",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 40.64,
+  },
+  {
+    "event": {
+      "attendee_count": 500,
+      "description": "All about types.",
+      "end_time": "2024-06-02T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "conference",
+        "name": "Conference",
+      },
+      "id": "event-2-partial-match",
+      "organizer": {
+        "name": "TS Org",
+      },
+      "start_time": "2024-06-02T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t3",
+          "name": "TypeScript",
+        },
+      ],
+      "title": "TypeScript Symposium",
+    },
+    "impactScore": 31,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: TypeScript",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "TypeScript",
+      ],
+      "score": 24,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Exact match: TypeScript",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 36.02,
+  },
+  {
+    "event": {
+      "_matchLocation": "agenda",
+      "attendee_count": 1000,
+      "description": "A day of tech talks.",
+      "end_time": "2024-06-05T17:00:00Z",
+      "event_agenda": [
+        {
+          "agenda_type": "session",
+          "description": "CSS Layouts",
+          "end_time": "2024-06-05T11:00:00Z",
+          "id": "a2",
+          "start_time": "2024-06-05T10:00:00Z",
+          "title": "Intro to CSSGrid",
+        },
+      ],
+      "event_type": {
+        "id": "conference",
+        "name": "Conference",
+      },
+      "id": "event-5-agenda-match-only",
+      "organizer": {
+        "name": "Tech World",
+      },
+      "start_time": "2024-06-05T09:00:00Z",
+      "status": "confirmed",
+      "tags": [],
+      "title": "General Tech Day",
+    },
+    "impactScore": 22,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Exact match: CSS",
+      "matchedCategories": [
+        "Agenda",
+      ],
+      "matchedTags": [
+        "CSS",
+      ],
+      "score": 16.8,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 8,
+    "reasons": [
+      "Exact match: CSS",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 33.08,
+  },
+  {
+    "event": {
+      "attendee_count": 10,
+      "description": "Learn marketing.",
+      "end_time": "2024-06-06T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "webinar",
+        "name": "Webinar",
+      },
+      "id": "event-6-no-match-discovery",
+      "organizer": {
+        "name": "Marketing Pro",
+      },
+      "start_time": "2024-06-06T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Business",
+          "color": "#6b7280",
+          "id": "t5",
+          "name": "Marketing",
+        },
+      ],
+      "title": "Marketing 101",
+    },
+    "impactScore": 0,
+    "locationScore": 1,
+    "match": {
+      "explanation": "No specific matches found",
+      "matchedCategories": [],
+      "matchedTags": [],
+      "score": 0,
+    },
+    "popularityBoost": 0,
+    "profileBoost": 0,
+    "reasons": [
+      "No specific matches found",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 8,
+  },
+]
+`;
