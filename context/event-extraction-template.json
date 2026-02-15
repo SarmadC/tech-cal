@@ -4,23 +4,29 @@
   "event": {
     "title": "Full official event title",
     "description": "Complete event description (HTML or plain text, preserve formatting)",
-    "start_time": "ISO 8601 (e.g. 2026-03-15T09:00:00)",
-    "end_time": "ISO 8601 (e.g. 2026-03-17T17:00:00)",
-    "timezone": "IANA timezone (e.g. America/New_York, America/Los_Angeles)",
-    "location": "Human-readable location string (e.g. 'San Francisco, CA, USA')",
+    "start_time": "ISO 8601 timestamp with offset (e.g. 2026-03-15T09:00:00-07:00)",
+    "end_time": "ISO 8601 timestamp with offset (e.g. 2026-03-17T17:00:00-07:00)",
+    "timezone": "IANA timezone identifier (e.g. America/New_York, Europe/London)",
+    "location": "Full address string (e.g. 'Moscone Center, 747 Howard St, San Francisco, CA 94103')",
     "event_format": "Online | In-person | Hybrid",
-    "language": "ISO 639-1 code (e.g. en, es, fr)",
-    "status": "scheduled | cancelled | postponed | completed",
+    "status": "Confirmed | Tentative | Cancelled | Postponed",
     "is_multi_day": false,
+    "event_pattern": "single | multi_day | all_day | custom",
+    "language": "ISO 639-1 code (default 'en')",
     "difficulty_level": "beginner | intermediate | advanced | null",
     "capacity": null,
     "attendee_count": null,
     "certificate_offered": false,
     "recording_available": false,
     "social_media_hashtag": "#EventHashtag or null",
-    "virtual_platform": "Platform name if virtual/hybrid (e.g. Zoom, Hopin)",
-    "target_audience": "Who is this event for (e.g. 'Software engineers, DevOps professionals')",
-    "prerequisites": "Any prerequisites for attending"
+    "virtual_platform": "Platform name if virtual (e.g. Zoom, Hopin)",
+    "target_audience": "Who is this event for (e.g. 'Software engineers, CTOs')",
+    "prerequisites": "Any prerequisites for attending",
+    "accessibility_features": {
+      "captioning": false,
+      "sign_language": false,
+      "translator": false
+    }
   },
 
   "urls": {
@@ -36,7 +42,7 @@
     "price_min": null,
     "price_max": null,
     "currency": "USD",
-    "registration_deadline": "ISO 8601 or null",
+    "registration_deadline": "ISO 8601 timestamp or null",
     "tiers": [
       {
         "_note": "Extract all visible pricing tiers/ticket types",
@@ -69,13 +75,15 @@
     "social_media": {
       "twitter": "URL or handle",
       "linkedin": "URL",
-      "youtube": "URL"
+      "youtube": "URL",
+      "facebook": "URL",
+      "instagram": "URL"
     }
   },
 
   "speakers": [
     {
-      "_note": "Extract ALL speakers/presenters/panelists found. Include keynote speakers, session speakers, panelists, and workshop leaders.",
+      "_note": "Extract ALL speakers/presenters/panelists found.",
       "name": "Full name (required)",
       "title": "Job title (e.g. Senior Software Engineer)",
       "company": "Company or organization name",
@@ -89,16 +97,19 @@
 
   "agenda": [
     {
-      "_note": "Extract ALL sessions, talks, workshops, panels, breaks, and networking events. Each session is one item.",
+      "_note": "Extract ALL sessions. Each session is one item.",
       "title": "Session title (required)",
       "description": "Session description/abstract",
-      "start_time": "ISO 8601 with date (e.g. 2026-03-15T09:00:00)",
-      "end_time": "ISO 8601 with date (e.g. 2026-03-15T10:00:00)",
+      "start_time": "ISO 8601 timestamp (e.g. 2026-03-15T09:00:00-07:00)",
+      "end_time": "ISO 8601 timestamp (e.g. 2026-03-15T10:00:00-07:00)",
       "day_number": 1,
       "agenda_type": "keynote | talk | workshop | panel | networking | break | registration | lunch | other",
-      "track": "Track name if multi-track (e.g. 'AI/ML', 'Backend', 'Main Stage')",
+      "track": "Track name if multi-track (e.g. 'AI/ML', 'Main Stage')",
       "location": "Room or stage name within the venue",
-      "speakers": ["Speaker Full Name 1", "Speaker Full Name 2"],
+      "speakers": [
+        "Speaker Full Name 1",
+        "Speaker Full Name 2"
+      ],
       "difficulty_level": "beginner | intermediate | advanced | null",
       "capacity": null,
       "is_required": false,
@@ -108,22 +119,22 @@
 
   "daily_schedule": [
     {
-      "_note": "High-level day-by-day schedule for multi-day events",
+      "_note": "High-level day-by-day schedule summary for multi-day events",
       "day_number": 1,
-      "date": "2026-03-15",
-      "start_time": "09:00",
-      "end_time": "17:00",
+      "date": "YYYY-MM-DD",
+      "start_time": "HH:MM",
+      "end_time": "HH:MM",
       "day_label": "Day 1 - Workshops",
       "notes": "Optional notes about the day"
     }
   ],
 
   "tags": [
-    "Tag names describing the event topics (e.g. 'AI', 'Cloud', 'DevOps', 'React', 'Security')"
+    "Tag names describing content (e.g. 'AI', 'Cloud', 'DevOps', 'React', 'Security')"
   ],
 
   "series": {
-    "_note": "If this event is part of a recurring series (e.g. KubeCon, re:Invent)",
+    "_note": "If this event is part of a recurring series (e.g. KubeCon)",
     "name": "Series name",
     "description": "Series description",
     "website_url": "Series website"
