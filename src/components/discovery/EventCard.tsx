@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, DotsThree, Star, Briefcase } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Star } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
@@ -255,7 +255,6 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 }}
                             >
                                 <span className="inline-flex items-center gap-1.5">
-                                    <Briefcase size={12} />
                                     Convince My Manager
                                 </span>
                             </button>
