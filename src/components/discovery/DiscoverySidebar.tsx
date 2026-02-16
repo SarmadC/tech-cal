@@ -18,21 +18,22 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
 
     return (
         <div className="filter-section filter-section-with-margin">
-            {/* Divider removed for cleaner look */}
+            {/* Divider for better separation */}
+            <div className="h-px bg-border/40 my-3" />
             <button
                 type="button"
-                className="flex items-center justify-between w-full mb-2 py-1 group text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center justify-between w-full mb-2 py-1 group text-foreground/80 hover:text-foreground transition-colors"
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setIsOpen(!isOpen);
                 }}
             >
-                <h3 className="text-[11px] font-semibold text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">{title}</h3>
+                <h3 className="text-[12px] font-semibold text-foreground/80 group-hover:text-foreground transition-colors uppercase tracking-wider">{title}</h3>
                 {isOpen ? (
-                    <CaretUp size={12} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                    <CaretUp size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                 ) : (
-                    <CaretDown size={12} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                    <CaretDown size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                 )}
             </button>
 
@@ -62,8 +63,8 @@ const RadioButtonOption: React.FC<RadioButtonOptionProps> = ({ label, count, che
                 <div className={`
                     w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
                     ${checked
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
-                        : 'border-border bg-transparent group-hover:border-border-strong'
+                        ? 'border-primary bg-primary ring-2 ring-primary/20'
+                        : 'border-muted-foreground/40 bg-background group-hover:border-foreground/60'
                     }
                 `}>
                     {checked && (
@@ -104,8 +105,8 @@ const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, 
                 <div className={`
                     w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
                     ${checked
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
-                        : 'border-border bg-transparent group-hover:border-border-strong'
+                        ? 'border-primary bg-primary shadow-sm'
+                        : 'border-muted-foreground/40 bg-background group-hover:border-foreground/60'
                     }
                 `}>
                     {checked && (

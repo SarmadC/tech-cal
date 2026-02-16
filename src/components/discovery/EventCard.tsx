@@ -161,7 +161,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     return (
         <div
-            className={`group/event-card relative flex flex-col rounded-[6px] border border-white/5 bg-card p-5 text-foreground shadow-none transition-all duration-300 cursor-pointer dark:bg-[#0a0a0a] hover:border-gray-600 hover:-translate-y-1 hover:shadow-xl ${accentClass}`}
+            className={`group/event-card relative flex flex-col rounded-xl border border-border/60 bg-card p-5 text-foreground shadow-sm transition-all duration-300 cursor-pointer dark:bg-card/40 hover:border-border-strong hover:-translate-y-1 hover:shadow-md ${accentClass}`}
             onClick={handleCardClick}
             onMouseLeave={() => setIsActionMenuOpen(false)}
             role="article"
@@ -300,7 +300,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
             <div className="mb-4">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className={`h-11 w-11 shrink-0 rounded-[8px] bg-card border border-border flex items-center justify-center overflow-hidden p-1.5 shadow-sm ${whiteLogoBackgroundInDark ? 'dark:bg-white dark:border-white/25' : ''}`}>
+                    <div className={`h-11 w-11 shrink-0 rounded-lg bg-background border border-border/60 flex items-center justify-center overflow-hidden p-1.5 shadow-sm ${whiteLogoBackgroundInDark ? 'dark:bg-white dark:border-white/25' : ''}`}>
                         {activeLogoSrc ? (
                             <Image
                                 src={activeLogoSrc}
@@ -317,7 +317,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                         )}
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <h3 className="text-[15px] font-medium text-foreground leading-tight group-hover/event-card:text-foreground transition-colors truncate" title={event.title}>
+                        <h3 className="text-[16px] font-semibold text-foreground leading-tight group-hover/event-card:text-foreground transition-colors truncate" title={event.title}>
                             {event.title}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">

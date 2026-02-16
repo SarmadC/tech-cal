@@ -5,7 +5,7 @@ import { Event, CareerImpactScore } from '@/types';
 import { MapPin, BookmarkSimple, CalendarBlank, Ticket, DotsThree, Star } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
-import { isEventFree } from '@/utils/filterCountUtils';
+import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { buildRecommendationHighlights } from './recommendationReasoning';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
@@ -21,6 +21,15 @@ interface HeroEventCardProps {
     isBookmarking?: boolean;
 }
 
+const CARD_ACCENTS = [
+    'hover:border-sky-300/60 focus-visible:ring-sky-300/30',
+    'hover:border-emerald-300/60 focus-visible:ring-emerald-300/30',
+    'hover:border-violet-300/60 focus-visible:ring-violet-300/30',
+    'hover:border-rose-300/60 focus-visible:ring-rose-300/30',
+    'hover:border-amber-300/60 focus-visible:ring-amber-300/30',
+    'hover:border-indigo-300/60 focus-visible:ring-indigo-300/30',
+];
+
 const HeroEventCard: React.FC<HeroEventCardProps> = ({
     event,
     onClick,
@@ -31,17 +40,28 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
     isBookmarked = false,
     isBookmarking = false
 }) => {
+    const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
+    const accentClass = CARD_ACCENTS[colorIndex];
+
     const startDate = new Date(event.startTime);
     // Mockup format: "March 15, 2026"
     const dateLabel = format(startDate, 'MMMM d, yyyy');
     const isFree = isEventFree(event);
+
+    const eventFormat = getEventFormat(event);
+    const formatDisplay = eventFormat === 'virtual'
+        ? 'Remote'
+        : eventFormat === 'hybrid'
+            ? 'Hybrid'
+            : 'On-Site';
+
+
 
     const priceDisplay = isFree
         ? 'Free'
         : typeof event.priceMin === 'number'
             ? `$${event.priceMin}`
             : event.priceRange || 'Paid';
-
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
         if (event.eventImageUrl) sources.push(event.eventImageUrl);
@@ -120,99 +140,96 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
         <div
             ref={cardRef}
             onMouseMove={handleMouseMove}
-            className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0A] p-6 backdrop-blur-md transition-all duration-500 hover:border-white/[0.12] hover:bg-[#101010] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_24px_48px_-12px_rgba(0,0,0,0.5)] md:grid md:grid-cols-[1.6fr,1fr] md:gap-12"
+            className={`group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 text-foreground shadow-sm transition-all duration-300 cursor-pointer dark:bg-card/40 hover:border-border-strong hover:-translate-y-1 hover:shadow-md md:grid md:grid-cols-[1fr_350px] md:gap-6 md:items-start ${accentClass}`}
             onClick={onClick}
         >
-            {/* Spotlight Gradient - Made subtler */}
+            {/* Spotlight Gradient - Theme aware */}
             <div
                 className="pointer-events-none absolute -inset-px opacity-0 transition duration-500 group-hover:opacity-100"
                 style={{
-                    background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.04), transparent 40%)`,
+                    background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, var(--accent-primary-light), transparent 40%)`,
                 }}
             />
 
-            {/* Left Pane: Main Info (65%) */}
+            {/* Left Pane: Main Info */}
             <div className="flex flex-col relative z-10 h-full">
                 {/* Header: Logo + Title */}
-                <div className="flex items-start gap-4 mb-4">
+                <div className="flex items-start gap-4 mb-2">
                     {/* Logo - Dimmed by default, color on hover */}
-                    <div className="w-12 h-12 shrink-0 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center overflow-hidden shadow-sm transition-all duration-500 group-hover:border-white/[0.1] group-hover:bg-white/[0.05]">
+                    <div className="h-11 w-11 shrink-0 rounded-lg bg-background border border-border/60 flex items-center justify-center overflow-hidden shadow-sm transition-all duration-500 group-hover:border-border group-hover:bg-background mt-1">
                         {activeLogoSrc ? (
                             <Image
                                 src={activeLogoSrc}
                                 alt={logoAltText}
-                                width={48}
-                                height={48}
-                                className="w-full h-full object-contain p-1.5 opacity-50 grayscale transition-all duration-500 group-hover:opacity-100 group-hover:grayscale-0"
+                                width={44}
+                                height={44}
+                                className="w-full h-full object-contain p-1.5 opacity-90 grayscale transition-all duration-500 group-hover:opacity-100 group-hover:grayscale-0"
                                 onError={handleLogoError}
                             />
                         ) : (
-                            <div className="text-xl font-bold text-white/20 group-hover:text-white/40 transition-colors">
+                            <div className="text-xl font-bold text-muted-foreground/50 group-hover:text-foreground/80 transition-colors">
                                 {event.title.charAt(0)}
                             </div>
                         )}
                     </div>
 
-                    <div className="min-w-0 flex flex-col pt-0.5">
-                        <div className="flex items-center gap-2 mb-1.5">
-
-                            <h3 className="text-[18px] font-medium text-white/90 leading-tight tracking-tight group-hover:text-white transition-colors truncate pr-4">
+                    <div className="min-w-0 flex flex-col pt-1">
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-[16px] font-semibold text-foreground leading-tight tracking-tight group-hover:text-foreground transition-colors truncate pr-4">
                                 {event.title}
                             </h3>
+                        </div>
+                        {/* Date/Time Sub-header - Matching EventCard */}
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground/80">
+                            <span>{dateLabel}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Description */}
-                <p className="text-[15px] text-white/60 mb-8 leading-relaxed line-clamp-3 pr-4 font-normal">
+                <p className="text-[13px] text-muted-foreground/90 mb-0 leading-relaxed line-clamp-6 pl-[60px] pr-4 font-normal">
                     {event.description || 'No description available for this event.'}
                 </p>
-
-                {/* Footer: Meta (Icons + Monospace) */}
-                <div className="mt-auto flex items-center gap-6 text-[13px] font-mono text-white/40">
-                    <div className="flex items-center gap-2">
-                        <MapPin size={14} className="text-white/30" />
-                        <span className="truncate max-w-[140px]">{event.location || 'TBA'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <CalendarBlank size={14} className="text-white/30" />
-                        <span>{dateLabel}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Ticket size={14} className="text-white/30" />
-                        <span>{priceDisplay}</span>
-                    </div>
-                </div>
             </div>
 
-            {/* Right Pane: Highlights (35%) - "Stealth" Sidebar */}
+            {/* Right Pane: match details */}
             <div className="hidden md:flex flex-col relative z-10 h-full pt-1">
-                <div className="flex items-end gap-4 mb-6">
-                    <div className="flex-1">
-                        <div className="mb-2 flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-gray-500 font-sans">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex-1 mr-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold text-muted-foreground font-sans">
                                 {recommendationScore}% match
                             </span>
-
                         </div>
                         <ProgressBar
                             value={recommendationScore}
                             showPercentage={false}
                             height="h-1"
-                            bgColor="bg-blue-500/20"
-                            color="bg-blue-500"
+                            bgColor="bg-primary/20"
+                            color="bg-primary"
                             className="space-y-0"
                         />
                     </div>
-
-                    <div className="flex items-center gap-1 mb-0.5 relative" ref={actionMenuRef}>
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100" ref={actionMenuRef}>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onBookmark?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isBookmarked}
+                            disabled={isBookmarking}
+                        >
+                            <BookmarkSimple size={16} weight={isBookmarked ? 'fill' : 'regular'} />
+                        </button>
                         <button
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onShortlistToggle?.(event);
                             }}
-                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/15' : 'text-white/20 hover:text-white/80 hover:bg-white/5'}`}
+                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-500 bg-violet-500/10 dark:text-violet-300 dark:bg-violet-500/15' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'}`}
                             aria-pressed={isInShortlist}
                             aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                         >
@@ -223,22 +240,9 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onBookmark?.(event);
-                            }}
-                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isBookmarked ? 'text-amber-400' : 'text-white/10 hover:text-white/60 hover:bg-white/5'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            aria-pressed={isBookmarked}
-                            disabled={isBookmarking}
-                        >
-                            <BookmarkSimple size={16} weight={isBookmarked ? 'fill' : 'regular'} />
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
                                 setIsActionMenuOpen((prev) => !prev);
                             }}
-                            className="p-1.5 rounded-md text-white/20 hover:text-white/70 hover:bg-white/5 transition-colors"
+                            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-colors"
                             aria-haspopup="menu"
                             aria-expanded={isActionMenuOpen}
                         >
@@ -248,12 +252,12 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                         {isActionMenuOpen && (
                             <div
                                 role="menu"
-                                className="absolute right-0 top-8 z-40 w-44 rounded-lg border border-white/10 bg-[#121212] p-1.5 shadow-xl"
+                                className="absolute right-0 top-8 z-40 w-44 rounded-lg border border-border bg-popover p-1.5 shadow-xl"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <button
                                     type="button"
-                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-white/90 hover:bg-white/10"
+                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground/90 hover:bg-accent"
                                     onClick={() => {
                                         onFeedbackAction?.(event, 'less-like-this');
                                         setIsActionMenuOpen(false);
@@ -263,7 +267,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 </button>
                                 <button
                                     type="button"
-                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-white/90 hover:bg-white/10"
+                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground/90 hover:bg-accent"
                                     onClick={() => {
                                         onFeedbackAction?.(event, 'not-relevant');
                                         setIsActionMenuOpen(false);
@@ -273,7 +277,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 </button>
                                 <button
                                     type="button"
-                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10"
+                                    className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10"
                                     onClick={() => {
                                         onFeedbackAction?.(event, 'hide');
                                         setIsActionMenuOpen(false);
@@ -287,7 +291,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                 </div>
 
                 {reasons.length > 0 ? (
-                    <ul className="space-y-4 opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+                    <div className="grid grid-cols-[120px_1fr] gap-x-2 gap-y-3 pl-0">
                         {reasons.map((reason, idx) => {
                             const parts = reason.split(': ');
                             const hasKey = parts.length > 1;
@@ -295,30 +299,43 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                             const value = hasKey ? parts.slice(1).join(': ') : reason;
 
                             return (
-                                <li key={idx} className="flex items-start gap-3">
-                                    {/* Custom Dash Bullet */}
-                                    <div className="w-2.5 h-[1.5px] bg-white/20 mt-[7px] shrink-0 rounded-full" />
-                                    <span className="text-[13px] leading-snug">
-                                        {hasKey ? (
-                                            <>
-                                                <span className="text-[#8A8F98]">{label} </span>
-                                                <span className="text-white font-medium">{value}</span>
-                                            </>
-                                        ) : (
-                                            <span className="text-white/50">{value}</span>
-                                        )}
-                                    </span>
-                                </li>
+                                <React.Fragment key={idx}>
+                                    <div className="text-[13px] text-muted-foreground leading-snug">
+                                        {hasKey ? label : <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 inline-block align-middle" />}
+                                    </div>
+                                    <div className="text-[13px] font-medium text-foreground leading-snug">
+                                        {value}
+                                    </div>
+                                </React.Fragment>
                             );
                         })}
-                    </ul>
+                    </div>
                 ) : (
-                    <div className="flex items-center justify-center h-full text-[13px] text-white/20 italic font-mono opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="flex items-center justify-center h-full text-[13px] text-muted-foreground/60 italic font-mono transition-opacity duration-300">
                         Recommended for you
                     </div>
                 )}
             </div>
 
+            {/* Footer: Spanning full width */}
+            <div className="md:col-span-2 flex items-center justify-between pt-4 border-t border-border/25 mt-2">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60 min-w-0">
+                    <MapPin size={12} weight="fill" className="text-gray-400 dark:text-muted-foreground/40 flex-shrink-0" />
+                    <span className="truncate max-w-[140px]">{event.location || 'Location TBA'}</span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="px-1.5 py-0.5 rounded-[4px] bg-blue-50 dark:bg-blue-500/20 text-[10px] font-mono text-blue-700 dark:text-blue-200 uppercase tracking-wider">
+                        {formatDisplay}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider ${isFree
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
+                        }`}>
+                        {priceDisplay}
+                    </span>
+                </div>
+            </div>
             {/* Mobile Bookmark (Absolute top right) */}
             <div className="absolute top-4 right-4 md:hidden z-20">
                 <button
@@ -327,7 +344,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                         e.stopPropagation();
                         onBookmark?.(event);
                     }}
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isBookmarked ? 'text-amber-400 bg-amber-400/10' : 'text-white/40 bg-white/5'}`}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isBookmarked ? 'text-amber-500 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-400/10' : 'text-muted-foreground/60 bg-background/40'}`}
                 >
                     <BookmarkSimple size={18} weight={isBookmarked ? 'fill' : 'regular'} />
                 </button>

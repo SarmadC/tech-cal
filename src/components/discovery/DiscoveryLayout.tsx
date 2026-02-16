@@ -36,7 +36,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     layout = 'grid'
 }) => {
     return (
-        <div className={`${minHeightClassName} bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
+        <div className={`${minHeightClassName} bg-muted/30 dark:bg-background p-4 lg:p-6 transition-colors ${className}`}>
             <div className="max-w-[1600px] mx-auto">
 
                 {/* Header Section */}

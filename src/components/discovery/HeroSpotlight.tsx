@@ -46,11 +46,7 @@ const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
 
     if (heroEvents.length === 0) return null;
 
-    const gridCols = heroEvents.length === 1
-        ? 'grid-cols-1 max-w-2xl'
-        : heroEvents.length === 2
-            ? 'grid-cols-1 md:grid-cols-2'
-            : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+    const gridClass = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6';
 
     return (
         <section className="mb-8">
@@ -61,19 +57,20 @@ const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
                 </h2>
             </div>
 
-            <div className={`grid ${gridCols} gap-6`}>
+            <div className={gridClass}>
                 {heroEvents.map((event) => (
-                    <HeroEventCard
-                        key={event.id}
-                        event={event}
-                        onClick={() => onEventSelect?.(event)}
-                        onBookmark={onBookmark}
-                        onFeedbackAction={onFeedbackAction}
-                        onShortlistToggle={onShortlistToggle}
-                        isInShortlist={isInShortlist?.(event.id)}
-                        isBookmarked={isBookmarked(event.id)}
-                        isBookmarking={pendingBookmarkIds.has(event.id)}
-                    />
+                    <div className={heroEvents.length === 1 ? 'md:col-span-2' : 'col-span-1'} key={event.id}>
+                        <HeroEventCard
+                            event={event}
+                            onClick={() => onEventSelect?.(event)}
+                            onBookmark={onBookmark}
+                            onFeedbackAction={onFeedbackAction}
+                            onShortlistToggle={onShortlistToggle}
+                            isInShortlist={isInShortlist?.(event.id)}
+                            isBookmarked={isBookmarked(event.id)}
+                            isBookmarking={pendingBookmarkIds.has(event.id)}
+                        />
+                    </div>
                 ))}
             </div>
         </section>
