@@ -16,6 +16,7 @@ import BookmarkEventButton from '@/components/events/BookmarkEventButton';
 import { ShareButtons } from '@/components/social/ShareButtons';
 import { EmbedButton } from '@/components/social/EmbedButton';
 import { SITE_URL } from '@/config/site';
+import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -412,6 +413,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         <ArrowSquareOut className="w-3.5 h-3.5 opacity-70" />
                                     </a>
                                 )}
+
+                                <PublicEventMoreActions eventId={event.id} />
                             </div>
 
                             <div className="divide-y divide-border-subtle">

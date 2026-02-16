@@ -1,15 +1,35 @@
 // src/components/calendar/EventActions.tsx
 'use client';
 import { FC, useState, useRef, useEffect } from 'react';
-import { CalendarPlusIcon, ShareNetworkIcon, DownloadSimpleIcon, DotsThreeVerticalIcon, CheckCircle, Printer, FilePdf } from '@phosphor-icons/react';
+import { CalendarPlusIcon, ShareNetworkIcon, DownloadSimpleIcon, DotsThreeVerticalIcon, CheckCircle, Printer, FilePdf, BriefcaseIcon } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { useEventActions } from '@/hooks/useEventActions';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { format } from 'date-fns';
+import ManagerJustificationModal, { prefetchManagerJustification } from './ManagerJustificationModal';
 
 interface EventActionsProps {
     event: Event;
+}
+
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function sanitizePrintUrl(value: string | null | undefined): string | null {
+    if (!value) return null;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
+    } catch {
+        return null;
+    }
 }
 
 const EventActions: FC<EventActionsProps> = ({ event }) => {
@@ -18,6 +38,7 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
     const { showSuccess, showError } = useSnackbar();
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [isTracking, setIsTracking] = useState(false);
+    const [showJustification, setShowJustification] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
 
     const eventIsBookmarked = isBookmarked(event.id);
@@ -44,12 +65,13 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
     // Handle print
     const handlePrint = () => {
         setShowMoreMenu(false);
+        const safeSourceUrl = sanitizePrintUrl(event.sourceUrl);
 
         // Create a print-friendly version of the event
         const printContent = `
             <html>
             <head>
-                <title>${event.title}</title>
+                <title>${escapeHtml(event.title)}</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
                     h1 { font-size: 24px; margin-bottom: 8px; }
@@ -61,20 +83,22 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                 </style>
             </head>
             <body>
-                <h1>${event.title}</h1>
+                <h1>${escapeHtml(event.title)}</h1>
                 <div class="meta">
                     <p><strong>Date:</strong> ${format(new Date(event.startTime), 'EEEE, MMMM d, yyyy')} at ${format(new Date(event.startTime), 'h:mm a')}</p>
-                    ${event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : ''}
-                    ${event.organizer ? `<p><strong>Organizer:</strong> ${event.organizer}</p>` : ''}
+                    ${event.location ? `<p><strong>Location:</strong> ${escapeHtml(event.location)}</p>` : ''}
+                    ${event.organizer ? `<p><strong>Organizer:</strong> ${escapeHtml(event.organizer)}</p>` : ''}
                 </div>
-                ${event.description ? `<div class="section"><div class="section-title">Description</div><div class="description">${event.description}</div></div>` : ''}
-                ${event.sourceUrl ? `<div class="section"><p><strong>More Info:</strong> ${event.sourceUrl}</p></div>` : ''}
+                ${event.description ? `<div class="section"><div class="section-title">Description</div><div class="description">${escapeHtml(event.description)}</div></div>` : ''}
+                ${safeSourceUrl ? `<div class="section"><p><strong>More Info:</strong> ${escapeHtml(safeSourceUrl)}</p></div>` : ''}
             </body>
             </html>
         `;
 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
+            const closeWindow = () => printWindow.close();
+            printWindow.addEventListener('afterprint', closeWindow, { once: true });
             printWindow.document.write(printContent);
             printWindow.document.close();
             printWindow.print();
@@ -84,12 +108,13 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
     // Handle export to PDF (uses print dialog with PDF option)
     const handleExportPdf = () => {
         setShowMoreMenu(false);
+        const safeSourceUrl = sanitizePrintUrl(event.sourceUrl);
 
         // Create PDF-optimized content
         const pdfContent = `
             <html>
             <head>
-                <title>${event.title} - Event Details</title>
+                <title>${escapeHtml(event.title)} - Event Details</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; }
                     h1 { font-size: 28px; margin-bottom: 8px; color: #111; }
@@ -108,24 +133,26 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                 </style>
             </head>
             <body>
-                <h1>${event.title}</h1>
+                <h1>${escapeHtml(event.title)}</h1>
                 <div class="subtitle">Event Details</div>
                 <div class="grid">
                     <div class="info-block">
                         <div class="info-label">Date & Time</div>
                         <div class="info-value">${format(new Date(event.startTime), 'EEEE, MMMM d, yyyy')}<br/>${format(new Date(event.startTime), 'h:mm a')}</div>
                     </div>
-                    ${event.location ? `<div class="info-block"><div class="info-label">Location</div><div class="info-value">${event.location}</div></div>` : ''}
-                    ${event.organizer ? `<div class="info-block"><div class="info-label">Organizer</div><div class="info-value">${event.organizer}</div></div>` : ''}
-                    ${event.sourceUrl ? `<div class="info-block"><div class="info-label">Event Link</div><div class="info-value" style="word-break: break-all;">${event.sourceUrl}</div></div>` : ''}
+                    ${event.location ? `<div class="info-block"><div class="info-label">Location</div><div class="info-value">${escapeHtml(event.location)}</div></div>` : ''}
+                    ${event.organizer ? `<div class="info-block"><div class="info-label">Organizer</div><div class="info-value">${escapeHtml(event.organizer)}</div></div>` : ''}
+                    ${safeSourceUrl ? `<div class="info-block"><div class="info-label">Event Link</div><div class="info-value" style="word-break: break-all;">${escapeHtml(safeSourceUrl)}</div></div>` : ''}
                 </div>
-                ${event.description ? `<div class="description-section"><div class="description-title">About This Event</div><div class="description">${event.description}</div></div>` : ''}
+                ${event.description ? `<div class="description-section"><div class="description-title">About This Event</div><div class="description">${escapeHtml(event.description)}</div></div>` : ''}
             </body>
             </html>
         `;
 
         const pdfWindow = window.open('', '_blank');
         if (pdfWindow) {
+            const closeWindow = () => pdfWindow.close();
+            pdfWindow.addEventListener('afterprint', closeWindow, { once: true });
             pdfWindow.document.write(pdfContent);
             pdfWindow.document.close();
             // Small delay to ensure content is rendered before print dialog
@@ -151,6 +178,16 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [showMoreMenu]);
+
+    useEffect(() => {
+        const prefetchTimer = window.setTimeout(() => {
+            void prefetchManagerJustification(event.id);
+        }, 300);
+
+        return () => {
+            window.clearTimeout(prefetchTimer);
+        };
+    }, [event.id]);
 
     return (
         <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50">
@@ -191,7 +228,19 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                 {/* More menu */}
                 <div className="relative" ref={moreMenuRef}>
                     <button 
-                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                        onClick={() => {
+                            const nextIsOpen = !showMoreMenu;
+                            setShowMoreMenu(nextIsOpen);
+                            if (nextIsOpen) {
+                                void prefetchManagerJustification(event.id);
+                            }
+                        }}
+                        onMouseEnter={() => {
+                            void prefetchManagerJustification(event.id);
+                        }}
+                        onFocus={() => {
+                            void prefetchManagerJustification(event.id);
+                        }}
                         className="flex items-center gap-1.5 px-3 py-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors border border-gray-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                         title="More actions"
                         aria-expanded={showMoreMenu}
@@ -238,6 +287,17 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                                 <span>Export to PDF</span>
                             </button>
                             <button
+                                onClick={() => {
+                                    setShowJustification(true);
+                                    setShowMoreMenu(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors focus:outline-none focus:bg-gray-700"
+                                role="menuitem"
+                            >
+                                <BriefcaseIcon className="w-4 h-4" />
+                                <span>Convince My Manager</span>
+                            </button>
+                            <button
                                 onClick={handlePrint}
                                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 rounded-b-lg transition-colors focus:outline-none focus:bg-gray-700"
                                 role="menuitem"
@@ -249,6 +309,11 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                     )}
                 </div>
             </div>
+            <ManagerJustificationModal
+                eventId={event.id}
+                isOpen={showJustification}
+                onClose={() => setShowJustification(false)}
+            />
         </div>
     );
 };

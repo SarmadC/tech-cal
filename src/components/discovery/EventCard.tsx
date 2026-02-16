@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, DotsThree, Star } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Star, Briefcase } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import RecommendationContext from './RecommendationContext';
 import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
+import ManagerJustificationModal, { prefetchManagerJustification } from '@/components/calendar/ManagerJustificationModal';
 
 interface EventCardProps {
     event: Event & { careerImpact?: CareerImpactScore };
@@ -56,6 +57,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
     showHoverMetaChips = false,
     showShortlistAction = true,
 }) => {
+    const CLICK_GUARD_MS = 350;
     const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
     const accentClass = CARD_ACCENTS[colorIndex];
 
@@ -90,7 +92,9 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
     const [isActionMenuOpen, setIsActionMenuOpen] = React.useState(false);
+    const [showManagerJustification, setShowManagerJustification] = React.useState(false);
     const actionMenuRef = React.useRef<HTMLDivElement>(null);
+    const suppressCardClickUntilRef = React.useRef<number>(0);
 
     React.useEffect(() => {
         setActiveLogoSrc(logoSources[0] ?? null);
@@ -100,6 +104,8 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         if (!isActionMenuOpen) {
             return;
         }
+
+        void prefetchManagerJustification(event.id);
 
         const handleOutsideClick = (eventTarget: MouseEvent) => {
             if (!actionMenuRef.current) {
@@ -114,7 +120,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
         document.addEventListener('mousedown', handleOutsideClick);
         return () => document.removeEventListener('mousedown', handleOutsideClick);
-    }, [isActionMenuOpen]);
+    }, [event.id, isActionMenuOpen]);
 
     const handleLogoError = React.useCallback(() => {
         if (!activeLogoSrc) {
@@ -134,10 +140,29 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         setIsActionMenuOpen(false);
     }, [event, onFeedbackAction]);
 
+    const suppressCardClicks = React.useCallback((durationMs = CLICK_GUARD_MS) => {
+        suppressCardClickUntilRef.current = Date.now() + durationMs;
+    }, []);
+
+    const handleCardClick = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (Date.now() < suppressCardClickUntilRef.current || showManagerJustification || isActionMenuOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        onClick?.();
+    }, [isActionMenuOpen, onClick, showManagerJustification]);
+
+    const handleManagerJustificationClose = React.useCallback(() => {
+        setShowManagerJustification(false);
+        // Prevent click-through when the dialog closes.
+        suppressCardClicks();
+    }, [suppressCardClicks]);
+
     return (
         <div
             className={`group/event-card relative flex flex-col rounded-[6px] border border-white/5 bg-card p-5 text-foreground shadow-none transition-all duration-300 cursor-pointer dark:bg-[#0a0a0a] hover:border-gray-600 hover:-translate-y-1 hover:shadow-xl ${accentClass}`}
-            onClick={onClick}
+            onClick={handleCardClick}
             onMouseLeave={() => setIsActionMenuOpen(false)}
             role="article"
         >
@@ -187,6 +212,12 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 e.stopPropagation();
                                 setIsActionMenuOpen((prev) => !prev);
                             }}
+                            onMouseEnter={() => {
+                                void prefetchManagerJustification(event.id);
+                            }}
+                            onFocus={() => {
+                                void prefetchManagerJustification(event.id);
+                            }}
                             className="p-1.5 rounded-md transition-all text-muted-foreground/50 hover:text-foreground hover:bg-accent/10"
                             aria-haspopup="menu"
                             aria-expanded={isActionMenuOpen}
@@ -211,6 +242,22 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 }}
                             >
                                 Why this event
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground hover:bg-accent/50"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    suppressCardClicks();
+                                    setShowManagerJustification(true);
+                                    setIsActionMenuOpen(false);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Briefcase size={12} />
+                                    Convince My Manager
+                                </span>
                             </button>
                             <button
                                 type="button"
@@ -330,6 +377,11 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                     </span>
                 </div>
             </div>
+            <ManagerJustificationModal
+                eventId={event.id}
+                isOpen={showManagerJustification}
+                onClose={handleManagerJustificationClose}
+            />
         </div>
     );
 }, (prevProps, nextProps) => {
