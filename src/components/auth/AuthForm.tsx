@@ -24,6 +24,8 @@ export function AuthForm({
 }: AuthFormProps) {
     const [state, formAction] = useActionState(action, initialState);
     const hasHandledSuccess = useRef(false);
+    const onSuccessRef = useRef(onSuccess);
+    onSuccessRef.current = onSuccess;
     const { showSuccess, showError } = useSnackbar();
 
     useEffect(() => {
@@ -31,13 +33,11 @@ export function AuthForm({
         if (state.success && !hasHandledSuccess.current) {
             hasHandledSuccess.current = true;
             showSuccess(state.message || 'Success!');
-            
+
             // Give the auth context a brief moment to update before calling onSuccess
             // Reduced delay to improve perceived performance
             setTimeout(() => {
-                if (onSuccess) {
-                    onSuccess(state);
-                }
+                onSuccessRef.current?.(state);
             }, 100);
         } else if (state.message && !state.success && (state.errors?._form || Object.keys(state.errors ?? {}).length === 0)) {
             // Show error snackbar only for general form errors
@@ -48,7 +48,7 @@ export function AuthForm({
         if (!state.success) {
             hasHandledSuccess.current = false;
         }
-    }, [state, onSuccess, showSuccess, showError]);
+    }, [state, showSuccess, showError]);
 
     return (
         <form action={formAction} className="space-y-6" noValidate>
