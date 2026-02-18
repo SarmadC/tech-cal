@@ -5,7 +5,7 @@
  * Uses a "fail sticky" strategy to avoid downgrading paying users on transient errors.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import {
@@ -277,15 +277,17 @@ export function useSubscription(): UseSubscriptionReturn {
     : FREE_TIER_LIMITS.maxRecommendations;
 
   // New computed values for billing UI
-  const accessEndsAt = getAccessEndsAt(subscription);
+  // Memoize Date-returning functions to prevent new object references on every render,
+  // which would break downstream useMemo in SubscriptionContext and cause re-render cascades
+  const accessEndsAt = useMemo(() => getAccessEndsAt(subscription), [subscription]);
   const gracePeriodDaysLeft = getGracePeriodDaysLeft(subscription);
   const trialExpired = checkTrialExpired(subscription);
-  
+
   // Check if user has already used a free trial (cannot trial again)
   const hasUsedTrial = !!(subscription?.trial_started_at);
 
   // Calculate days until renewal for active subscribers
-  const daysUntilRenewal = (() => {
+  const daysUntilRenewal = useMemo(() => {
     if (!subscription || subscription.status !== 'active' || !subscription.current_period_end) {
       return null;
     }
@@ -294,7 +296,7 @@ export function useSubscription(): UseSubscriptionReturn {
     const diffMs = renewalDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
-  })();
+  }, [subscription]);
 
   return {
     subscription,

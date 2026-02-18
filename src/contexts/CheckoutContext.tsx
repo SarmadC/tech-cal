@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 type PlanType = 'monthly' | 'annual';
 
@@ -37,14 +37,16 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
         setIsOpen(false);
     }, []);
 
+    const contextValue = useMemo(() => ({
+        isOpen,
+        checkoutOptions,
+        openCheckout,
+        closeCheckout,
+        setCheckoutUser
+    }), [isOpen, checkoutOptions, openCheckout, closeCheckout, setCheckoutUser]);
+
     return (
-        <CheckoutContext.Provider value={{
-            isOpen,
-            checkoutOptions,
-            openCheckout,
-            closeCheckout,
-            setCheckoutUser
-        }}>
+        <CheckoutContext.Provider value={contextValue}>
             {children}
         </CheckoutContext.Provider>
     );

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import posthog from 'posthog-js';
 
@@ -210,7 +210,7 @@ function LoginPageContent() {
         }
     }, [user, loading, initialized, isOAuthLoading]);
 
-    const initialState: AuthFormState = { message: '', success: false };
+    const initialState = useMemo<AuthFormState>(() => ({ message: '', success: false }), []);
     const verificationEmail = searchParams.get('email') || '';
     const showVerificationNotice =
         searchParams.get('verify') === '1' || searchParams.get('verify') === 'true';
@@ -249,10 +249,10 @@ function LoginPageContent() {
         }
     };
 
-    const handleLoginSuccess = () => {
+    const handleLoginSuccess = useCallback(() => {
         const redirectTo = getIntendedDestination();
         router.push(redirectTo);
-    };
+    }, [getIntendedDestination, router]);
 
     // --- IMPROVED FIX ---
 

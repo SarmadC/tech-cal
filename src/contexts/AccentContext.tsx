@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 
 type AccentColor = 'blue' | 'purple' | 'orange' | 'teal' | 'emerald';
 
@@ -28,18 +28,16 @@ export function AccentProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const setAccent = (newAccent: AccentColor) => {
+    const setAccent = useCallback((newAccent: AccentColor) => {
         setAccentState(newAccent);
         localStorage.setItem('techcal-accent', newAccent);
         document.documentElement.setAttribute('data-accent', newAccent);
-    };
+    }, []);
 
-    // Avoid hydration mismatch by not rendering until mounted if needed, 
-    // but here we just need to provide the context. 
-    // The effect handles the attribute.
+    const contextValue = useMemo(() => ({ accent, setAccent }), [accent, setAccent]);
 
     return (
-        <AccentContext.Provider value={{ accent, setAccent }}>
+        <AccentContext.Provider value={contextValue}>
             {children}
         </AccentContext.Provider>
     );
