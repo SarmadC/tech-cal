@@ -118,6 +118,8 @@ export interface Event {
     eventFormat?: 'Online' | 'In-person' | 'Hybrid' | null;
     targetAudience?: string | null;
     prerequisites?: string | null;
+    networkAttendingCount?: number;
+    networkSampleAvatars?: string[];
 
     
     // Agenda and speaker information

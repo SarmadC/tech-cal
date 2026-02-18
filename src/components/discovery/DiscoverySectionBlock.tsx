@@ -16,8 +16,11 @@ interface DiscoverySectionBlockProps {
     events: EventWithImpact[];
     onEventSelect?: (event: Event) => void;
     onBookmark?: (event: Event) => Promise<void> | void;
+    onAttendanceToggle?: (event: Event) => Promise<void> | void;
     isBookmarked: (eventId: string) => boolean;
+    isAttending: (eventId: string) => boolean;
     pendingBookmarkIds: Set<string>;
+    pendingAttendanceIds: Set<string>;
     defaultVisibleCount?: number;
     expanded?: boolean;
     onExpandedChange?: (expanded: boolean) => void;
@@ -34,8 +37,11 @@ const DiscoverySectionBlock: React.FC<DiscoverySectionBlockProps> = ({
     events,
     onEventSelect,
     onBookmark,
+    onAttendanceToggle,
     isBookmarked,
+    isAttending,
     pendingBookmarkIds,
+    pendingAttendanceIds,
     defaultVisibleCount = 3,
     expanded,
     onExpandedChange,
@@ -88,8 +94,11 @@ const DiscoverySectionBlock: React.FC<DiscoverySectionBlockProps> = ({
                         event={event}
                         onClick={() => onEventSelect?.(event)}
                         onBookmark={onBookmark}
+                        onAttendanceToggle={onAttendanceToggle}
                         isBookmarked={isBookmarked(event.id)}
                         isBookmarking={pendingBookmarkIds.has(event.id)}
+                        isAttending={isAttending(event.id)}
+                        isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
                         showRecommendationContext
                         quickFitBadges={getQuickFitBadges?.(event) ?? []}
                         onFeedbackAction={onFeedbackAction}

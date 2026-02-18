@@ -35,6 +35,14 @@ export interface RecommendationBatch {
   }>;
 }
 
+type RecommendationSection = RecommendationBatch['section'];
+type RecommendationDisplayItem = RecommendationBatch['recommendations'][number];
+
+interface InteractionTrackingOptions {
+  durationMs?: number;
+  recommendationBatchId?: string;
+}
+
 export interface TrackingOptions {
   enableTracking?: boolean;
   batchSize?: number;
@@ -43,13 +51,65 @@ export interface TrackingOptions {
 
 export function useRecommendationTracking(options: TrackingOptions = {}) {
   const { user } = useAuth();
+  const userId = user?.id;
   const supabase = createClient();
   const sessionIdRef = useRef<string | undefined>(undefined);
   const viewTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const viewStartTimeRef = useRef<number | undefined>(undefined);
+  const sectionBatchMapRef = useRef<Partial<Record<RecommendationSection, string>>>({});
+  const eventBatchMapRef = useRef<Map<string, string>>(new Map());
+  const recentBatchSignatureRef = useRef<Map<RecommendationSection, { signature: string; trackedAt: number }>>(new Map());
   const consentCacheRef = useRef<{ userId: string; hasConsent: boolean | null; cachedAt: number } | null>(null);
   // Track if component is mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
+
+  const buildEventSectionKey = useCallback((section: RecommendationSection, eventId: string): string => {
+    return `${section}:${eventId}`;
+  }, []);
+
+  const rememberBatchAssociations = useCallback((
+    section: RecommendationSection,
+    recommendations: RecommendationDisplayItem[],
+    recommendationBatchId: string
+  ) => {
+    sectionBatchMapRef.current[section] = recommendationBatchId;
+
+    for (const recommendation of recommendations) {
+      const key = buildEventSectionKey(section, recommendation.eventId);
+      eventBatchMapRef.current.set(key, recommendationBatchId);
+    }
+
+    // Keep memory bounded for long-lived sessions.
+    if (eventBatchMapRef.current.size > 2000) {
+      eventBatchMapRef.current.clear();
+    }
+  }, [buildEventSectionKey]);
+
+  const resolveRecommendationBatchId = useCallback((
+    section: RecommendationSection,
+    eventId: string,
+    context?: Record<string, unknown>,
+    explicitRecommendationBatchId?: string
+  ): string | undefined => {
+    if (explicitRecommendationBatchId) {
+      return explicitRecommendationBatchId;
+    }
+
+    const contextBatchId = typeof context?.recommendationBatchId === 'string'
+      ? context.recommendationBatchId
+      : undefined;
+    if (contextBatchId) {
+      return contextBatchId;
+    }
+
+    const eventKey = buildEventSectionKey(section, eventId);
+    const eventBatchId = eventBatchMapRef.current.get(eventKey);
+    if (eventBatchId) {
+      return eventBatchId;
+    }
+
+    return sectionBatchMapRef.current[section];
+  }, [buildEventSectionKey]);
 
   // Generate session ID once per hook instance
   useEffect(() => {
@@ -57,6 +117,12 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       sessionIdRef.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
   }, []);
+
+  useEffect(() => {
+    sectionBatchMapRef.current = {};
+    eventBatchMapRef.current.clear();
+    recentBatchSignatureRef.current.clear();
+  }, [userId]);
 
   // Cached consent check (avoid DB calls on every interaction)
   const checkConsentCached = useCallback(async (userId: string): Promise<boolean> => {
@@ -92,11 +158,11 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         clearTimeout(viewTimerRef.current);
       }
       // Force flush any pending interactions for this user
-      if (user?.id) {
-        BehavioralAnalyticsService.forceFlushUser(user.id);
+      if (userId) {
+        BehavioralAnalyticsService.forceFlushUser(userId);
       }
     };
-  }, [supabase, user?.id]);
+  }, [supabase, userId]);
 
   /**
    * Track user interaction with an event
@@ -106,26 +172,35 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     interactionType: UserInteraction['interactionType'],
     section: UserInteraction['section'],
     position?: number,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    trackingOptions: InteractionTrackingOptions = {}
   ) => {
-    if (!user?.id || !options.enableTracking) return;
+    if (!userId || !options.enableTracking) return;
 
     // Check analytics consent (cached)
-    const hasConsent = await checkConsentCached(user.id);
+    const hasConsent = await checkConsentCached(userId);
     if (!hasConsent) return;
 
+    const recommendationBatchId = resolveRecommendationBatchId(
+      section,
+      eventId,
+      context,
+      trackingOptions.recommendationBatchId
+    );
+
     const interaction: UserInteraction = {
-      userId: user.id,
+      userId,
       eventId,
       interactionType,
       section,
       position,
       algorithmVersion: ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION,
+      durationMs: trackingOptions.durationMs,
       context
     };
 
     await BehavioralAnalyticsService.trackInteraction(
-      user?.id || '',
+      userId,
       interaction.interactionType,
       { 
         eventId: interaction.eventId,
@@ -133,7 +208,8 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         position: interaction.position,
         algorithmVersion: interaction.algorithmVersion,
         durationMs: interaction.durationMs,
-        context: interaction.context
+        context: interaction.context,
+        recommendationBatchId
       },
       supabase
     );
@@ -151,10 +227,11 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         position,
         algorithmVersion: interaction.algorithmVersion,
         durationMs: interaction.durationMs,
+        recommendationBatchId: recommendationBatchId ?? null,
         interactionContext: context ?? null
       }
     });
-  }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
+  }, [userId, supabase, options.enableTracking, checkConsentCached, resolveRecommendationBatchId]);
 
   /**
    * Track when user starts viewing an event (starts timer)
@@ -164,7 +241,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     section: UserInteraction['section'],
     position?: number
   ) => {
-    if (!user?.id || !options.enableTracking) return;
+    if (!userId || !options.enableTracking) return;
 
     viewStartTimeRef.current = Date.now();
     
@@ -175,7 +252,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
 
     // Track view interaction immediately
     trackInteraction(eventId, 'view', section, position);
-  }, [user?.id, trackInteraction, options.enableTracking]);
+  }, [userId, trackInteraction, options.enableTracking]);
 
   /**
    * Track when user stops viewing an event (calculates duration)
@@ -185,38 +262,13 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     section: UserInteraction['section'],
     position?: number
   ) => {
-    if (!user?.id || !options.enableTracking || !viewStartTimeRef.current) return;
+    if (!userId || !options.enableTracking || !viewStartTimeRef.current) return;
 
     const durationMs = Date.now() - viewStartTimeRef.current;
 
     // Only track if viewed for more than 1 second
     if (durationMs > 1000) {
-      const hasConsent = await checkConsentCached(user.id);
-      // Check if still mounted after async operation
-      if (!hasConsent || !isMountedRef.current) return;
-
-      const interaction: UserInteraction = {
-        userId: user.id,
-        eventId,
-        interactionType: 'view',
-        section,
-        position,
-        algorithmVersion: ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION,
-        durationMs
-      };
-
-      await BehavioralAnalyticsService.trackInteraction(
-        user.id,
-        interaction.interactionType,
-        {
-          eventId: interaction.eventId,
-          section: interaction.section,
-          position: interaction.position,
-          algorithmVersion: interaction.algorithmVersion,
-          durationMs: interaction.durationMs
-        },
-        supabase
-      );
+      await trackInteraction(eventId, 'view', section, position, undefined, { durationMs });
     }
 
     // Clear timer and start time
@@ -225,31 +277,77 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       viewTimerRef.current = undefined;
     }
     viewStartTimeRef.current = undefined;
-  }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
+  }, [userId, options.enableTracking, trackInteraction]);
 
   /**
    * Track recommendation batch display
    */
   const trackRecommendationDisplay = useCallback(async (
-    section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins',
-    recommendations: Array<{
-      eventId: string;
-      score: number;
-      position: number;
-    }>,
+    section: RecommendationSection,
+    recommendations: RecommendationDisplayItem[],
     _algorithmVersion: string = 'v1.0'
   ) => {
-    if (!user?.id || !sessionIdRef.current || !options.enableTracking) return;
+    if (!userId || !sessionIdRef.current || !options.enableTracking) return;
 
-    const hasConsent = await checkConsentCached(user.id);
+    const hasConsent = await checkConsentCached(userId);
     // Check if still mounted after async operation
     if (!hasConsent || !isMountedRef.current) return;
 
-    // TODO: Implement recommendation batch tracking in Phase 2
-    // Will require new RPC function or table structure for batch display tracking
-    // For now, individual interactions (view/click) provide sufficient signal
-    // Batch structure for future reference:
-    // { userId, sessionId, algorithmVersion, section, recommendations }
+    const normalizedRecommendations = recommendations.filter(
+      (recommendation): recommendation is RecommendationDisplayItem =>
+        typeof recommendation?.eventId === 'string' && recommendation.eventId.length > 0
+    );
+
+    if (normalizedRecommendations.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const signature = normalizedRecommendations
+      .map(rec => `${rec.eventId}:${rec.position}:${rec.score}`)
+      .join('|');
+    const lastSignature = recentBatchSignatureRef.current.get(section);
+
+    // Dedupe rapid re-renders of the same recommendation batch.
+    if (
+      lastSignature &&
+      lastSignature.signature === signature &&
+      now - lastSignature.trackedAt < 10_000
+    ) {
+      return;
+    }
+
+    recentBatchSignatureRef.current.set(section, {
+      signature,
+      trackedAt: now,
+    });
+
+    let recommendationBatchId: string | null = null;
+
+    const { data: persistedBatch, error: persistError } = await supabase
+      .from('recommendation_batches')
+      .insert({
+        user_id: userId,
+        session_id: sessionIdRef.current,
+        algorithm_version: _algorithmVersion,
+        section,
+        event_ids: normalizedRecommendations.map(rec => rec.eventId),
+        scores: normalizedRecommendations.map(rec => rec.score),
+        shown_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (persistError) {
+      console.warn('Failed to persist recommendation batch display', {
+        userId,
+        section,
+        error: persistError.message
+      });
+    } else if (persistedBatch?.id) {
+      recommendationBatchId = persistedBatch.id;
+      rememberBatchAssociations(section, normalizedRecommendations, persistedBatch.id);
+    }
 
     void sendTelemetryEvent({
       eventType: 'recommendation_batch_displayed',
@@ -259,11 +357,13 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         section
       },
       metadata: {
-        recommendations,
-        algorithmVersion: _algorithmVersion
+        recommendations: normalizedRecommendations,
+        algorithmVersion: _algorithmVersion,
+        recommendationBatchId,
+        persistedToRecommendationBatches: Boolean(recommendationBatchId)
       }
     });
-  }, [user?.id, options.enableTracking, checkConsentCached]);
+  }, [userId, options.enableTracking, checkConsentCached, supabase, rememberBatchAssociations]);
 
   /**
    * Track click interaction
@@ -338,7 +438,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     getSessionId,
     
     // State
-    isTrackingEnabled: !!options.enableTracking && !!user?.id
+    isTrackingEnabled: !!options.enableTracking && !!userId
   };
 }
 

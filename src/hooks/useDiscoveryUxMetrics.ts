@@ -29,6 +29,12 @@ interface SavePayload {
     source: 'bookmark' | 'swipe' | 'shortlist';
 }
 
+interface AttendanceTogglePayload {
+    eventId: string;
+    source: 'card_icon' | 'hero_icon';
+    action: 'set_attending' | 'clear_attending';
+}
+
 export function useDiscoveryUxMetrics({ surface, initialRankingMode }: UseDiscoveryUxMetricsOptions) {
     const sessionStartRef = useRef<number | null>(null);
     const sessionIdRef = useRef<string | null>(null);
@@ -153,6 +159,20 @@ export function useDiscoveryUxMetrics({ surface, initialRankingMode }: UseDiscov
         });
     }, [baseContext, ensureSession]);
 
+    const trackAttendanceToggle = useCallback(({ eventId, source, action }: AttendanceTogglePayload) => {
+        const { sessionId } = ensureSession();
+        void sendTelemetryEvent({
+            eventType: 'discovery_attendance_toggle',
+            sessionId,
+            context: baseContext(),
+            metadata: {
+                eventId,
+                source,
+                action,
+            },
+        });
+    }, [baseContext, ensureSession]);
+
     const trackShortlistAction = useCallback((action: 'add' | 'remove' | 'clear', size: number, eventId?: string) => {
         const { sessionId } = ensureSession();
         void sendTelemetryEvent({
@@ -209,6 +229,7 @@ export function useDiscoveryUxMetrics({ surface, initialRankingMode }: UseDiscov
         trackCardClick,
         trackFeedbackAction,
         trackSave,
+        trackAttendanceToggle,
         trackShortlistAction,
         flushSummary,
     };

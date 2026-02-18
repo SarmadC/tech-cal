@@ -13,6 +13,7 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { CircleNotchIcon } from '@phosphor-icons/react';
 import { TIMEZONE_OPTIONS } from '@/types/career';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import SocialSettingsPanel from './SocialSettingsPanel';
 
 interface ProfileSettingsFormProps {
     profile: AppProfile | null;
@@ -163,7 +164,6 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
         try {
             // Using the server action directly
-            // @ts-ignore - Action types sometimes tricky with direct calls vs hooks
             const result = await uploadAvatarAction(initialState, formData);
 
             if (result.success) {
@@ -248,7 +248,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
     };
 
     return (
-        <div className="relative pb-24">
+        <div className="relative pb-24 space-y-10">
             {/* Header */}
             <div className="mb-8">
                 <h2 className="text-xl font-medium text-[var(--foreground-primary)] mb-1">Profile</h2>
@@ -398,6 +398,8 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                     </div>
                 </div>
             </form>
+
+            <SocialSettingsPanel />
         </div>
     );
 }

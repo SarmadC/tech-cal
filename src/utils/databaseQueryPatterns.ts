@@ -176,11 +176,34 @@ export class DatabaseQueryPatterns {
       position?: number | null;
       algorithm_version?: string;
       duration_ms?: number | null;
+      recommendation_batch_id?: string | null;
     }>,
     supabaseClient: SupabaseClientType
   ) {
     return supabaseClient.rpc('batch_insert_interactions', {
       interactions: interactions
+    });
+  }
+
+  /**
+   * Batch insert interactions with optional recommendation batch linkage.
+   * Uses v2 RPC when attribution to recommendation_batches is needed.
+   */
+  static async batchInsertInteractionsV2(
+    interactions: Array<{
+      user_id: string;
+      event_id?: string | null;
+      interaction_type: string;
+      section: string;
+      position?: number | null;
+      algorithm_version?: string;
+      duration_ms?: number | null;
+      recommendation_batch_id?: string | null;
+    }>,
+    supabaseClient: SupabaseClientType
+  ) {
+    return supabaseClient.rpc('batch_insert_interactions_v2', {
+      interactions
     });
   }
 

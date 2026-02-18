@@ -2,9 +2,10 @@
 
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { FunnelSimple, Repeat, SlidersHorizontal, Tag, MapPin, X } from '@phosphor-icons/react';
+import { SlidersHorizontal } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
+import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
@@ -24,7 +25,6 @@ import { useIsMobile } from '@/hooks/useDeviceDetection';
 import MobileEventListCard from './MobileEventListCard';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
-import { cn } from '@/lib/utils';
 import '@/app/styles/discovery-sidebar.css';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
 import { useRemoteSearchSuggestions } from '@/hooks/useRemoteSearchSuggestions';
@@ -135,11 +135,6 @@ export default function EventListView({ initialCategories, profile, locationOpti
         dateRange: { start: startOfToday, end: null as Date | null },
     }), [startOfToday]);
 
-    const categoryOptions = useMemo<MultiSelectOption[]>(() => initialCategories.map((category) => ({
-        value: category.id,
-        label: category.name,
-    })), [initialCategories]);
-
     const locationSelectOptions = useMemo<MultiSelectOption[]>(() => locationOptions.map((value) => ({
         value,
         label: value,
@@ -160,6 +155,26 @@ export default function EventListView({ initialCategories, profile, locationOpti
         isDetectingLocation,
         isBackgroundRefetch,
     } = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
+    const { countsByEventId } = useNetworkEventCounts(filteredEvents.map((event) => event.id));
+
+    const eventsWithNetwork = useMemo(() => {
+        if (Object.keys(countsByEventId).length === 0) {
+            return filteredEvents;
+        }
+
+        return filteredEvents.map((event) => {
+            const networkCounts = countsByEventId[event.id];
+            if (!networkCounts) {
+                return event;
+            }
+
+            return {
+                ...event,
+                networkAttendingCount: networkCounts.networkCount,
+                networkSampleAvatars: networkCounts.sampleAvatars,
+            };
+        });
+    }, [filteredEvents, countsByEventId]);
 
     const [selectedEvent, setSelectedEvent] = useState<TrackedEvent | null>(null);
     const [isClosing, setIsClosing] = useState(false);
@@ -178,8 +193,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     // Calculate filter counts - use server counts if available, otherwise calculate from filtered events
     const filterCounts = useMemo(() => {
-        return countsFromServer ?? calculateFilterCounts(filteredEvents, initialCategories);
-    }, [countsFromServer, filteredEvents, initialCategories]);
+        return countsFromServer ?? calculateFilterCounts(eventsWithNetwork, initialCategories);
+    }, [countsFromServer, eventsWithNetwork, initialCategories]);
 
     // Hook up search suggestions and history for DiscoveryHeader - NOW positioned correctly
     const { suggestions, isLoading: isSuggestionsLoading } = useRemoteSearchSuggestions({
@@ -203,7 +218,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }, [filters.searchTerm, filters.locations, filters.dateRange, addSearch, refetch]);
 
 
-    const rows: EventRow[] = useMemo(() => filteredEvents.map((event: TrackedEvent) => {
+    const rows: EventRow[] = useMemo(() => eventsWithNetwork.map((event: TrackedEvent) => {
         const startDisplay = formatDate(event.startTime, event.timezone);
         const timeDisplay = formatTime(event.startTime, event.timezone);
         const endDisplay = event.endTime ? formatTime(event.endTime, event.timezone) : null;
@@ -222,7 +237,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
             slug,
             event,
         };
-    }), [filteredEvents]);
+    }), [eventsWithNetwork]);
 
     const handleOpenDetails = useCallback((event: TrackedEvent) => {
         setIsClosing(false);
@@ -316,8 +331,6 @@ export default function EventListView({ initialCategories, profile, locationOpti
         updateFilter('sortDirection', direction);
         updateFilter('page', 1);
     };
-
-    const appliedFiltersLabel = activeFilterCount > 0 ? `${activeFilterCount} filters applied` : 'No filters applied';
 
     const pageSizeOptions = useMemo(() => {
         const base = new Set<number>([10, 20, 50, 100, pagination.pageSize]);

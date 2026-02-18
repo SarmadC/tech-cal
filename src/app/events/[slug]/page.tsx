@@ -1,20 +1,22 @@
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { EventJsonLd, BreadcrumbJsonLd } from '@/components/seo';
-import { formatDate, formatMonthYear, formatTime } from '@/utils/dateUtils';
+import { formatDate, formatMonthYear } from '@/utils/dateUtils';
 import { transformAgendaItemsToApp } from '@/utils/transformers';
 import { EventAgendaSection } from '@/components/events/EventAgendaSection';
 import type { AgendaItem } from '@/types';
 import {
-    ArrowSquareOut,
-    Globe
+    ArrowSquareOut
 } from '@phosphor-icons/react/dist/ssr';
 import BookmarkEventButton from '@/components/events/BookmarkEventButton';
+import AttendanceEventButton from '@/components/events/AttendanceEventButton';
 import { ShareButtons } from '@/components/social/ShareButtons';
 import { EmbedButton } from '@/components/social/EmbedButton';
+import WhosGoingSection from '@/components/events/WhosGoingSection';
 import { SITE_URL } from '@/config/site';
 import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
 
@@ -389,6 +391,10 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                     <aside className="hidden lg:block lg:col-span-4">
                         <div className="rounded-lg border border-border-subtle bg-background-secondary/40 overflow-hidden">
                             <div className="p-4 space-y-3 border-b border-border-subtle">
+                                <AttendanceEventButton
+                                    eventId={event.id}
+                                    loginRedirect={`/events/${event.slug}`}
+                                />
                                 <BookmarkEventButton
                                     eventId={event.id}
                                     event={{
@@ -423,9 +429,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         <span className="text-[11px] text-foreground-tertiary/70">Organizer</span>
                                         <span className="flex items-center gap-2 text-[11px] text-foreground-primary">
                                             {organizer.logo_url && (
-                                                <img
+                                                <Image
                                                     src={organizer.logo_url}
                                                     alt={`${organizer.name} logo`}
+                                                    width={20}
+                                                    height={20}
                                                     className="h-5 w-5 object-contain"
                                                 />
                                             )}
@@ -445,6 +453,10 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                             <div className="px-4 py-3 border-t border-border-subtle">
                                 <span className="text-[11px] text-foreground-tertiary/70 block mb-2">Share</span>
                                 <ShareButtons url={eventUrl} title={event.title} />
+                            </div>
+
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <WhosGoingSection eventId={event.id} />
                             </div>
 
                             <div className="px-4 py-3 border-t border-border-subtle">
@@ -501,12 +513,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 {/* Mobile Sticky Bottom Bar */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-main/95 backdrop-blur-md border-t border-border-subtle lg:hidden z-50">
                     <div className="flex gap-2 max-w-md mx-auto">
-                        <Link
-                            href="/login?redirect=/events"
-                            className="flex-1 h-11 flex items-center justify-center bg-foreground-primary text-background-main font-medium rounded-lg text-[14px]"
-                        >
-                            Track
-                        </Link>
+                        <AttendanceEventButton
+                            eventId={event.id}
+                            loginRedirect={`/events/${event.slug}`}
+                            variant="mobile"
+                        />
                         {event.source_url && (
                             <a
                                 href={event.source_url}

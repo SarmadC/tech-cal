@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { CircleNotchIcon } from '@phosphor-icons/react';
 import { TIMEZONE_OPTIONS } from '@/types/career';
+import SocialSettingsPanel from './SocialSettingsPanel';
 
 interface SettingsMobileProfileProps {
     profile: AppProfile | null;
@@ -228,6 +229,8 @@ export default function SettingsMobileProfile({ profile }: SettingsMobileProfile
                     Your profile information is visible to other users within your organization or events you attend.
                 </p>
             </div>
+
+            <SocialSettingsPanel compact />
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, CalendarBlank, Ticket, DotsThree, Star } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Star, UserCheck } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
@@ -14,11 +14,14 @@ interface HeroEventCardProps {
     event: Event & { careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onBookmark?: (event: Event) => Promise<void> | void;
+    onAttendanceToggle?: (event: Event) => Promise<void> | void;
     onFeedbackAction?: (event: Event & { careerImpact?: CareerImpactScore }, action: DiscoveryFeedbackAction) => void;
     onShortlistToggle?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
     isInShortlist?: boolean;
     isBookmarked?: boolean;
     isBookmarking?: boolean;
+    isAttending?: boolean;
+    isAttendanceUpdating?: boolean;
 }
 
 const CARD_ACCENTS = [
@@ -34,11 +37,14 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
     event,
     onClick,
     onBookmark,
+    onAttendanceToggle,
     onFeedbackAction,
     onShortlistToggle,
     isInShortlist = false,
     isBookmarked = false,
-    isBookmarking = false
+    isBookmarking = false,
+    isAttending = false,
+    isAttendanceUpdating = false
 }) => {
     const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
     const accentClass = CARD_ACCENTS[colorIndex];
@@ -215,6 +221,20 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
+                                onAttendanceToggle?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-500 dark:text-emerald-400' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isAttending}
+                            aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
+                            disabled={isAttendanceUpdating}
+                            aria-busy={isAttendanceUpdating}
+                        >
+                            <UserCheck size={16} weight={isAttending ? 'fill' : 'regular'} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 onBookmark?.(event);
                             }}
                             className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -336,8 +356,22 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                     </span>
                 </div>
             </div>
-            {/* Mobile Bookmark (Absolute top right) */}
-            <div className="absolute top-4 right-4 md:hidden z-20">
+            {/* Mobile quick actions (Absolute top right) */}
+            <div className="absolute top-4 right-4 md:hidden z-20 flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAttendanceToggle?.(event);
+                    }}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isAttending ? 'text-emerald-500 bg-emerald-500/10 dark:text-emerald-400 dark:bg-emerald-400/10' : 'text-muted-foreground/60 bg-background/40'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    aria-pressed={isAttending}
+                    aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
+                    disabled={isAttendanceUpdating}
+                    aria-busy={isAttendanceUpdating}
+                >
+                    <UserCheck size={18} weight={isAttending ? 'fill' : 'regular'} />
+                </button>
                 <button
                     type="button"
                     onClick={(e) => {

@@ -145,8 +145,9 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const hiddenEventIdSet = useMemo(() => new Set(hiddenEventIds), [hiddenEventIds]);
     const shortlistIdSet = useMemo(() => new Set(shortlistIds), [shortlistIds]);
 
-    const { trackedEvents } = useEventEngagement();
-    const { showInfo } = useSnackbar();
+    const { trackedEvents, getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
+    const { showInfo, showError } = useSnackbar();
+    const [pendingAttendanceIds, setPendingAttendanceIds] = useState<Set<string>>(new Set());
 
     const metrics = useDiscoveryUxMetrics({
         surface: 'mobile',
@@ -288,6 +289,37 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         }
         setFeedbackHint('Preference updated. You will see fewer related events.');
     }, [metrics, setCategoryPenalty, setHiddenEventIds]);
+
+    const isAttending = useCallback((eventId: string) => {
+        return getAttendanceStatus(eventId) === 'attending';
+    }, [getAttendanceStatus]);
+
+    const handleAttendanceToggle = useCallback(async (event: EventWithImpact) => {
+        if (!event?.id || pendingAttendanceIds.has(event.id)) {
+            return;
+        }
+
+        const currentlyAttending = getAttendanceStatus(event.id) === 'attending';
+        setPendingAttendanceIds((prev) => new Set(prev).add(event.id));
+
+        try {
+            await setAttendanceStatus(event.id, currentlyAttending ? null : 'attending');
+            metrics.trackAttendanceToggle({
+                eventId: event.id,
+                source: 'card_icon',
+                action: currentlyAttending ? 'clear_attending' : 'set_attending',
+            });
+        } catch (error) {
+            showError('Failed to update attendance status.');
+            console.error('Failed to toggle attendance from mobile discovery card:', error);
+        } finally {
+            setPendingAttendanceIds((prev) => {
+                const next = new Set(prev);
+                next.delete(event.id);
+                return next;
+            });
+        }
+    }, [pendingAttendanceIds, getAttendanceStatus, setAttendanceStatus, metrics, showError]);
 
     const handleShortlistToggle = useCallback((event: EventWithImpact) => {
         const currentlyShortlisted = shortlistIdSet.has(event.id);
@@ -820,6 +852,9 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                     showInfo('Saved with swipe.');
                                 }
                             }}
+                            isAttending={isAttending(event.id)}
+                            isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
+                            onAttendanceToggle={handleAttendanceToggle}
                         />
                     ))
                 )}

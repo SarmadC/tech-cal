@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Event, MultiDayEventInstance } from '@/types';
 import { isEventPast } from '@/utils/dateUtils';
 import { isParentMultiDayEvent } from '@/utils/multiDayEventUtils';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 interface MonthEventCardProps {
     event: Event | MultiDayEventInstance;
@@ -197,11 +198,14 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     const isMultiDayInstance =
         spanInfo !== null ||
         (isParentMultiDayEvent(event) && event.isMultiDay && !!event.endTime);
-    const isMultiDayFirstDay = spanInfo ? spanInfo.isFirst : !('isInstance' in event);
 
-    const timeLabel = isMultiDayInstance ? '' : timeLabelRaw;
-    const durationLabel = isMultiDayInstance ? null : durationLabelRaw;
-    const showCategory = event.category?.name && (!isMultiDayInstance || isMultiDayFirstDay);
+    const summaryLabelParts = [
+        isMultiDayInstance ? '' : timeLabelRaw,
+        isMultiDayInstance ? null : durationLabelRaw,
+    ].filter((value): value is string => Boolean(value));
+    const summaryLabel = summaryLabelParts.join(' · ');
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     const handleClick = (clickEvent: React.MouseEvent) => {
         clickEvent.stopPropagation();
@@ -227,7 +231,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             onMouseLeave={onLeave}
             tabIndex={0}
             role="button"
-            aria-label={`${event.title}`}
+            aria-label={`${event.title}${summaryLabel ? `, ${summaryLabel}` : ''}`}
         >
             <span className="month-event-card-accent" aria-hidden="true" />
 
@@ -247,6 +251,16 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             )}
 
             <span className="month-event-card-label" style={{ padding: '2px 0' }}>{event.title}</span>
+            {networkAttendingCount > 0 && (
+                <NetworkAttendingBadge
+                    eventId={event.id}
+                    telemetrySurface="calendar_month_card"
+                    count={networkAttendingCount}
+                    sampleAvatars={networkSampleAvatars}
+                    compact
+                    className="ml-2 hidden md:inline-flex"
+                />
+            )}
 
             {/* Redundant pills removed for cleaner look as per user request */}
         </div>

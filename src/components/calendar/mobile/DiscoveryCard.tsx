@@ -8,6 +8,7 @@ import {
     Calendar,
     Star,
     DotsThree,
+    UserCheck,
 } from '@phosphor-icons/react';
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
@@ -36,6 +37,9 @@ export interface DiscoveryCardProps {
     onShortlistToggle?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => void;
     isInShortlist?: boolean;
     onSaved?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }, source: 'bookmark' | 'swipe') => void;
+    isAttending?: boolean;
+    isAttendanceUpdating?: boolean;
+    onAttendanceToggle?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => Promise<void> | void;
 }
 
 const LONG_PRESS_DELAY_MS = 500;
@@ -56,19 +60,28 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     onShortlistToggle,
     isInShortlist = false,
     onSaved,
+    isAttending: isAttendingProp,
+    isAttendanceUpdating: isAttendanceUpdatingProp,
+    onAttendanceToggle,
 }) => {
     const hasTrackedView = React.useRef(false);
     const gestureConsumedRef = useRef(false);
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-    const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const { isBookmarked, toggleBookmark, getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
     const { showError } = useSnackbar();
 
     const [isBookmarking, setIsBookmarking] = useState(false);
+    const [internalIsAttendanceUpdating, setInternalIsAttendanceUpdating] = useState(false);
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
     const isBookmarkedValue = isBookmarked(event.id);
+    const internalIsAttending = getAttendanceStatus(event.id) === 'attending';
+    const isAttending = typeof isAttendingProp === 'boolean' ? isAttendingProp : internalIsAttending;
+    const isAttendanceUpdating = typeof isAttendanceUpdatingProp === 'boolean'
+        ? isAttendanceUpdatingProp
+        : internalIsAttendanceUpdating;
 
     React.useEffect(() => {
         if (!hasTrackedView.current && onView) {
@@ -109,6 +122,32 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             setIsBookmarking(false);
         }
     }, [event, isBookmarkedValue, isBookmarking, onSaved, showError, toggleBookmark]);
+
+    const handleAttendanceToggle = React.useCallback(async () => {
+        if (onAttendanceToggle) {
+            try {
+                await onAttendanceToggle(event);
+            } catch (error) {
+                showError('Failed to update attendance');
+                console.error('Failed to toggle attendance from discovery card:', error);
+            }
+            return;
+        }
+
+        if (isAttendanceUpdating) {
+            return;
+        }
+
+        setInternalIsAttendanceUpdating(true);
+        try {
+            await setAttendanceStatus(event.id, isAttending ? null : 'attending');
+        } catch (error) {
+            showError('Failed to update attendance');
+            console.error('Failed to toggle attendance from discovery card:', error);
+        } finally {
+            setInternalIsAttendanceUpdating(false);
+        }
+    }, [onAttendanceToggle, event, isAttendanceUpdating, setAttendanceStatus, isAttending, showError]);
 
     const handleFeedback = React.useCallback((action: DiscoveryFeedbackAction) => {
         onFeedbackAction?.(event, action);
@@ -259,6 +298,26 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                 aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                             >
                                 <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleAttendanceToggle();
+                                }}
+                                className={cn(
+                                    'p-2 rounded-md transition-colors',
+                                    isAttending
+                                        ? 'text-emerald-300 bg-emerald-500/15'
+                                        : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]',
+                                    isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                )}
+                                aria-pressed={isAttending}
+                                aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
+                                disabled={isAttendanceUpdating}
+                            >
+                                <UserCheck size={16} weight={isAttending ? 'fill' : 'regular'} />
                             </button>
 
                             <button

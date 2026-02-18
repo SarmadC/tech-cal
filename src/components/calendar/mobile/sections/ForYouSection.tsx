@@ -5,9 +5,11 @@ import { User } from '@phosphor-icons/react';
 import { Event, AppProfile, TrackedEvent } from '@/types';
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { useForYouTracking } from '@/hooks/useRecommendationTracking';
+import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { DiscoveryService } from '@/services/discoveryService';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from '../DiscoveryCard';
+import { sendTelemetryEvent } from '@/utils/telemetryClient';
 // import CareerProfilePrompt from './CareerProfilePrompt'; // Removed - using enhanced empty state instead
 import BentoGrid from '../../desktop/discovery/BentoGrid';
 
@@ -38,6 +40,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
 }) => {
     const careerProfileLoading = false;
     const hasCareerProfile = true;
+    const { getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
+    const [pendingAttendanceIds, setPendingAttendanceIds] = React.useState<Set<string>>(new Set());
 
     // Personalized tracking for For You section
     const tracking = useForYouTracking();
@@ -173,6 +177,42 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             trackForYouView(event.id, position + 1);
         }
     }, [trackForYouView, isTrackingEnabled]);
+
+    const isAttending = React.useCallback((eventId: string) => {
+        return getAttendanceStatus(eventId) === 'attending';
+    }, [getAttendanceStatus]);
+
+    const handleAttendanceToggle = React.useCallback(async (event: Event) => {
+        if (!event?.id || pendingAttendanceIds.has(event.id)) {
+            return;
+        }
+
+        const currentlyAttending = getAttendanceStatus(event.id) === 'attending';
+        setPendingAttendanceIds((prev) => new Set(prev).add(event.id));
+
+        try {
+            await setAttendanceStatus(event.id, currentlyAttending ? null : 'attending');
+            void sendTelemetryEvent({
+                eventType: 'discovery_attendance_toggle',
+                context: {
+                    surface: 'mobile',
+                },
+                metadata: {
+                    eventId: event.id,
+                    source: 'card_icon',
+                    action: currentlyAttending ? 'clear_attending' : 'set_attending',
+                },
+            });
+        } catch (error) {
+            console.error('[ForYouSection] Failed to toggle attendance:', error);
+        } finally {
+            setPendingAttendanceIds((prev) => {
+                const next = new Set(prev);
+                next.delete(event.id);
+                return next;
+            });
+        }
+    }, [pendingAttendanceIds, getAttendanceStatus, setAttendanceStatus]);
 
 
     // Remove the CareerProfilePrompt - we'll handle this in the empty state below
@@ -342,6 +382,9 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             variant={index === 0 ? 'featured' : 'default'}
             showLearnMore={false}
             className=""
+            isAttending={isAttending(event.id)}
+            isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
+            onAttendanceToggle={handleAttendanceToggle}
         />
     ));
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, DotsThree, Star } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Star, UserCheck } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
@@ -10,13 +10,17 @@ import RecommendationContext from './RecommendationContext';
 import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
 import ManagerJustificationModal, { prefetchManagerJustification } from '@/components/calendar/ManagerJustificationModal';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 interface EventCardProps {
     event: Event & { careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onBookmark?: (event: Event) => Promise<void> | void;
+    onAttendanceToggle?: (event: Event) => Promise<void> | void;
     isBookmarked?: boolean;
     isBookmarking?: boolean;
+    isAttending?: boolean;
+    isAttendanceUpdating?: boolean;
     showRecommendationContext?: boolean;
     quickFitBadges?: QuickFitBadge[];
     onFeedbackAction?: (event: Event, action: DiscoveryFeedbackAction) => void;
@@ -43,8 +47,11 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
     event,
     onClick,
     onBookmark,
+    onAttendanceToggle,
     isBookmarked = false,
     isBookmarking = false,
+    isAttending = false,
+    isAttendanceUpdating = false,
     showRecommendationContext = false,
     quickFitBadges = [],
     onFeedbackAction,
@@ -78,6 +85,8 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         : eventFormat === 'hybrid'
             ? 'Hybrid'
             : 'On-Site';
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
@@ -186,6 +195,25 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
                             </button>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAttendanceToggle?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-400 hover:text-emerald-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isAttending}
+                            aria-label={isAttending ? 'Remove attending status' : "Mark as attending"}
+                            disabled={isAttendanceUpdating}
+                            aria-busy={isAttendanceUpdating}
+                        >
+                            <UserCheck
+                                size={16}
+                                weight={isAttending ? 'fill' : 'regular'}
+                                className="transition-all duration-200"
+                            />
+                        </button>
 
                         <button
                             type="button"
@@ -358,6 +386,16 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                 </div>
             )}
 
+            {networkAttendingCount > 0 && (
+                <NetworkAttendingBadge
+                    eventId={event.id}
+                    telemetrySurface="discover_event_card"
+                    count={networkAttendingCount}
+                    sampleAvatars={networkSampleAvatars}
+                    className="mb-3"
+                />
+            )}
+
             <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
                 <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60 min-w-0">
                     <MapPin size={12} weight="fill" className="text-gray-400 dark:text-muted-foreground/40 flex-shrink-0" />
@@ -391,6 +429,8 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     return (
         prevProps.event === nextProps.event &&
+        prevProps.isAttending === nextProps.isAttending &&
+        prevProps.isAttendanceUpdating === nextProps.isAttendanceUpdating &&
         prevProps.isBookmarked === nextProps.isBookmarked &&
         prevProps.isBookmarking === nextProps.isBookmarking &&
         prevProps.showRecommendationContext === nextProps.showRecommendationContext &&

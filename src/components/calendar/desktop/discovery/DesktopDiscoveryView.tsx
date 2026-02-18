@@ -78,10 +78,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     isSearching,
     countsFromServer
 }) => {
-    const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const { isBookmarked, toggleBookmark, getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
     const { showError, showInfo } = useSnackbar();
 
     const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
+    const [pendingAttendanceIds, setPendingAttendanceIds] = useState<Set<string>>(new Set());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [feedbackHint, setFeedbackHint] = useState<string | null>(null);
     const [explainEvent, setExplainEvent] = useState<EventWithImpact | null>(null);
@@ -246,6 +247,40 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         });
         onEventSelect?.(event);
     }, [metrics, onEventSelect]);
+
+    const isAttending = useCallback((eventId: string) => {
+        return getAttendanceStatus(eventId) === 'attending';
+    }, [getAttendanceStatus]);
+
+    const handleAttendanceToggle = useCallback(async (
+        event: EventWithImpact,
+        source: 'card_icon' | 'hero_icon' = 'card_icon'
+    ) => {
+        if (!event?.id || pendingAttendanceIds.has(event.id)) {
+            return;
+        }
+
+        const currentlyAttending = getAttendanceStatus(event.id) === 'attending';
+        setPendingAttendanceIds((prev) => new Set(prev).add(event.id));
+
+        try {
+            await setAttendanceStatus(event.id, currentlyAttending ? null : 'attending');
+            metrics.trackAttendanceToggle({
+                eventId: event.id,
+                source,
+                action: currentlyAttending ? 'clear_attending' : 'set_attending',
+            });
+        } catch (error) {
+            showError('Failed to update attendance');
+            console.error('Failed to toggle attendance from discovery card:', error);
+        } finally {
+            setPendingAttendanceIds((prev) => {
+                const next = new Set(prev);
+                next.delete(event.id);
+                return next;
+            });
+        }
+    }, [pendingAttendanceIds, getAttendanceStatus, setAttendanceStatus, showError, metrics]);
 
     const handleFeedbackAction = useCallback((event: EventWithImpact, action: DiscoveryFeedbackAction) => {
         metrics.trackFeedbackAction(event.id, action);
@@ -532,11 +567,14 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                             events={eventsForGrid}
                             onEventSelect={(event) => handleCardClick(event as EventWithImpact, 0, 'hero')}
                             onBookmark={handleBookmarkToggle}
+                            onAttendanceToggle={(event) => handleAttendanceToggle(event as EventWithImpact, 'hero_icon')}
                             onFeedbackAction={handleFeedbackAction}
                             onShortlistToggle={handleShortlistToggle}
                             isInShortlist={(eventId) => shortlistIdSet.has(eventId)}
                             isBookmarked={isBookmarked}
+                            isAttending={isAttending}
                             pendingBookmarkIds={pendingBookmarkIds}
+                            pendingAttendanceIds={pendingAttendanceIds}
                         />
 
                         {sections.map((section) => (
@@ -548,8 +586,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                                 events={section.events}
                                 onEventSelect={(event) => handleCardClick(event as EventWithImpact, undefined, section.id)}
                                 onBookmark={handleBookmarkToggle}
+                                onAttendanceToggle={handleAttendanceToggle}
                                 isBookmarked={isBookmarked}
+                                isAttending={isAttending}
                                 pendingBookmarkIds={pendingBookmarkIds}
+                                pendingAttendanceIds={pendingAttendanceIds}
                                 expanded={sectionExpansion[section.id] ?? false}
                                 onExpandedChange={(expanded) => handleSectionExpansionChange(section.id, expanded)}
                                 getQuickFitBadges={getBadgesForEvent}
@@ -567,8 +608,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                                 events={remainingEvents}
                                 onEventSelect={(event) => handleCardClick(event as EventWithImpact, undefined, 'more-events')}
                                 onBookmark={handleBookmarkToggle}
+                                onAttendanceToggle={handleAttendanceToggle}
                                 isBookmarked={isBookmarked}
+                                isAttending={isAttending}
                                 pendingBookmarkIds={pendingBookmarkIds}
+                                pendingAttendanceIds={pendingAttendanceIds}
                                 defaultVisibleCount={6}
                                 expanded={sectionExpansion['more-events'] ?? false}
                                 onExpandedChange={(expanded) => handleSectionExpansionChange('more-events', expanded)}
@@ -587,8 +631,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                             event={event}
                             onClick={() => handleCardClick(event, index, shortlistMode ? 'shortlist' : 'grid')}
                             onBookmark={handleBookmarkToggle}
+                            onAttendanceToggle={handleAttendanceToggle}
                             isBookmarked={isBookmarked(event.id)}
                             isBookmarking={pendingBookmarkIds.has(event.id)}
+                            isAttending={isAttending(event.id)}
+                            isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
                             showRecommendationContext
                             quickFitBadges={getBadgesForEvent(event)}
                             onFeedbackAction={handleFeedbackAction}

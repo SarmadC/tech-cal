@@ -2386,16 +2386,20 @@ export type Database = {
           bookmark_count_today: number | null
           created_at: string | null
           full_name: string | null
+          headline: string | null
           id: string
           is_admin: boolean
           last_bookmark_at: string | null
           location: string | null
           preferences: Json | null
+          profile_visibility: string
           recommendation_preferences: Json | null
+          show_attendance: boolean
           team_preferences: Json | null
           timezone: string | null
           tracked_events_count: number | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           analytics_consent?: boolean | null
@@ -2404,16 +2408,20 @@ export type Database = {
           bookmark_count_today?: number | null
           created_at?: string | null
           full_name?: string | null
+          headline?: string | null
           id: string
           is_admin?: boolean
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
+          profile_visibility?: string
           recommendation_preferences?: Json | null
+          show_attendance?: boolean
           team_preferences?: Json | null
           timezone?: string | null
           tracked_events_count?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           analytics_consent?: boolean | null
@@ -2422,16 +2430,20 @@ export type Database = {
           bookmark_count_today?: number | null
           created_at?: string | null
           full_name?: string | null
+          headline?: string | null
           id?: string
           is_admin?: boolean
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
+          profile_visibility?: string
           recommendation_preferences?: Json | null
+          show_attendance?: boolean
           team_preferences?: Json | null
           timezone?: string | null
           tracked_events_count?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }
@@ -2936,6 +2948,217 @@ export type Database = {
         }
         Relationships: []
       }
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      trust_levels: {
+        Row: {
+          created_at: string
+          last_evaluated_at: string
+          level: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_evaluated_at?: string
+          level?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_evaluated_at?: string
+          level?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trust_levels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trust_levels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "trust_levels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_social_stats: {
+        Row: {
+          follower_count: number
+          following_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          follower_count?: number
+          following_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          follower_count?: number
+          following_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_social_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_social_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_social_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_events: {
         Row: {
           algorithm_version: string | null
@@ -3070,6 +3293,7 @@ export type Database = {
           id: string
           interaction_type: string
           position: number | null
+          recommendation_batch_id: string | null
           section: string
           user_id: string
         }
@@ -3081,6 +3305,7 @@ export type Database = {
           id?: string
           interaction_type: string
           position?: number | null
+          recommendation_batch_id?: string | null
           section: string
           user_id: string
         }
@@ -3092,6 +3317,7 @@ export type Database = {
           id?: string
           interaction_type?: string
           position?: number | null
+          recommendation_batch_id?: string | null
           section?: string
           user_id?: string
         }
@@ -3115,6 +3341,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_interactions_simple_recommendation_batch_id_fkey"
+            columns: ["recommendation_batch_id"]
+            isOneToOne: false
+            referencedRelation: "recommendation_batches"
             referencedColumns: ["id"]
           },
           {
@@ -3710,6 +3943,10 @@ export type Database = {
         }[]
       }
       batch_insert_interactions: {
+        Args: { interactions: Json[] }
+        Returns: undefined
+      }
+      batch_insert_interactions_v2: {
         Args: { interactions: Json[] }
         Returns: undefined
       }
