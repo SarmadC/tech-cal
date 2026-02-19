@@ -1,30 +1,10 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { ProfileService } from '@/services/profileService'
-import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
+import { SocialProfileService } from '@/services/socialProfileService';
 
-// Best Practice: Define schema in a central location for reusability.
-// Assuming a file exists at `src/lib/schemas.ts`
-// If not, this is where you'd import it from. For this example, we'll define it here.
-const ProfileUpdateSchema = z.object({
-    fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }).or(z.literal('')),
-    // Adding .or(z.literal('')) allows an empty string, which is a common use case for optional fields.
-    // If the field MUST have content if present, remove .or(z.literal('')).
-    timezone: z.string().optional(),
-});
+// ... (imports remain the same)
 
-// The FormState type remains the same as it's perfectly structured for useFormState.
-export type FormState = {
-    message: string;
-    errors?: {
-        fullName?: string[];
-        timezone?: string[];
-        _form?: string[]; // For general, non-field-specific errors
-    };
-    success: boolean;
-}
+// ... (schema remains the same)
 
 export async function updateUserProfileAction(
     prevState: FormState,
@@ -43,10 +23,16 @@ export async function updateUserProfileAction(
     }
 
     // 2. Input Validation: Use Zod's safeParse to validate form data.
-    const validatedFields = ProfileUpdateSchema.safeParse({
+    const rawData = {
         fullName: formData.get('fullName'),
         timezone: formData.get('timezone'),
-    });
+        username: formData.get('username'),
+        headline: formData.get('headline'),
+        profileVisibility: formData.get('profileVisibility'),
+        showAttendance: formData.get('showAttendance') === 'true' ? true : formData.get('showAttendance') === 'false' ? false : undefined,
+    };
+
+    const validatedFields = ProfileUpdateSchema.safeParse(rawData);
 
     if (!validatedFields.success) {
         return {
@@ -59,12 +45,18 @@ export async function updateUserProfileAction(
 
     // 3. Business Logic / Service Call: Use a try...catch block for robust error handling.
     try {
-        // The service is called with the *validated* data.
-        // We assume `ProfileService.updateProfile` will throw an error on failure.
-        // We don't need to destructure `{ error }` from the result anymore.
+        // Update generic profile data
         await ProfileService.updateProfile(user.id, {
             fullName: validatedFields.data.fullName,
             timezone: validatedFields.data.timezone,
+        }, supabase);
+
+        // Update social profile data
+        await SocialProfileService.updateSocialProfile(user.id, {
+            username: validatedFields.data.username || null,
+            headline: validatedFields.data.headline || null,
+            profileVisibility: validatedFields.data.profileVisibility as any, // Cast if necessary, or ensure schema matches
+            showAttendance: validatedFields.data.showAttendance,
         }, supabase);
 
     } catch (error) {
@@ -79,9 +71,9 @@ export async function updateUserProfileAction(
         };
     }
 
-    // 4. Revalidation and Success Response: This code only runs if the `try` block succeeds.
+    // 4. Revalidation and Success Response
     revalidatePath('/dashboard/settings');
-    revalidatePath('/dashboard'); // Revalidate any other page that shows user info.
+    revalidatePath('/dashboard'); 
 
     return {
         success: true,

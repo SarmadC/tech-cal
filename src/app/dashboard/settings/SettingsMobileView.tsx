@@ -6,7 +6,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import { AppProfile } from '@/types';
 import SettingsMobileIntegration from './SettingsMobileIntegration';
-import SettingsMobileProfile from './SettingsMobileProfile';
+import ProfileSettingsForm from './ProfileSettingsForm';
 import SettingsMobileAppearance from './SettingsMobileAppearance';
 import SettingsMobileBilling from './SettingsMobileBilling';
 import SettingsMobileCareer from './SettingsMobileCareer';
@@ -107,7 +107,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
                 return <SettingsMobileBilling />;
             case 'profile':
             default:
-                return <SettingsMobileProfile profile={profile} />;
+                return <ProfileSettingsForm profile={profile} />;
         }
     };
 
