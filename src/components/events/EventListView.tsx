@@ -338,9 +338,21 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }, [pagination.pageSize]);
 
     const handlePageSizeChange = useCallback((size: number) => {
-        updateFilter('page', 1);
-        updateFilter('pageSize', size);
-    }, [updateFilter]);
+        const isSamePageSize = size === pagination.pageSize;
+        const isFirstPage = pagination.page === 1;
+
+        if (isSamePageSize && isFirstPage) {
+            return;
+        }
+
+        if (!isFirstPage) {
+            updateFilter('page', 1);
+        }
+
+        if (!isSamePageSize) {
+            updateFilter('pageSize', size);
+        }
+    }, [pagination.page, pagination.pageSize, updateFilter]);
 
     const handlePageChange = useCallback((page: number) => {
         const nextPage = Math.max(1, Math.min(page, pagination.totalPages));

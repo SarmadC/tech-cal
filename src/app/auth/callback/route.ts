@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') // 'signup', 'recovery', 'magiclink', 'invite', or null for OAuth
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
-    const rawNext = searchParams.get('next') ?? '/events'
+    const rawNext = searchParams.get('next') ?? '/discover'
 
     // Sanitize next to avoid open-redirects; ensure leading slash and strip domain
-    let next = '/events'
+    let next = '/discover'
     try {
         if (typeof rawNext === 'string') {
             if (rawNext.startsWith('http://') || rawNext.startsWith('https://')) {
@@ -32,12 +32,12 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Fix: If next is root (landing page), force it to events
+        // If next is root (landing page), force it to discover
         if (next === '/' || next === '') {
-            next = '/events';
+            next = '/discover';
         }
     } catch (_) {
-        next = '/events'
+        next = '/discover'
     }
 
     // Determine redirect based on auth type

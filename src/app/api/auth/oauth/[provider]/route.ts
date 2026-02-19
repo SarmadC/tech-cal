@@ -23,7 +23,7 @@ export async function GET(
     try {
         const { provider } = await context.params
         const { searchParams } = new URL(request.url)
-        const nextPath = searchParams.get('next') || '/events'
+        const nextPath = searchParams.get('next') || '/discover'
 
         // Validate provider
         if (provider !== 'google' && provider !== 'github') {

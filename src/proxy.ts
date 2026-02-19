@@ -101,7 +101,7 @@ export async function proxy(request: NextRequest) {
 
   // If user is authenticated and trying to access auth routes (login/signup)
   if (user && isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL('/events', request.url))
+    return NextResponse.redirect(new URL('/discover', request.url))
   }
 
   return response

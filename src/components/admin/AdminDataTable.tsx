@@ -370,7 +370,13 @@ export function AdminDataTable<T>({
                     <span className="text-foreground-muted">Rows per page:</span>
                     <Select
                         value={String(pageSize)}
-                        onValueChange={(value) => onPageSizeChange?.(Number(value))}
+                        onValueChange={(value) => {
+                            const nextPageSize = Number(value);
+                            if (!Number.isFinite(nextPageSize) || nextPageSize === pageSize) {
+                                return;
+                            }
+                            onPageSizeChange?.(nextPageSize);
+                        }}
                     >
                         <SelectTrigger className="h-7 w-20 rounded-md border border-default bg-background-tertiary text-xs text-foreground-tertiary">
                             <SelectValue />
@@ -423,5 +429,4 @@ export function AdminDataTable<T>({
 }
 
 export default AdminDataTable;
-
 

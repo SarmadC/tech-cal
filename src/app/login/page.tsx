@@ -105,13 +105,13 @@ function LoginPageContent() {
     const { user, initialized, loading } = useAuth();
 
     const getIntendedDestination = useCallback(() => {
-        const destination = searchParams.get('redirect') || searchParams.get('next') || '/events';
+        const destination = searchParams.get('redirect') || searchParams.get('next') || '/discover';
 
         if (!destination.startsWith('/')) {
-            return '/events';
+            return '/discover';
         }
 
-        return destination === '/' ? '/events' : destination;
+        return destination === '/' ? '/discover' : destination;
     }, [searchParams]);
 
     // Debounced redirect to prevent multiple rapid redirects

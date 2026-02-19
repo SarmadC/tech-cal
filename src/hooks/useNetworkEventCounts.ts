@@ -40,18 +40,25 @@ export function useNetworkEventCounts(eventIds: string[]): UseNetworkEventCounts
   const { user, loading } = useAuth();
   const [countsByEventId, setCountsByEventId] = useState<Record<string, NetworkEventCount>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const userId = user?.id;
+
+  const normalizedEventIdsKey = useMemo(() => (
+    Array.from(new Set(eventIds.filter(Boolean))).sort().join(',')
+  ), [eventIds]);
 
   const normalizedEventIds = useMemo(() => (
-    Array.from(new Set(eventIds.filter(Boolean))).sort()
-  ), [eventIds]);
+    normalizedEventIdsKey ? normalizedEventIdsKey.split(',') : []
+  ), [normalizedEventIdsKey]);
 
   useEffect(() => {
     if (loading) {
       return;
     }
 
-    if (!user || normalizedEventIds.length === 0) {
-      setCountsByEventId({});
+    if (!userId || normalizedEventIds.length === 0) {
+      setCountsByEventId((prev) => (
+        Object.keys(prev).length === 0 ? prev : {}
+      ));
       setIsLoading(false);
       return;
     }
@@ -103,14 +110,40 @@ export function useNetworkEventCounts(eventIds: string[]): UseNetworkEventCounts
           }
         }
 
-        setCountsByEventId(nextMap);
+        setCountsByEventId((prev) => {
+          const prevKeys = Object.keys(prev);
+          const nextKeys = Object.keys(nextMap);
+
+          const hasSameValues = prevKeys.length === nextKeys.length && nextKeys.every((key) => {
+            const prevCount = prev[key];
+            const nextCount = nextMap[key];
+
+            if (!prevCount || !nextCount) {
+              return false;
+            }
+
+            if (prevCount.networkCount !== nextCount.networkCount) {
+              return false;
+            }
+
+            if (prevCount.sampleAvatars.length !== nextCount.sampleAvatars.length) {
+              return false;
+            }
+
+            return prevCount.sampleAvatars.every((avatar, index) => avatar === nextCount.sampleAvatars[index]);
+          });
+
+          return hasSameValues ? prev : nextMap;
+        });
       } catch (error) {
         if ((error as { name?: string }).name === 'AbortError') {
           return;
         }
 
         if (isMounted) {
-          setCountsByEventId({});
+          setCountsByEventId((prev) => (
+            Object.keys(prev).length === 0 ? prev : {}
+          ));
         }
       } finally {
         if (isMounted) {
@@ -125,11 +158,10 @@ export function useNetworkEventCounts(eventIds: string[]): UseNetworkEventCounts
       isMounted = false;
       abortController.abort();
     };
-  }, [user, loading, normalizedEventIds]);
+  }, [userId, loading, normalizedEventIds]);
 
   return {
     countsByEventId,
     isLoading,
   };
 }
-
