@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
 import { X, Check, CaretDownIcon } from '@phosphor-icons/react';
-import { SKILL_CATEGORIES, searchSkills, POPULAR_SKILLS } from '@/data/skillsData';
+import { searchSkills, POPULAR_SKILLS } from '@/data/skillsData';
 import { cn } from '@/lib/utils';
 
 interface SkillsDropdownProps {
@@ -12,6 +12,9 @@ interface SkillsDropdownProps {
     maxSkills?: number;
     className?: string;
     disabled?: boolean;
+    suggestions?: readonly string[];
+    suggestionHeaderLabel?: string;
+    entityName?: string;
 }
 
 export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
@@ -20,28 +23,41 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
     placeholder = "Search and select skills...",
     maxSkills = 50,
     className,
-    disabled = false
+    disabled = false,
+    suggestions,
+    suggestionHeaderLabel = 'Popular Skills',
+    entityName = 'skills',
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filteredSkills, setFilteredSkills] = useState<string[]>([]);
-    const [activeCategory, setActiveCategory] = useState<string>('all');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const inputId = useId();
+    const errorId = `${inputId}-error`;
+    const normalizedSuggestions = suggestions && suggestions.length > 0
+      ? Array.from(new Set(suggestions.map((item) => item.trim()).filter(Boolean)))
+      : null;
 
-    // Filter skills based on search query and category
-    useEffect(() => {
+    const filteredSkills = useMemo(() => {
         let skills: string[] = [];
+        const searchLimit = 50;
 
         if (searchQuery.trim()) {
-            skills = searchSkills(searchQuery, 50);
+            if (normalizedSuggestions) {
+                const lowercaseQuery = searchQuery.toLowerCase();
+                skills = normalizedSuggestions
+                    .filter((item) => item.toLowerCase().includes(lowercaseQuery))
+                    .slice(0, searchLimit);
+            } else {
+                skills = searchSkills(searchQuery, searchLimit);
+            }
         } else {
             // Show popular skills when no query
-            skills = POPULAR_SKILLS;
+            skills = normalizedSuggestions || POPULAR_SKILLS;
         }
 
         // Remove duplicate skill entries before filtering
@@ -50,8 +66,8 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
         // Filter out already selected skills (case-insensitive)
         const normalizedSelected = selectedSkills.map(s => s.toLowerCase());
         skills = skills.filter(skill => !normalizedSelected.includes(skill.toLowerCase()));
-        setFilteredSkills(skills.slice(0, 30)); // Limit to 30 for performance
-    }, [searchQuery, selectedSkills]);
+        return skills.slice(0, 30); // Limit to 30 for performance
+    }, [normalizedSuggestions, searchQuery, selectedSkills]);
 
     // Handle click outside
     useEffect(() => {
@@ -195,19 +211,12 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
 
     const handleInputFocus = () => {
         setIsOpen(true);
-        // Show popular skills when focusing without a query
-        if (!searchQuery.trim()) {
-            setFilteredSkills(POPULAR_SKILLS.slice(0, 30));
-        }
     };
 
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
         if (!isOpen) {
             inputRef.current?.focus();
-            if (!searchQuery.trim()) {
-                setFilteredSkills(POPULAR_SKILLS.slice(0, 30));
-            }
         }
     };
 
@@ -264,6 +273,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
                 )}
             >
                 <input
+                    id={inputId}
                     ref={inputRef}
                     type="text"
                     value={searchQuery}
@@ -273,7 +283,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
                     placeholder={placeholder}
                     disabled={disabled}
                     className="bg-transparent border-none outline-none text-[14px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 flex-1 focus:outline-none focus:ring-0 px-0 py-0"
-                    aria-describedby={duplicateError ? `${inputRef.current?.id || 'skills'}-error` : undefined}
+                    aria-describedby={duplicateError ? errorId : undefined}
                     aria-expanded={isOpen}
                     aria-haspopup="listbox"
                 />
@@ -310,7 +320,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
             {/* Error Message */}
             {duplicateError && (
                 <p
-                    id={`${inputRef.current?.id || 'skills'}-error`}
+                    id={errorId}
                     className="mt-1.5 text-xs text-red-400"
                     role="alert"
                 >
@@ -335,7 +345,9 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
                     {/* Header with Popular label */}
                     {!searchQuery.trim() && (
                         <div className="px-4 py-2 border-b border-white/5 bg-zinc-900/50">
-                            <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Popular Skills</span>
+                            <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">
+                                {suggestionHeaderLabel}
+                            </span>
                         </div>
                     )}
 
@@ -343,7 +355,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
                     <div ref={listRef} className="max-h-60 overflow-y-auto bg-zinc-900">
                         {filteredSkills.length === 0 ? (
                             <div className="px-4 py-3 text-sm text-zinc-500 text-center">
-                                {searchQuery ? 'No skills found' : 'No skills available'}
+                                {searchQuery ? `No ${entityName} found` : `No ${entityName} available`}
                             </div>
                         ) : (
                             filteredSkills.map((skill, index) => (

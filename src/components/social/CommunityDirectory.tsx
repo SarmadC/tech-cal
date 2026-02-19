@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleNotchIcon, MagnifyingGlass, Sparkle, X } from '@phosphor-icons/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,11 +51,31 @@ interface UserSearchResponse {
   error?: string;
 }
 
+type CommunitySortMode = 'newest' | 'popular' | 'active';
+
 const EMPTY_HIGHLIGHTS: CommunityHighlights = {
   attendingSavedEvents: [],
   networkAttendingThisWeek: [],
   newMembers: [],
 };
+
+const SORT_MODE_LABELS: Record<CommunitySortMode, string> = {
+  newest: 'Newest',
+  popular: 'Most followed',
+  active: 'Most active',
+};
+
+function parseSortModeParam(value: string | null): CommunitySortMode {
+  if (value === 'popular' || value === 'active') {
+    return value;
+  }
+
+  return 'newest';
+}
+
+function parseHasHeadlineParam(value: string | null): boolean {
+  return value === '1' || value === 'true';
+}
 
 function normalizeHighlights(highlights?: Partial<CommunityHighlights>): CommunityHighlights {
   return {
@@ -122,6 +143,24 @@ function getActivitySignals(user: CommunityUser): string[] {
   return signals.slice(0, 2);
 }
 
+function getUserJoinTimestamp(user: CommunityUser): number {
+  if (!user.joinedAt) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(user.joinedAt);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getUserActivityScore(user: CommunityUser): number {
+  return (
+    user.activity.sharedSavedEventCount * 4 +
+    user.activity.attendingThisWeekCount * 3 +
+    user.activity.upcomingAttendingCount * 2 +
+    user.activity.recentFollowerCount
+  );
+}
+
 interface CommunityUserRowProps {
   user: CommunityUser;
   telemetrySurface: string;
@@ -141,7 +180,7 @@ function CommunityUserRow({
   const signals = getActivitySignals(user);
 
   return (
-    <li className="py-4">
+    <li className="py-4 transition-colors hover:bg-[var(--background-secondary)]/40">
       <div className="flex items-start gap-3">
         <Avatar className="h-10 w-10">
           <AvatarImage src={user.avatarUrl || ''} alt={displayName} />
@@ -238,8 +277,18 @@ function CommunityHighlightList({
 }
 
 export default function CommunityDirectory() {
-  const [queryInput, setQueryInput] = useState('');
-  const [hasHeadlineOnly, setHasHeadlineOnly] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [queryInput, setQueryInput] = useState(() => {
+    return (searchParams.get('q') ?? '').slice(0, 80);
+  });
+  const [hasHeadlineOnly, setHasHeadlineOnly] = useState(() => {
+    return parseHasHeadlineParam(searchParams.get('hasHeadline'));
+  });
+  const [sortMode, setSortMode] = useState<CommunitySortMode>(() => {
+    return parseSortModeParam(searchParams.get('sort'));
+  });
   const [users, setUsers] = useState<CommunityUser[]>([]);
   const [highlights, setHighlights] = useState<CommunityHighlights>(EMPTY_HIGHLIGHTS);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -248,6 +297,23 @@ export default function CommunityDirectory() {
   const [error, setError] = useState<string | null>(null);
   const highlightImpressionsSentRef = useRef<Set<string>>(new Set());
   const highlightImpressionScopeRef = useRef('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const nextQueryInput = (searchParams.get('q') ?? '').slice(0, 80);
+    const nextHasHeadlineOnly = parseHasHeadlineParam(searchParams.get('hasHeadline'));
+    const nextSortMode = parseSortModeParam(searchParams.get('sort'));
+
+    if (nextQueryInput !== queryInput) {
+      setQueryInput(nextQueryInput);
+    }
+    if (nextHasHeadlineOnly !== hasHeadlineOnly) {
+      setHasHeadlineOnly(nextHasHeadlineOnly);
+    }
+    if (nextSortMode !== sortMode) {
+      setSortMode(nextSortMode);
+    }
+  }, [hasHeadlineOnly, queryInput, searchParams, sortMode]);
 
   const normalizedQuery = useMemo(() => queryInput.trim(), [queryInput]);
   const highlightScopeKey = useMemo(
@@ -259,6 +325,29 @@ export default function CommunityDirectory() {
     () => users.filter((user) => Boolean(user.headline)).length,
     [users]
   );
+  const sortedUsers = useMemo(() => {
+    const nextUsers = [...users];
+    nextUsers.sort((left, right) => {
+      if (sortMode === 'popular') {
+        if (right.followerCount !== left.followerCount) {
+          return right.followerCount - left.followerCount;
+        }
+        return getUserJoinTimestamp(right) - getUserJoinTimestamp(left);
+      }
+
+      if (sortMode === 'active') {
+        const rightScore = getUserActivityScore(right);
+        const leftScore = getUserActivityScore(left);
+        if (rightScore !== leftScore) {
+          return rightScore - leftScore;
+        }
+        return right.followerCount - left.followerCount;
+      }
+
+      return getUserJoinTimestamp(right) - getUserJoinTimestamp(left);
+    });
+    return nextUsers;
+  }, [sortMode, users]);
   const suggestedUsers = useMemo(() => {
     return [...users]
       .sort((left, right) => {
@@ -287,12 +376,13 @@ export default function CommunityDirectory() {
     }
 
     const userCountLabel = `${users.length} ${users.length === 1 ? 'profile' : 'profiles'} shown`;
+    const sortHint = `Sorted by ${SORT_MODE_LABELS[sortMode].toLowerCase()}.`;
     if (!hasHeadlineOnly) {
-      return `${userCountLabel}. ${hasProfilesWithHeadlines} include a headline.`;
+      return `${userCountLabel}. ${hasProfilesWithHeadlines} include a headline. ${sortHint}`;
     }
 
-    return `${userCountLabel}. Headline-only filter is active.`;
-  }, [hasActiveFilters, hasHeadlineOnly, hasProfilesWithHeadlines, users.length]);
+    return `${userCountLabel}. Headline-only filter is active. ${sortHint}`;
+  }, [hasActiveFilters, hasHeadlineOnly, hasProfilesWithHeadlines, sortMode, users.length]);
 
   const fetchUsers = useCallback(async ({
     cursor = null,
@@ -347,6 +437,44 @@ export default function CommunityDirectory() {
       setIsLoadingMore(false);
     }
   }, [hasHeadlineOnly, normalizedQuery]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+
+      if (normalizedQuery.length > 0) {
+        nextParams.set('q', normalizedQuery);
+      } else {
+        nextParams.delete('q');
+      }
+
+      if (hasHeadlineOnly) {
+        nextParams.set('hasHeadline', '1');
+      } else {
+        nextParams.delete('hasHeadline');
+      }
+
+      if (sortMode !== 'newest') {
+        nextParams.set('sort', sortMode);
+      } else {
+        nextParams.delete('sort');
+      }
+
+      const nextQueryString = nextParams.toString();
+      const currentQueryString = searchParams.toString();
+      if (nextQueryString === currentQueryString) {
+        return;
+      }
+
+      router.replace(nextQueryString.length > 0 ? `${pathname}?${nextQueryString}` : pathname, {
+        scroll: false,
+      });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [hasHeadlineOnly, normalizedQuery, pathname, router, searchParams, sortMode]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -407,6 +535,35 @@ export default function CommunityDirectory() {
       highlightImpressionsSentRef.current.clear();
     }
   }, [highlightScopeKey]);
+
+  useEffect(() => {
+    const handleSlashFocus = (event: KeyboardEvent) => {
+      if (event.key !== '/') {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget = Boolean(
+        target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable)
+      );
+
+      if (isTypingTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleSlashFocus);
+    return () => {
+      window.removeEventListener('keydown', handleSlashFocus);
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoading || error) {
@@ -492,13 +649,14 @@ export default function CommunityDirectory() {
           </p>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-[1fr_auto_auto] md:items-center">
+        <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
           <div className="relative">
             <MagnifyingGlass
               size={16}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-tertiary)]"
             />
             <input
+              ref={searchInputRef}
               value={queryInput}
               onChange={(event) => setQueryInput(event.target.value)}
               placeholder="Search by name, username, or headline"
@@ -527,6 +685,33 @@ export default function CommunityDirectory() {
             Has headline only
           </label>
 
+          <label className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border-default)] px-3 text-xs text-[var(--foreground-secondary)]">
+            <span>Sort</span>
+            <select
+              value={sortMode}
+              onChange={(event) => {
+                const nextSortMode = event.target.value as CommunitySortMode;
+                setSortMode(nextSortMode);
+                void sendTelemetryEvent({
+                  eventType: 'community_sort_changed',
+                  context: {
+                    surface: 'community_page',
+                  },
+                  metadata: {
+                    sortMode: nextSortMode,
+                    queryLength: normalizedQuery.length,
+                    hasHeadlineOnly,
+                  },
+                });
+              }}
+              className="min-w-[110px] bg-transparent text-xs text-[var(--foreground-primary)] outline-none"
+            >
+              <option value="newest">Newest</option>
+              <option value="popular">Most followed</option>
+              <option value="active">Most active</option>
+            </select>
+          </label>
+
           <Button
             type="button"
             variant="ghost"
@@ -543,6 +728,7 @@ export default function CommunityDirectory() {
         </div>
 
         <p className="text-xs text-[var(--foreground-tertiary)]">{resultLabel}</p>
+        <p className="text-[11px] text-[var(--foreground-tertiary)]">Tip: press / to focus search.</p>
       </header>
 
       <section className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_240px]">
@@ -646,7 +832,7 @@ export default function CommunityDirectory() {
               ) : null}
 
               <ul className="divide-y divide-[var(--border-default)] border-y border-[var(--border-default)]">
-                {users.map((user) => (
+                {sortedUsers.map((user) => (
                   <CommunityUserRow
                     key={user.id}
                     user={user}
