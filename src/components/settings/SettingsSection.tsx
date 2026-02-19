@@ -30,7 +30,7 @@ export function SettingsSection({
                     )}
                 </div>
             )}
-            <div className="space-y-px bg-[var(--border-default)] rounded-lg overflow-hidden border border-[var(--border-default)]">
+            <div className="space-y-1">
                 {children}
             </div>
         </section>

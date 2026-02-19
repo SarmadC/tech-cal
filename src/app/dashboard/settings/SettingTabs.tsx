@@ -1,15 +1,13 @@
 'use client'
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ProfileSettingsForm from './ProfileSettingsForm';
 import BillingSettings from './BillingSettings';
 import CareerProfileManager from '@/components/profile/CareerProfileManager';
 import CalendarIntegrationSettings from '@/components/dashboard/CalendarIntegrationSettings';
 import { ThemeSelector } from '@/components/ui/theme-selector';
-import { MaterialIcon } from '@/components/ui/Icon';
 import { AppProfile } from '@/types';
-import { SettingsLayout } from '@/components/settings/SettingsLayout';
+import { SettingsLayout, type NavigationItem } from '@/components/settings/SettingsLayout';
 
 export default function SettingsTabs({ profile }: { profile: AppProfile | null }) {
     const searchParams = useSearchParams();
@@ -18,15 +16,15 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
     const tabParam = searchParams.get('tab');
     const activeTab = tabParam || 'profile';
 
-    const navigationItems: any[] = [
+    const navigationItems: NavigationItem[] = [
         { key: 'account_header', type: 'header', label: 'Account' },
-        { key: 'profile', href: '/dashboard/settings?tab=profile', label: 'Profile', icon: 'person' },
-        { key: 'career', href: '/dashboard/settings?tab=career', label: 'Career Profile', icon: 'work' },
-        { key: 'appearance', href: '/dashboard/settings?tab=appearance', label: 'Preferences', icon: 'tune' }, // Renamed to Permissions/Preferences conceptually
+        { key: 'profile', href: '/dashboard/settings?tab=profile', label: 'Profile' },
+        { key: 'career', href: '/dashboard/settings?tab=career', label: 'Career Profile' },
+        { key: 'appearance', href: '/dashboard/settings?tab=appearance', label: 'Preferences' }, // Renamed to Permissions/Preferences conceptually
 
         { key: 'workspace_header', type: 'header', label: 'Workspace' },
-        { key: 'integrations', href: '/dashboard/settings?tab=integrations', label: 'Integrations', icon: 'extension' },
-        { key: 'billing', href: '/dashboard/settings?tab=billing', label: 'Billing', icon: 'credit_card' },
+        { key: 'integrations', href: '/dashboard/settings?tab=integrations', label: 'Integrations' },
+        { key: 'billing', href: '/dashboard/settings?tab=billing', label: 'Billing' },
     ];
 
     const renderContent = () => {

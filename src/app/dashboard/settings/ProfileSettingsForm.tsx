@@ -13,7 +13,7 @@ import { TIMEZONE_OPTIONS } from '@/types/career';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { SettingsControl } from '@/components/settings/SettingsControl';
-import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch'; // Assuming we have a Switch component or use native
 import BlockUserButton from '@/components/social/BlockUserButton';
 import { ProfileVisibility } from '@/services/socialProfileService';
 
@@ -81,14 +81,14 @@ const SettingsInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttribut
         <div className="w-full">
             <input
                 ref={ref}
-                className={`w-full bg-[var(--background-secondary)] text-[14px] text-[var(--foreground-primary)] placeholder-[var(--foreground-tertiary)] py-2 px-3 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)] focus:outline-none transition-all duration-200 ${className || ''} ${error ? 'border-[var(--error)] focus:border-[var(--error)] focus:ring-[var(--error)]' : ''}`}
+                className={`w-full bg-transparent text-[13px] text-[var(--foreground-primary)] placeholder-[var(--foreground-tertiary)] px-3 py-1.5 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-[3px] focus:ring-[var(--accent-primary)]/10 focus:outline-none transition-all duration-200 ${className || ''} ${error ? 'border-[var(--error)] focus:border-[var(--error)] focus:ring-[var(--error)]/10' : ''}`}
                 {...props}
             />
             {helperText && !error && (
-                <p className="mt-1.5 text-xs text-[var(--foreground-secondary)]">{helperText}</p>
+                <p className="mt-1.5 text-[12px] text-[var(--foreground-tertiary)]">{helperText}</p>
             )}
             {error && (
-                <p className="mt-1.5 text-xs text-[var(--error)] flex items-center">
+                <p className="mt-1.5 text-[12px] text-[var(--error)] flex items-center">
                     <MaterialIcon name="error" size={14} className="mr-1" />
                     {error}
                 </p>
@@ -300,21 +300,21 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
             {/* Identity Group */}
             <SettingsSection title="Identity" description="Manage your personal information and how you appear to others.">
-                <SettingsControl>
-                    <div className="flex items-center gap-4 w-full">
-                        <Avatar className="h-12 w-12 border border-[var(--border-default)]">
+                {/* Header-like Avatar Row */}
+                {/* Header-like Avatar Row */}
+                <div className="group py-2.5 grid gap-4 border-b border-[var(--border-default)]/40 items-center grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <div className="min-w-0 space-y-0.5 mb-2 sm:mb-0">
+                        <div className="text-[13px] font-medium text-[var(--foreground-primary)]">
+                            Profile Picture
+                        </div>
+                    </div>
+                    <div className="min-w-0 flex items-center justify-start gap-4">
+                        <Avatar className="h-10 w-10 border border-[var(--border-default)]">
                             <AvatarImage src={profile?.avatarUrl || ''} />
                             <AvatarFallback>{profile?.fullName?.substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                            <div className="font-medium text-[var(--foreground-primary)]">
-                                {profile?.fullName || 'User'}
-                            </div>
-                            <div className="text-xs text-[var(--foreground-tertiary)] truncate">
-                                {profile?.email}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
+
+                        <div className="relative">
                             <input
                                 type="file" ref={fileInputRef} className="hidden"
                                 accept="image/png, image/jpeg, image/gif, image/webp"
@@ -324,33 +324,28 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                                 type="button" variant="outline" size="sm"
                                 disabled={isUploading}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="h-8 text-xs bg-[var(--background-secondary)] hover:bg-[var(--background-tertiary)] border-[var(--border-default)]"
+                                className="h-7 text-[12px] font-medium bg-[var(--background-main)] hover:bg-[var(--background-secondary)] border-[var(--border-default)] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] transition-all duration-200 active:scale-95"
                             >
                                 {isUploading ? <CircleNotchIcon className="animate-spin" /> : "Change avatar"}
                             </Button>
                         </div>
                     </div>
+                </div>
+
+                <SettingsControl label="Display Name">
+                    <div className="w-full sm:w-[320px]">
+                        <SettingsInput
+                            name="fullName"
+                            ref={fullNameRef}
+                            defaultValue={profile?.fullName || ''}
+                            placeholder="Your full name"
+                            error={state.errors?.fullName?.[0]}
+                        />
+                    </div>
                 </SettingsControl>
 
-                <Separator className="bg-[var(--border-default)]/50" />
-
-                <SettingsControl label="Display Name" layout="row">
-                    <SettingsInput
-                        name="fullName"
-                        ref={fullNameRef}
-                        defaultValue={profile?.fullName || ''}
-                        placeholder="Your full name"
-                        error={state.errors?.fullName?.[0]}
-                    />
-                </SettingsControl>
-
-                <Separator className="bg-[var(--border-default)]/50" />
-
-                <SettingsControl
-                    label="Username"
-                    description="Unique identifier for your public profile."
-                >
-                    <div className="w-full">
+                <SettingsControl label="Username">
+                    <div className="w-full sm:w-[320px]">
                         <SettingsInput
                             name="username"
                             ref={usernameRef}
@@ -358,19 +353,19 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                             placeholder="username"
                             maxLength={30}
                             error={state.errors?.username?.[0]}
-                            helperText={usernameAvailabilityMessage || "3-30 characters, letters, numbers, _ or -"}
+                            helperText={usernameAvailabilityMessage || "Unique identifier (3-30 chars)"}
                             onChange={(e) => {
                                 checkDirty();
                                 setUsernameToCheck(e.target.value);
                             }}
                             className={
-                                usernameAvailabilityState === 'available' ? 'border-green-500 focus:border-green-500 focus:ring-green-500' :
-                                    (usernameAvailabilityState === 'taken' || usernameAvailabilityState === 'invalid') ? 'border-[var(--error)] focus:border-[var(--error)] focus:ring-[var(--error)]' : ''
+                                usernameAvailabilityState === 'available' ? 'text-green-600' :
+                                    (usernameAvailabilityState === 'taken' || usernameAvailabilityState === 'invalid') ? 'text-[var(--error)]' : ''
                             }
                         />
                         {usernameAvailabilityState !== 'idle' && usernameAvailabilityState !== 'error' && (
                             <div className={`mt-1 text-xs flex items-center gap-1 ${usernameAvailabilityState === 'available' ? 'text-green-600' :
-                                    usernameAvailabilityState === 'checking' ? 'text-[var(--foreground-secondary)]' : 'text-[var(--error)]'
+                                usernameAvailabilityState === 'checking' ? 'text-[var(--foreground-secondary)]' : 'text-[var(--error)]'
                                 }`}>
                                 {usernameAvailabilityState === 'checking' && <CircleNotchIcon className="animate-spin h-3 w-3" />}
                             </div>
@@ -378,100 +373,102 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                     </div>
                 </SettingsControl>
 
-                <Separator className="bg-[var(--border-default)]/50" />
-
                 <SettingsControl label="Timezone">
-                    <div className="relative w-full">
+                    <div className="relative w-full sm:w-[320px]">
                         <select
                             ref={timezoneRef}
                             name="timezone"
                             defaultValue={profile?.timezone || ''}
                             onChange={checkDirty}
-                            className="w-full bg-[var(--background-secondary)] text-[14px] text-[var(--foreground-primary)] py-2 px-3 pr-8 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)] focus:outline-none appearance-none cursor-pointer"
+                            className="w-full bg-transparent text-[13px] text-[var(--foreground-primary)] px-3 py-1.5 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-[3px] focus:ring-[var(--accent-primary)]/10 focus:outline-none appearance-none cursor-pointer hover:bg-[var(--background-secondary)]/50 transition-colors"
                         >
                             <option value="">Select timezone</option>
-                            {/* Simplified rendering of options for brevity/perf, assume helper exists or map directly */}
                             {TIMEZONE_OPTIONS.map(tz => (
                                 <option key={tz.value} value={tz.value}>{tz.label}</option>
                             ))}
                         </select>
-                        <MaterialIcon name="expand-more" size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-tertiary)]" />
+                        <MaterialIcon name="expand-more" size={16} className="absolute right-3 top-3 pointer-events-none text-[var(--foreground-tertiary)]" />
+                        <div className="mt-1.5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                                    if (timezoneRef.current) {
+                                        timezoneRef.current.value = detected;
+                                        checkDirty();
+                                    }
+                                }}
+                                className="text-[11px] font-medium text-[var(--accent-primary)] hover:text-[var(--accent-primary)]/80 transition-all duration-200 active:scale-95 flex items-center gap-1"
+                            >
+                                <MaterialIcon name="my_location" size={12} />
+                                Auto-detect timezone
+                            </button>
+                        </div>
                     </div>
-                    {/* Helper/Auto-detect can go here */}
                 </SettingsControl>
             </SettingsSection>
 
             {/* Social Presence Group */}
             <div className="mt-8">
                 <SettingsSection title="Social Presence" description="Control your visibility and interactions.">
-                    <SettingsControl
-                        label="Headline"
-                        description="A short bio that appears on your profile card."
-                    >
-                        <SettingsInput
-                            name="headline"
-                            ref={headlineRef}
-                            defaultValue={socialData?.headline || ''}
-                            placeholder="e.g. Product Designer at Linear"
-                            maxLength={120}
-                            error={state.errors?.headline?.[0]}
-                        />
+                    <SettingsControl label="Headline">
+                        <div className="w-full sm:w-[320px]">
+                            <SettingsInput
+                                name="headline"
+                                ref={headlineRef}
+                                defaultValue={socialData?.headline || ''}
+                                placeholder="e.g. Product Designer at Linear"
+                                maxLength={120}
+                                error={state.errors?.headline?.[0]}
+                                className="bg-[var(--background-secondary)] border border-[var(--border-default)]"
+                            />
+                        </div>
                     </SettingsControl>
 
-                    <Separator className="bg-[var(--border-default)]/50" />
-
                     <SettingsControl label="Profile Visibility">
-                        <div className="flex flex-col gap-3">
-                            <div className="flex bg-[var(--background-secondary)] p-1 rounded-lg border border-[var(--border-default)] w-fit">
+                        <div className="flex flex-col gap-2 w-full sm:w-[320px]">
+                            <div className="inline-flex bg-[var(--background-secondary)]/50 p-0.5 rounded-full border border-[var(--border-default)]/60 w-fit">
                                 <button
                                     type="button"
                                     onClick={() => setVisibility('private')}
-                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${visibility === 'private' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
+                                    className={`px-3 py-1 text-[12px] font-medium rounded-full transition-all duration-200 active:scale-95 border border-transparent ${visibility === 'private' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm border-[var(--border-default)]/20' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
                                 >
                                     Private
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setVisibility('public')}
-                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${visibility === 'public' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
+                                    className={`px-3 py-1 text-[12px] font-medium rounded-full transition-all duration-200 active:scale-95 border border-transparent ${visibility === 'public' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm border-[var(--border-default)]/20' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
                                 >
                                     Public
                                 </button>
                             </div>
                             <input type="hidden" name="profileVisibility" value={visibility} />
 
-                            <p className="text-xs text-[var(--foreground-secondary)]">
+                            <p className="mt-1 text-[12px] text-[var(--foreground-tertiary)]">
                                 {visibility === 'private'
                                     ? "Only you can view your full profile and activity."
-                                    : "Your profile can be discovered by others in the directory."}
+                                    : "Anyone in the workspace can view your profile and activity."}
                             </p>
                         </div>
                     </SettingsControl>
 
-                    {visibility === 'public' && (
-                        <>
-                            <Separator className="bg-[var(--border-default)]/50" />
-                            <SettingsControl
-                                label="Attendance Visibility"
-                                description="Allow others to see when you are attending public events."
-                                action={
-                                    <div className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            name="showAttendance" // This might need handling if value is boolean. value="true" only sends if checked.
-                                            checked={showAttendance}
-                                            value="true"
-                                            onChange={(e) => setShowAttendance(e.target.checked)}
-                                            className="h-4 w-4 rounded border-[var(--border-default)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]"
-                                        />
-                                        {/* Hidden input to ensure false is sent if unchecked? Zod optional handles it usually, but FormData only sends checked checkboxes. 
-                                             My action handles undefined/false manually. */}
-                                        <input type="hidden" name="showAttendance" value={showAttendance.toString()} />
-                                    </div>
-                                }
+                    {visibility === 'public' && <SettingsControl
+                        label="Show Attendance"
+                        description="Let others see which public events you are attending."
+                    >
+                        <div className="flex items-center h-6">
+                            <Switch
+                                name="showAttendance"
+                                checked={showAttendance}
+                                onCheckedChange={setShowAttendance}
+                                className="scale-90"
                             />
-                        </>
-                    )}
+                            {/* FormData helper since Switch might not submit value if not standard input */}
+                            <input type="hidden" name="showAttendance" value={showAttendance.toString()} />
+                        </div>
+                    </SettingsControl>
+                    }
                 </SettingsSection>
             </div>
 
@@ -480,35 +477,39 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                 <SettingsSection title="Blocked Users" description="Manage users restricted from interacting with you.">
                     {blockedUsers.length === 0 ? (
                         <SettingsControl>
-                            <span className="text-sm text-[var(--foreground-tertiary)] italic">No blocked users</span>
+                            <div className="flex items-center gap-4 w-full sm:w-[320px] text-[13px]">
+                                <span className="text-[var(--foreground-tertiary)] italic">No blocked users</span>
+                                <Button variant="ghost" size="sm" className="h-6 text-[11px] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] px-2 transition-all duration-200 active:scale-95">
+                                    Block someone...
+                                </Button>
+                            </div>
                         </SettingsControl>
                     ) : (
-                        <div className="divide-y divide-[var(--border-default)]/50">
-                            {blockedUsers.map(user => (
-                                <SettingsControl key={user.id} layout="row" className="py-3">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={user.avatarUrl || ''} />
-                                            <AvatarFallback>{(user.fullName || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <div className="text-sm font-medium text-[var(--foreground-primary)]">{user.fullName || 'Unknown'}</div>
-                                            {user.username && <div className="text-xs text-[var(--foreground-tertiary)]">@{user.username}</div>}
-                                        </div>
+                        blockedUsers.map(user => (
+                            <SettingsControl key={user.id} layout="row">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-6 w-6">
+                                        <AvatarImage src={user.avatarUrl || ''} />
+                                        <AvatarFallback>{(user.fullName || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="text-[13px] font-medium text-[var(--foreground-primary)]">{user.fullName || 'Unknown'}</div>
+                                        {user.username && <div className="text-[11px] text-[var(--foreground-tertiary)]">@{user.username}</div>}
                                     </div>
-                                    <BlockUserButton
-                                        userId={user.id}
-                                        username={user.username}
-                                        initialBlocked={true}
-                                        compact
-                                        onStatusChange={(blocked) => {
-                                            if (!blocked) setBlockedUsers(prev => prev.filter(u => u.id !== user.id));
-                                        }}
-                                    />
-                                </SettingsControl>
-                            ))}
-                        </div>
-                    )}
+                                </div>
+                                <BlockUserButton
+                                    userId={user.id}
+                                    username={user.username}
+                                    initialBlocked={true}
+                                    compact
+                                    onStatusChange={(blocked) => {
+                                        if (!blocked) setBlockedUsers(prev => prev.filter(u => u.id !== user.id));
+                                    }}
+                                />
+                            </SettingsControl>
+                        ))
+                    )
+                    }
                 </SettingsSection>
             </div>
 
@@ -545,6 +546,6 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                     <SaveButton isDirty={isDirty} />
                 </div>
             </div>
-        </form>
+        </form >
     );
 }

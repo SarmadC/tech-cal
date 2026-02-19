@@ -1,10 +1,18 @@
 'use server'
 
+import { createClient } from '@/utils/supabase/server';
+import { revalidatePath } from 'next/cache';
+import { ProfileService } from '@/services/profileService';
 import { SocialProfileService } from '@/services/socialProfileService';
-
-// ... (imports remain the same)
+import { ProfileUpdateSchema } from '@/lib/schemas';
 
 // ... (schema remains the same)
+
+export interface FormState {
+    message: string;
+    errors?: Record<string, string[]>;
+    success?: boolean;
+}
 
 export async function updateUserProfileAction(
     prevState: FormState,

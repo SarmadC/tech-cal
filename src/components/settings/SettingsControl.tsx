@@ -21,26 +21,26 @@ export function SettingsControl({
     return (
         <div
             className={cn(
-                "bg-[var(--background-main)] p-4 sm:p-5 transition-colors group hover:bg-[var(--background-secondary)]/30",
-                layout === 'row' ? "sm:flex sm:items-start sm:justify-between sm:gap-4" : "block",
+                "group py-2.5 grid gap-4 border-b border-[var(--border-default)]/40 last:border-0 items-start",
+                layout === 'column' ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-[200px_1fr]",
                 className
             )}
             {...props}
         >
-            <div className={cn("flex-1 min-w-0 space-y-1", layout === 'row' ? "mb-4 sm:mb-0" : "mb-4")}>
+            <div className={cn("min-w-0 space-y-0.5", layout === 'row' ? "pt-1.5" : "mb-2")}>
                 {label && (
-                    <label className="block text-sm font-medium text-[var(--foreground-primary)]">
+                    <label className="block text-[13px] font-medium text-[var(--foreground-primary)]">
                         {label}
                     </label>
                 )}
                 {description && (
-                    <div className="text-sm text-[var(--foreground-secondary)] leading-relaxed">
+                    <div className="text-[13px] text-[var(--foreground-tertiary)] bg-transparent leading-relaxed">
                         {description}
                     </div>
                 )}
             </div>
 
-            <div className={cn("flex-shrink-0", layout === 'row' ? "sm:ml-4 self-center" : "")}>
+            <div className="min-w-0">
                 {children || action}
             </div>
         </div>
