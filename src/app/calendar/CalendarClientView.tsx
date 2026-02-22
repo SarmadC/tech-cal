@@ -13,6 +13,7 @@ import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
+import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
 import { CalendarProvider } from '@/contexts';
@@ -260,7 +261,40 @@ export default function CalendarClientView({
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
     const eventData = useEventData(profile);
-    const { dayEvents, weekEvents } = useViewEvents(eventData.enrichedEvents, searchParams);
+    const { countsByEventId } = useNetworkEventCounts(eventData.enrichedEvents.map((event) => event.id));
+
+    const enrichedEventsWithNetwork = useMemo(() => {
+        if (Object.keys(countsByEventId).length === 0) {
+            return eventData.enrichedEvents;
+        }
+
+        return eventData.enrichedEvents.map((event) => {
+            const networkCounts = countsByEventId[event.id];
+            if (!networkCounts) {
+                return event;
+            }
+
+            const existingSampleAvatars = event.networkSampleAvatars ?? [];
+            const sampleAvatarsUnchanged =
+                existingSampleAvatars.length === networkCounts.sampleAvatars.length &&
+                existingSampleAvatars.every((avatar, index) => avatar === networkCounts.sampleAvatars[index]);
+
+            if (
+                networkCounts.networkCount === (event.networkAttendingCount ?? 0) &&
+                sampleAvatarsUnchanged
+            ) {
+                return event;
+            }
+
+            return {
+                ...event,
+                networkAttendingCount: networkCounts.networkCount,
+                networkSampleAvatars: networkCounts.sampleAvatars,
+            };
+        });
+    }, [eventData.enrichedEvents, countsByEventId]);
+
+    const { dayEvents, weekEvents } = useViewEvents(enrichedEventsWithNetwork, searchParams);
 
     // Get current date from URL params
     const currentDate = useMemo(() => {
@@ -330,13 +364,13 @@ export default function CalendarClientView({
             <div className="relative">
                 <AdaptiveCalendarRenderer
                     view={context.view}
-                    events={eventData.enrichedEvents}
+                    events={enrichedEventsWithNetwork}
                     weekEvents={weekEvents}
                     dayEvents={dayEvents}
                     initialDate={context.date}
                     categories={initialCategories}
                     profile={profile}
-                    trackedEvents={eventData.enrichedEvents.filter(e => e.isTracked)}
+                    trackedEvents={enrichedEventsWithNetwork.filter(e => e.isTracked)}
                     onEventSelect={handleSelectEvent}
                     onEventClick={handleEventClick}
                     calendarRef={context.calendarRef}
@@ -357,7 +391,7 @@ export default function CalendarClientView({
                 <CalendarProvider
                     selectedDate={state.selectedDate}
                     currentDate={currentDate}
-                    events={eventData.enrichedEvents}
+                    events={enrichedEventsWithNetwork}
                     categories={initialCategories}
                     profile={profile}
                     onDateSelect={handleDateSelect}
@@ -380,7 +414,7 @@ export default function CalendarClientView({
                             // Handle add event - could open a modal or navigate to create event page
                             // Add event functionality handled
                         }}
-                        events={eventData.enrichedEvents}
+                        events={enrichedEventsWithNetwork}
                         categories={initialCategories}
                         profile={profile}
                         renderContent={(context) => (
@@ -417,7 +451,7 @@ export default function CalendarClientView({
                                                     }}
                                                     onUpdateFilter={eventData.updateFilter}
                                                     categories={initialCategories}
-                                                    events={eventData.enrichedEvents}
+                                                    events={enrichedEventsWithNetwork}
                                                     counts={eventData.counts || {}}
                                                     mobileMode={true}
                                                 />

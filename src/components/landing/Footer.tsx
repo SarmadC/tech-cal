@@ -46,21 +46,28 @@ export function Footer() {
                     <div className="footer-card">
                         <h3 className="footer-section-title">Quick Links</h3>
                         <nav className="footer-nav">
-                            <Link href="/discover" className="footer-link">Discover</Link>
+                            <Link href="/events" className="footer-link">Discover</Link>
                             <Link href="/calendar?view=month" className="footer-link">Calendar</Link>
                             <Link href="/dashboard" className="footer-link">Dashboard</Link>
                             <Link href="/pricing" className="footer-link">Pricing</Link>
                             <Link href="/blog" className="footer-link">Blog</Link>
-                            <Link href="/contact" className="footer-link">Contact</Link>
+                        </nav>
+                    </div>
+
+                    <div className="footer-card">
+                        <h3 className="footer-section-title">Resources</h3>
+                        <nav className="footer-nav">
+                            <Link href="/resources/tech-events-calendar-2026" className="footer-link">Events Calendar 2026</Link>
+                            <Link href="/resources/cfp-calendar" className="footer-link">CFP Calendar</Link>
                         </nav>
                     </div>
 
                     <div className="footer-card">
                         <h3 className="footer-section-title">Contact & Legal</h3>
                         <nav className="footer-nav">
-                            <Link href="mailto:hello@kure-cal.com" className="footer-link footer-email">
+                            <Link href="/contact" className="footer-link footer-email" aria-label="Contact Kure-Cal">
                                 <EnvelopeSimpleIcon size={16} />
-                                hello@kure-cal.com
+                                Contact Support
                             </Link>
                             <Link href="/legal/privacy" className="footer-link">Privacy Policy</Link>
                             <Link href="/legal/terms" className="footer-link">Terms & Conditions</Link>
@@ -85,7 +92,9 @@ export function Footer() {
                                 (e.target as HTMLFormElement).reset();
                             }
                         }} className="mt-4 mb-6 flex gap-2">
+                            <label htmlFor="footer-email" className="sr-only">Email address</label>
                             <input
+                                id="footer-email"
                                 type="email"
                                 name="email"
                                 placeholder="Enter your email"

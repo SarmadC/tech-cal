@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { RecommendationMonitoringService } from '@/services/recommendationMonitoringService';
 import { MONITORING_CONFIG } from '@/config/monitoringConstants';
+import { isAdminUser } from '@/lib/adminAuth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,8 +31,22 @@ export async function GET(request: NextRequest) {
     // Create Supabase client
     const supabase = await createClient();
 
-    // Get current user (optional - can work without auth for internal monitoring)
-    const { data: { user: _user } } = await supabase.auth.getUser();
+    // Require authenticated admin user for monitoring data
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = await isAdminUser(user.id, supabase as Parameters<typeof isAdminUser>[1]);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
 
     // Check if this is a development/internal request
     const isDev = process.env.NODE_ENV === 'development';
@@ -108,12 +123,5 @@ export async function GET(request: NextRequest) {
 
 // OPTIONS handler for CORS
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+  return new NextResponse(null, { status: 204 });
 }

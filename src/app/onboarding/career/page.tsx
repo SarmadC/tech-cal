@@ -81,7 +81,7 @@ function CareerOnboardingContent() {
     // Redirect if user has already completed onboarding
     React.useEffect(() => {
         if (!isLoading && hasCompletedOnboarding) {
-            router.push('/discover');
+            router.push('/events');
             return;
         }
     }, [hasCompletedOnboarding, isLoading, router]);
@@ -98,7 +98,7 @@ function CareerOnboardingContent() {
             await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
             window.dispatchEvent(new CustomEvent('profile-updated'));
             showSuccess('Career profile completed! Discovering personalized events...');
-            router.push('/discover');
+            router.push('/events');
         } catch (error) {
             console.error('Career onboarding error:', error);
             const errorMessage = error instanceof Error
@@ -150,7 +150,7 @@ function CareerOnboardingContent() {
         }
 
         showInfo('You can complete your career profile later in settings');
-        router.push('/discover');
+        router.push('/events');
     };
 
     if (isCreatingProfile || (isLoading && !profile)) {

@@ -1,6 +1,7 @@
 // src/app/api/events/filtered/route.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
+import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 
 const mockSupabaseAuthGetUser = vi.fn(async () => ({ data: { user: { id: 'u1' } }, error: null }));
 const mockProfilesSelect = vi.fn(() => ({
@@ -34,21 +35,34 @@ vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(async () => mockSupabase)
 }));
 
-const { mockGetEventsWithColdStartHandling, mockEnrichEventsWithCareerImpact, mockGetFilterCounts } = vi.hoisted(() => ({
+const {
+  mockGetEventsWithColdStartHandling,
+  mockEnrichEventsWithCareerImpact,
+  mockGetFilterCounts,
+  mockGetEventIdsByTags,
+  mockGetEventIdsByTagSearch,
+  mockGetEventIdsByOrganizerSearch
+} = vi.hoisted(() => ({
   mockGetEventsWithColdStartHandling: vi.fn(),
   mockEnrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events),
   mockGetFilterCounts: vi.fn(async () => ({
     format: { virtual: 0, 'in-person': 0, hybrid: 0 },
     cost: { free: 0, paid: 0 },
     categories: {}
-  }))
+  })),
+  mockGetEventIdsByTags: vi.fn(),
+  mockGetEventIdsByTagSearch: vi.fn(),
+  mockGetEventIdsByOrganizerSearch: vi.fn()
 }));
 
 vi.mock('@/services/eventServices', () => ({
   EventService: {
     getEventsWithColdStartHandling: mockGetEventsWithColdStartHandling,
     enrichEventsWithCareerImpact: mockEnrichEventsWithCareerImpact,
-    getFilterCounts: mockGetFilterCounts
+    getFilterCounts: mockGetFilterCounts,
+    getEventIdsByTags: mockGetEventIdsByTags,
+    getEventIdsByTagSearch: mockGetEventIdsByTagSearch,
+    getEventIdsByOrganizerSearch: mockGetEventIdsByOrganizerSearch
   }
 }));
 
@@ -132,6 +146,120 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     const [filters] = mockGetEventsWithColdStartHandling.mock.calls[0];
     expect(filters.budget).toBeUndefined();
   });
+
+  it('keeps tag + search semantics as intersection (AND)', async () => {
+    mockGetEventIdsByTags.mockResolvedValueOnce(['tag-1', 'tag-2']);
+    mockGetEventIdsByTagSearch.mockResolvedValue(['tag-2', 'search-only']);
+    mockGetEventIdsByOrganizerSearch.mockResolvedValue([]);
+    mockGetEventsWithColdStartHandling.mockResolvedValueOnce({ events: [], totalCount: 0, isColdStart: false });
+    mockEnrichEventsWithCareerImpact.mockResolvedValueOnce([]);
+
+    const req = buildRequest({
+      tags: ['frontend'],
+      searchTerm: 'react',
+      page: 1,
+      pageSize: 10
+    });
+    const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const data = await res.json();
+
+    expect(res.ok).toBe(true);
+    expect(data.success).toBe(true);
+    const [filters] = mockGetEventsWithColdStartHandling.mock.calls[0];
+    expect(filters.eventIds).toEqual(['tag-2']);
+  });
+
+  it('applies recommended filter using configured threshold', async () => {
+    const baseEvents = [
+      {
+        id: 'below-threshold',
+        title: 'Below',
+        startTime: '2026-01-01T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED - 1 }
+      },
+      {
+        id: 'at-threshold',
+        title: 'At',
+        startTime: '2026-01-02T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED }
+      },
+      {
+        id: 'above-threshold',
+        title: 'Above',
+        startTime: '2026-01-03T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED + 1 }
+      }
+    ] as unknown[];
+
+    mockGetEventsWithColdStartHandling.mockResolvedValueOnce({
+      events: baseEvents,
+      totalCount: 3,
+      isColdStart: false
+    });
+
+    const req = buildRequest({ recommended: true, page: 1, pageSize: 10 });
+    const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const data = await res.json();
+
+    expect(res.ok).toBe(true);
+    expect(data.success).toBe(true);
+    expect(mockEnrichEventsWithCareerImpact).not.toHaveBeenCalled();
+    expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['at-threshold', 'above-threshold']);
+  });
+
+  it('keeps advanced reranked order for descending career-impact sort', async () => {
+    const previousRerank = process.env.DISCOVERY_RERANK;
+    process.env.DISCOVERY_RERANK = 'advanced';
+
+    try {
+      mockGetEventsWithColdStartHandling.mockReset();
+      mockEnrichEventsWithCareerImpact.mockReset();
+
+      mockGetEventsWithColdStartHandling.mockResolvedValue({
+        events: [
+          { id: 'a', title: 'A', startTime: '2026-01-01T10:00:00Z', description: '' },
+          { id: 'b', title: 'B', startTime: '2026-01-02T10:00:00Z', description: '' }
+        ],
+        totalCount: 2,
+        isColdStart: false
+      });
+
+      // Simulate canonical enrichment + rerank output order (b before a),
+      // where raw careerImpact scores would otherwise sort as a before b.
+      mockEnrichEventsWithCareerImpact.mockResolvedValue([
+        {
+          id: 'b',
+          title: 'B',
+          startTime: '2026-01-02T10:00:00Z',
+          description: '',
+          careerImpact: { overall: 80 }
+        },
+        {
+          id: 'a',
+          title: 'A',
+          startTime: '2026-01-01T10:00:00Z',
+          description: '',
+          careerImpact: { overall: 95 }
+        }
+      ]);
+
+      const req = buildRequest({ sortBy: 'career-impact', sortDirection: 'desc', page: 1, pageSize: 10 });
+      const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+      const data = await res.json();
+
+      expect(res.ok).toBe(true);
+      expect(data.success).toBe(true);
+      expect(mockEnrichEventsWithCareerImpact).toHaveBeenCalledTimes(1);
+      expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['b', 'a']);
+    } finally {
+      if (previousRerank === undefined) {
+        delete process.env.DISCOVERY_RERANK;
+      } else {
+        process.env.DISCOVERY_RERANK = previousRerank;
+      }
+    }
+  });
 });
-
-

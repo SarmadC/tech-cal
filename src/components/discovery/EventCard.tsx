@@ -1,21 +1,39 @@
 'use client';
 
 import React from 'react';
-import { Event } from '@/types';
-import { MapPin, Clock, BookmarkSimple } from '@phosphor-icons/react';
+import { Event, CareerImpactScore } from '@/types';
+import { MapPin, BookmarkSimple, DotsThree, Star, UserCheck } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
+import RecommendationContext from './RecommendationContext';
+import { QuickFitBadge } from './quickFitBadges';
+import { DiscoveryFeedbackAction } from './discoveryFeedback';
+import ManagerJustificationModal, { prefetchManagerJustification } from '@/components/calendar/ManagerJustificationModal';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 interface EventCardProps {
-    event: Event;
+    event: Event & { careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onBookmark?: (event: Event) => Promise<void> | void;
+    onAttendanceToggle?: (event: Event) => Promise<void> | void;
     isBookmarked?: boolean;
     isBookmarking?: boolean;
+    isAttending?: boolean;
+    isAttendanceUpdating?: boolean;
+    showRecommendationContext?: boolean;
+    quickFitBadges?: QuickFitBadge[];
+    onFeedbackAction?: (event: Event, action: DiscoveryFeedbackAction) => void;
+    onExplainRecommendation?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
+    onShortlistToggle?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
+    isInShortlist?: boolean;
+    showWeekday?: boolean;
+    whiteLogoBackgroundInDark?: boolean;
+    showActionControls?: boolean;
+    showHoverMetaChips?: boolean;
+    showShortlistAction?: boolean;
 }
 
-// Accent rings for cards - deterministic per-event to keep variety without hardcoded fills
 const CARD_ACCENTS = [
     'hover:border-sky-300/60 focus-visible:ring-sky-300/30',
     'hover:border-emerald-300/60 focus-visible:ring-emerald-300/30',
@@ -25,32 +43,50 @@ const CARD_ACCENTS = [
     'hover:border-indigo-300/60 focus-visible:ring-indigo-300/30',
 ];
 
-// Memoize to prevent unnecessary re-renders when parent updates
-// Only compare data props, not callbacks (callbacks change on every render due to inline functions)
-const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBookmark, isBookmarked = false, isBookmarking = false }) => {
-    // Deterministic color based on event ID
+const EventCard: React.FC<EventCardProps> = React.memo(({
+    event,
+    onClick,
+    onBookmark,
+    onAttendanceToggle,
+    isBookmarked = false,
+    isBookmarking = false,
+    isAttending = false,
+    isAttendanceUpdating = false,
+    showRecommendationContext = false,
+    quickFitBadges = [],
+    onFeedbackAction,
+    onExplainRecommendation,
+    onShortlistToggle,
+    isInShortlist = false,
+    showWeekday = true,
+    whiteLogoBackgroundInDark = false,
+    showActionControls = true,
+    showHoverMetaChips = false,
+    showShortlistAction = true,
+}) => {
+    const CLICK_GUARD_MS = 350;
     const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
     const accentClass = CARD_ACCENTS[colorIndex];
 
     const startDate = new Date(event.startTime);
-    const dateLabel = format(startDate, 'EEE, MMM d');
+    const dateLabel = format(startDate, showWeekday ? 'EEE, MMM d' : 'MMM d');
     const timeLabel = format(startDate, 'h:mm a');
     const isFree = isEventFree(event);
 
-    // Format price
     const priceDisplay = isFree
         ? 'Free'
         : typeof event.priceMin === 'number'
             ? `$${event.priceMin}`
             : event.priceRange || 'Paid';
 
-    // Format format (Virtual/In-Person)
     const eventFormat = getEventFormat(event);
     const formatDisplay = eventFormat === 'virtual'
         ? 'Remote'
         : eventFormat === 'hybrid'
             ? 'Hybrid'
             : 'On-Site';
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
@@ -61,13 +97,39 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
             sources.push(event.organization.logo);
         }
         return sources;
-    }, [event.eventImageUrl, event.organization?.logo]);
+    }, [event.eventImageUrl, event.organization]);
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
+    const [isActionMenuOpen, setIsActionMenuOpen] = React.useState(false);
+    const [showManagerJustification, setShowManagerJustification] = React.useState(false);
+    const actionMenuRef = React.useRef<HTMLDivElement>(null);
+    const suppressCardClickUntilRef = React.useRef<number>(0);
 
     React.useEffect(() => {
         setActiveLogoSrc(logoSources[0] ?? null);
     }, [event.id, logoSources]);
+
+    React.useEffect(() => {
+        if (!isActionMenuOpen) {
+            return;
+        }
+
+        void prefetchManagerJustification(event.id);
+
+        const handleOutsideClick = (eventTarget: MouseEvent) => {
+            if (!actionMenuRef.current) {
+                return;
+            }
+
+            const targetNode = eventTarget.target;
+            if (targetNode instanceof Node && !actionMenuRef.current.contains(targetNode)) {
+                setIsActionMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, [event.id, isActionMenuOpen]);
 
     const handleLogoError = React.useCallback(() => {
         if (!activeLogoSrc) {
@@ -82,31 +144,208 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
         ? `${event.organization?.name ?? 'Event organizer'} logo`
         : `${event.title} event image`;
 
+    const runFeedbackAction = React.useCallback((action: DiscoveryFeedbackAction) => {
+        onFeedbackAction?.(event, action);
+        setIsActionMenuOpen(false);
+    }, [event, onFeedbackAction]);
+
+    const suppressCardClicks = React.useCallback((durationMs = CLICK_GUARD_MS) => {
+        suppressCardClickUntilRef.current = Date.now() + durationMs;
+    }, []);
+
+    const handleCardClick = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (Date.now() < suppressCardClickUntilRef.current || showManagerJustification || isActionMenuOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        onClick?.();
+    }, [isActionMenuOpen, onClick, showManagerJustification]);
+
+    const handleManagerJustificationClose = React.useCallback(() => {
+        setShowManagerJustification(false);
+        // Prevent click-through when the dialog closes.
+        suppressCardClicks();
+    }, [suppressCardClicks]);
+
     return (
         <div
-            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-border dark:border-border bg-card dark:bg-[#0a0a0a] hover:shadow-md dark:hover:shadow-none hover:bg-accent/10 hover:border-border-strong text-foreground ${accentClass}`}
-            onClick={onClick}
+            className={`group/event-card relative flex flex-col rounded-xl border border-border/60 bg-card p-5 text-foreground shadow-sm transition-all duration-300 cursor-pointer dark:bg-card/40 hover:border-border-strong hover:-translate-y-1 hover:shadow-md ${accentClass}`}
+            onClick={handleCardClick}
+            onMouseLeave={() => setIsActionMenuOpen(false)}
+            role="article"
         >
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-[6px] bg-card border border-border flex items-center justify-center overflow-hidden shadow-sm">
+            {showActionControls && (
+                <div
+                    className="absolute right-4 top-4 z-20"
+                    ref={actionMenuRef}
+                >
+                    <div className="flex items-center gap-1 rounded-md border border-border/70 bg-background/80 p-0.5 shadow-sm backdrop-blur-sm transition-all duration-200 opacity-0 pointer-events-none translate-y-1 group-hover/event-card:opacity-100 group-hover/event-card:pointer-events-auto group-hover/event-card:translate-y-0 group-focus-within/event-card:opacity-100 group-focus-within/event-card:pointer-events-auto group-focus-within/event-card:translate-y-0">
+                        {showShortlistAction && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShortlistToggle?.(event);
+                                }}
+                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'}`}
+                                aria-pressed={isInShortlist}
+                                aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
+                            >
+                                <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAttendanceToggle?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-400 hover:text-emerald-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isAttending}
+                            aria-label={isAttending ? 'Remove attending status' : "Mark as attending"}
+                            disabled={isAttendanceUpdating}
+                            aria-busy={isAttendanceUpdating}
+                        >
+                            <UserCheck
+                                size={16}
+                                weight={isAttending ? 'fill' : 'regular'}
+                                className="transition-all duration-200"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onBookmark?.(event);
+                            }}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-pressed={isBookmarked}
+                            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
+                            disabled={isBookmarking}
+                            aria-busy={isBookmarking}
+                        >
+                            <BookmarkSimple
+                                size={16}
+                                weight={isBookmarked ? 'fill' : 'regular'}
+                                className="transition-all duration-200"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsActionMenuOpen((prev) => !prev);
+                            }}
+                            onMouseEnter={() => {
+                                void prefetchManagerJustification(event.id);
+                            }}
+                            onFocus={() => {
+                                void prefetchManagerJustification(event.id);
+                            }}
+                            className="p-1.5 rounded-md transition-all text-muted-foreground/50 hover:text-foreground hover:bg-accent/10"
+                            aria-haspopup="menu"
+                            aria-expanded={isActionMenuOpen}
+                            aria-label="More actions"
+                        >
+                            <DotsThree size={16} weight="bold" />
+                        </button>
+                    </div>
+
+                    {isActionMenuOpen && (
+                        <div
+                            role="menu"
+                            className="absolute right-0 top-10 z-30 w-44 rounded-lg border border-border bg-popover p-1.5 shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground hover:bg-accent/50"
+                                onClick={() => {
+                                    onExplainRecommendation?.(event);
+                                    setIsActionMenuOpen(false);
+                                }}
+                            >
+                                Why this event
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground hover:bg-accent/50"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    suppressCardClicks();
+                                    setShowManagerJustification(true);
+                                    setIsActionMenuOpen(false);
+                                }}
+                            >
+                                <span className="inline-flex items-center gap-1.5">
+                                    Convince My Manager
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground hover:bg-accent/50"
+                                onClick={() => runFeedbackAction('less-like-this')}
+                            >
+                                Less like this
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-foreground hover:bg-accent/50"
+                                onClick={() => runFeedbackAction('not-relevant')}
+                            >
+                                Not relevant
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full text-left rounded-md px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10"
+                                onClick={() => runFeedbackAction('hide')}
+                            >
+                                Hide event
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {showHoverMetaChips && !showActionControls && (
+                <div className="pointer-events-none absolute right-4 top-4 z-10 flex items-center gap-1.5 opacity-0 translate-y-1 transition-all duration-200 group-hover/event-card:opacity-100 group-hover/event-card:translate-y-0">
+                    <span className="px-1.5 py-0.5 rounded-[4px] bg-blue-50 dark:bg-blue-500/10 text-[10px] font-mono text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                        {formatDisplay}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider ${isFree
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
+                        }`}>
+                        {priceDisplay}
+                    </span>
+                </div>
+            )}
+
+            <div className="mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-11 w-11 shrink-0 rounded-lg bg-background border border-border/60 flex items-center justify-center overflow-hidden p-1.5 shadow-sm ${whiteLogoBackgroundInDark ? 'dark:bg-white dark:border-white/25' : ''}`}>
                         {activeLogoSrc ? (
                             <Image
                                 src={activeLogoSrc}
                                 alt={logoAltText}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-contain"
+                                width={28}
+                                height={28}
+                                className="h-7 w-7 object-contain"
                                 onError={handleLogoError}
                             />
                         ) : (
-                            <div className="text-lg font-bold text-gray-400">
+                            <div className={`text-base font-bold ${whiteLogoBackgroundInDark ? 'text-gray-500' : 'text-gray-400'}`}>
                                 {event.title.charAt(0)}
                             </div>
                         )}
                     </div>
-                    <div className="flex flex-col">
-                        <h3 className="text-[15px] font-medium text-foreground leading-tight group-hover:text-foreground transition-colors" title={event.title}>
+                    <div className="flex flex-col min-w-0">
+                        <h3 className="text-[16px] font-semibold text-foreground leading-tight group-hover/event-card:text-foreground transition-colors truncate" title={event.title}>
                             {event.title}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
@@ -116,51 +355,50 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
                         </div>
                     </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onBookmark?.(event);
-                        }}
-                        className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        aria-pressed={isBookmarked}
-                        aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
-                        disabled={isBookmarking}
-                        aria-busy={isBookmarking}
-                    >
-                        <BookmarkSimple
-                            size={16}
-                            weight={isBookmarked ? 'fill' : 'regular'}
-                            className="transition-all duration-200"
-                        />
-                    </button>
-
-                    <button
-                        type="button"
-                        className="p-1.5 text-muted-foreground/40 hover:text-foreground hover:bg-accent/10 rounded-md transition-all"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            const targetUrl = event.registrationUrl || event.sourceUrl;
-                            if (targetUrl) {
-                                window.open(targetUrl, '_blank');
-                            }
-                        }}
-                        title="Register"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"></path></svg>
-                    </button>
-                </div>
             </div>
 
-            <p className="text-[13px] text-muted-foreground/80 mb-4 line-clamp-2 leading-relaxed">
+            <p className={`text-[13px] text-muted-foreground/80 mb-4 leading-relaxed ${showRecommendationContext && event.careerImpact ? 'line-clamp-1' : 'line-clamp-2'}`}>
                 {event.description || 'No description available for this event.'}
             </p>
 
+            {showRecommendationContext && event.careerImpact && (
+                <div className="mb-3">
+                    <RecommendationContext
+                        careerImpact={event.careerImpact}
+                        event={{ attendeeCount: event.attendeeCount ?? null }}
+                        variant="compact"
+                    />
+                </div>
+            )}
+
+            {quickFitBadges.length > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                    {quickFitBadges.map((badge) => (
+                        <span
+                            key={`${event.id}-${badge.id}`}
+                            className={badge.id === 'schedule-conflict'
+                                ? 'inline-flex items-center rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300'
+                                : 'inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300'}
+                        >
+                            {badge.label}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {networkAttendingCount > 0 && (
+                <NetworkAttendingBadge
+                    eventId={event.id}
+                    telemetrySurface="discover_event_card"
+                    count={networkAttendingCount}
+                    sampleAvatars={networkSampleAvatars}
+                    className="mb-3"
+                />
+            )}
+
             <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
-                <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
-                    <MapPin size={12} weight="fill" className="text-gray-400 dark:text-muted-foreground/40" />
+                <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60 min-w-0">
+                    <MapPin size={12} weight="fill" className="text-gray-400 dark:text-muted-foreground/40 flex-shrink-0" />
                     <span className="truncate max-w-[120px]">{event.location || 'Location TBA'}</span>
                 </div>
 
@@ -169,22 +407,43 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
                         {formatDisplay}
                     </span>
                     <span className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider ${isFree
-                            ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
-                            : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
                         }`}>
                         {priceDisplay}
                     </span>
                 </div>
             </div>
+            <ManagerJustificationModal
+                eventId={event.id}
+                isOpen={showManagerJustification}
+                onClose={handleManagerJustificationClose}
+            />
         </div>
     );
 }, (prevProps, nextProps) => {
-    // Custom comparison: only compare data that affects rendering
-    // Skip onClick/onBookmark as they change every render (inline functions in parent)
+    const prevBadges = prevProps.quickFitBadges ?? [];
+    const nextBadges = nextProps.quickFitBadges ?? [];
+    const badgesEqual = prevBadges.length === nextBadges.length &&
+        prevBadges.every((badge, index) => badge.id === nextBadges[index]?.id);
+
     return (
-        prevProps.event.id === nextProps.event.id &&
+        prevProps.event === nextProps.event &&
+        prevProps.isAttending === nextProps.isAttending &&
+        prevProps.isAttendanceUpdating === nextProps.isAttendanceUpdating &&
         prevProps.isBookmarked === nextProps.isBookmarked &&
-        prevProps.isBookmarking === nextProps.isBookmarking
+        prevProps.isBookmarking === nextProps.isBookmarking &&
+        prevProps.showRecommendationContext === nextProps.showRecommendationContext &&
+        prevProps.isInShortlist === nextProps.isInShortlist &&
+        prevProps.showWeekday === nextProps.showWeekday &&
+        prevProps.whiteLogoBackgroundInDark === nextProps.whiteLogoBackgroundInDark &&
+        prevProps.showActionControls === nextProps.showActionControls &&
+        prevProps.showHoverMetaChips === nextProps.showHoverMetaChips &&
+        prevProps.showShortlistAction === nextProps.showShortlistAction &&
+        badgesEqual &&
+        prevProps.onFeedbackAction === nextProps.onFeedbackAction &&
+        prevProps.onExplainRecommendation === nextProps.onExplainRecommendation &&
+        prevProps.onShortlistToggle === nextProps.onShortlistToggle
     );
 });
 

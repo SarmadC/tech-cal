@@ -1,93 +1,222 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ArrowCounterClockwise } from '@phosphor-icons/react';
 import MockEventDetailPanel from '@/components/calendar/MockEventDetailPanel';
 import DiscoveryLayout from '@/components/discovery/DiscoveryLayout';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
-import DemoEventCard from './DemoEventCard';
+import EventCard from '@/components/discovery/EventCard';
 import { MOCK_EVENTS, MOCK_CATEGORIES } from './MockData';
-import { mockEvent, mockEventCategories } from '@/mocks/mockEvent';
-import { UnifiedFilterOptions } from '@/hooks/useUnifiedServerFiltering';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UnifiedFilterOptions, UpdateFilterHandler, createDefaultUnifiedFilters } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, normalizeEventFormat, isEventFree } from '@/utils/filterCountUtils';
-import { createDefaultUnifiedFilters } from '@/hooks/useUnifiedServerFiltering';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Event } from '@/types';
 
+interface DemoPersonaPreset {
+    id: 'frontend' | 'ai' | 'founder';
+    label: string;
+    rationale: string;
+    filters: Partial<UnifiedFilterOptions>;
+}
+
+const DEMO_PERSONAS: DemoPersonaPreset[] = [
+    {
+        id: 'frontend',
+        label: 'Frontend Engineer',
+        rationale: 'Focused on UI frameworks, frontend stack updates, and shippable product sessions.',
+        filters: {
+            searchTerm: 'frontend',
+            format: 'virtual',
+            sortBy: 'date',
+            sortDirection: 'asc',
+        },
+    },
+    {
+        id: 'ai',
+        label: 'AI Engineer',
+        rationale: 'Optimized for practical AI sessions, model tooling, and events with strong impact potential.',
+        filters: {
+            searchTerm: 'ai',
+            format: 'all',
+            sortBy: 'career-impact',
+            sortDirection: 'desc',
+        },
+    },
+    {
+        id: 'founder',
+        label: 'Founder',
+        rationale: 'Designed to surface investor-facing launches, networking opportunities, and high-signal gatherings.',
+        filters: {
+            searchTerm: 'networking',
+            cost: 'free',
+            sortBy: 'popularity',
+            sortDirection: 'desc',
+        },
+    },
+];
+
+type EventWithImpactPreview = Event & { careerImpact?: { overall?: number } };
+
+const getDefaultDemoFilters = (overrides: Partial<UnifiedFilterOptions> = {}): UnifiedFilterOptions =>
+    createDefaultUnifiedFilters({
+        pageSize: 12,
+        sortBy: 'date',
+        sortDirection: 'asc',
+        ...overrides,
+    });
+
+const getCareerImpactOverall = (event: Event): number =>
+    (event as EventWithImpactPreview).careerImpact?.overall ?? 0;
+
 export default function ProductDemoSection() {
-    // Local state for the demo to feel interactive
-    const [filters, setFilters] = useState<UnifiedFilterOptions>(
-        createDefaultUnifiedFilters({
-            pageSize: 10
-        })
+    const [filters, setFilters] = useState<UnifiedFilterOptions>(() => getDefaultDemoFilters());
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [bookmarkedEventIds, setBookmarkedEventIds] = useState<Set<string>>(() => new Set());
+    const [activePersonaId, setActivePersonaId] = useState<DemoPersonaPreset['id'] | null>(null);
+
+    const { showInfo } = useSnackbar();
+
+    const activePersona = useMemo(
+        () => DEMO_PERSONAS.find((preset) => preset.id === activePersonaId) ?? null,
+        [activePersonaId]
     );
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [bookmarkedEventIds, setBookmarkedEventIds] = useState<Set<string>>(() => new Set());
-    const { showSuccess, showInfo } = useSnackbar();
-
-    // Filter logic to make the demo functional!
-    const activeFilterCount = [
+    const activeFilterCount = useMemo(() => [
         filters.searchTerm ? 1 : 0,
-        filters.locations?.length ? 1 : 0,
+        filters.locations.length > 0 ? 1 : 0,
         filters.format !== 'all' ? 1 : 0,
         filters.cost !== 'all' ? 1 : 0,
-        filters.categories.length ? 1 : 0,
-        filters.tags.length ? 1 : 0,
+        filters.categories.length > 0 ? 1 : 0,
+        filters.tags.length > 0 ? 1 : 0,
         (filters.dateRange.start || filters.dateRange.end) ? 1 : 0
-    ].reduce((a, b) => a + b, 0);
+    ].reduce((a, b) => a + b, 0), [filters]);
 
-    const filteredEvents = MOCK_EVENTS.filter(event => {
-        // Search
+    const filteredEvents = useMemo(() => MOCK_EVENTS.filter((event) => {
         if (filters.searchTerm) {
             const term = filters.searchTerm.toLowerCase();
             const inTitle = event.title.toLowerCase().includes(term);
             const inDesc = event.description?.toLowerCase().includes(term);
-            const inTags = (event.tags || []).some(tag => tag.name?.toLowerCase().includes(term));
+            const inTags = (event.tags || []).some((tag) => tag.name?.toLowerCase().includes(term));
             if (!inTitle && !inDesc && !inTags) {
                 return false;
             }
         }
-        // Format
+
+        if (filters.locations.length > 0) {
+            const location = event.location.toLowerCase();
+            const hasLocationMatch = filters.locations.some((selectedLocation) =>
+                location.includes(selectedLocation.toLowerCase())
+            );
+            if (!hasLocationMatch) {
+                return false;
+            }
+        }
+
+        if (filters.dateRange.start || filters.dateRange.end) {
+            const eventDate = new Date(event.startTime);
+
+            if (filters.dateRange.start) {
+                const start = new Date(filters.dateRange.start);
+                start.setHours(0, 0, 0, 0);
+                if (eventDate < start) {
+                    return false;
+                }
+            }
+
+            if (filters.dateRange.end) {
+                const end = new Date(filters.dateRange.end);
+                end.setHours(23, 59, 59, 999);
+                if (eventDate > end) {
+                    return false;
+                }
+            }
+        }
+
         if (filters.format !== 'all') {
-            const evtFormat = normalizeEventFormat(event.eventFormat);
-            if (evtFormat !== filters.format) return false;
+            const eventFormat = normalizeEventFormat(event.eventFormat);
+            if (eventFormat !== filters.format) {
+                return false;
+            }
         }
-        // Cost
+
         if (filters.cost !== 'all') {
-            const isFree = isEventFree(event);
-            if (filters.cost === 'free' && !isFree) return false;
-            if (filters.cost === 'paid' && isFree) return false;
+            const isFreeEvent = isEventFree(event);
+            if (filters.cost === 'free' && !isFreeEvent) {
+                return false;
+            }
+            if (filters.cost === 'paid' && isFreeEvent) {
+                return false;
+            }
         }
-        // Categories
+
         if (filters.categories.length > 0) {
             const eventCategoryId = event.eventTypeId || event.category?.id;
             if (!eventCategoryId || !filters.categories.includes(eventCategoryId)) {
                 return false;
             }
         }
-        // Tags
+
         if (filters.tags.length > 0) {
-            const eventTags = (event.tags || []).map(tag => tag.name?.toLowerCase().trim()).filter(Boolean);
-            const filterTags = filters.tags.map(tag => tag.toLowerCase().trim());
-            // Event must have at least one of the selected tags
-            const hasMatchingTag = filterTags.some(filterTag =>
-                eventTags.some(eventTag => eventTag === filterTag)
+            const eventTags = (event.tags || []).map((tag) => tag.name?.toLowerCase().trim()).filter(Boolean);
+            const filterTags = filters.tags.map((tag) => tag.toLowerCase().trim());
+            const hasMatchingTag = filterTags.some((filterTag) =>
+                eventTags.some((eventTag) => eventTag === filterTag)
             );
             if (!hasMatchingTag) {
                 return false;
             }
         }
-        return true;
-    });
 
-    const handleUpdateFilter = (key: keyof UnifiedFilterOptions, value: any) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+        return true;
+    }), [filters]);
+
+    const sortedEvents = useMemo(() => {
+        const next = [...filteredEvents];
+
+        switch (filters.sortBy) {
+            case 'popularity':
+                return next.sort((a, b) => (b.attendeeCount || 0) - (a.attendeeCount || 0));
+            case 'career-impact':
+                return next.sort((a, b) => getCareerImpactOverall(b) - getCareerImpactOverall(a));
+            case 'title':
+                return next.sort((a, b) => a.title.localeCompare(b.title));
+            case 'location':
+                return next.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
+            case 'default':
+            case 'date':
+            default:
+                return next.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        }
+    }, [filteredEvents, filters.sortBy]);
+
+    const displayCounts = useMemo(
+        () => calculateFilterCounts(MOCK_EVENTS, MOCK_CATEGORIES),
+        []
+    );
+
+    const visibleEvents = sortedEvents;
+
+    const activeSelectedEvent = useMemo(
+        () => (selectedEvent && visibleEvents.some((event) => event.id === selectedEvent.id) ? selectedEvent : null),
+        [selectedEvent, visibleEvents]
+    );
+
+    const handleUpdateFilter: UpdateFilterHandler = (key, value) => {
+        setFilters((prev) => ({ ...prev, [key]: value }));
     };
 
-    const counts = calculateFilterCounts(MOCK_EVENTS, MOCK_CATEGORIES);
+    const handleApplyPersona = (persona: DemoPersonaPreset) => {
+        setActivePersonaId(persona.id);
+        setFilters(getDefaultDemoFilters(persona.filters));
+        showInfo(`Applied ${persona.label} preset.`, 3500);
+    };
+
+    const handleClearPersona = () => {
+        setActivePersonaId(null);
+        setFilters(getDefaultDemoFilters());
+    };
 
     const handleBookmark = (event: Event) => {
         const alreadyBookmarked = bookmarkedEventIds.has(event.id);
@@ -102,11 +231,20 @@ export default function ProductDemoSection() {
             return next;
         });
 
-        if (alreadyBookmarked) {
-            showInfo(`Removed “${event.title}” from bookmarks (demo only).`, 3500);
-        } else {
-            showSuccess(`Saved “${event.title}” to bookmarks (demo only).`, 4000);
-        }
+        showInfo(
+            alreadyBookmarked
+                ? `Removed "${event.title}" from bookmarks (demo only).`
+                : `Saved "${event.title}" to bookmarks (demo only).`,
+            3500
+        );
+    };
+
+    const handleResetDemo = () => {
+        setFilters(getDefaultDemoFilters());
+        setSelectedEvent(null);
+        setBookmarkedEventIds(new Set());
+        setActivePersonaId(null);
+        showInfo('Demo reset to default state.', 3000);
     };
 
     return (
@@ -115,37 +253,63 @@ export default function ProductDemoSection() {
             <div className="absolute h-full w-full bg-background [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
 
             <div className="container mx-auto px-0 sm:px-4 relative z-10">
-                <div className="text-center max-w-3xl mx-auto mb-16">
+                <div className="text-center max-w-4xl mx-auto mb-12">
                     <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-                        <span className="text-gradient-mono">Powerful Discovery</span>
+                        <span className="text-gradient-mono">Discovery, Exactly In-App</span>
                         <br />
                         <span className="text-muted-foreground text-3xl md:text-4xl font-normal">
-                            Built for efficiency
+                            Product Preview
                         </span>
                     </h2>
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                        Experience the actual interface. Filter by stack, location, or price.
-                        <br />
-                        No clutter, just the events that matter to your career.
-                    </p>
-                </div>
 
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                        Mock data with the exact discovery UI and interactions users get in the platform.
+                        <br />
+                        Search, filter, and inspect full event details including timeline and track views.
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                        {DEMO_PERSONAS.map((persona) => (
+                            <button
+                                key={persona.id}
+                                type="button"
+                                onClick={() => handleApplyPersona(persona)}
+                                className={`px-3.5 py-2 rounded-full text-xs font-medium border transition-colors ${activePersonaId === persona.id
+                                    ? 'border-primary/60 bg-primary/15 text-foreground'
+                                    : 'border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30'
+                                    }`}
+                            >
+                                {persona.label}
+                            </button>
+                        ))}
+                        {activePersonaId && (
+                            <button
+                                type="button"
+                                onClick={handleClearPersona}
+                                className="px-3.5 py-2 rounded-full text-xs font-medium border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+                            >
+                                Clear Persona
+                            </button>
+                        )}
+                    </div>
+
+                    {activePersona && (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            {activePersona.rationale}
+                        </p>
+                    )}
+                </div>
             </div>
 
-            {/* The Demo Interface Wrapper - Enhanced Glass Effect */}
             <div className="product-demo-shell w-full max-w-[1400px] mx-auto relative group perspective-1000">
-                {/* Glow Background */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
 
                 <div className="product-demo-frame relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
-
-                    {/* Top Bar Accent */}
                     <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 dark:opacity-60" />
 
-                    {/* Reusing the Actual App Components */}
                     <div className="product-demo-content p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
                         <DiscoveryLayout
-                            className="min-h-0 product-demo-layout" // Prevent forced full viewport height
+                            className="min-h-0 product-demo-layout product-demo-contrast"
                             minHeightClassName="min-h-0"
                             isSidebarOpen={isSidebarOpen}
                             onSidebarClose={() => setIsSidebarOpen(false)}
@@ -160,62 +324,81 @@ export default function ProductDemoSection() {
                                     }}
                                     onUpdateFilter={handleUpdateFilter}
                                     categories={MOCK_CATEGORIES}
-                                    events={filteredEvents}
-                                    counts={counts}
+                                    events={sortedEvents}
+                                    counts={displayCounts}
                                 />
                             }
                             header={
                                 <DiscoveryHeader
                                     searchTerm={filters.searchTerm}
-                                    onSearchChange={(val) => handleUpdateFilter('searchTerm', val)}
+                                    onSearchChange={(value) => handleUpdateFilter('searchTerm', value)}
                                     location={filters.locations[0] || ''}
-                                    onLocationChange={(val) => handleUpdateFilter('locations', val ? [val] : [])}
+                                    onLocationChange={(value) => handleUpdateFilter('locations', value ? [value] : [])}
                                     dateRange={filters.dateRange}
                                     onDateRangeChange={(range) => handleUpdateFilter('dateRange', range)}
                                     onSearch={() => { }}
-                                    onResetFilters={() => setFilters(createDefaultUnifiedFilters({ pageSize: 10 }))}
+                                    onResetFilters={handleClearPersona}
                                     activeFilterCount={activeFilterCount}
                                     onFilterClick={() => setIsSidebarOpen(true)}
-                                    onNearMeClick={() => { }}
                                     isDetectingLocation={false}
                                 />
                             }
-                            resultCount={filteredEvents.length}
-                            sortOption={
-                                <Select
-                                    value={filters.sortBy}
-                                    onValueChange={(value) => handleUpdateFilter('sortBy', value)}
-                                >
-                                    <SelectTrigger className="w-full sm:w-[180px]">
-                                        <SelectValue placeholder="Sort by" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="date">Date</SelectItem>
-                                        <SelectItem value="popularity">Popularity</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            resultCount={visibleEvents.length}
+                            actionControls={
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleResetDemo}
+                                        className="product-demo-reset-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-primary/45 bg-primary/12 text-foreground text-xs font-medium hover:border-primary/70 hover:bg-primary/20 transition-colors"
+                                    >
+                                        <ArrowCounterClockwise size={12} weight="bold" />
+                                        Reset demo state
+                                    </button>
+                                </div>
                             }
                         >
-                            {filteredEvents.map((event) => (
-                                <DemoEventCard
-                                    key={event.id}
-                                    event={event}
-                                    // Disable navigation for demo, open mock details instead
-                                    onClick={() => setIsDetailOpen(true)}
-                                    isBookmarked={bookmarkedEventIds.has(event.id)}
-                                    onBookmark={() => handleBookmark(event)}
-                                />
-                            ))}
+                            {visibleEvents.length === 0 ? (
+                                <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-border/70 p-6 text-center bg-card/40">
+                                    <h3 className="text-base font-semibold text-foreground">No events in this view</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        Adjust filters or reset persona to repopulate the demo instantly.
+                                    </p>
+                                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleClearPersona}
+                                            className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                                        >
+                                            Reset filters
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                visibleEvents.map((event) => (
+                                    <EventCard
+                                        key={event.id}
+                                        event={event}
+                                        onClick={() => setSelectedEvent(event)}
+                                        onBookmark={handleBookmark}
+                                        isBookmarked={bookmarkedEventIds.has(event.id)}
+                                        showWeekday={false}
+                                        whiteLogoBackgroundInDark
+                                        showActionControls
+                                        showShortlistAction={false}
+                                        showRecommendationContext
+                                    />
+                                ))
+                            )}
                         </DiscoveryLayout>
                     </div>
                 </div>
             </div>
 
             <MockEventDetailPanel
-                isOpen={isDetailOpen}
-                onClose={() => setIsDetailOpen(false)}
-                event={mockEvent}
-                categories={mockEventCategories}
+                isOpen={Boolean(activeSelectedEvent)}
+                onClose={() => setSelectedEvent(null)}
+                event={activeSelectedEvent ?? undefined}
+                categories={MOCK_CATEGORIES}
             />
         </section>
     );

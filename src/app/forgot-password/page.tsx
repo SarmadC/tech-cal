@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
                                         required
                                         autoComplete="email"
                                         className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                                        placeholder="you@example.com"
+                                        placeholder="Enter your email"
                                     />
                                     {state.errors?.email && <p className="mt-2 text-sm text-red-500">{state.errors.email[0]}</p>}
                                 </div>

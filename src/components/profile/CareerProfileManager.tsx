@@ -12,48 +12,30 @@ import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCar
 import QuickEditModal from './quick-edit';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Button } from '@/components/ui/button';
-import { IdentificationCard, CheckCircle, PencilSimple } from '@phosphor-icons/react';
+import { IdentificationCard, CheckCircle, PencilSimple, CaretRight } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 
-// --- Shared Components (Linear Style) ---
+// --- Shared Components (Refined Linear Style) ---
 
 const SettingSection = ({
     title,
     description,
-    onEdit,
-    editLabel = "Edit",
     children
 }: {
     title: string,
     description?: string,
-    onEdit?: () => void,
-    editLabel?: string,
     children: React.ReactNode
 }) => (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 py-8 border-b border-zinc-200 dark:border-zinc-800 last:border-0 relative">
-        <div className="col-span-4 space-y-4">
-            <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">{title}</h3>
-                </div>
-                {description && (
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-[90%]">{description}</p>
-                )}
-            </div>
-            {onEdit && (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-medium border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                    onClick={onEdit}
-                >
-                    {editLabel}
-                </Button>
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 py-6 border-b border-[var(--border-default)]/20 last:border-0 relative group/section">
+        <div className="col-span-4 space-y-1">
+            <h3 className="text-sm font-medium text-[var(--foreground-primary)] leading-tight">{title}</h3>
+            {description && (
+                <p className="text-[13px] text-[var(--foreground-tertiary)] leading-relaxed max-w-[90%]">{description}</p>
             )}
         </div>
         <div className="col-span-8">
-            <div className="space-y-0.5">
+            <div className="grid grid-cols-1 border-t border-[var(--border-default)]/20">
                 {children}
             </div>
         </div>
@@ -63,32 +45,60 @@ const SettingSection = ({
 const SettingRow = ({
     label,
     value,
-    className = '',
-    onSet
+    onClick,
+    isEmpty = false,
+    className = ''
 }: {
     label: string,
     value?: React.ReactNode,
-    className?: string,
-    onSet?: () => void
+    onClick?: () => void,
+    isEmpty?: boolean,
+    className?: string
 }) => (
-    <div className={`flex items-baseline justify-between py-2 min-h-[32px] ${className}`}>
-        <div className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 shrink-0 w-1/3">
+    <div
+        onClick={onClick}
+        className={`group flex items-center justify-between py-2 border-b border-[var(--border-default)]/20 last:border-0 min-h-[40px] cursor-pointer hover:bg-[var(--background-secondary)]/30 -mx-2 px-2 transition-colors ${className}`}
+    >
+        <div className="text-[13px] font-medium text-[var(--foreground-primary)] transition-colors shrink-0 w-1/3">
             {label}
         </div>
-        <div className="text-[13px] text-zinc-900 dark:text-zinc-100 text-right font-medium max-w-[66%] leading-relaxed">
-            {value ? (
-                value
+        <div className="flex items-center justify-end gap-2 text-[13px] text-[var(--foreground-primary)] font-medium max-w-[66%] leading-relaxed text-right">
+            {isEmpty ? (
+                <span className="text-[var(--foreground-tertiary)] opacity-60 transition-colors">Not set</span>
             ) : (
-                <button
-                    onClick={onSet}
-                    className="text-zinc-400 dark:text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 px-2 py-0.5 rounded text-[12px] font-medium"
-                >
-                    Set now
-                </button>
+                <div className="truncate flex justify-end w-full">
+                    {value}
+                </div>
             )}
+            <div className="text-[var(--foreground-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity -mr-1 flex-shrink-0">
+                <CaretRight size={14} weight="bold" />
+            </div>
         </div>
     </div>
 );
+
+// --- Content Formatters ---
+
+const ChipsList = ({ items, max = 3 }: { items: string[], max?: number }) => {
+    if (!items || items.length === 0) return null;
+    const visibleInfo = items.slice(0, max);
+    const remaining = items.length - max;
+
+    return (
+        <div className="flex flex-wrap gap-1.5 justify-end">
+            {visibleInfo.map((item, i) => (
+                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-[var(--background-secondary)] text-[var(--foreground-secondary)] text-[11px] font-medium border border-[var(--border-default)]/50 whitespace-nowrap">
+                    {item}
+                </span>
+            ))}
+            {remaining > 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[var(--foreground-tertiary)] text-[11px] font-medium whitespace-nowrap opacity-70">
+                    +{remaining}
+                </span>
+            )}
+        </div>
+    );
+};
 
 // --- Helper Functions ---
 
@@ -116,20 +126,6 @@ const formatLearningStyle = (style: string): string => {
     return labels[style] || style;
 };
 
-const formatList = (items: string[], formatter?: (item: string) => string) => {
-    if (!items || items.length === 0) return null;
-    return (
-        <span className="inline-block">
-            {items.map((item, i) => (
-                <span key={i}>
-                    {formatter ? formatter(item) : item}
-                    {i < items.length - 1 && <span className="text-zinc-400 dark:text-zinc-600 mr-1.5">,</span>}
-                </span>
-            ))}
-        </span>
-    );
-};
-
 // --- Types & Constants ---
 
 export interface CareerProfileManagerProps {
@@ -137,13 +133,6 @@ export interface CareerProfileManagerProps {
     onProfileUpdate?: (profile: CareerProfile) => void;
 }
 
-const DEFAULT_OPTIONAL_STATUS = {
-    learningPreferences: false,
-    networkingPreferences: false,
-    teamPreferences: false
-};
-
-const OPTIONAL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 const QUICK_EDIT_STEP_MAP: Record<QuickEditSection, number> = {
     role: 1,
     skills: 2,
@@ -188,6 +177,7 @@ export default function CareerProfileManager({
     className = '',
     onProfileUpdate
 }: CareerProfileManagerProps) {
+    // ... (Hooks and state remain the same)
     const { user } = useAuth();
     const isMobile = useIsMobile();
     const router = useRouter();
@@ -206,7 +196,7 @@ export default function CareerProfileManager({
         saveError: null
     });
 
-    // Kept for backward compatibility/logic if needed, though prompts are less prominent in this view
+    // ... (Keep existing refs/effects logic)
     const [dismissedPromptIds, setDismissedPromptIds] = useState<string[]>([]);
     const loggedShownPrompts = useRef<Set<string>>(new Set());
     const completedSectionsRef = useRef<Set<string>>(new Set());
@@ -237,7 +227,7 @@ export default function CareerProfileManager({
         goals: null as never
     };
 
-    // --- Logic for Prompts/Notifications ---
+    // ... (Keep existing prompt logic/handlers)
     const logPromptEvent = useCallback((event: 'prompt_shown' | 'prompt_opened' | 'prompt_snoozed' | 'prompt_completed', sectionId: keyof CareerOptionalSectionStatus, extra: Record<string, unknown> = {}) => {
         AnalyticsService.logProfilePromptEvent(event, {
             section: sectionId,
@@ -289,8 +279,6 @@ export default function CareerProfileManager({
     };
 
     const handleQuickEditClose = () => {
-        // If save happened within modal, isDirty might be reset, but we can check if successful
-        // We can just close it.
         setQuickEditSection(null);
     };
 
@@ -305,32 +293,11 @@ export default function CareerProfileManager({
         }
     };
 
-    // --- Loading & Error States ---
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[200px]">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-500 mx-auto mb-2"></div>
-                    <p className="text-sm text-zinc-500">Loading profile...</p>
-                </div>
-            </div>
-        );
-    }
 
-    if (error) {
-        return (
-            <div className="flex items-center justify-center min-h-[200px]">
-                <div className="text-center">
-                    <p className="text-red-500 text-sm mb-2">Error loading profile</p>
-                    <button onClick={refreshProfile} className="text-sm underline transition text-zinc-500 hover:text-zinc-900">
-                        Try again
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    if (isLoading) return <div className="flex items-center justify-center min-h-[200px]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-500"></div></div>;
+    if (error) return <div className="flex items-center justify-center min-h-[200px] text-red-500">Error loading profile</div>;
 
-    // --- Onboarding / Incomplete State ---
+    // ... (Keep onboarding/incomplete state logic currently same, focusing on the main view below)
     if (!hasCompletedOnboarding || !currentCareerProfile) {
         return (
             <div className={`career-profile-manager incomplete ${className}`}>
@@ -392,7 +359,6 @@ export default function CareerProfileManager({
         );
     }
 
-    // --- Main View (Linear Style Settings) ---
     if (isMobile && quickEditSection) {
         const initialStep = QUICK_EDIT_STEP_MAP[quickEditSection];
         return (
@@ -413,144 +379,109 @@ export default function CareerProfileManager({
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-500 pb-20">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Career Profile</h2>
-                    <p className="text-[14px] text-zinc-500 dark:text-zinc-400 mt-1">
-                        Manage your role, skills, and preferences to improve recommendations.
-                    </p>
-                </div>
-                {saveFeedback && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20">
-                            <CheckCircle size={14} weight="fill" />
-                            <span>Saved</span>
-                        </div>
-                    </div>
-                )}
-            </div>
+        <div className="max-w-4xl space-y-2 animate-in fade-in duration-500 pb-20">
+            {/* Note: Header removed to match "bare settings" style if this is inside a layout that provides it, 
+                 but keeping basic structure. */}
 
-            <div className="border-t border-zinc-200 dark:border-zinc-800">
-                {/* Professional Profile */}
-                <SettingSection
-                    title="Professional Profile"
-                    description="Your current role and workplace details."
-                    onEdit={() => handleQuickEdit('role')}
-                    editLabel="Edit Profile"
-                >
-                    <SettingRow label="Current Role" value={currentCareerProfile.currentRole} onSet={() => handleQuickEdit('role')} />
-                    <SettingRow label="Seniority" value={currentCareerProfile.seniority ? currentCareerProfile.seniority.replace('-', ' ') : undefined} onSet={() => handleQuickEdit('role')} />
-                    <SettingRow label="Industry" value={currentCareerProfile.industry} onSet={() => handleQuickEdit('role')} />
-                    <SettingRow label="Company Size" value={formatCompanySize(currentCareerProfile.companySize || '')} onSet={() => handleQuickEdit('role')} />
-                </SettingSection>
+            {/* Professional Profile */}
+            <SettingSection
+                title="Professional Profile"
+                description="Your current role and workplace."
+            >
+                <SettingRow
+                    label="Current Role"
+                    value={currentCareerProfile.currentRole}
+                    isEmpty={!currentCareerProfile.currentRole}
+                    onClick={() => handleQuickEdit('role')}
+                />
+                <SettingRow
+                    label="Seniority"
+                    value={currentCareerProfile.seniority ? currentCareerProfile.seniority.replace('-', ' ') : undefined}
+                    isEmpty={!currentCareerProfile.seniority}
+                    onClick={() => handleQuickEdit('role')}
+                />
+                <SettingRow
+                    label="Industry"
+                    value={currentCareerProfile.industry}
+                    isEmpty={!currentCareerProfile.industry}
+                    onClick={() => handleQuickEdit('role')}
+                />
+                <SettingRow
+                    label="Company Size"
+                    value={formatCompanySize(currentCareerProfile.companySize || '')}
+                    isEmpty={!currentCareerProfile.companySize}
+                    onClick={() => handleQuickEdit('role')}
+                />
+            </SettingSection>
 
-                {/* Skills & Interests */}
-                <SettingSection
-                    title="Skills & Interests"
-                    description="Skills you have and want to learn."
-                    onEdit={() => handleQuickEdit('skills')}
-                    editLabel="Edit Skills"
-                >
-                    <SettingRow
-                        label="Primary Skills"
-                        value={formatList(currentCareerProfile.primarySkills)}
-                        onSet={() => handleQuickEdit('skills')}
-                    />
-                    <SettingRow
-                        label="Skills to Learn"
-                        value={formatList(currentCareerProfile.skillsToLearn)}
-                        onSet={() => handleQuickEdit('skills')}
-                    />
-                    <SettingRow
-                        label="Interests"
-                        value={formatList(currentCareerProfile.interests)}
-                        onSet={() => handleQuickEdit('skills')}
-                    />
-                </SettingSection>
+            {/* Skills & Interests */}
+            <SettingSection
+                title="Skills & Interests"
+                description="What you know and what you want to learn."
+            >
+                <SettingRow
+                    label="Primary Skills"
+                    value={<ChipsList items={currentCareerProfile.primarySkills || []} />}
+                    isEmpty={!currentCareerProfile.primarySkills?.length}
+                    onClick={() => handleQuickEdit('skills')}
+                />
+                <SettingRow
+                    label="Skills to Learn"
+                    value={<ChipsList items={currentCareerProfile.skillsToLearn || []} />}
+                    isEmpty={!currentCareerProfile.skillsToLearn?.length}
+                    onClick={() => handleQuickEdit('skills')}
+                />
+                <SettingRow
+                    label="Interests"
+                    value={<ChipsList items={currentCareerProfile.interests || []} />}
+                    isEmpty={!currentCareerProfile.interests?.length}
+                    onClick={() => handleQuickEdit('skills')}
+                />
+            </SettingSection>
 
-                {/* Goals */}
-                <SettingSection
-                    title="Career Goals"
-                    description="Your goals and timeline."
-                    onEdit={() => handleQuickEdit('goals')}
-                    editLabel="Edit Goals"
-                >
-                    <SettingRow
-                        label="Timeframe"
-                        value={<span className="capitalize">{currentCareerProfile.timeframe?.replace('-', ' ') || 'Medium Term'}</span>}
-                        onSet={() => handleQuickEdit('goals')}
-                    />
-                    <SettingRow
-                        label="Goals"
-                        value={currentCareerProfile.careerGoals && currentCareerProfile.careerGoals.length > 0 ? (
-                            <span>
-                                {currentCareerProfile.careerGoals.map((goal, i) => (
-                                    <span key={i}>
-                                        {goal.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                                        {i < currentCareerProfile.careerGoals.length - 1 && <span className="text-zinc-400 dark:text-zinc-600 mr-1.5">,</span>}
-                                    </span>
-                                ))}
-                            </span>
-                        ) : undefined}
-                        onSet={() => handleQuickEdit('goals')}
-                    />
-                </SettingSection>
+            {/* Goals */}
+            <SettingSection
+                title="Career Goals"
+                description="Your professional objectives and timeline."
+            >
+                <SettingRow
+                    label="Timeframe"
+                    value={<span className="capitalize">{currentCareerProfile.timeframe?.replace('-', ' ')}</span>}
+                    isEmpty={!currentCareerProfile.timeframe}
+                    onClick={() => handleQuickEdit('goals')}
+                />
+                <SettingRow
+                    label="Goals"
+                    value={currentCareerProfile.careerGoals?.map(g => g.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())).join(', ')}
+                    isEmpty={!currentCareerProfile.careerGoals?.length}
+                    onClick={() => handleQuickEdit('goals')}
+                />
+            </SettingSection>
 
-                {/* Preferences - Learning */}
-                <SettingSection
-                    title="Learning Preferences"
-                    description="How you prefer to learn."
-                    onEdit={() => handleQuickEdit('learning')}
-                    editLabel="Edit Preferences"
-                >
-                    <SettingRow
-                        label="Learning Style"
-                        value={formatList(currentCareerProfile.learningStyle || [], formatLearningStyle)}
-                        onSet={() => handleQuickEdit('learning')}
-                    />
-                    <SettingRow
-                        label="Availability"
-                        value={<span className="capitalize">{currentCareerProfile.availableTime?.replace('-', ' ') || 'Moderate'}</span>}
-                        onSet={() => handleQuickEdit('learning')}
-                    />
-                    <SettingRow
-                        label="Budget"
-                        value={<span className="capitalize">{currentCareerProfile.budget?.replace('-', ' ') || 'Moderate'}</span>}
-                        onSet={() => handleQuickEdit('learning')}
-                    />
-                </SettingSection>
-
-                {/* Preferences - Networking & Team */}
-                <SettingSection
-                    title="Networking & Team"
-                    description="Who you want to meet and event formats."
-                    onEdit={() => handleQuickEdit('networking')}
-                    editLabel="Edit Networking"
-                >
-                    <SettingRow
-                        label="Networking Goals"
-                        value={currentCareerProfile.networkingGoals && currentCareerProfile.networkingGoals.length > 0 ? (
-                            <span>
-                                {currentCareerProfile.networkingGoals.map((goal, i) => (
-                                    <span key={i}>
-                                        {goal.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                                        {i < currentCareerProfile.networkingGoals.length - 1 && <span className="text-zinc-400 dark:text-zinc-600 mr-1.5">,</span>}
-                                    </span>
-                                ))}
-                            </span>
-                        ) : undefined}
-                        onSet={() => handleQuickEdit('networking')}
-                    />
-                    <SettingRow
-                        label="Event Formats"
-                        value={formatList(currentCareerProfile.preferredEventTypes || [], (t) => t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}
-                        onSet={() => handleQuickEdit('networking')}
-                    />
-                </SettingSection>
-
-            </div>
+            {/* Preferences */}
+            <SettingSection
+                title="Learning & Networking"
+                description="Your preferred learning styles and event formats."
+            >
+                <SettingRow
+                    label="Learning Style"
+                    value={<ChipsList items={currentCareerProfile.learningStyle?.map(s => formatLearningStyle(s)) || []} />}
+                    isEmpty={!currentCareerProfile.learningStyle?.length}
+                    onClick={() => handleQuickEdit('learning')}
+                />
+                <SettingRow
+                    label="Networking Goals"
+                    value={<ChipsList items={currentCareerProfile.networkingGoals?.map(g => g.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
+                    isEmpty={!currentCareerProfile.networkingGoals?.length}
+                    onClick={() => handleQuickEdit('networking')}
+                />
+                <SettingRow
+                    label="Event Formats"
+                    value={<ChipsList items={currentCareerProfile.preferredEventTypes?.map(t => t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
+                    isEmpty={!currentCareerProfile.preferredEventTypes?.length}
+                    onClick={() => handleQuickEdit('networking')}
+                />
+            </SettingSection>
 
             {/* Quick Edit Modal */}
             {!isMobile && (

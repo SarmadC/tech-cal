@@ -42,18 +42,20 @@ export function FullCalendarCSSLoader() {
             link.rel = 'stylesheet';
             link.href = 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css';
             link.crossOrigin = 'anonymous';
-            
+
             link.onload = () => {
                 isLoading = false;
+                loadPromise = null; // Clear reference to allow garbage collection
                 resolve();
             };
-            
+
             link.onerror = () => {
                 isLoading = false;
+                loadPromise = null; // Clear reference to allow garbage collection
                 console.warn('Failed to load FullCalendar CSS');
                 resolve(); // Still resolve to prevent hanging
             };
-            
+
             document.head.appendChild(link);
         });
     }, []);

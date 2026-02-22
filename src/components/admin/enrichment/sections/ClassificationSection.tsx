@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { TagSelector } from '../TagSelector';
 
 import type { ClassificationSectionProps, EventFormatEnum } from '../types';
 
@@ -50,7 +51,6 @@ export function ClassificationSection({
     }, [lookupData.eventTags, eventTagRelations]);
 
     // State for creating new tags
-    const [newTagName, setNewTagName] = useState('');
     const [creatingTag, setCreatingTag] = useState(false);
     const [tagCreationError, setTagCreationError] = useState<string | null>(null);
     const [localTags, setLocalTags] = useState<Array<{ id: string; event_tag: string; category: string | null }>>([]);
@@ -139,7 +139,6 @@ export function ClassificationSection({
                     ...prev,
                     tagIds: [...prev.tagIds, data.tagId],
                 }));
-                setNewTagName('');
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to create tag';
@@ -217,67 +216,19 @@ export function ClassificationSection({
                 </div>
                 <div className="grid gap-2">
                     <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Tags</label>
-                    <select
-                        multiple
-                        value={relationships.tagIds}
-                        onChange={(e) => {
-                            const selected = Array.from(e.target.selectedOptions, option => option.value);
-                            setRelationships(prev => ({ ...prev, tagIds: selected }));
+                    <TagSelector
+                        selectedTagIds={relationships.tagIds}
+                        tags={allTagsWithLocal}
+                        onToggleTag={(tagId) => {
+                            setRelationships(prev => {
+                                const newTagIds = prev.tagIds.includes(tagId)
+                                    ? prev.tagIds.filter(id => id !== tagId)
+                                    : [...prev.tagIds, tagId];
+                                return { ...prev, tagIds: newTagIds };
+                            });
                         }}
-                        className="w-full bg-transparent border border-default rounded-md px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors min-h-[80px]"
-                    >
-                        {allTagsWithLocal.map(tag => (
-                            <option key={tag.id} value={tag.id} className="bg-background-main py-1">{tag.event_tag}</option>
-                        ))}
-                    </select>
-
-                    {/* Selected Tags Display */}
-                    {relationships.tagIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {relationships.tagIds.map(tagId => {
-                                const tag = allTagsWithLocal.find(t => t.id === tagId);
-                                if (!tag) return null;
-                                return (
-                                    <span
-                                        key={tagId}
-                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent-primary-light text-accent-primary text-xs border border-accent-primary/30"
-                                    >
-                                        {tag.event_tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setRelationships(prev => ({
-                                                    ...prev,
-                                                    tagIds: prev.tagIds.filter(id => id !== tagId)
-                                                }));
-                                            }}
-                                            className="hover:text-white focus:outline-none"
-                                        >
-                                            ×
-                                        </button>
-                                    </span>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="Create new tag..."
-                            value={newTagName}
-                            onChange={(e) => setNewTagName(e.target.value)}
-                            className="flex-1 bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                        />
-                        <Button
-                            onClick={() => createNewTag(newTagName)}
-                            disabled={!newTagName.trim() || creatingTag}
-                            size="sm"
-                            variant="secondary"
-                        >
-                            {creatingTag ? 'Creating...' : 'Create Tag'}
-                        </Button>
-                    </div>
+                        onCreateTag={createNewTag}
+                    />
                     {tagCreationError && (
                         <p className="text-xs text-rose-500 mt-1">{tagCreationError}</p>
                     )}

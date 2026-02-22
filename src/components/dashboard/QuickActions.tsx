@@ -19,7 +19,7 @@ const quickActions: QuickAction[] = [
     variant: 'default'
   },
   {
-    href: '/discover',
+    href: '/events',
     icon: StarIcon,
     label: 'Discover New Events',
     variant: 'outline'

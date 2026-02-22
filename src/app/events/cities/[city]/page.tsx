@@ -1,0 +1,321 @@
+import { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
+import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
+import { BreadcrumbJsonLd, ItemListJsonLd } from '@/components/seo';
+import { formatDate } from '@/utils/dateUtils';
+import { cityNameToSlug, findCityBySlug, slugToCityName } from '@/utils/categorySlugUtils';
+import { categoryNameToSlug } from '@/utils/categorySlugUtils';
+import { SITE_URL } from '@/config/site';
+
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+interface CityPageProps {
+    params: Promise<{ city: string }>;
+}
+
+interface CityEvent {
+    id: string;
+    slug: string | null;
+    title: string;
+    description: string | null;
+    start_time: string;
+    end_time: string | null;
+    location: string | null;
+    event_format: string | null;
+    event_type: { name: string } | null;
+    organizer: { name: string } | null;
+}
+
+async function getPublicReadClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && serviceKey) {
+        return createServiceClient(supabaseUrl, serviceKey);
+    }
+
+    return await createClient();
+}
+
+const getUpcomingCityNames = unstable_cache(
+    async () => {
+        const supabase = await getPublicReadClient();
+        const now = new Date().toISOString();
+
+        const { data: cityRows } = await supabase
+            .from('events')
+            .select('location_city')
+            .eq('status', 'confirmed')
+            .not('location_city', 'is', null)
+            .gte('start_time', now);
+
+        if (!cityRows) return [];
+
+        return Array.from(
+            new Set(
+                cityRows
+                    .map((r) => (r as { location_city: string | null }).location_city)
+                    .filter((c): c is string => c !== null && c.trim() !== '')
+            )
+        );
+    },
+    ['seo-upcoming-city-names'],
+    { revalidate: 3600 }
+);
+
+const getCityData = cache(async (citySlug: string) => {
+    const supabase = await getPublicReadClient();
+    const now = new Date().toISOString();
+
+    const uniqueCities = await getUpcomingCityNames();
+    const matchedCity = findCityBySlug(uniqueCities, citySlug);
+
+    if (!matchedCity) return null;
+
+    // Fetch events and count in parallel using the exact DB city name
+    const [{ data: events }, { count }] = await Promise.all([
+        supabase
+            .from('events')
+            .select(
+                'id, slug, title, description, start_time, end_time, location, event_format, event_type:event_type_id(name), organizer:organizer_id(name)'
+            )
+            .eq('status', 'confirmed')
+            .eq('location_city', matchedCity)
+            .gte('start_time', now)
+            .order('start_time', { ascending: true })
+            .limit(50),
+        supabase
+            .from('events')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'confirmed')
+            .eq('location_city', matchedCity)
+            .gte('start_time', now),
+    ]);
+
+    return {
+        cityName: matchedCity,
+        events: (events as unknown as CityEvent[]) || [],
+        totalCount: count || 0,
+    };
+});
+
+export async function generateMetadata({
+    params,
+}: CityPageProps): Promise<Metadata> {
+    const { city } = await params;
+    const data = await getCityData(city);
+    const cityName = data?.cityName || slugToCityName(city);
+    const totalCount = data?.totalCount || 0;
+
+    const title = `Tech Events in ${cityName} 2026 — Conferences & Meetups | Kure-Cal`;
+    const description = `Discover ${totalCount} upcoming tech events in ${cityName}. Browse conferences, meetups, hackathons, and workshops for developers in ${cityName}.`;
+
+    return {
+        title,
+        description,
+        openGraph: {
+            title: `Tech Events in ${cityName} 2026 — Conferences & Meetups`,
+            description,
+            type: 'website',
+            url: `${SITE_URL}/events/cities/${city}`,
+            images: [{ url: `${SITE_URL}/og-image.png` }],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `Tech Events in ${cityName} 2026`,
+            description,
+            images: [`${SITE_URL}/og-image.png`],
+        },
+        alternates: {
+            canonical: `${SITE_URL}/events/cities/${city}`,
+        },
+    };
+}
+
+export async function generateStaticParams(): Promise<{ city: string }[]> {
+    const uniqueCities = await getUpcomingCityNames();
+
+    return uniqueCities.map((c) => ({ city: cityNameToSlug(c) }));
+}
+
+export default async function CityPage({ params }: CityPageProps) {
+    const { city } = await params;
+    const data = await getCityData(city);
+
+    if (!data) notFound();
+
+    const { cityName, events, totalCount } = data;
+
+    // Fetch categories for cross-links
+    const supabase = await createClient();
+    const { data: types } = await supabase
+        .from('event_type')
+        .select('name')
+        .eq('is_active', true)
+        .order('name');
+
+    const categories = (types || [])
+        .filter((t): t is { name: string } => t.name !== null)
+        .map((t) => ({
+            name: t.name,
+            slug: categoryNameToSlug(t.name),
+        }));
+
+    return (
+        <>
+            <BreadcrumbJsonLd
+                items={[
+                    { name: 'Home', url: SITE_URL },
+                    { name: 'Events', url: `${SITE_URL}/events` },
+                    { name: cityName },
+                ]}
+            />
+            <ItemListJsonLd
+                items={events.map((e) => ({
+                    title: e.title,
+                    startDate: e.start_time,
+                    endDate: e.end_time,
+                    location: e.location,
+                    isOnline: e.event_format === 'Online',
+                    description: e.description,
+                    url: `${SITE_URL}/events/${e.slug || e.id}`,
+                    organizerName: e.organizer?.name,
+                }))}
+            />
+
+            <div className="min-h-screen bg-background-main pb-24">
+                <header className="border-b border-border-subtle">
+                    <div className="max-w-5xl mx-auto px-6 sm:px-8 py-12">
+                        <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-6">
+                            <Link
+                                href="/events"
+                                className="hover:text-foreground-tertiary transition-colors"
+                            >
+                                Events
+                            </Link>
+                            <span className="text-foreground-tertiary/30">
+                                /
+                            </span>
+                            <span className="text-foreground-tertiary">
+                                {cityName}
+                            </span>
+                        </nav>
+
+                        <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-foreground-primary leading-tight mb-4">
+                            Tech Events in {cityName}
+                        </h1>
+                        <p className="text-[15px] text-foreground-secondary leading-relaxed max-w-2xl">
+                            {totalCount > 0
+                                ? `Discover ${totalCount} upcoming tech events in ${cityName}. From conferences to meetups, find the best developer events happening near you.`
+                                : `No upcoming tech events in ${cityName} right now. Check back soon or browse events in other cities.`}
+                        </p>
+                    </div>
+                </header>
+
+                <main className="max-w-5xl mx-auto px-6 sm:px-8 py-10">
+                    {events.length > 0 ? (
+                        <ul className="divide-y divide-border-subtle">
+                            {events.map((event) => {
+                                const eventSlug =
+                                    event.slug || event.id;
+                                return (
+                                    <li key={event.id}>
+                                        <Link
+                                            href={`/events/${eventSlug}`}
+                                            className="block py-5 group"
+                                        >
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <h2 className="text-[15px] font-medium text-foreground-primary group-hover:text-accent-primary transition-colors truncate">
+                                                        {event.title}
+                                                    </h2>
+                                                    <div className="flex items-center gap-2 mt-1 text-[13px] text-foreground-tertiary">
+                                                        <time
+                                                            dateTime={
+                                                                event.start_time
+                                                            }
+                                                        >
+                                                            {formatDate(
+                                                                event.start_time
+                                                            )}
+                                                        </time>
+                                                        {event.location && (
+                                                            <>
+                                                                <span className="text-foreground-tertiary/30">
+                                                                    ·
+                                                                </span>
+                                                                <span>
+                                                                    {
+                                                                        event.location
+                                                                    }
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {event.event_type && (
+                                                        <span className="text-[11px] px-2 py-0.5 rounded-full border border-border-subtle text-foreground-tertiary">
+                                                            {
+                                                                event.event_type
+                                                                    .name
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {event.event_format && (
+                                                        <span className="text-[11px] text-foreground-tertiary/70">
+                                                            {
+                                                                event.event_format
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {event.description && (
+                                                <p className="mt-2 text-[13px] text-foreground-tertiary line-clamp-2">
+                                                    {event.description.slice(
+                                                        0,
+                                                        200
+                                                    )}
+                                                </p>
+                                            )}
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        <p className="text-[15px] text-foreground-tertiary/60 italic py-12 text-center">
+                            No upcoming events in this city.
+                        </p>
+                    )}
+
+                    {/* Cross-links to category pages */}
+                    {categories.length > 0 && (
+                        <section className="mt-16 pt-10 border-t border-border-subtle">
+                            <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-4">
+                                Browse by Category
+                            </h2>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map((cat) => (
+                                    <Link
+                                        key={cat.slug}
+                                        href={`/events/category/${cat.slug}`}
+                                        className="px-3 py-1.5 rounded-md border border-border-subtle text-[13px] text-foreground-secondary hover:text-foreground-primary hover:border-border-default transition-colors"
+                                    >
+                                        {cat.name}s
+                                    </Link>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </main>
+            </div>
+        </>
+    );
+}

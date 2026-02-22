@@ -190,11 +190,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add timeout protection
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
-    });
-
     // Get user profile and career profile with memoization
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
     const { careerProfile, profileHash } = await MemoizedProfileService.getCareerProfileAndHash(userProfile, supabase);
@@ -226,10 +221,23 @@ export async function POST(request: NextRequest) {
     // profileHash already available from memoized service
 
     // Cache-optimized batch processing
-    const batchResult = await Promise.race([
-      processBatchWithCache(validEvents, careerProfile, profileHash, options),
-      timeoutPromise
-    ]) as Awaited<ReturnType<typeof processBatchWithCache>>;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
+    });
+
+    const batchResult = await (async () => {
+      try {
+        return await Promise.race([
+          processBatchWithCache(validEvents, careerProfile, profileHash, options),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof processBatchWithCache>>;
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      }
+    })();
 
     // Update processing time
     batchResult.stats.processingTimeMs = Date.now() - startTime;

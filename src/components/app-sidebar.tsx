@@ -16,12 +16,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { ListBullets } from '@phosphor-icons/react';
+import { ListBullets, UsersThree } from '@phosphor-icons/react';
 
 const items = [
-  { title: 'Discover', url: '/discover', icon: () => <MaterialIcon name="compass" size={18} /> },
+  { title: 'Discover', url: '/events', icon: () => <MaterialIcon name="compass" size={18} /> },
   { title: 'Calendar', url: '/calendar?view=month', icon: () => <MaterialIcon name="calendar" size={18} /> },
   { title: 'Events List', url: '/events', icon: () => <ListBullets size={18} /> },
+  { title: 'Community', url: '/community', icon: () => <UsersThree size={18} /> },
   { title: 'Dashboard', url: '/dashboard', icon: () => <MaterialIcon name="bar-chart" size={18} /> },
   { title: 'Hackathons', url: '/hackathons', icon: () => <MaterialIcon name="code" size={18} /> },
   { title: 'Settings', url: '/dashboard/settings', icon: () => <MaterialIcon name="settings" size={18} /> },
@@ -118,5 +119,4 @@ export function AppSidebar() {
 }
 
 export default AppSidebar;
-
 

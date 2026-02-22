@@ -1,5 +1,6 @@
 // src/app/robots.ts
 import { MetadataRoute } from 'next'
+import { SITE_URL } from '@/config/site'
 
 export default function robots(): MetadataRoute.Robots {
     // Block all crawling on non-production environments (staging/preview)
@@ -20,10 +21,12 @@ export default function robots(): MetadataRoute.Robots {
                     '/dashboard/',
                     '/calendar/',
                     '/discover/',
+                    '/hackathons/',
+                    '/settings/',
                     '/sentry-example-page/',
                 ],
             },
         ],
-        sitemap: 'https://kure-cal.com/sitemap.xml',
+        sitemap: `${SITE_URL}/sitemap.xml`,
     }
 }

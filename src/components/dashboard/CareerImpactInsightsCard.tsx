@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { ChartLine, Trophy, Lightbulb, TrendUp, CheckCircle } from '@phosphor-icons/react';
-import type { CareerProfile, TrackedEventRecord } from '@/types';
+import { calculateEventAlignment } from '@/utils/uiScoringAdapter';
+import { doesEventMatchGoal } from '@/utils/eventGoalAlignment';
+import { getCanonicalSkillMeta } from '@/utils/skillTaxonomy';
+import type { CareerGoal, CareerProfile, Event, TrackedEventRecord } from '@/types';
 
 interface CareerImpactInsightsCardProps {
   careerProfile: CareerProfile;
@@ -20,58 +23,126 @@ interface SkillProgress {
   nextMilestone: string;
 }
 
+interface AttendedEventAlignment {
+  event: Event;
+  normalizedMatchedSkills: string[];
+  matchedGoals: CareerGoal[];
+  networkingAligned: boolean;
+}
+
+const NETWORKING_KEYWORDS = [
+  'network',
+  'meetup',
+  'community',
+  'mixer',
+  'social',
+  'connect',
+  'roundtable'
+] as const;
+
+function normalizeSkill(skill: string): string {
+  const canonical = getCanonicalSkillMeta(skill)?.name ?? skill;
+  return canonical.trim().toLowerCase();
+}
+
+function isNetworkingEvent(event: Event): boolean {
+  const eventText = `${event.title} ${event.description} ${event.category?.name ?? ''}`.toLowerCase();
+  const tagText = (event.tags || []).map(tag => tag.name.toLowerCase()).join(' ');
+  return NETWORKING_KEYWORDS.some(keyword => eventText.includes(keyword) || tagText.includes(keyword));
+}
+
 export function CareerImpactInsightsCard({
   careerProfile,
   trackedEvents
 }: CareerImpactInsightsCardProps) {
   const theme = useTimelineTheme();
 
-  // Analyze skill development from ATTENDED events only
-  const skillAnalysis = useMemo(() => {
-    const attendedEvents = trackedEvents.filter(e => e.status === 'attended');
-    const skillProgress: Map<string, number> = new Map();
+  // Compute attended event alignments once and reuse for metrics/insights.
+  const attendedAlignments = useMemo<AttendedEventAlignment[]>(() => {
+    return trackedEvents
+      .filter((record): record is TrackedEventRecord & { event: Event } => record.status === 'attended' && !!record.event)
+      .map(record => {
+        const alignment = calculateEventAlignment(record.event, careerProfile);
+        const profileGoals = new Set(careerProfile.careerGoals);
 
-    // Track which skills to learn have had related ATTENDED events
-    careerProfile.skillsToLearn.forEach(skill => {
-      const relatedEvents = attendedEvents.filter(_event => {
-        // In a real implementation, this would check event metadata
-        return true; // Simplified
+        const matchedGoals = careerProfile.careerGoals.filter(goal =>
+          alignment.matchedGoals.includes(goal) || doesEventMatchGoal(record.event, goal)
+        );
+
+        const normalizedMatchedSkills = alignment.matchedSkills
+          .map(normalizeSkill)
+          .filter(Boolean);
+
+        const networkingAligned =
+          matchedGoals.includes('networking') ||
+          alignment.alignmentReasons.some(reason => reason.type === 'networking') ||
+          isNetworkingEvent(record.event);
+
+        return {
+          event: record.event,
+          normalizedMatchedSkills,
+          matchedGoals: matchedGoals.filter(goal => profileGoals.has(goal)),
+          networkingAligned
+        };
       });
-      skillProgress.set(skill, relatedEvents.length);
+  }, [trackedEvents, careerProfile]);
+
+  // Analyze skill development from attended events.
+  const skillAnalysis = useMemo(() => {
+    const skillMap = new Map<string, { label: string; count: number }>();
+
+    careerProfile.skillsToLearn.forEach(skill => {
+      const canonicalLabel = getCanonicalSkillMeta(skill)?.name ?? skill;
+      skillMap.set(normalizeSkill(skill), { label: canonicalLabel, count: 0 });
     });
 
-    const progressList: SkillProgress[] = Array.from(skillProgress.entries())
-      .map(([skill, count]): SkillProgress => ({
-        skill,
+    attendedAlignments.forEach(({ normalizedMatchedSkills }) => {
+      normalizedMatchedSkills.forEach(matchedSkill => {
+        const existing = skillMap.get(matchedSkill);
+        if (existing) {
+          existing.count += 1;
+        }
+      });
+    });
+
+    const progressList: SkillProgress[] = Array.from(skillMap.values())
+      .map(({ label, count }): SkillProgress => ({
+        skill: label,
         eventsAttended: count,
         progressLevel: count >= 5 ? 'proficient' : count >= 2 ? 'learning' : 'beginner',
-        nextMilestone: count >= 5 ? 'Advanced level' : count >= 2 ? '3 more events to proficient' : '1 more event to start learning'
+        nextMilestone: count >= 5
+          ? 'Maintain with advanced events'
+          : count >= 2
+          ? `${Math.max(1, 5 - count)} more event${5 - count === 1 ? '' : 's'} to reach proficient`
+          : 'Attend 1 relevant event to start momentum'
       }))
       .sort((a, b) => b.eventsAttended - a.eventsAttended)
       .slice(0, 5);
 
     return progressList;
-  }, [careerProfile, trackedEvents]);
+  }, [careerProfile, attendedAlignments]);
 
-  // Calculate career impact metrics from ATTENDED events only
+  // Calculate career impact metrics from attended events.
   const impactMetrics = useMemo(() => {
-    const attendedEvents = trackedEvents.filter(e => e.status === 'attended');
-    const totalEvents = attendedEvents.length;
+    const totalEvents = attendedAlignments.length;
+    const targetSkills = new Set(careerProfile.skillsToLearn.map(normalizeSkill));
 
-    // Calculate skill-aligned events percentage
-    const skillAlignedCount = Math.floor(totalEvents * 0.7); // Simplified
+    const skillAlignedCount = attendedAlignments.filter(({ normalizedMatchedSkills }) => {
+      if (targetSkills.size === 0) {
+        return normalizedMatchedSkills.length > 0;
+      }
+      return normalizedMatchedSkills.some(skill => targetSkills.has(skill));
+    }).length;
     const skillAlignedPercentage = totalEvents > 0
       ? Math.round((skillAlignedCount / totalEvents) * 100)
       : 0;
 
-    // Calculate goal-aligned events percentage
-    const goalAlignedCount = Math.floor(totalEvents * 0.6); // Simplified
+    const goalAlignedCount = attendedAlignments.filter(alignment => alignment.matchedGoals.length > 0).length;
     const goalAlignedPercentage = totalEvents > 0
       ? Math.round((goalAlignedCount / totalEvents) * 100)
       : 0;
 
-    // Calculate networking impact
-    const networkingCount = Math.floor(totalEvents * 0.4); // Simplified
+    const networkingCount = attendedAlignments.filter(alignment => alignment.networkingAligned).length;
     const networkingPercentage = totalEvents > 0
       ? Math.round((networkingCount / totalEvents) * 100)
       : 0;
@@ -85,7 +156,7 @@ export function CareerImpactInsightsCard({
       networkingCount,
       networkingPercentage
     };
-  }, [trackedEvents]);
+  }, [attendedAlignments, careerProfile]);
 
   // Generate insights
   const insights = useMemo(() => {
@@ -96,7 +167,7 @@ export function CareerImpactInsightsCard({
     }> = [];
 
     // Skill development insights
-    if (skillAnalysis.length > 0) {
+    if (skillAnalysis.length > 0 && skillAnalysis[0].eventsAttended > 0) {
       const topSkill = skillAnalysis[0];
       insightsList.push({
         type: 'success',
@@ -138,9 +209,9 @@ export function CareerImpactInsightsCard({
     }
 
     // Skills to learn insights
-    const unstartedSkills = careerProfile.skillsToLearn.filter(
-      skill => !skillAnalysis.some(s => s.skill === skill)
-    );
+    const unstartedSkills = skillAnalysis
+      .filter(skill => skill.eventsAttended === 0)
+      .map(skill => skill.skill);
     if (unstartedSkills.length > 0 && unstartedSkills.length <= 3) {
       insightsList.push({
         type: 'info',

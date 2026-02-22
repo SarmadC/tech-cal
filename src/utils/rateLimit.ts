@@ -25,6 +25,11 @@ export const RATE_LIMIT_CONFIGS = {
   ULTRA_LOW_FREQUENCY: {
     requests: 5,
     window: '1 m'
+  },
+  // Social graph actions (follow/unfollow)
+  FOLLOW_ACTIONS_DAILY: {
+    requests: 50,
+    window: '1 d'
   }
 } as const;
 

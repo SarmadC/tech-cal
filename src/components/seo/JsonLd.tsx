@@ -2,6 +2,10 @@
 // Reusable JSON-LD structured data components for SEO
 
 import React from 'react';
+import { SITE_NAME, SITE_URL } from '@/config/site';
+
+const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+const WEBSITE_ID = `${SITE_URL}/#website`;
 
 interface JsonLdProps {
     data: Record<string, unknown>;
@@ -32,23 +36,17 @@ function JsonLd({ data }: JsonLdProps) {
  */
 export function OrganizationJsonLd() {
     const sameAs = [
-        // Add social media URLs when available
-        // 'https://twitter.com/kurecal',
-        // 'https://linkedin.com/company/kurecal',
+        'https://twitter.com/kure_cal',
+        'https://linkedin.com/company/kure-cal',
     ].filter(Boolean);
 
     const data = {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        '@id': 'https://kure-cal.com/#organization',
-        name: 'Kure-Cal',
-        url: 'https://kure-cal.com',
-        logo: {
-            '@type': 'ImageObject',
-            url: 'https://kure-cal.com/logo.svg',
-            width: 512,
-            height: 512,
-        },
+        '@id': ORGANIZATION_ID,
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo.svg`,
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         ...(sameAs.length > 0 && { sameAs }),
     };
@@ -63,18 +61,18 @@ export function WebsiteJsonLd() {
     const data = {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        '@id': 'https://kure-cal.com/#website',
-        name: 'Kure-Cal',
-        url: 'https://kure-cal.com',
+        '@id': WEBSITE_ID,
+        name: SITE_NAME,
+        url: SITE_URL,
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         potentialAction: {
             '@type': 'SearchAction',
-            target: 'https://kure-cal.com/discover?q={search_term_string}',
+            target: `${SITE_URL}/events?q={search_term_string}`,
             'query-input': 'required name=search_term_string',
         },
         publisher: {
             '@type': 'Organization',
-            '@id': 'https://kure-cal.com/#organization',
+            '@id': ORGANIZATION_ID,
         },
     };
 
@@ -145,21 +143,15 @@ export function ArticleJsonLd({
         },
         publisher: {
             '@type': 'Organization',
-            name: 'Kure-Cal',
-            logo: {
-                '@type': 'ImageObject',
-                url: 'https://kure-cal.com/logo.svg',
-            },
+            name: SITE_NAME,
+            logo: `${SITE_URL}/logo.svg`,
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
-            '@id': `https://kure-cal.com/blog/${slug}`,
+            '@id': `${SITE_URL}/blog/${slug}`,
         },
         ...(imageUrl && {
-            image: {
-                '@type': 'ImageObject',
-                url: imageUrl,
-            },
+            image: imageUrl,
         }),
     };
 
@@ -204,7 +196,7 @@ export function EventJsonLd({
     organizer,
     offers,
 }: EventJsonLdProps) {
-    const fallbackImage = 'https://kure-cal.com/og-image.png';
+    const fallbackImage = `${SITE_URL}/og-image.png`;
     const resolvedImage = imageUrl || fallbackImage;
 
     // Build offers schema only if we have pricing data

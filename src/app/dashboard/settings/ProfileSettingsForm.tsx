@@ -1,11 +1,9 @@
-// src/app/dashboard/settings/ProfileSettingsForm.tsx
 'use client'
 
-import React, { useEffect, useActionState, useRef, useState } from 'react';
+import React, { useEffect, useActionState, useRef, useState, useMemo } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useAuth } from '@/contexts/AuthContext';
-
 import { updateUserProfileAction, uploadAvatarAction, FormState } from './actions';
 import type { AppProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -13,44 +11,38 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { CircleNotchIcon } from '@phosphor-icons/react';
 import { TIMEZONE_OPTIONS } from '@/types/career';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SettingsSection } from '@/components/settings/SettingsSection';
+import { SettingsControl } from '@/components/settings/SettingsControl';
+import { Switch } from '@/components/ui/switch'; // Assuming we have a Switch component or use native
+import BlockUserButton from '@/components/social/BlockUserButton';
+import { ProfileVisibility } from '@/services/socialProfileService';
 
 interface ProfileSettingsFormProps {
     profile: AppProfile | null;
 }
 
-// Helper functions remain the same
-function getTimezoneOffset(timezone: string): number | null {
-    try {
-        const now = new Date();
-        const utcHours = now.getUTCHours();
-        const utcMinutes = now.getUTCMinutes();
-        const tzFormatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: timezone,
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-        });
-        const tzParts = tzFormatter.formatToParts(now);
-        const tzHours = parseInt(tzParts.find(p => p.type === 'hour')?.value || '0', 10);
-        const tzMinutes = parseInt(tzParts.find(p => p.type === 'minute')?.value || '0', 10);
-        let offsetMinutes = (tzHours * 60 + tzMinutes) - (utcHours * 60 + utcMinutes);
-        if (offsetMinutes > 12 * 60) offsetMinutes -= 24 * 60;
-        else if (offsetMinutes < -12 * 60) offsetMinutes += 24 * 60;
-        return offsetMinutes;
-    } catch { return null; }
+interface SocialProfileData {
+    username: string | null;
+    headline: string | null;
+    profileVisibility: ProfileVisibility;
+    showAttendance: boolean;
+    trustLevel: number;
 }
 
-function findClosestTimezone(detectedTimezone: string): typeof TIMEZONE_OPTIONS[number] | undefined {
-    const detectedOffset = getTimezoneOffset(detectedTimezone);
-    if (detectedOffset === null) return undefined;
-    const matchingTimezones = TIMEZONE_OPTIONS.filter(tz => {
-        const tzOffset = getTimezoneOffset(tz.value);
-        return tzOffset !== null && tzOffset === detectedOffset;
-    });
-    if (matchingTimezones.length === 0) return undefined;
-    const usTimezones = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Anchorage'];
-    const usMatch = matchingTimezones.find(tz => usTimezones.includes(tz.value));
-    return usMatch || matchingTimezones[0];
+type UsernameAvailabilityState = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved' | 'error';
+
+interface UsernameAvailabilityPayload {
+    username: string;
+    available: boolean;
+    reason?: 'taken' | 'invalid' | 'reserved';
+    message: string;
+}
+
+interface BlockedUser {
+    id: string;
+    fullName: string | null;
+    avatarUrl: string | null;
+    username: string | null;
 }
 
 function SaveButton({ isDirty }: { isDirty: boolean }) {
@@ -77,34 +69,26 @@ function SaveButton({ isDirty }: { isDirty: boolean }) {
                     Saving...
                 </>
             ) : (
-                'Save Changes'
+                'Save changes'
             )}
         </Button>
     );
 }
 
-// Updated Ghost Input with more padding
-const GhostInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; rightElement?: React.ReactNode }>(
-    ({ label, id, error, className, rightElement, ...props }, ref) => (
-        <div className="group relative">
-            <div className="flex justify-between items-baseline mb-1">
-                <label htmlFor={id} className="text-xs font-medium text-[var(--foreground-tertiary)] uppercase tracking-wide">
-                    {label}
-                </label>
-                {rightElement}
-            </div>
-            <div className="relative">
-                <input
-                    ref={ref}
-                    id={id}
-                    className={`w-full bg-transparent text-[15px] text-[var(--foreground-primary)] placeholder-[var(--foreground-tertiary)] py-3 px-1 border-b border-[var(--border-default)] focus:border-[var(--foreground-secondary)] focus:outline-none transition-all duration-200 ${className || ''}`}
-                    style={{ borderRadius: 0 }}
-                    {...props}
-                />
-                <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-[var(--foreground-primary)] transition-all duration-300 group-focus-within:w-full" />
-            </div>
+// Custom Input Component for the settings design
+const SettingsInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { error?: string, helperText?: string }>(
+    ({ className, error, helperText, ...props }, ref) => (
+        <div className="w-full">
+            <input
+                ref={ref}
+                className={`w-full bg-transparent text-[13px] text-[var(--foreground-primary)] placeholder-[var(--foreground-tertiary)] px-3 py-1.5 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-[3px] focus:ring-[var(--accent-primary)]/10 focus:outline-none transition-all duration-200 ${className || ''} ${error ? 'border-[var(--error)] focus:border-[var(--error)] focus:ring-[var(--error)]/10' : ''}`}
+                {...props}
+            />
+            {helperText && !error && (
+                <p className="mt-1.5 text-[12px] text-[var(--foreground-tertiary)]">{helperText}</p>
+            )}
             {error && (
-                <p className="text-xs text-[var(--error)] mt-1 flex items-center">
+                <p className="mt-1.5 text-[12px] text-[var(--error)] flex items-center">
                     <MaterialIcon name="error" size={14} className="mr-1" />
                     {error}
                 </p>
@@ -112,48 +96,156 @@ const GhostInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<
         </div>
     )
 );
-GhostInput.displayName = 'GhostInput';
+SettingsInput.displayName = 'SettingsInput';
 
 export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
     const { showSuccess, showError } = useSnackbar();
     const { refreshProfile } = useAuth();
-    const timezoneSelectRef = useRef<HTMLSelectElement>(null);
-    const fullNameInputRef = useRef<HTMLInputElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDirty, setIsDirty] = useState(false);
 
-    // Separate state for avatar upload
+    // Combined State
+    const [socialData, setSocialData] = useState<SocialProfileData | null>(null);
+    const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+    const [isLoadingSocial, setIsLoadingSocial] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
 
+    // Username Availability State
+    const [usernameAvailabilityState, setUsernameAvailabilityState] = useState<UsernameAvailabilityState>('idle');
+    const [usernameAvailabilityMessage, setUsernameAvailabilityMessage] = useState<string | null>(null);
+
+    // Form Action State
     const initialState: FormState = {
         message: '',
         errors: {},
         success: false,
     };
-
     const [state, formAction] = useActionState(updateUserProfileAction, initialState);
 
-    // Initial state for upload action (consumed manually, but could use useActionState if wrapped)
-    // We'll call uploadAvatarAction directly for simplicity in this flow or use a hidden form submit.
-    // Let's use a manual handler to give immediate feedback.
+    // Refs for managed inputs to check dirty state
+    const fullNameRef = useRef<HTMLInputElement>(null);
+    const timezoneRef = useRef<HTMLSelectElement>(null);
+    const usernameRef = useRef<HTMLInputElement>(null);
+    const headlineRef = useRef<HTMLInputElement>(null);
 
-    const handleUploadClick = () => {
-        fileInputRef.current?.click();
+    // Visibility state managed in React state since it's a custom control
+    const [visibility, setVisibility] = useState<ProfileVisibility>('private');
+    const [showAttendance, setShowAttendance] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchData = async () => {
+            try {
+                const [profileRes, blocksRes] = await Promise.all([
+                    fetch('/api/profile/social'),
+                    fetch('/api/blocks')
+                ]);
+
+                if (profileRes.ok && blocksRes.ok) {
+                    const profileData = await profileRes.json();
+                    const blocksData = await blocksRes.json();
+
+                    if (isMounted) {
+                        if (profileData.success && profileData.data) {
+                            setSocialData(profileData.data);
+                            setVisibility(profileData.data.profileVisibility);
+                            setShowAttendance(profileData.data.showAttendance);
+                        }
+                        if (blocksData.success && blocksData.data) {
+                            setBlockedUsers(blocksData.data);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load social settings", err);
+            } finally {
+                if (isMounted) setIsLoadingSocial(false);
+            }
+        };
+        fetchData();
+        return () => { isMounted = false; };
+    }, []);
+
+    // Dirty Checking
+    const checkDirty = () => {
+        if (!socialData || !profile) return;
+
+        const currentFullName = fullNameRef.current?.value || '';
+        const currentTimezone = timezoneRef.current?.value || '';
+        const currentUsername = usernameRef.current?.value || '';
+        const currentHeadline = headlineRef.current?.value || '';
+
+        const isProfileDirty =
+            currentFullName !== (profile.fullName || '') ||
+            currentTimezone !== (profile.timezone || '');
+
+        const isSocialDirty =
+            currentUsername !== (socialData.username || '') ||
+            currentHeadline !== (socialData.headline || '') ||
+            visibility !== socialData.profileVisibility ||
+            showAttendance !== socialData.showAttendance;
+
+        setIsDirty(isProfileDirty || isSocialDirty);
     };
 
+    // Attach listeners
+    const [usernameToCheck, setUsernameToCheck] = useState<string | null>(null);
+
+    // Debounced Username Check
+    useEffect(() => {
+        const checkUsername = async () => {
+            if (!usernameToCheck || usernameToCheck === socialData?.username) {
+                setUsernameAvailabilityState('idle');
+                setUsernameAvailabilityMessage(null);
+                return;
+            }
+
+            const USERNAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{2,29}$/;
+            if (!USERNAME_PATTERN.test(usernameToCheck)) {
+                setUsernameAvailabilityState('invalid');
+                setUsernameAvailabilityMessage('Username must be 3-30 chars, start with a letter, and use only letters, numbers, "_" or "-".');
+                return;
+            }
+
+            setUsernameAvailabilityState('checking');
+            setUsernameAvailabilityMessage('Checking availability...');
+
+            try {
+                const response = await fetch(`/api/profile/username-check?q=${encodeURIComponent(usernameToCheck)}`);
+                const payload = await response.json();
+
+                if (payload.success && payload.data) {
+                    if (payload.data.available) {
+                        setUsernameAvailabilityState('available');
+                        setUsernameAvailabilityMessage(payload.data.message);
+                    } else {
+                        setUsernameAvailabilityState(payload.data.reason || 'taken');
+                        setUsernameAvailabilityMessage(payload.data.message);
+                    }
+                } else {
+                    // If error, just reset or show generic
+                    setUsernameAvailabilityState('error');
+                    setUsernameAvailabilityMessage(null);
+                }
+            } catch (err) {
+                setUsernameAvailabilityState('error');
+                setUsernameAvailabilityMessage(null);
+            }
+        };
+
+        const timer = setTimeout(checkUsername, 500);
+        return () => clearTimeout(timer);
+    }, [usernameToCheck, socialData]);
+
+
+
+    // Handle File Upload
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        // Client-side Validation
-        if (file.size > 2 * 1024 * 1024) { // 2MB
+        if (file.size > 2 * 1024 * 1024) {
             showError("File size must be less than 2MB.");
-            return;
-        }
-
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showError("Only JPG, PNG, GIF, and WebP images are allowed.");
             return;
         }
 
@@ -162,239 +254,298 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
         formData.append('avatar', file);
 
         try {
-            // Using the server action directly
-            // @ts-ignore - Action types sometimes tricky with direct calls vs hooks
             const result = await uploadAvatarAction(initialState, formData);
-
             if (result.success) {
                 showSuccess(result.message);
-                // Refresh the profile context to update the navbar immediately
                 await refreshProfile();
-                // Profile/Avatar will update via revalidatePath from server
             } else {
                 showError(result.message || "Failed to upload avatar.");
             }
         } catch (error) {
-            console.error("Upload error", error);
             showError("An unexpected error occurred.");
         } finally {
             setIsUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
-
-    useEffect(() => {
-        const checkDirty = () => {
-            const currentName = fullNameInputRef.current?.value || '';
-            const currentTimezone = timezoneSelectRef.current?.value || '';
-            const originalName = profile?.fullName || '';
-            const originalTimezone = profile?.timezone || '';
-
-            setIsDirty(
-                currentName !== originalName ||
-                currentTimezone !== originalTimezone
-            );
-        };
-
-        const nameInput = fullNameInputRef.current;
-        const timezoneSelect = timezoneSelectRef.current;
-
-        if (nameInput) nameInput.addEventListener('input', checkDirty);
-        if (timezoneSelect) timezoneSelect.addEventListener('change', checkDirty);
-
-        return () => {
-            if (nameInput) nameInput.removeEventListener('input', checkDirty);
-            if (timezoneSelect) timezoneSelect.removeEventListener('change', checkDirty);
-        };
-    }, [profile]);
-
-    useEffect(() => {
-        if (state.success) {
-            setTimeout(() => setIsDirty(false), 0);
-        }
-    }, [state.success]);
-
+    // Effect for form submission feedback
     useEffect(() => {
         if (state.success) {
             showSuccess(state.message);
-        } else if (state.message && (state.errors?._form || state.errors?.fullName || state.errors?.timezone)) {
-            // Handle generic or specific errors
-            const msg = state.errors?._form?.[0] || state.errors?.fullName?.[0] || state.errors?.timezone?.[0] || state.message;
+            // Update socialData baseline to match new values so dirty check passes
+            if (usernameRef.current && headlineRef.current) {
+                setSocialData(prev => prev ? ({
+                    ...prev,
+                    username: usernameRef.current?.value || null,
+                    headline: headlineRef.current?.value || null,
+                    profileVisibility: visibility,
+                    showAttendance: showAttendance
+                }) : null);
+            }
+            setIsDirty(false);
+        } else if (state.message) {
+            const msg = state.errors?._form?.[0] || Object.values(state.errors || {}).flat()[0] || state.message;
             showError(msg);
         }
     }, [state, showSuccess, showError]);
 
-    const handleAutoDetectTimezone = () => {
-        try {
-            const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            let matchingTimezone = TIMEZONE_OPTIONS.find(tz => tz.value === detectedTimezone);
-            if (!matchingTimezone) matchingTimezone = findClosestTimezone(detectedTimezone);
 
-            if (matchingTimezone && timezoneSelectRef.current) {
-                timezoneSelectRef.current.value = matchingTimezone.value;
-                setIsDirty(true);
-                timezoneSelectRef.current.dispatchEvent(new Event('change', { bubbles: true }));
-                showSuccess(`Timezone set to ${matchingTimezone.label}`);
-            } else {
-                showError(`Unable to find matching timezone for ${detectedTimezone}`);
-            }
-        } catch {
-            showError('Unable to detect timezone');
-        }
-    };
+    if (isLoadingSocial) {
+        return <div className="p-8 text-center text-[var(--foreground-tertiary)]">Loading profile settings...</div>;
+    }
 
     return (
-        <div className="relative pb-24">
-            {/* Header */}
-            <div className="mb-8">
-                <h2 className="text-xl font-medium text-[var(--foreground-primary)] mb-1">Profile</h2>
-                <p className="text-sm text-[var(--foreground-secondary)]">Manage your personal information and identity.</p>
-            </div>
+        <form action={formAction} onChange={checkDirty} className="relative pb-24">
 
-            <form action={formAction} className="space-y-10 max-w-2xl">
-                {/* Avatar Row */}
-                <div className="flex items-center gap-6">
-                    <Avatar className="h-20 w-20 border border-[var(--border-default)]">
-                        <AvatarImage src={profile?.avatarUrl || ''} alt={profile?.fullName || 'Avatar'} />
-                        <AvatarFallback className="bg-[var(--background-secondary)] text-[var(--foreground-secondary)] text-lg font-medium">
-                            {profile?.fullName?.substring(0, 2).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col gap-2">
-                        <div className="flex gap-3">
+            {/* Identity Group */}
+            <SettingsSection title="Identity" description="Manage your personal information and how you appear to others.">
+                {/* Header-like Avatar Row */}
+                {/* Header-like Avatar Row */}
+                <div className="group py-2.5 grid gap-4 border-b border-[var(--border-default)]/40 items-center grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <div className="min-w-0 space-y-0.5 mb-2 sm:mb-0">
+                        <div className="text-[13px] font-medium text-[var(--foreground-primary)]">
+                            Profile Picture
+                        </div>
+                    </div>
+                    <div className="min-w-0 flex items-center justify-start gap-4">
+                        <Avatar className="h-10 w-10 border border-[var(--border-default)]">
+                            <AvatarImage src={profile?.avatarUrl || ''} />
+                            <AvatarFallback>{profile?.fullName?.substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
+                        </Avatar>
+
+                        <div className="relative">
                             <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
+                                type="file" ref={fileInputRef} className="hidden"
                                 accept="image/png, image/jpeg, image/gif, image/webp"
                                 onChange={handleFileChange}
                             />
                             <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs font-medium"
-                                onClick={handleUploadClick}
+                                type="button" variant="outline" size="sm"
                                 disabled={isUploading}
+                                onClick={() => fileInputRef.current?.click()}
+                                className="h-7 text-[12px] font-medium bg-[var(--background-main)] hover:bg-[var(--background-secondary)] border-[var(--border-default)] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] transition-all duration-200 active:scale-95"
                             >
-                                {isUploading ? (
-                                    <>
-                                        <CircleNotchIcon className="mr-2 h-3 w-3 animate-spin" />
-                                        Uploading...
-                                    </>
-                                ) : "Upload new picture"}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs font-medium text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error-bg)]"
-                                onClick={() => showSuccess("Remove functionality coming soon")}
-                            >
-                                Remove
+                                {isUploading ? <CircleNotchIcon className="animate-spin" /> : "Change avatar"}
                             </Button>
                         </div>
-                        <p className="text-[11px] text-[var(--foreground-tertiary)]">
-                            JPG, or PNG. Max size of 2MB.
-                        </p>
                     </div>
                 </div>
 
-                <div className="h-[1px] w-full bg-[var(--border-default)] opacity-40" />
+                <SettingsControl label="Display Name">
+                    <div className="w-full sm:w-[320px]">
+                        <SettingsInput
+                            name="fullName"
+                            ref={fullNameRef}
+                            defaultValue={profile?.fullName || ''}
+                            placeholder="Your full name"
+                            error={state.errors?.fullName?.[0]}
+                        />
+                    </div>
+                </SettingsControl>
 
-                {/* Ghost Inputs */}
-                <div className="space-y-8">
-                    <GhostInput
-                        label="Display Name"
-                        id="fullName"
-                        name="fullName"
-                        ref={fullNameInputRef}
-                        defaultValue={profile?.fullName || ''}
-                        placeholder="Your full name"
-                        error={state.errors?.fullName?.[0]}
-                    />
-
-                    <div className="group relative">
-                        <div className="flex justify-between items-baseline mb-1">
-                            <label htmlFor="timezone" className="text-xs font-medium text-[var(--foreground-tertiary)] uppercase tracking-wide">
-                                Timezone
-                            </label>
-                            <button
-                                type="button"
-                                onClick={handleAutoDetectTimezone}
-                                className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            >
-                                <MaterialIcon name="my_location" size={12} />
-                                Auto-detect
-                            </button>
-                        </div>
-                        <div className="relative">
-                            <select
-                                ref={timezoneSelectRef}
-                                id="timezone"
-                                name="timezone"
-                                defaultValue={profile?.timezone || ''}
-                                className="w-full bg-transparent text-[15px] text-[var(--foreground-primary)] py-3 px-1 pr-8 border-b border-[var(--border-default)] focus:border-[var(--foreground-secondary)] focus:outline-none appearance-none cursor-pointer transition-all duration-200"
-                                style={{ borderRadius: 0 }}
-                            >
-                                <option value="">Select your timezone</option>
-                                {Object.entries(
-                                    TIMEZONE_OPTIONS.reduce((groups, tz) => {
-                                        if (!groups[tz.region]) groups[tz.region] = [];
-                                        groups[tz.region].push(tz);
-                                        return groups;
-                                    }, {} as Record<string, typeof TIMEZONE_OPTIONS[number][]>)
-                                ).map(([region, timezones]) => (
-                                    <optgroup key={region} label={region}>
-                                        {timezones.map(tz => (
-                                            <option key={tz.value} value={tz.value}>
-                                                {tz.label}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-tertiary)] flex items-center justify-center">
-                                <MaterialIcon name="expand-more" size={16} />
+                <SettingsControl label="Username">
+                    <div className="w-full sm:w-[320px]">
+                        <SettingsInput
+                            name="username"
+                            ref={usernameRef}
+                            defaultValue={socialData?.username || ''}
+                            placeholder="username"
+                            maxLength={30}
+                            error={state.errors?.username?.[0]}
+                            helperText={usernameAvailabilityMessage || "Unique identifier (3-30 chars)"}
+                            onChange={(e) => {
+                                checkDirty();
+                                setUsernameToCheck(e.target.value);
+                            }}
+                            className={
+                                usernameAvailabilityState === 'available' ? 'text-green-600' :
+                                    (usernameAvailabilityState === 'taken' || usernameAvailabilityState === 'invalid') ? 'text-[var(--error)]' : ''
+                            }
+                        />
+                        {usernameAvailabilityState !== 'idle' && usernameAvailabilityState !== 'error' && (
+                            <div className={`mt-1 text-xs flex items-center gap-1 ${usernameAvailabilityState === 'available' ? 'text-green-600' :
+                                usernameAvailabilityState === 'checking' ? 'text-[var(--foreground-secondary)]' : 'text-[var(--error)]'
+                                }`}>
+                                {usernameAvailabilityState === 'checking' && <CircleNotchIcon className="animate-spin h-3 w-3" />}
                             </div>
-                            <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-[var(--foreground-primary)] transition-all duration-300 group-focus-within:w-full" />
-                        </div>
-                        {state.errors?.timezone && (
-                            <p className="text-xs text-[var(--error)] mt-1 flex items-center">
-                                <MaterialIcon name="error" size={14} className="mr-1" />
-                                {state.errors.timezone[0]}
-                            </p>
                         )}
                     </div>
-                </div>
+                </SettingsControl>
 
-                {/* Contextual Action Bar */}
-                <div
-                    className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-[var(--background-secondary)] border border-[var(--border-default)] shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 transition-all duration-300 z-50 ${isDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}
-                >
-                    <span className="text-sm font-medium text-[var(--foreground-secondary)]">
+                <SettingsControl label="Timezone">
+                    <div className="relative w-full sm:w-[320px]">
+                        <select
+                            ref={timezoneRef}
+                            name="timezone"
+                            defaultValue={profile?.timezone || ''}
+                            onChange={checkDirty}
+                            className="w-full bg-transparent text-[13px] text-[var(--foreground-primary)] px-3 py-1.5 rounded-md border border-[var(--border-default)] focus:border-[var(--accent-primary)] focus:ring-[3px] focus:ring-[var(--accent-primary)]/10 focus:outline-none appearance-none cursor-pointer hover:bg-[var(--background-secondary)]/50 transition-colors"
+                        >
+                            <option value="">Select timezone</option>
+                            {TIMEZONE_OPTIONS.map(tz => (
+                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
+                        </select>
+                        <MaterialIcon name="expand-more" size={16} className="absolute right-3 top-3 pointer-events-none text-[var(--foreground-tertiary)]" />
+                        <div className="mt-1.5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                                    if (timezoneRef.current) {
+                                        timezoneRef.current.value = detected;
+                                        checkDirty();
+                                    }
+                                }}
+                                className="text-[11px] font-medium text-[var(--accent-primary)] hover:text-[var(--accent-primary)]/80 transition-all duration-200 active:scale-95 flex items-center gap-1"
+                            >
+                                <MaterialIcon name="my_location" size={12} />
+                                Auto-detect timezone
+                            </button>
+                        </div>
+                    </div>
+                </SettingsControl>
+            </SettingsSection>
+
+            {/* Social Presence Group */}
+            <div className="mt-8">
+                <SettingsSection title="Social Presence" description="Control your visibility and interactions.">
+                    <SettingsControl label="Headline">
+                        <div className="w-full sm:w-[320px]">
+                            <SettingsInput
+                                name="headline"
+                                ref={headlineRef}
+                                defaultValue={socialData?.headline || ''}
+                                placeholder="e.g. Product Designer at Linear"
+                                maxLength={120}
+                                error={state.errors?.headline?.[0]}
+                                className="bg-[var(--background-secondary)] border border-[var(--border-default)]"
+                            />
+                        </div>
+                    </SettingsControl>
+
+                    <SettingsControl label="Profile Visibility">
+                        <div className="flex flex-col gap-2 w-full sm:w-[320px]">
+                            <div className="inline-flex bg-[var(--background-secondary)]/50 p-0.5 rounded-full border border-[var(--border-default)]/60 w-fit">
+                                <button
+                                    type="button"
+                                    onClick={() => setVisibility('private')}
+                                    className={`px-3 py-1 text-[12px] font-medium rounded-full transition-all duration-200 active:scale-95 border border-transparent ${visibility === 'private' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm border-[var(--border-default)]/20' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
+                                >
+                                    Private
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setVisibility('public')}
+                                    className={`px-3 py-1 text-[12px] font-medium rounded-full transition-all duration-200 active:scale-95 border border-transparent ${visibility === 'public' ? 'bg-[var(--background-main)] text-[var(--foreground-primary)] shadow-sm border-[var(--border-default)]/20' : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'}`}
+                                >
+                                    Public
+                                </button>
+                            </div>
+                            <input type="hidden" name="profileVisibility" value={visibility} />
+
+                            <p className="mt-1 text-[12px] text-[var(--foreground-tertiary)]">
+                                {visibility === 'private'
+                                    ? "Only you can view your full profile and activity."
+                                    : "Anyone in the workspace can view your profile and activity."}
+                            </p>
+                        </div>
+                    </SettingsControl>
+
+                    {visibility === 'public' && <SettingsControl
+                        label="Show Attendance"
+                        description="Let others see which public events you are attending."
+                    >
+                        <div className="flex items-center h-6">
+                            <Switch
+                                name="showAttendance"
+                                checked={showAttendance}
+                                onCheckedChange={setShowAttendance}
+                                className="scale-90"
+                            />
+                            {/* FormData helper since Switch might not submit value if not standard input */}
+                            <input type="hidden" name="showAttendance" value={showAttendance.toString()} />
+                        </div>
+                    </SettingsControl>
+                    }
+                </SettingsSection>
+            </div>
+
+            {/* Blocked Users Group */}
+            <div className="mt-8">
+                <SettingsSection title="Blocked Users" description="Manage users restricted from interacting with you.">
+                    {blockedUsers.length === 0 ? (
+                        <SettingsControl>
+                            <div className="flex items-center gap-4 w-full sm:w-[320px] text-[13px]">
+                                <span className="text-[var(--foreground-tertiary)] italic">No blocked users</span>
+                                <Button variant="ghost" size="sm" className="h-6 text-[11px] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] px-2 transition-all duration-200 active:scale-95">
+                                    Block someone...
+                                </Button>
+                            </div>
+                        </SettingsControl>
+                    ) : (
+                        blockedUsers.map(user => (
+                            <SettingsControl key={user.id} layout="row">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-6 w-6">
+                                        <AvatarImage src={user.avatarUrl || ''} />
+                                        <AvatarFallback>{(user.fullName || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="text-[13px] font-medium text-[var(--foreground-primary)]">{user.fullName || 'Unknown'}</div>
+                                        {user.username && <div className="text-[11px] text-[var(--foreground-tertiary)]">@{user.username}</div>}
+                                    </div>
+                                </div>
+                                <BlockUserButton
+                                    userId={user.id}
+                                    username={user.username}
+                                    initialBlocked={true}
+                                    compact
+                                    onStatusChange={(blocked) => {
+                                        if (!blocked) setBlockedUsers(prev => prev.filter(u => u.id !== user.id));
+                                    }}
+                                />
+                            </SettingsControl>
+                        ))
+                    )
+                    }
+                </SettingsSection>
+            </div>
+
+
+            {/* Sticky Save Footer */}
+            <div
+                className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[var(--background-secondary)] border border-[var(--border-default)] shadow-xl rounded-full px-4 py-2 flex items-center gap-4 transition-all duration-300 z-50 ${isDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[var(--foreground-secondary)] pl-2">
                         Unsaved changes
                     </span>
-                    <div className="h-4 w-[1px] bg-[var(--border-default)]" />
-                    <div className="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-xs hover:bg-[var(--background-tertiary)]"
-                            onClick={() => {
-                                if (fullNameInputRef.current) fullNameInputRef.current.value = profile?.fullName || '';
-                                if (timezoneSelectRef.current) timezoneSelectRef.current.value = profile?.timezone || '';
-                                setIsDirty(false);
-                            }}
-                        >
-                            Reset
-                        </Button>
-                        <SaveButton isDirty={isDirty} />
-                    </div>
+                    <div className="h-4 w-[1px] bg-[var(--border-default)] mx-2" />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-3 text-xs hover:bg-[var(--background-tertiary)]"
+                        onClick={() => {
+                            // Reset
+                            if (fullNameRef.current && profile) fullNameRef.current.value = profile.fullName || '';
+                            if (usernameRef.current && socialData) usernameRef.current.value = socialData.username || '';
+                            if (headlineRef.current && socialData) headlineRef.current.value = socialData.headline || '';
+                            if (timezoneRef.current && profile) timezoneRef.current.value = profile.timezone || '';
+                            if (socialData) {
+                                setVisibility(socialData.profileVisibility);
+                                setShowAttendance(socialData.showAttendance);
+                            }
+                            setIsDirty(false);
+                        }}
+                    >
+                        Reset
+                    </Button>
+                    <SaveButton isDirty={isDirty} />
                 </div>
-            </form>
-        </div>
+            </div>
+        </form >
     );
 }

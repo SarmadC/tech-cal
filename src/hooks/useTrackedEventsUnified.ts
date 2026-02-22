@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
@@ -28,6 +29,19 @@ export function useTrackedEventsUnified() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { supabase, isReady: _isReady } = useSupabaseSafe();
+
+  // AbortController ref for calendar unsync requests - prevents state updates on unmounted components
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup AbortController on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   // Map bookmarkedEventIds to trackedEventIds for backward compatibility
   // Note: "tracked" now means "bookmarked" in the new model
@@ -73,18 +87,27 @@ export function useTrackedEventsUnified() {
       
       // Calendar unsync
       if (external_calendar_event_id && external_provider) {
+        // Cancel any previous calendar unsync request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         fetch('/api/calendar/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ 
-            eventId, 
+          body: JSON.stringify({
+            eventId,
             action: 'delete',
             external_calendar_event_id,
             external_provider
-          })
+          }),
+          signal
         })
           .then(async (res) => {
+            if (signal.aborted) return;
             if (res.status === 202) {
               console.log('Calendar unsync queued');
             } else if (!res.ok && res.status !== 404) {
@@ -92,6 +115,7 @@ export function useTrackedEventsUnified() {
             }
           })
           .catch((err) => {
+            if (err.name === 'AbortError') return; // Ignore abort errors
             console.error('Calendar unsync request failed:', err);
           });
       }

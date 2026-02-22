@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { House, Compass, CalendarBlank, SquaresFour, Ticket } from '@phosphor-icons/react';
+import { Compass, CalendarBlank, SquaresFour, UsersThree } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -16,9 +16,9 @@ const MobileBottomNav = () => {
     const router = useRouter();
 
     const navItems: NavItem[] = [
-        { name: 'Discover', href: '/discover', icon: Compass },
+        { name: 'Discover', href: '/events', icon: Compass },
         { name: 'Calendar', href: '/calendar', icon: CalendarBlank },
-        { name: 'Events', href: '/events', icon: Ticket },
+        { name: 'Community', href: '/community', icon: UsersThree },
         { name: 'Dashboard', href: '/dashboard', icon: SquaresFour },
     ];
 

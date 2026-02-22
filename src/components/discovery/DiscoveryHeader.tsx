@@ -27,6 +27,8 @@ interface DiscoveryHeaderProps {
     isAutocompletLoading?: boolean;
     onSuggestionSelect?: (suggestion: SearchSuggestion | SearchHistoryItem) => void;
     onHistorySelect?: (item: SearchHistoryItem) => void;
+    rankingControls?: React.ReactNode;
+    actionControls?: React.ReactNode;
 }
 
 // Timezone to location mapping for fallback location detection
@@ -171,12 +173,15 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     suggestions = [],
     searchHistory = [],
     isAutocompletLoading = false,
-    onSuggestionSelect
+    onSuggestionSelect,
+    rankingControls,
+    actionControls
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isLocalDetecting, setIsLocalDetecting] = useState(false);
     const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Show autocomplete when typing and there are suggestions or history
     const hasAutocompleteContent = suggestions.length > 0 || searchHistory.length > 0;
@@ -201,6 +206,15 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+                blurTimeoutRef.current = null;
+            }
+        };
     }, []);
 
     // Handle suggestion selection
@@ -295,13 +309,13 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className={`relative z-50 mb-8 transition-colors`}>
+        <div className={`relative z-10 mb-8 transition-colors`}>
             {/* Glass strip container */}
-            <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-background/40 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/20">
+            <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-background/40 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/5 dark:shadow-black/20">
 
                 {/* Search Input - Command Palette Style */}
-                <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors z-10 flex items-center">
+                <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-20' : ''}`}>
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-foreground/70 group-focus-within:text-foreground transition-colors z-10 flex items-center">
                         {isSearching ? (
                             <SpinnerGap size={18} className="animate-spin" />
                         ) : (
@@ -313,13 +327,27 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Search events..."
                         maxLength={200}
-                        className="w-full pl-11 pr-16 py-2.5 bg-muted/50 focus:bg-transparent border border-transparent focus:border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
+                        className="w-full pl-11 pr-16 py-2.5 bg-background focus:bg-background border border-border focus:border-black/20 dark:focus:border-white/20 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none shadow-sm"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
+                        onFocus={() => {
+                            if (blurTimeoutRef.current) {
+                                clearTimeout(blurTimeoutRef.current);
+                                blurTimeoutRef.current = null;
+                            }
+                            if (hasAutocompleteContent && searchTerm.length >= 2) {
+                                setIsAutocompleteOpen(true);
+                            }
+                        }}
                         onBlur={(e) => {
                             onSearchChange(e.target.value.trim());
-                            setTimeout(() => setIsAutocompleteOpen(false), 350);
+                            if (blurTimeoutRef.current) {
+                                clearTimeout(blurTimeoutRef.current);
+                            }
+                            blurTimeoutRef.current = setTimeout(() => {
+                                setIsAutocompleteOpen(false);
+                                blurTimeoutRef.current = null;
+                            }, 350);
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -353,7 +381,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
                 {/* Location Input */}
                 <div className="flex-1 w-full relative group transition-colors">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors flex items-center">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/70 group-focus-within:text-foreground transition-colors flex items-center">
                         <MapPin size={16} weight="regular" />
                     </div>
                     <input
@@ -385,7 +413,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
                 {/* Date Range Filter */}
                 <div className="flex-1 w-full relative group transition-colors">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors flex items-center">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/70 group-focus-within:text-foreground transition-colors flex items-center">
                         <Calendar size={16} weight="regular" />
                     </div>
                     <button
@@ -411,7 +439,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     )}
 
                     <button
-                        className="hidden lg:flex px-4 py-2 bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] rounded-lg transition-colors text-sm font-semibold"
+                        className="hidden lg:flex px-5 py-2.5 bg-foreground text-background hover:bg-foreground/90 rounded-lg transition-all text-sm font-semibold shadow-sm items-center gap-2"
                         onClick={onSearch}
                     >
                         Search
@@ -426,6 +454,17 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     </button>
                 </div>
             </div>
+
+            {(rankingControls || actionControls) && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {rankingControls}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {actionControls}
+                    </div>
+                </div>
+            )}
 
             {/* Date Range Picker */}
             <QuickDatePicker
@@ -465,6 +504,8 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         prevProps.isDetectingLocation === nextProps.isDetectingLocation &&
         prevProps.isSearching === nextProps.isSearching &&
         prevProps.isAutocompletLoading === nextProps.isAutocompletLoading &&
+        prevProps.rankingControls === nextProps.rankingControls &&
+        prevProps.actionControls === nextProps.actionControls &&
         dateRangeEqual &&
         suggestionsEqual &&
         historyEqual

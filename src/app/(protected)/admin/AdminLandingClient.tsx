@@ -17,7 +17,50 @@ export interface AdminSummaryMetrics {
     protectedFields?: number | null;
 }
 
+export interface AdminSocialStageGates {
+    windowDays: number;
+    denominatorConsentedActiveUsers: number;
+    denominatorNote: string;
+    phaseA: {
+        attendanceOptInUsers: number;
+        attendanceOptInRate: number | null;
+        whosGoingImpressions: number;
+        whosGoingClicks: number;
+        whosGoingCtr: number | null;
+    };
+    phaseB: {
+        usersWhoFollowed: number;
+        followAdoptionRate: number | null;
+        profileViews: number;
+        followToReturnUsers: number;
+        followToReturnCohortUsers: number;
+        followToReturnRate: number | null;
+    };
+    phaseC: {
+        networkBadgeImpressions: number;
+        networkBadgeClicks: number;
+        networkBadgeCtr: number | null;
+        discoveryAttendanceToggleCount: number;
+        discoveryAttendanceToggleUsers: number;
+        discoveryAttendanceToggleRate: number | null;
+        discoveryAttendanceToggleSetCount: number;
+        discoveryAttendanceToggleClearCount: number;
+        discoveryAttendanceToggleUnknownActionCount: number;
+        discoveryAttendanceToggleBySurface: Array<{
+            surface: string;
+            count: number;
+        }>;
+        retentionFollowersReturnRate: number | null;
+        retentionNonFollowersReturnRate: number | null;
+        retentionDelta: number | null;
+        retentionFollowersCohortUsers: number;
+        retentionNonFollowersCohortUsers: number;
+    };
+}
+
 type QueueHealth = 'healthy' | 'warning' | 'critical';
+type StageGateStatus = 'pass' | 'fail' | 'no_data';
+type StageGateComparator = 'gte' | 'gt';
 
 function getQueueHealth(value: number | null | undefined, thresholds: { warning: number; critical: number }): QueueHealth {
     if (value === null || value === undefined || value === 0) return 'healthy';
@@ -44,7 +87,40 @@ const healthStyles: Record<QueueHealth, { ring: string; badge: string; indicator
     },
 };
 
-export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryMetrics }) {
+const stageGateStyles: Record<StageGateStatus, { card: string; badge: string; label: string }> = {
+    pass: {
+        card: 'border-emerald-500/40 bg-emerald-500/5',
+        badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        label: 'Pass',
+    },
+    fail: {
+        card: 'border-amber-500/40 bg-amber-500/5',
+        badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        label: 'Below target',
+    },
+    no_data: {
+        card: 'border-default/50 bg-background-secondary/50',
+        badge: 'bg-background-tertiary text-foreground-tertiary border-default/60',
+        label: 'No data',
+    },
+};
+
+const STAGE_GATE_THRESHOLDS = {
+    phaseAAttendanceOptInRate: 0.15,
+    phaseAWhosGoingCtr: 0.05,
+    phaseBFollowAdoptionRate: 0.2,
+    phaseBFollowToReturnRate: 0.6,
+    phaseCNetworkBadgeCtr: 0.08,
+    phaseCRetentionDelta: 0,
+} as const;
+
+export default function AdminLandingClient({
+    metrics,
+    socialStageGates,
+}: {
+    metrics: AdminSummaryMetrics;
+    socialStageGates: AdminSocialStageGates | null;
+}) {
     const { setTitle, setSubtitle, setQuickFilters, setSearch, setToolbarContent } = useAdminToolbar();
 
     useEffect(() => {
@@ -134,6 +210,52 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
         overallHealth === 'warning' ? 'Some queues need attention' :
             'Critical queues require action';
 
+    const stageGates = socialStageGates ? [
+        {
+            key: 'phase-a-opt-in',
+            title: 'Phase A attendance opt-in',
+            value: socialStageGates.phaseA.attendanceOptInRate,
+            target: STAGE_GATE_THRESHOLDS.phaseAAttendanceOptInRate,
+            detail: `${socialStageGates.phaseA.attendanceOptInUsers} users opted in`,
+        },
+        {
+            key: 'phase-a-ctr',
+            title: 'Phase A Who\'s Going CTR',
+            value: socialStageGates.phaseA.whosGoingCtr,
+            target: STAGE_GATE_THRESHOLDS.phaseAWhosGoingCtr,
+            detail: `${socialStageGates.phaseA.whosGoingClicks} clicks / ${socialStageGates.phaseA.whosGoingImpressions} impressions`,
+        },
+        {
+            key: 'phase-b-follow',
+            title: 'Phase B follow adoption',
+            value: socialStageGates.phaseB.followAdoptionRate,
+            target: STAGE_GATE_THRESHOLDS.phaseBFollowAdoptionRate,
+            detail: `${socialStageGates.phaseB.usersWhoFollowed} users followed at least one account`,
+        },
+        {
+            key: 'phase-b-follow-return',
+            title: 'Phase B follow-to-return (7d)',
+            value: socialStageGates.phaseB.followToReturnRate,
+            target: STAGE_GATE_THRESHOLDS.phaseBFollowToReturnRate,
+            detail: `${socialStageGates.phaseB.followToReturnUsers} returning users / ${socialStageGates.phaseB.followToReturnCohortUsers} eligible follow users`,
+        },
+        {
+            key: 'phase-c-network-ctr',
+            title: 'Phase C network badge CTR',
+            value: socialStageGates.phaseC.networkBadgeCtr,
+            target: STAGE_GATE_THRESHOLDS.phaseCNetworkBadgeCtr,
+            detail: `${socialStageGates.phaseC.networkBadgeClicks} clicks / ${socialStageGates.phaseC.networkBadgeImpressions} impressions`,
+        },
+        {
+            key: 'phase-c-retention-delta',
+            title: 'Phase C retention delta (7d)',
+            value: socialStageGates.phaseC.retentionDelta,
+            target: STAGE_GATE_THRESHOLDS.phaseCRetentionDelta,
+            comparator: 'gt' as StageGateComparator,
+            detail: `${formatRate(socialStageGates.phaseC.retentionFollowersReturnRate)} followers (n=${socialStageGates.phaseC.retentionFollowersCohortUsers}) vs ${formatRate(socialStageGates.phaseC.retentionNonFollowersReturnRate)} non-followers (n=${socialStageGates.phaseC.retentionNonFollowersCohortUsers})`,
+        },
+    ] : [];
+
     return (
         <div className="space-y-6">
             {/* System Health Banner */}
@@ -217,6 +339,79 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                 </CardContent>
             </Card>
 
+            <Card className="border border-default/60 bg-background-main/60 text-foreground-secondary">
+                <CardHeader className="space-y-2">
+                    <CardTitle className="text-base font-semibold">Social stage gates</CardTitle>
+                    <p className="text-sm text-foreground-tertiary">
+                        {socialStageGates
+                            ? `Telemetry snapshot for the last ${socialStageGates.windowDays} days.`
+                            : 'Telemetry summary is currently unavailable.'}
+                    </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {socialStageGates ? (
+                        <>
+                            <div className="grid gap-3 md:grid-cols-2">
+                                {stageGates.map((gate) => {
+                                    const status = getStageGateStatus(
+                                        gate.value,
+                                        gate.target,
+                                        gate.comparator
+                                    );
+                                    const style = stageGateStyles[status];
+
+                                    return (
+                                        <div key={gate.key} className={cn('rounded-lg border p-3', style.card)}>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-sm font-medium text-foreground-secondary">{gate.title}</p>
+                                                <Badge className={cn('text-[11px]', style.badge)}>{style.label}</Badge>
+                                            </div>
+                                            <div className="mt-2 flex items-baseline gap-2">
+                                                <span className="text-2xl font-semibold text-foreground-primary">
+                                                    {formatRate(gate.value)}
+                                                </span>
+                                                <span className="text-xs text-foreground-tertiary">
+                                                    target {gate.comparator === 'gt' ? '>' : '≥'} {formatRate(gate.target)}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-xs text-foreground-tertiary">{gate.detail}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="rounded-lg border border-default/50 bg-background-secondary/50 p-3">
+                                <p className="text-sm font-medium text-foreground-secondary">
+                                    Phase C discovery attendance toggles
+                                </p>
+                                <p className="mt-1 text-xs text-foreground-tertiary">
+                                    {socialStageGates.phaseC.discoveryAttendanceToggleCount} toggles from{' '}
+                                    {socialStageGates.phaseC.discoveryAttendanceToggleUsers} users (
+                                    {formatRate(socialStageGates.phaseC.discoveryAttendanceToggleRate)} of consented users).
+                                    {' '}Set: {socialStageGates.phaseC.discoveryAttendanceToggleSetCount}, clear: {socialStageGates.phaseC.discoveryAttendanceToggleClearCount}, unknown: {socialStageGates.phaseC.discoveryAttendanceToggleUnknownActionCount}.
+                                </p>
+                                {socialStageGates.phaseC.discoveryAttendanceToggleBySurface.length > 0 && (
+                                    <p className="mt-1 text-xs text-foreground-tertiary">
+                                        Top surfaces:{' '}
+                                        {socialStageGates.phaseC.discoveryAttendanceToggleBySurface
+                                            .slice(0, 3)
+                                            .map((entry) => `${entry.surface} (${entry.count})`)
+                                            .join(', ')}
+                                    </p>
+                                )}
+                            </div>
+                            <p className="text-xs text-foreground-tertiary">
+                                Denominator: {socialStageGates.denominatorConsentedActiveUsers} analytics-consented active users.{' '}
+                                {socialStageGates.denominatorNote} Return metrics count events that occur 24 hours to 7 days after cohort anchor.
+                            </p>
+                        </>
+                    ) : (
+                        <div className="rounded-lg border border-default/50 bg-background-secondary/50 p-4 text-sm text-foreground-tertiary">
+                            Unable to load telemetry stage-gate metrics right now.
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
             <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
                 <Card className="border border-default/60 bg-background-main/60 text-foreground-secondary">
                     <CardHeader>
@@ -283,4 +478,25 @@ function formatMetric(value?: number | null) {
         return `${(value / 1000).toFixed(1)}k`;
     }
     return value.toString();
+}
+
+function formatRate(value: number | null | undefined) {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+    return `${(value * 100).toFixed(1)}%`;
+}
+
+function getStageGateStatus(
+    value: number | null | undefined,
+    threshold: number,
+    comparator: StageGateComparator = 'gte'
+): StageGateStatus {
+    if (value === null || value === undefined) {
+        return 'no_data';
+    }
+    if (comparator === 'gt') {
+        return value > threshold ? 'pass' : 'fail';
+    }
+    return value >= threshold ? 'pass' : 'fail';
 }

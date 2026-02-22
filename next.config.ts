@@ -3,8 +3,23 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-// 1. Define the security headers array. This makes the config cleaner.
-const securityHeaders = [
+const buildCsp = (frameAncestors: string) =>
+  `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com https://cdn.paddle.com https://public.profitwell.com https://us.i.posthog.com https://us-assets.i.posthog.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
+        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
+        img-src 'self' data: blob: https:;
+        font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
+        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com https://us.i.posthog.com https://us-assets.i.posthog.com;
+        frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;
+        frame-ancestors ${frameAncestors};
+        base-uri 'self';
+        form-action 'self';
+        `.replace(/\s+/g, ' ').trim();
+
+// Shared security headers for all routes
+const commonSecurityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',
     value: 'on'
@@ -19,32 +34,34 @@ const securityHeaders = [
     value: '1; mode=block' // Recommended for older browsers
   },
   {
-    key: 'X-Frame-Options',
-    value: 'DENY' // Prevents the site from being rendered in an iframe (clickjacking protection)
-  },
-  {
     key: 'X-Content-Type-Options',
     value: 'nosniff' // Prevents the browser from MIME-sniffing a response away from the declared content-type
   },
   {
     key: 'Referrer-Policy',
     value: 'strict-origin-when-cross-origin' // Aligns with modern browser defaults
+  }
+];
+
+// Default app/pages: block framing.
+const securityHeaders = [
+  ...commonSecurityHeaders,
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY'
   },
   {
     key: 'Content-Security-Policy',
-    value: `
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com https://cdn.paddle.com https://public.profitwell.com https://us.i.posthog.com https://us-assets.i.posthog.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
-        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
-        img-src 'self' data: blob: https:;
-        font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
-        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com https://us.i.posthog.com https://us-assets.i.posthog.com;
-        frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;
-        frame-ancestors 'none';
-        base-uri 'self';
-        form-action 'self';
-        `.replace(/\s+/g, ' ').trim()
+    value: buildCsp("'none'")
+  }
+];
+
+// Embed pages: explicitly allow framing by external sites.
+const embedHeaders = [
+  ...commonSecurityHeaders,
+  {
+    key: 'Content-Security-Policy',
+    value: buildCsp("*")
   }
 ];
 
@@ -54,12 +71,26 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'kure-cal.com' }],
+        destination: 'https://www.kure-cal.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   // 2. Add the async headers function to your Next.js config.
   async headers() {
     return [
       {
-        // Apply these headers to all routes in your application.
-        source: '/(.*)',
+        source: '/embed/:path*',
+        headers: embedHeaders,
+      },
+      {
+        // Apply strict framing headers to all non-embed routes.
+        source: '/((?!embed(?:/|$)).*)',
         headers: securityHeaders,
       },
     ];

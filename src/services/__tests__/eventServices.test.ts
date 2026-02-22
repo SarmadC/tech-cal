@@ -254,6 +254,30 @@ describe('EventService', () => {
     });
   });
 
+  describe('getEventCount', () => {
+    it('applies enhanced filters for count queries', async () => {
+      mockSupabase.__query.__setThenValue({
+        count: 42,
+        data: null,
+        error: null,
+      });
+
+      const applyEnhancedFiltersSpy = vi.spyOn(EventService as any, 'applyEnhancedFilters');
+
+      const count = await EventService.getEventCount({
+        budget: 'low',
+        status: ['confirmed'],
+        eventIds: ['event-1', 'event-2']
+      } as EventFilters, mockSupabase as unknown as SupabaseClient);
+
+      expect(applyEnhancedFiltersSpy).toHaveBeenCalled();
+      expect(mockSupabase.in).toHaveBeenCalledWith('status', ['confirmed']);
+      expect(mockSupabase.in).toHaveBeenCalledWith('id', ['event-1', 'event-2']);
+      expect(mockSupabase.eq).toHaveBeenCalledWith('currency', 'USD');
+      expect(count).toBe(42);
+    });
+  });
+
   describe('getEventById', () => {
     it('should fetch a single event by ID', async () => {
       const mockEvent = {
@@ -449,5 +473,4 @@ describe('EventService', () => {
     });
   });
 });
-
 

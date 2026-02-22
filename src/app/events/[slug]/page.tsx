@@ -1,18 +1,24 @@
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { EventJsonLd, BreadcrumbJsonLd } from '@/components/seo';
-import { formatDate, formatMonthYear, formatTime } from '@/utils/dateUtils';
+import { formatDate, formatMonthYear } from '@/utils/dateUtils';
 import { transformAgendaItemsToApp } from '@/utils/transformers';
 import { EventAgendaSection } from '@/components/events/EventAgendaSection';
 import type { AgendaItem } from '@/types';
 import {
-    ArrowSquareOut,
-    Globe
+    ArrowSquareOut
 } from '@phosphor-icons/react/dist/ssr';
 import BookmarkEventButton from '@/components/events/BookmarkEventButton';
+import AttendanceEventButton from '@/components/events/AttendanceEventButton';
+import { ShareButtons } from '@/components/social/ShareButtons';
+import { EmbedButton } from '@/components/social/EmbedButton';
+import WhosGoingSection from '@/components/events/WhosGoingSection';
+import { SITE_URL } from '@/config/site';
+import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -178,7 +184,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
         ? event.description.slice(0, 160) + (event.description.length > 160 ? '...' : '')
         : `Join ${event.title} - a tech event happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}.`;
 
-    const ogImage = event.event_image_url || 'https://kure-cal.com/og-image.png';
+    const ogImage = event.event_image_url || `${SITE_URL}/og-image.png`;
 
     return {
         title: `${event.title} - ${eventDate} | Kure-Cal`,
@@ -187,7 +193,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             title: `${event.title} - ${eventDate}`,
             description,
             type: 'website',
-            url: `https://kure-cal.com/events/${event.slug}`,
+            url: `${SITE_URL}/events/${event.slug}`,
             images: [{ url: ogImage }],
         },
         twitter: {
@@ -197,7 +203,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             images: [ogImage],
         },
         alternates: {
-            canonical: `https://kure-cal.com/events/${event.slug}`,
+            canonical: `${SITE_URL}/events/${event.slug}`,
         },
     };
 }
@@ -230,6 +236,8 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
         .map((e) => ({ slug: e.slug }));
 }
 
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
+
 export default async function PublicEventPage({ params }: EventPageProps) {
     const { slug } = await params;
     const result = await getEventBySlug(slug);
@@ -246,9 +254,13 @@ export default async function PublicEventPage({ params }: EventPageProps) {
     }
 
     const eventType = event.event_type as { id: string; name: string; color: string } | null;
-    const organizer = event.organizer as { id: string; name: string; logo_url?: string } | null;
+    const rawOrganizer = event.organizer as { id: string; name: string; logo_url?: string } | null;
+    const organizer = rawOrganizer ? {
+        ...rawOrganizer,
+        logo_url: getLogoUrlFromInput(rawOrganizer.logo_url, rawOrganizer.name)
+    } : null;
 
-    const eventUrl = `https://kure-cal.com/events/${event.slug}`;
+    const eventUrl = `${SITE_URL}/events/${event.slug}`;
 
     return (
         <>
@@ -271,8 +283,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
             />
             <BreadcrumbJsonLd
                 items={[
-                    { name: 'Home', url: 'https://kure-cal.com' },
-                    { name: 'Events', url: 'https://kure-cal.com/discover' },
+                    { name: 'Home', url: SITE_URL },
+                    { name: 'Events', url: `${SITE_URL}/events` },
                     { name: event.title },
                 ]}
             />
@@ -284,7 +296,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                     <div className="max-w-7xl mx-auto px-6 sm:px-8">
                         {/* Minimal Breadcrumb */}
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-5">
-                            <Link href="/discover" className="hover:text-foreground-tertiary transition-colors">
+                            <Link href="/events" className="hover:text-foreground-tertiary transition-colors">
                                 Events
                             </Link>
                             <span className="text-foreground-tertiary/30">/</span>
@@ -379,6 +391,10 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                     <aside className="hidden lg:block lg:col-span-4">
                         <div className="rounded-lg border border-border-subtle bg-background-secondary/40 overflow-hidden">
                             <div className="p-4 space-y-3 border-b border-border-subtle">
+                                <AttendanceEventButton
+                                    eventId={event.id}
+                                    loginRedirect={`/events/${event.slug}`}
+                                />
                                 <BookmarkEventButton
                                     eventId={event.id}
                                     event={{
@@ -403,6 +419,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         <ArrowSquareOut className="w-3.5 h-3.5 opacity-70" />
                                     </a>
                                 )}
+
+                                <PublicEventMoreActions eventId={event.id} />
                             </div>
 
                             <div className="divide-y divide-border-subtle">
@@ -411,9 +429,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         <span className="text-[11px] text-foreground-tertiary/70">Organizer</span>
                                         <span className="flex items-center gap-2 text-[11px] text-foreground-primary">
                                             {organizer.logo_url && (
-                                                <img
+                                                <Image
                                                     src={organizer.logo_url}
                                                     alt={`${organizer.name} logo`}
+                                                    width={20}
+                                                    height={20}
                                                     className="h-5 w-5 object-contain"
                                                 />
                                             )}
@@ -428,6 +448,19 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         <span className="text-[11px] text-foreground-primary">{eventType.name}</span>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <span className="text-[11px] text-foreground-tertiary/70 block mb-2">Share</span>
+                                <ShareButtons url={eventUrl} title={event.title} />
+                            </div>
+
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <WhosGoingSection eventId={event.id} />
+                            </div>
+
+                            <div className="px-4 py-3 border-t border-border-subtle">
+                                <EmbedButton slug={event.slug} title={event.title} />
                             </div>
 
                         </div>
@@ -480,12 +513,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 {/* Mobile Sticky Bottom Bar */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-main/95 backdrop-blur-md border-t border-border-subtle lg:hidden z-50">
                     <div className="flex gap-2 max-w-md mx-auto">
-                        <Link
-                            href="/login?redirect=/discover"
-                            className="flex-1 h-11 flex items-center justify-center bg-foreground-primary text-background-main font-medium rounded-lg text-[14px]"
-                        >
-                            Track
-                        </Link>
+                        <AttendanceEventButton
+                            eventId={event.id}
+                            loginRedirect={`/events/${event.slug}`}
+                            variant="mobile"
+                        />
                         {event.source_url && (
                             <a
                                 href={event.source_url}
@@ -496,6 +528,17 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                 Website
                             </a>
                         )}
+                        <a
+                            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(event.title)}&url=${encodeURIComponent(eventUrl)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Share on X"
+                            className="h-11 w-11 flex items-center justify-center border border-border-default rounded-lg text-foreground-secondary"
+                        >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM16.482 19.333h1.833L7.084 4.126H5.117z" />
+                            </svg>
+                        </a>
                     </div>
                 </div>
             </div>

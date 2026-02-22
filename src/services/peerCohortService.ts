@@ -22,6 +22,14 @@ export interface UserCohort {
   seniorityRange: string[];
 }
 
+export interface PeerComparisonSnapshot {
+  percentile: number;
+  comparison: 'above' | 'below' | 'average';
+  sampleSize: number;
+  confidence: 'high' | 'medium' | 'low';
+  recommendation: string;
+}
+
 interface CohortUser {
   userId: string;
   role: string;
@@ -40,11 +48,11 @@ export class PeerCohortService {
   /**
    * Find intelligent peer cohorts for role-based comparison
    */
-  static async findUserCohorts(
+  static findUserCohorts(
     userProfile: CareerProfile,
     allUserProfiles: CareerProfile[] = [],
     userEvents: TrackedEventRecord[] = []
-  ): Promise<PeerCohort> {
+  ): PeerCohort {
     try {
       // 1. Try exact role + similar seniority match
       const primaryMatch = this.findExactRoleMatch(userProfile, allUserProfiles, userEvents);
@@ -68,6 +76,52 @@ export class PeerCohortService {
       console.warn('Error finding user cohorts:', error);
       return this.getEmptyCohort(userProfile);
     }
+  }
+
+  /**
+   * Build peer-comparison snapshot for dashboard metrics.
+   * Uses cohort matching when available and deterministic modeled cohort as fallback.
+   */
+  static calculatePeerComparison(
+    userProfile: CareerProfile,
+    userEvents: TrackedEventRecord[] = [],
+    allUserProfiles: CareerProfile[] = []
+  ): PeerComparisonSnapshot {
+    const cohortResult = this.findUserCohorts(userProfile, allUserProfiles, userEvents);
+    const selectedObservedCohort =
+      cohortResult.primaryMatch.size >= COHORT_REQUIREMENTS.MINIMUM_VIABLE
+        ? cohortResult.primaryMatch
+        : cohortResult.fallbackMatch && cohortResult.fallbackMatch.size > 0
+          ? cohortResult.fallbackMatch
+          : cohortResult.primaryMatch.size > 0
+            ? cohortResult.primaryMatch
+            : null;
+    const hasObservedCohort = selectedObservedCohort !== null;
+    const selectedCohort = selectedObservedCohort ?? this.createModeledCohort(userProfile, userEvents);
+
+    const observedSignals = this.deriveObservedUserSignals(userEvents);
+    const annualizedUserEventCount = observedSignals
+      ? Math.round(observedSignals.eventsPerMonth * 12)
+      : Math.max(
+          0,
+          userEvents.filter(event => event.status === 'attended').length
+        );
+
+    const percentile = this.calculatePercentile(annualizedUserEventCount, selectedCohort);
+    const comparison: 'above' | 'below' | 'average' =
+      percentile >= 60 ? 'above' : percentile <= 40 ? 'below' : 'average';
+
+    const recommendation = hasObservedCohort
+      ? cohortResult.recommendation
+      : 'Baseline comparison derived from your role and activity patterns';
+
+    return {
+      percentile,
+      comparison,
+      sampleSize: selectedObservedCohort?.size ?? 0,
+      confidence: hasObservedCohort ? cohortResult.confidence : 'low',
+      recommendation
+    };
   }
 
   /**
@@ -163,15 +217,17 @@ export class PeerCohortService {
     matchingUsers: CareerProfile[],
     roleIdentifier: string,
     seniorityRange: string[],
-    _userEvents: TrackedEventRecord[]
+    userEvents: TrackedEventRecord[]
   ): UserCohort {
-    // Convert profiles to cohort users (simplified - would need real event data)
+    const observedSignals = this.deriveObservedUserSignals(userEvents);
+
+    // Convert profiles to cohort users using deterministic profile-derived estimates.
     const cohortUsers: CohortUser[] = matchingUsers.map(profile => ({
       userId: profile.userId,
       role: profile.currentRole,
       seniority: profile.seniority,
-      eventCount: Math.floor(Math.random() * 24) + 1, // Mock data - would be real
-      careerImpactScore: Math.floor(Math.random() * 40) + 60 // Mock data
+      eventCount: this.estimateAnnualEventCount(profile, observedSignals?.eventsPerMonth ?? null),
+      careerImpactScore: this.estimateCareerImpactScore(profile, observedSignals?.avgImpactScore ?? null)
     }));
 
     // Calculate baseline metrics
@@ -179,7 +235,12 @@ export class PeerCohortService {
     const averageActivity = cohortUsers.length > 0 ? totalEvents / cohortUsers.length : 0;
 
     // Create event baseline based on role category
-    const eventBaseline = this.createEventBaseline(roleIdentifier, averageActivity);
+    const eventBaseline = this.createEventBaseline(
+      roleIdentifier,
+      averageActivity,
+      cohortUsers,
+      matchingUsers
+    );
 
     return {
       users: cohortUsers,
@@ -191,10 +252,221 @@ export class PeerCohortService {
     };
   }
 
+  private static createModeledCohort(
+    userProfile: CareerProfile,
+    userEvents: TrackedEventRecord[]
+  ): UserCohort {
+    const observedSignals = this.deriveObservedUserSignals(userEvents);
+    const baseEventCount = this.estimateAnnualEventCount(userProfile, observedSignals?.eventsPerMonth ?? null);
+    const baseImpact = this.estimateCareerImpactScore(userProfile, observedSignals?.avgImpactScore ?? null);
+    const modeledSize = COHORT_REQUIREMENTS.MINIMUM_VIABLE;
+
+    const modeledUsers: CohortUser[] = Array.from({ length: modeledSize }, (_, index) => {
+      const spread = index - Math.floor(modeledSize / 2);
+      return {
+        userId: `modeled-peer-${index + 1}`,
+        role: userProfile.currentRole,
+        seniority: userProfile.seniority,
+        eventCount: Math.max(4, Math.min(36, baseEventCount + spread)),
+        careerImpactScore: Math.max(45, Math.min(95, baseImpact + (spread * 2)))
+      };
+    });
+
+    const averageActivity = modeledUsers.reduce((sum, user) => sum + user.eventCount, 0) / modeledUsers.length;
+    const eventBaseline = this.createEventBaseline(
+      userProfile.currentRole,
+      averageActivity,
+      modeledUsers,
+      [userProfile]
+    );
+
+    return {
+      users: modeledUsers,
+      size: modeledUsers.length,
+      averageActivity,
+      eventBaseline,
+      roleCategory: this.getRoleCategory(userProfile.currentRole) || userProfile.currentRole,
+      seniorityRange: this.getSimilarSeniorityLevels(userProfile.seniority)
+    };
+  }
+
+  private static deriveObservedUserSignals(
+    userEvents: TrackedEventRecord[]
+  ): { eventsPerMonth: number; avgImpactScore: number } | null {
+    const attendedEvents = userEvents
+      .filter(record => record.status === 'attended' && record.event)
+      .map(record => record.event as Event);
+
+    if (attendedEvents.length === 0) {
+      return null;
+    }
+
+    const eventTimestamps = attendedEvents
+      .map(event => new Date(event.startTime).getTime())
+      .filter(timestamp => Number.isFinite(timestamp))
+      .sort((a, b) => a - b);
+
+    const oldestTimestamp = eventTimestamps[0];
+    const monthsObserved = oldestTimestamp
+      ? Math.max(1, (Date.now() - oldestTimestamp) / (1000 * 60 * 60 * 24 * 30))
+      : 12;
+
+    const eventsPerMonth = attendedEvents.length / monthsObserved;
+    const avgImpactScore = attendedEvents.reduce((sum, event) => {
+      return sum + this.inferEventImpactScore(event);
+    }, 0) / attendedEvents.length;
+
+    return {
+      eventsPerMonth,
+      avgImpactScore
+    };
+  }
+
+  private static estimateAnnualEventCount(
+    profile: CareerProfile,
+    observedEventsPerMonth: number | null
+  ): number {
+    let annualCount = this.getSeniorityActivityBaseline(profile.seniority);
+
+    annualCount += Math.min(profile.skillsToLearn.length, 6) * 0.7;
+    annualCount += Math.min(profile.networkingGoals.length, 5) * 0.9;
+    annualCount += Math.min(profile.careerGoals.length, 4) * 0.6;
+
+    const timeAdjustment: Record<string, number> = {
+      'very-limited': -4,
+      'limited': -2,
+      'moderate': 0,
+      'flexible': 2,
+      'dedicated': 4
+    };
+    annualCount += timeAdjustment[profile.availableTime] ?? 0;
+
+    if (observedEventsPerMonth !== null) {
+      const observedAnnual = observedEventsPerMonth * 12;
+      annualCount = (annualCount * 0.75) + (observedAnnual * 0.25);
+    }
+
+    return Math.round(Math.max(4, Math.min(36, annualCount)));
+  }
+
+  private static estimateCareerImpactScore(
+    profile: CareerProfile,
+    observedImpactScore: number | null
+  ): number {
+    let score = 52;
+
+    score += this.getSeniorityImpactBaseline(profile.seniority);
+    score += Math.min(profile.primarySkills.length, 8) * 2.2;
+    score += Math.min(profile.skillsToLearn.length, 6) * 1.3;
+    score += Math.min(profile.interests.length, 6) * 0.8;
+
+    if (profile.careerGoals.includes('career-advancement')) score += 4;
+    if (profile.careerGoals.includes('leadership-growth')) score += 4;
+    if (profile.careerGoals.includes('networking')) score += 3;
+    if (profile.careerGoals.includes('role-transition')) score += 3;
+
+    if (profile.learningStyle.includes('hands-on')) score += 2;
+    if (profile.learningStyle.includes('interactive')) score += 2;
+
+    if (observedImpactScore !== null) {
+      score = (score * 0.8) + (observedImpactScore * 0.2);
+    }
+
+    return Math.round(Math.max(45, Math.min(95, score)));
+  }
+
+  private static getSeniorityActivityBaseline(seniority: string): number {
+    const activityBaseline: Record<string, number> = {
+      'student': 20,
+      'entry-level': 16,
+      'junior': 14,
+      'mid-level': 12,
+      'senior': 10,
+      'staff': 9,
+      'principal': 8,
+      'lead': 10,
+      'manager': 9,
+      'director': 8,
+      'vp': 7,
+      'founder': 11
+    };
+
+    return activityBaseline[seniority] ?? 10;
+  }
+
+  private static getSeniorityImpactBaseline(seniority: string): number {
+    const impactBaseline: Record<string, number> = {
+      'student': 2,
+      'entry-level': 4,
+      'junior': 5,
+      'mid-level': 7,
+      'senior': 9,
+      'staff': 11,
+      'principal': 12,
+      'lead': 10,
+      'manager': 10,
+      'director': 11,
+      'vp': 12,
+      'founder': 10
+    };
+
+    return impactBaseline[seniority] ?? 7;
+  }
+
+  private static inferEventImpactScore(event: Event): number {
+    const scoredEvent = event as Event & {
+      careerImpactLite?: { overall?: number };
+      careerImpact?: { overall?: number };
+    };
+    const knownScore = scoredEvent.careerImpactLite?.overall ?? scoredEvent.careerImpact?.overall;
+    if (typeof knownScore === 'number' && Number.isFinite(knownScore)) {
+      return Math.max(0, Math.min(100, knownScore <= 1 ? knownScore * 100 : knownScore));
+    }
+
+    let inferredScore = 55;
+    const title = event.title.toLowerCase();
+    if (title.includes('conference') || title.includes('summit')) inferredScore += 12;
+    if (title.includes('workshop') || title.includes('training')) inferredScore += 8;
+    if (title.includes('network') || title.includes('meetup')) inferredScore += 6;
+    if ((event.attendeeCount || 0) > 500) inferredScore += 8;
+    if ((event.speakerLineup?.length || 0) >= 3) inferredScore += 6;
+
+    return Math.max(40, Math.min(90, inferredScore));
+  }
+
+  private static getPreferredEventTypes(
+    matchingUsers: CareerProfile[],
+    roleCategory: string,
+    fallbackPreferences: Record<string, string[]>
+  ): string[] {
+    const eventTypeCounts = new Map<string, number>();
+
+    matchingUsers.forEach(profile => {
+      profile.preferredEventTypes.forEach(eventType => {
+        const normalized = eventType.toLowerCase();
+        eventTypeCounts.set(normalized, (eventTypeCounts.get(normalized) || 0) + 1);
+      });
+    });
+
+    const rankedEventTypes = Array.from(eventTypeCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([eventType]) => eventType);
+
+    return rankedEventTypes.length > 0
+      ? rankedEventTypes
+      : (fallbackPreferences[roleCategory] || ['conference', 'workshop']);
+  }
+
   /**
    * Create event baseline for role category
    */
-  private static createEventBaseline(roleIdentifier: string, averageActivity: number): EventBaseline {
+  private static createEventBaseline(
+    roleIdentifier: string,
+    averageActivity: number,
+    cohortUsers: CohortUser[],
+    matchingUsers: CareerProfile[]
+  ): EventBaseline {
     const roleCategory = this.getRoleCategory(roleIdentifier) || roleIdentifier;
 
     // Role-specific event preferences
@@ -205,10 +477,14 @@ export class PeerCohortService {
       [ROLE_CATEGORIES.LEADERSHIP]: ['leadership', 'strategy', 'business', 'management']
     };
 
+    const avgCareerImpact = cohortUsers.length > 0
+      ? cohortUsers.reduce((sum, user) => sum + user.careerImpactScore, 0) / cohortUsers.length
+      : 75;
+
     return {
       eventsPerMonth: Math.round((averageActivity / 12) * 10) / 10,
-      preferredEventTypes: eventPreferences[roleCategory] || ['conference', 'workshop'],
-      avgCareerImpact: 75 // baseline impact score
+      preferredEventTypes: this.getPreferredEventTypes(matchingUsers, roleCategory, eventPreferences),
+      avgCareerImpact: Math.round(avgCareerImpact)
     };
   }
 

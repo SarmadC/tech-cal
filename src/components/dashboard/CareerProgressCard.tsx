@@ -74,6 +74,10 @@ function getAverageImpact(goalData: GoalProgress): number | null {
 
 // Get suggested action based on status
 function getSuggestedAction(goalData: GoalProgress, goalKey: string): string | null {
+    if (goalData.suggestedAction) {
+        return goalData.suggestedAction;
+    }
+
     const config = GOAL_CONFIG[goalKey as keyof typeof GOAL_CONFIG];
     const eventsNeeded = goalData.targetEventCount - goalData.eventCount;
 
@@ -329,7 +333,7 @@ export function CareerProgressCard({
             {goalsWithProgress.length === 0 && (
                 <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-white/5">
                     <Link
-                        href="/discover"
+                        href="/events"
                         className="flex items-center justify-center gap-2 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
                     >
                         Find events that match your goals
@@ -340,4 +344,3 @@ export function CareerProgressCard({
         </DashboardCard>
     );
 }
-

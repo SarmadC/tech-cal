@@ -5,7 +5,10 @@ import type { Database } from '@/types/supabase'
 
 // Routes that require authentication
 const PROTECTED_ROUTES = [
+  '/discover',
+  '/calendar',
   '/dashboard',
+  '/hackathons',
   '/settings',
   '/onboarding',
 ]
@@ -13,33 +16,32 @@ const PROTECTED_ROUTES = [
 // Routes that should redirect authenticated users away
 const AUTH_ROUTES = ['/login', '/signup']
 
-// Routes that are always public
-const PUBLIC_ROUTES = [
-  '/',
-  '/discover',
+// Public landing/index routes that must remain crawlable.
+const CRAWLABLE_PUBLIC_PREFIXES = [
   '/events',
-  '/hackathons',
+  '/resources',
+  '/blog',
   '/pricing',
-  '/legal',
-  '/about',
   '/contact',
-  '/forgot-password',
-  '/auth/callback',
-  '/auth/reset-password',
-  '/auth/confirm',
-  '/api',
+  '/about',
+  '/legal',
+  '/embed',
 ]
 
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+export function pathMatchesPrefix(pathname: string, routePrefix: string): boolean {
+  return pathname === routePrefix || pathname.startsWith(`${routePrefix}/`)
 }
 
-function isAuthRoute(pathname: string): boolean {
-  return AUTH_ROUTES.some(route => pathname === route)
+export function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some(route => pathMatchesPrefix(pathname, route))
 }
 
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+export function isAuthRoute(pathname: string): boolean {
+  return AUTH_ROUTES.some(route => pathMatchesPrefix(pathname, route))
+}
+
+export function isCrawlablePublicRoute(pathname: string): boolean {
+  return CRAWLABLE_PUBLIC_PREFIXES.some(route => pathMatchesPrefix(pathname, route))
 }
 
 export async function proxy(request: NextRequest) {
@@ -83,14 +85,17 @@ export async function proxy(request: NextRequest) {
 
   // Refresh session if expired - this is important for keeping the session alive
   // Using getUser() instead of getSession() for security (validates with Supabase server)
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
 
   // If user is not authenticated and trying to access protected route
-  if (!user && isProtectedRoute(pathname)) {
+  if (!user && isProtectedRoute(pathname) && !isCrawlablePublicRoute(pathname)) {
+    const redirectPath = `${pathname}${request.nextUrl.search}`
     const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('next', pathname)
+    // Keep both params during transition since some pages still read `next`.
+    redirectUrl.searchParams.set('redirect', redirectPath)
+    redirectUrl.searchParams.set('next', redirectPath)
     return NextResponse.redirect(redirectUrl)
   }
 

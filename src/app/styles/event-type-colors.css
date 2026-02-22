@@ -136,16 +136,16 @@
   --event-default-border: #475569;
   --event-default-text: #cbd5e1;
 
-  /* Category Accents - Dark Mode Overrides - Tailwind 700s */
-  --color-category-summit: #1d4ed8;
-  --color-category-workshop: #6d28d9;
-  --color-category-networking: #047857;
-  --color-category-conference: #0369a1;
-  --color-category-webinar: #c2410c;
-  --color-category-startup: #be185d;
-  --color-category-trade-show: #4338ca;
-  --color-category-product-launch: #b45309;
-  --color-category-training: #0f766e;
+  /* Category Accents - Dark Mode Overrides - User Requested Pastels */
+  --color-category-summit: #A0C4FF; /* Baby Blue Ice */
+  --color-category-workshop: #BDB2FF; /* Periwinkle */
+  --color-category-networking: #CAFFBF; /* Tea Green */
+  --color-category-conference: #9BF6FF; /* Soft Cyan */
+  --color-category-webinar: #FFD6A5; /* Apricot Cream */
+  --color-category-startup: #FFC6FF; /* Mauve */
+  --color-category-trade-show: #BDB2FF; /* Periwinkle (for Indigo) */
+  --color-category-product-launch: #FDFFB6; /* Lemon Chiffon */
+  --color-category-training: #9BF6FF; /* Soft Cyan (for Teal) */
 }
 
 /* Event type tag classes */

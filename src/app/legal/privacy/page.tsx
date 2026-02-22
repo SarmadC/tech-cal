@@ -1,22 +1,23 @@
 // src/app/legal/privacy/page.tsx
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 // Static generation for legal pages - static content
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy',
-    description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+    title: 'Privacy Policy - Your Data, Our Commitment',
+    description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
     openGraph: {
-        title: 'Privacy Policy | Kure-Cal',
-        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+        title: 'Privacy Policy - Your Data, Our Commitment | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
         type: 'website',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Privacy Policy | Kure-Cal',
-        description: 'Read the Kure-Cal privacy policy to learn what data we collect, how we use it, and the choices you have to control your information.',
+        title: 'Privacy Policy - Your Data, Our Commitment | Kure-Cal',
+        description: 'Read the Kure-Cal privacy policy to understand what data we collect, how we use it, and the choices you have to control your personal information and privacy settings.',
     },
 };
 
@@ -30,7 +31,7 @@ export default function PrivacyPage() {
             <p>
                 This Privacy Policy describes how <strong>Kure-Cal</strong> (&quot;Kure-Cal&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;)
                 collects, uses, and shares information when you use our website, products, and services (collectively, the &quot;Services&quot;).
-                If you have questions, contact us at <a href="mailto:support@kurecal.app">support@kurecal.app</a>.
+                If you have questions, use our <Link href="/contact">contact form</Link>.
             </p>
 
             <h2>2. Information We Collect</h2>
@@ -106,7 +107,7 @@ export default function PrivacyPage() {
                 <li>Withdrawal of consent where processing is based on consent.</li>
             </ul>
             <p>
-                To exercise rights, contact <a href="mailto:support@kurecal.app">support@kurecal.app</a>. We may verify your identity to process requests.
+                To exercise rights, submit a request through our <Link href="/contact">contact form</Link>. We may verify your identity to process requests.
             </p>
 
             <h2>10. International Transfers</h2>
@@ -128,7 +129,7 @@ export default function PrivacyPage() {
 
             <h2>13. Contact Us</h2>
             <p>
-                Email: <a href="mailto:support@kurecal.app">support@kurecal.app</a>
+                Use our <Link href="/contact">contact form</Link>, or write to support [at] kurecal [dot] app.
             </p>
         </main>
     );

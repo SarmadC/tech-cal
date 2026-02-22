@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import BlogPostForm from '@/components/admin/BlogPostForm';
 import { updatePost } from '../actions';
 
@@ -15,6 +15,8 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
             slug,
             content,
             read_time_minutes,
+            featured_image_url,
+            cta_event_id,
             post_categories (
                 name
             )
@@ -26,13 +28,17 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
         notFound();
     }
 
+    const categoryData = post.post_categories as { name: string } | { name: string }[] | null;
+    const categoryName = Array.isArray(categoryData) ? (categoryData[0]?.name || '') : (categoryData?.name || '');
+
     const initialData = {
         title: post.title,
         slug: post.slug,
         content: post.content || '',
         read_time_minutes: post.read_time_minutes || 5,
-        // @ts-ignore
-        category_name: post.post_categories?.name || ''
+        featured_image_url: post.featured_image_url || '',
+        cta_event_id: post.cta_event_id || '',
+        category_name: categoryName
     };
 
     const updateAction = updatePost.bind(null, id);

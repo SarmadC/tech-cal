@@ -207,7 +207,7 @@ export default function AdminSidebar() {
                             </div>
                             <div className="flex-1">
                                 <div className="text-foreground-tertiary">Admin User</div>
-                                <div className="text-[10px]">admin@tech-cal.com</div>
+                                <div className="text-[10px]">admin [at] tech-cal [dot] com</div>
                             </div>
                         </div>
                     </SidebarFooter>
@@ -241,5 +241,4 @@ export default function AdminSidebar() {
         </Sidebar>
     );
 }
-
 

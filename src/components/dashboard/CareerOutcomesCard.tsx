@@ -89,7 +89,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                         Track events to measure your career impact and growth
                     </p>
                     <Link
-                        href="/discover"
+                        href="/events"
                         className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
                     >
                         Browse Events

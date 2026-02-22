@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import posthog from 'posthog-js';
 
@@ -86,7 +86,7 @@ function VerificationNotice({ email }: { email?: string }) {
                         >
                             {isResending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
                         </button>
-                        <span className="text-xs text-foreground-tertiary">Check spam if you don't see it.</span>
+                        <span className="text-xs text-foreground-tertiary">Check spam if you don&apos;t see it.</span>
                     </div>
                 </div>
             </div>
@@ -104,17 +104,27 @@ function LoginPageContent() {
     const [hasRedirected, setHasRedirected] = useState(false);
     const { user, initialized, loading } = useAuth();
 
+    const getIntendedDestination = useCallback(() => {
+        const destination = searchParams.get('redirect') || searchParams.get('next') || '/discover';
+
+        if (!destination.startsWith('/')) {
+            return '/discover';
+        }
+
+        return destination === '/' ? '/discover' : destination;
+    }, [searchParams]);
+
     // Debounced redirect to prevent multiple rapid redirects
     useEffect(() => {
         if (initialized && user && !hasRedirected && !loading) {
-            const redirectTo = searchParams.get('redirect') || '/discover';
+            const redirectTo = getIntendedDestination();
             // Use setTimeout to avoid synchronous setState in effect
             setTimeout(() => {
                 setHasRedirected(true);
                 router.push(redirectTo);
             }, 50);
         }
-    }, [initialized, user, router, searchParams, hasRedirected, loading]);
+    }, [initialized, user, router, hasRedirected, loading, getIntendedDestination]);
 
     useEffect(() => {
 
@@ -153,6 +163,7 @@ function LoginPageContent() {
                     errorTitle = "Session Exchange Failed";
                     break;
                 case 'oauth-no-code':
+                case 'no-code':
                     errorTitle = "OAuth Authorization Failed";
                     break;
                 case 'no-session':
@@ -199,7 +210,7 @@ function LoginPageContent() {
         }
     }, [user, loading, initialized, isOAuthLoading]);
 
-    const initialState: AuthFormState = { message: '', success: false };
+    const initialState = useMemo<AuthFormState>(() => ({ message: '', success: false }), []);
     const verificationEmail = searchParams.get('email') || '';
     const showVerificationNotice =
         searchParams.get('verify') === '1' || searchParams.get('verify') === 'true';
@@ -219,13 +230,7 @@ function LoginPageContent() {
         showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
         try {
-            let intendedNext = searchParams.get('redirect') || '/discover';
-
-            // Fix: If redirect is set to root (landing page), force it to discover
-            // This prevents the issue where users are redirected back to landing page after login
-            if (intendedNext === '/' || intendedNext === '') {
-                intendedNext = '/discover';
-            }
+            const intendedNext = getIntendedDestination();
 
             // Use route handler instead of server action for proper cookie handling
             const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
@@ -244,10 +249,10 @@ function LoginPageContent() {
         }
     };
 
-    const handleLoginSuccess = () => {
-        const redirectTo = searchParams.get('redirect') || '/discover';
+    const handleLoginSuccess = useCallback(() => {
+        const redirectTo = getIntendedDestination();
         router.push(redirectTo);
-    };
+    }, [getIntendedDestination, router]);
 
     // --- IMPROVED FIX ---
 
@@ -304,7 +309,7 @@ function LoginPageContent() {
                                     required
                                     defaultValue={verificationEmail}
                                     className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                    placeholder="you@example.com"
+                                    placeholder="Enter your email"
                                     aria-describedby={state.errors?.email ? "email-error" : undefined}
                                     aria-invalid={state.errors?.email ? "true" : "false"}
                                 />

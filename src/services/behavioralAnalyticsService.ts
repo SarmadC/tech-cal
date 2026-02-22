@@ -299,13 +299,23 @@ export class BehavioralAnalyticsService {
         position: (data.position as number) || null,
         algorithm_version: (data.algorithmVersion as string) || ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION,
         duration_ms: (data.durationMs as number) || null,
+        recommendation_batch_id: (data.recommendationBatchId as string) || null,
       };
 
-      // Use existing DatabaseQueryPatterns abstraction
-      const { error } = await DatabaseQueryPatterns.batchInsertInteractions(
+      // Prefer v2 RPC for recommendation batch attribution.
+      let { error } = await DatabaseQueryPatterns.batchInsertInteractionsV2(
         [interaction],
         supabaseClient
       );
+
+      // Backward-compatible fallback for environments without v2 RPC deployed yet.
+      if (error?.code === '42883') {
+        const fallback = await DatabaseQueryPatterns.batchInsertInteractions(
+          [interaction],
+          supabaseClient
+        );
+        error = fallback.error;
+      }
 
       if (error) {
         console.error('Error tracking interaction:', error);

@@ -1547,6 +1547,27 @@ html.light .landing-container .hero-secondary-btn:hover {
     padding: var(--product-demo-content-padding);
 }
 
+/* Product demo contrast polish: improve readability of secondary metadata */
+.landing-container .product-demo-section .product-demo-contrast [role="article"] p.text-\[13px\] {
+    color: hsl(var(--muted-foreground) / 0.92) !important;
+}
+
+.landing-container .product-demo-section .product-demo-contrast [role="article"] .font-mono.text-\[11px\] {
+    color: hsl(var(--muted-foreground) / 0.84) !important;
+}
+
+.landing-container .product-demo-section .product-demo-contrast [role="article"] span.text-\[10px\] {
+    opacity: 0.95;
+}
+
+.landing-container .product-demo-section .product-demo-contrast .filter-option span:last-child {
+    color: hsl(var(--muted-foreground) / 0.9) !important;
+}
+
+.landing-container .product-demo-section .product-demo-contrast .filter-section button.text-muted-foreground {
+    color: hsl(var(--muted-foreground) / 0.9) !important;
+}
+
 @media (max-width: 1200px) {
     .landing-container .product-demo-section {
         --product-demo-radius: 28px;

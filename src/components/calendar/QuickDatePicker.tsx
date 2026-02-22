@@ -36,6 +36,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     const [direction, setDirection] = useState<'prev' | 'next' | null>(null);
     const pickerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [inputValue, setInputValue] = useState('');
     const [parsedInputDate, setParsedInputDate] = useState<Date | null>(null);
@@ -87,9 +88,21 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
 
     // Autofocus input when opened
     useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 0);
+        if (!isOpen) {
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+            return;
         }
+
+        focusTimeoutRef.current = setTimeout(() => inputRef.current?.focus(), 0);
+        return () => {
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+        };
     }, [isOpen]);
 
     // Parse manual input into a Date

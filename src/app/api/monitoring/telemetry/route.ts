@@ -3,10 +3,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { TelemetryAnalyticsService } from '@/services/telemetryAnalyticsService';
+import { isAdminUser } from '@/lib/adminAuth';
+import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+
+const monitoringTelemetryRateLimiter = createRateLimiter(
+  'monitoring-telemetry',
+  'LOW_FREQUENCY'
+);
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = await isAdminUser(user.id, supabase as Parameters<typeof isAdminUser>[1]);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const rateLimitResult = await checkRateLimit(monitoringTelemetryRateLimiter, user.id);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
     const daysParam = searchParams.get('days');

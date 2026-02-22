@@ -6,10 +6,11 @@ import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { isEventLive, isEventPast, formatTime } from '@/utils/dateUtils';
+import { isEventLive, isEventPast } from '@/utils/dateUtils';
 import { isMultiDayEvent, getMultiDayDuration, getCategoryColor } from '@/utils/eventUtils';
 // Career impact components removed - using inline implementation
 import { getPillColor } from '@/utils/pillColorUtils';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 export interface EventCardProps {
     event: Event | MultiDayEventInstance | (Event & { careerImpactLite?: CareerImpactScoreLite });
@@ -48,16 +49,18 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     className = '',
     style = {},
     isOverlapping = false,
-    showCareerImpact = true,
+    showCareerImpact: _showCareerImpact = true,
     isCompressed = false,
     isSummary = false,
-    overlapCount = 0,
-    hiddenEvents = [],
-    onBadgeClick
+    overlapCount: _overlapCount = 0,
+    hiddenEvents: _hiddenEvents = [],
+    onBadgeClick: _onBadgeClick
 }) => {
 
     const live = isEventLive(event.startTime, event.endTime);
     const isPast = isEventPast(event.startTime, event.endTime);
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     // Unified card size logic
     const cardSize = visualInfo?.span || 1;
@@ -81,7 +84,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     const now = new Date();
     const totalMs = Math.max(assumedEndDate.getTime() - startDate.getTime(), 1);
     const elapsedMs = Math.min(Math.max(now.getTime() - startDate.getTime(), 0), totalMs);
-    const progressPercent = Math.round((elapsedMs / totalMs) * 100);
+    const _progressPercent = Math.round((elapsedMs / totalMs) * 100);
 
     // Get category color for this event
     const categoryColor = getCategoryColor(event);
@@ -184,29 +187,29 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     } as React.CSSProperties;
 
 
-    const sizeBucket = getSizeBucket(cardSize);
+    const _sizeBucket = getSizeBucket(cardSize);
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
-    const isExtraLarge = cardSize > 8;
-    const isUltraLarge = cardSize > 12;
+    const _isExtraLarge = cardSize > 8;
+    const _isUltraLarge = cardSize > 12;
 
     // Layout mode for adaptive content
-    const layoutMode = cardSize < 4 ? 'compact'
+    const _layoutMode = cardSize < 4 ? 'compact'
         : cardSize < 8 ? 'normal'
             : cardSize < 12 ? 'expanded'
                 : 'full';
 
-    const showTimelineRail = isDayView && cardSize >= 8;
+    const _showTimelineRail = isDayView && cardSize >= 8;
 
     // Time displays - Linear/Notion style: remove redundant time text
     // Unified: grid position already communicates time, so hide time text completely generally
     // Only show for very specific large day contexts if absolutely needed, but for "Weekly UI" unification we hide it
     // to match the clean "Weekly" look.
-    const isNarrowEvent = isCompressed || cardSize <= 2;
-    const showStartTime = false; // Unified: reliance on grid position
-    const showEndTime = false;
-    const startTimeFormatted = '';
-    const endTimeFormatted = '';
+    const _isNarrowEvent = isCompressed || cardSize <= 2;
+    const _showStartTime = false; // Unified: reliance on grid position
+    const _showEndTime = false;
+    const _startTimeFormatted = '';
+    const _endTimeFormatted = '';
 
 
 
@@ -214,9 +217,9 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     // Day view specific content display
     // Hide duration for medium (5–6) and extra-large (>8) day cards to match CSS
     const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
-    const showDayLocation = isDayView && event.location && cardSize >= 5;
-    const showDayOrganizer = isDayView && event.organizer && cardSize >= 6;
-    const showDayDescription = isDayView && event.description && cardSize >= 10;
+    const _showDayLocation = isDayView && event.location && cardSize >= 5;
+    const _showDayOrganizer = isDayView && event.organizer && cardSize >= 6;
+    const _showDayDescription = isDayView && event.description && cardSize >= 10;
 
     // Unified content display - Progressive disclosure based on card size
     // Small cards (span 1-2): Title only
@@ -226,7 +229,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     const showOrganizer = !isCompressed && cardSize > 4;
 
     // Medium cards: Add progress indicators
-    const showProgress = !isCompressed && cardSize >= 3;
+    const _showProgress = !isCompressed && cardSize >= 3;
 
 
     // Refined Linear/Notion-style background - prevent bleed-through with blur and opacity
@@ -334,6 +337,17 @@ const EventCardComponent: React.FC<EventCardProps> = ({
                                     {event.title}
                                 </h3>
                             </div>
+
+                            {!isCompact && networkAttendingCount > 0 && (
+                                <NetworkAttendingBadge
+                                    eventId={event.id}
+                                    telemetrySurface={viewType === 'day' ? 'calendar_day_card' : 'calendar_week_card'}
+                                    count={networkAttendingCount}
+                                    sampleAvatars={networkSampleAvatars}
+                                    compact
+                                    className="mt-1"
+                                />
+                            )}
 
                             {/* Metadata Zone: Essential Event Information */}
                             {/* Clear visual hierarchy: Location first, then Organizer */}
@@ -449,9 +463,17 @@ const EventCardComponent: React.FC<EventCardProps> = ({
 
 // Memoize to prevent unnecessary re-renders when parent calendar updates
 export const EventCard = memo(EventCardComponent, (prevProps, nextProps) => {
+    const prevSampleAvatars = prevProps.event.networkSampleAvatars ?? [];
+    const nextSampleAvatars = nextProps.event.networkSampleAvatars ?? [];
+    const sampleAvatarsUnchanged =
+        prevSampleAvatars.length === nextSampleAvatars.length &&
+        prevSampleAvatars.every((avatar, index) => avatar === nextSampleAvatars[index]);
+
     return (
         prevProps.event.id === nextProps.event.id &&
         prevProps.event.title === nextProps.event.title &&
+        (prevProps.event.networkAttendingCount ?? 0) === (nextProps.event.networkAttendingCount ?? 0) &&
+        sampleAvatarsUnchanged &&
         prevProps.viewType === nextProps.viewType &&
         prevProps.visualInfo?.span === nextProps.visualInfo?.span &&
         prevProps.isOverlapping === nextProps.isOverlapping &&

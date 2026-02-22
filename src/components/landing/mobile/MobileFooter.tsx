@@ -25,9 +25,9 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
 
                 {/* Meta row */}
                 <div className="mobile-footer-meta">
-                    <Link href="mailto:hello@kure-cal.com" className="meta-link email">
+                    <Link href="/contact" className="meta-link email" aria-label="Contact Kure-Cal">
                         <EnvelopeSimpleIcon size={14} />
-                        <span>hello@kure-cal.com</span>
+                        <span>Email support</span>
                     </Link>
                     <span className="meta-sep" aria-hidden="true">·</span>
                     <Link href="/legal/privacy" className="meta-link">Privacy</Link>

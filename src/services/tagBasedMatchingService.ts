@@ -3,6 +3,7 @@ import { CareerProfile } from '@/types/career';
 import { eventTransformer } from '@/utils/transformers';
 import { getRoleKeywords } from '@/utils/roleTaxonomy';
 import { LocationScoringService, UserLocation } from './locationScoringService';
+import { TAG_MATCHING_CONFIG } from '@/config/scoringConfig';
 
 export interface TagMatchResult {
   score: number;
@@ -12,7 +13,7 @@ export interface TagMatchResult {
 }
 
 export interface TagSimilarityMap {
-  [key: string]: string[];
+  [key: string]: readonly string[];
 }
 
 export interface TagRecommendationResult {
@@ -34,58 +35,13 @@ export interface TagRecommendationResult {
 export class TagBasedMatchingService {
   // Tag similarity mappings for better matching
   // We will normalize this to be bidirectional at runtime
-  private static readonly RAW_TAG_SIMILARITIES: TagSimilarityMap = {
-    // Programming Languages
-    'javascript': ['js', 'node.js', 'nodejs', 'typescript', 'ts'],
-    'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy'],
-    'react': ['jsx', 'next.js', 'nextjs', 'frontend', 'javascript'],
-    'ai': ['artificial intelligence', 'machine learning', 'ml', 'deep learning'],
-    'machine learning': ['ai', 'artificial intelligence', 'data science', 'ml'],
-    'data science': ['machine learning', 'ai', 'analytics', 'data analysis'],
-    
-    // Event Types
-    'workshop': ['training', 'bootcamp', 'masterclass', 'hands-on'],
-    'conference': ['summit', 'convention', 'symposium'],
-    'meetup': ['networking', 'social', 'community'],
-    'webinar': ['online', 'virtual', 'livestream'],
-    
-    // Difficulty Levels
-    'beginner': ['intro', '101', 'fundamentals', 'basics'],
-    'intermediate': ['advanced', 'experienced', 'professional'],
-    'advanced': ['expert', 'senior', 'master', 'specialist'],
-    
-    // Industry Context
-    'fintech': ['financial technology', 'banking', 'payments'],
-    'healthcare': ['health tech', 'medical', 'biotech'],
-    'ecommerce': ['online retail', 'marketplace', 'shopping'],
-    'startup': ['entrepreneurship', 'founder', 'venture'],
-    
-    // Soft Skills
-    'leadership': ['management', 'team lead', 'director'],
-    'communication': ['presentation', 'public speaking', 'writing'],
-    'project management': ['agile', 'scrum', 'planning']
-  };
+  private static readonly RAW_TAG_SIMILARITIES: TagSimilarityMap = TAG_MATCHING_CONFIG.RAW_TAG_SIMILARITIES;
 
   // Normalized bidirectional similarity map
   private static TAG_SIMILARITIES: Map<string, Set<string>> | null = null;
 
   // Category weights for different types of matches
-  private static readonly CATEGORY_WEIGHTS = {
-    'Programming': 1.0,      // Highest weight for technical skills
-    'Framework': 0.9,        // High weight for frameworks
-    'Tech': 0.8,             // High weight for tech concepts
-    'Development': 0.8,      // High weight for development skills
-    'Methodology': 0.7,      // Medium-high weight for methodologies
-    'Platform': 0.7,         // Medium-high weight for platforms
-    'Business': 0.6,         // Medium weight for business skills
-    'Industry': 0.5,         // Medium weight for industry context
-    'Event-Type': 0.4,       // Lower weight for event types
-    'Difficulty': 0.3,       // Lower weight for difficulty levels
-    'Soft-Skills': 0.6,      // Medium weight for soft skills
-    'Career-Stage': 0.5,     // Medium weight for career stages
-    'Community': 0.4,        // Lower weight for community aspects
-    'Agenda': 0.7            // Good weight for agenda-derived matches
-  };
+  private static readonly CATEGORY_WEIGHTS = TAG_MATCHING_CONFIG.CATEGORY_WEIGHTS;
 
   /**
    * Initialize the bidirectional similarity map
@@ -184,8 +140,9 @@ export class TagBasedMatchingService {
     // Define weights based on experience level
     // Beginner: 60% Learning, 40% Primary
     // Standard: 20% Learning, 80% Primary
-    const primaryWeight = isBeginner ? 0.6 : 1.0;
-    const learnWeight = isBeginner ? 1.0 : 0.4;
+    const expWeights = isBeginner ? TAG_MATCHING_CONFIG.EXPERIENCE_WEIGHTS.BEGINNER : TAG_MATCHING_CONFIG.EXPERIENCE_WEIGHTS.STANDARD;
+    const primaryWeight = expWeights.PRIMARY;
+    const learnWeight = expWeights.LEARN;
 
     // Match on primary skills, interests, and goals
     const primaryTerms = [...userSkills, ...userInterests, ...userGoals];
@@ -232,7 +189,7 @@ export class TagBasedMatchingService {
       const roleKeywords = getRoleKeywords(careerProfile.currentRole);
       const roleMatches = this.findDirectMatches(mergedTags, roleKeywords);
       if (roleMatches.score > 0) {
-        totalScore += roleMatches.score * 0.5; // Modest boost
+        totalScore += roleMatches.score * TAG_MATCHING_CONFIG.ROLE_MATCH_MULTIPLIER; // Modest boost
         matchedTags.push(...roleMatches.tags);
         matchedCategories.push(...roleMatches.categories);
         explanations.push(`Aligns with your ${careerProfile.currentRole} role`);
@@ -324,7 +281,7 @@ export class TagBasedMatchingService {
         const term = userTerm.toLowerCase();
         
         if (tagName === term) {
-          score += 30 * categoryWeight; // High score for exact matches
+          score += TAG_MATCHING_CONFIG.MATCH_POINTS.DIRECT * categoryWeight; // High score for exact matches
           tags.push(eventTag.name);
           categories.push(category);
           explanations.push(`Exact match: ${eventTag.name}`);
@@ -358,7 +315,7 @@ export class TagBasedMatchingService {
         const similarities = this.TAG_SIMILARITIES!.get(term);
         
         if (similarities && similarities.has(tagName)) {
-          score += 20 * categoryWeight; // Medium score for similarity matches
+          score += TAG_MATCHING_CONFIG.MATCH_POINTS.SIMILARITY * categoryWeight; // Medium score for similarity matches
           tags.push(eventTag.name);
           categories.push(category);
           explanations.push(`${eventTag.name} related to ${userTerm}`);
@@ -401,7 +358,7 @@ export class TagBasedMatchingService {
       );
 
       if (hasCategoryMatch) {
-        score += 10 * categoryWeight; // Lower score for category matches
+        score += TAG_MATCHING_CONFIG.MATCH_POINTS.CATEGORY * categoryWeight; // Lower score for category matches
         categoryTags.forEach(tag => {
           tags.push(tag.name);
           categories.push(category);
@@ -547,9 +504,9 @@ export class TagBasedMatchingService {
     });
 
     // Merge and deduplicate by ID with priority: Tag -> Text -> Discovery
-    // Enforce hard cap of 100
+    // Enforce hard cap
     const eventMap = new Map<string, Record<string, unknown>>();
-    const MAX_CANDIDATES = 100;
+    const MAX_CANDIDATES = TAG_MATCHING_CONFIG.MAX_CANDIDATES;
 
     const addEvents = (events: Record<string, unknown>[]) => {
       for (const event of events) {
@@ -624,18 +581,18 @@ export class TagBasedMatchingService {
       const matchLocation = (eventRecord as { _matchLocation?: string })._matchLocation;
       let textMatchBoost = 0;
       if (matchLocation === 'title') {
-        textMatchBoost = 5; // Strong boost for title matches
+        textMatchBoost = TAG_MATCHING_CONFIG.RECOMMENDATION.WEIGHTS.TEXT_MATCH_TITLE; // Strong boost for title matches
       } else if (matchLocation === 'agenda') {
-        textMatchBoost = 3; // Medium boost for agenda matches
+        textMatchBoost = TAG_MATCHING_CONFIG.RECOMMENDATION.WEIGHTS.TEXT_MATCH_AGENDA; // Medium boost for agenda matches
       }
       // description matches get no boost (they're still in results, just not boosted)
 
       // Score weights: match (55%) + impact (22%) + location (8%) + text boost (5%) + boosts (10%)
       const totalScore =
-        match.score * 0.55 +
-        impactScore * 0.22 +
-        locationScore * 8 + // Scale location score (0-8)
-        textMatchBoost +    // Text match location boost (0-5)
+        match.score * TAG_MATCHING_CONFIG.RECOMMENDATION.WEIGHTS.MATCH_SCORE +
+        impactScore * TAG_MATCHING_CONFIG.RECOMMENDATION.WEIGHTS.IMPACT_SCORE +
+        locationScore * TAG_MATCHING_CONFIG.RECOMMENDATION.WEIGHTS.LOCATION_SCALE +
+        textMatchBoost +
         profileBoost +
         recencyBoost +
         popularityBoost;
@@ -749,7 +706,7 @@ export class TagBasedMatchingService {
     });
     
     const candidateMap = new Map<string, Record<string, unknown>>();
-    const HARD_CAP = 100;
+    const HARD_CAP = TAG_MATCHING_CONFIG.MAX_CANDIDATES;
 
     const addEvents = (events: Record<string, unknown>[]) => {
       for (const event of events) {
@@ -793,7 +750,11 @@ export class TagBasedMatchingService {
         const locationResult = LocationScoringService.calculateLocationScore(appEvent, userLocation);
         const locationScore = locationResult.score;
   
-        const totalScore = match.score * 0.55 + impactScore * 0.22 + locationScore * 10 + profileBoost + recencyBoost + popularityBoost;
+        const totalScore = 
+          match.score * TAG_MATCHING_CONFIG.DISCOVERY.WEIGHTS.MATCH_SCORE + 
+          impactScore * TAG_MATCHING_CONFIG.DISCOVERY.WEIGHTS.IMPACT_SCORE + 
+          locationScore * TAG_MATCHING_CONFIG.DISCOVERY.WEIGHTS.LOCATION_SCALE + 
+          profileBoost + recencyBoost + popularityBoost;
         const reasons = [
           match.explanation, 
           ...profileReasons.filter(Boolean),
@@ -1254,7 +1215,7 @@ export class TagBasedMatchingService {
     
     // Match by normalized name (handles any casing in stored preferences or event names)
     if (eventTypeName && preferredTypes.has(eventTypeName)) {
-      boost += 8;
+      boost += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.PREFERRED_EVENT_TYPE;
       reasons.push('Matches your preferred event type');
     }
 
@@ -1277,13 +1238,13 @@ export class TagBasedMatchingService {
         tagNames.has(keyword.toLowerCase()) || text.includes(keyword.toLowerCase())
       );
       if (hasRoleMatch) {
-        boost += 5;
+        boost += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.ROLE_MATCH;
         reasons.push(`Matches your ${careerProfile.currentRole} role`);
       }
     }
 
     if (careerProfile.seniority && match.matchedCategories.includes('Career-Stage')) {
-      boost += 4;
+      boost += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.SENIORITY_MATCH;
       reasons.push('Aligned with your seniority level');
     }
 
@@ -1302,26 +1263,26 @@ export class TagBasedMatchingService {
       switch (goal) {
         case 'networking':
           if (tagNames.has('networking') || text.includes('networking')) {
-            amount += 6;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.GOALS.NETWORKING;
             reasons.push('Supports your networking goal');
           }
           break;
         case 'skill-development':
           if (tagNames.has('workshop') || text.includes('workshop')) {
-            amount += 5;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.GOALS.SKILL_DEVELOPMENT;
             reasons.push('Hands-on skill development opportunity');
           }
           break;
         case 'leadership-growth':
         case 'career-advancement':
           if (text.includes('leadership') || tagNames.has('leadership')) {
-            amount += 5;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.GOALS.LEADERSHIP;
             reasons.push('Targets your leadership growth goal');
           }
           break;
         case 'entrepreneurship':
           if (text.includes('startup') || tagNames.has('startup')) {
-            amount += 4;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.GOALS.ENTREPRENEURSHIP;
             reasons.push('Relevant to your entrepreneurship interests');
           }
           break;
@@ -1343,19 +1304,19 @@ export class TagBasedMatchingService {
       switch (style) {
         case 'hands-on':
           if (tagNames.has('workshop') || text.includes('workshop')) {
-            amount += 5;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.LEARNING_STYLE.HANDS_ON;
             reasons.push('Hands-on workshop matches your learning style');
           }
           break;
         case 'interactive':
           if (text.includes('panel') || text.includes('discussion')) {
-            amount += 3;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.LEARNING_STYLE.INTERACTIVE;
             reasons.push('Interactive format aligns with your preference');
           }
           break;
         case 'theoretical':
           if (text.includes('lecture') || text.includes('talk')) {
-            amount += 2;
+            amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.LEARNING_STYLE.THEORETICAL;
             reasons.push('Deep-dive session suits your learning style');
           }
           break;
@@ -1376,11 +1337,11 @@ export class TagBasedMatchingService {
     networkingGoals.forEach(goal => {
       const normalized = String(goal).replace(/_/g, '-');
       if (normalized.includes('leadership') && text.includes('executive')) {
-        amount += 4;
+        amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.NETWORKING.EXECUTIVE;
         reasons.push('High-level networking opportunity');
       } else if ((normalized.includes('peer') || normalized.includes('network')) &&
         (tagNames.has('networking') || text.includes('network'))) {
-        amount += 3;
+        amount += TAG_MATCHING_CONFIG.PROFILE_BOOSTS.NETWORKING.PEER;
         reasons.push('Great fit for expanding your peer network');
       }
     });
@@ -1394,18 +1355,17 @@ export class TagBasedMatchingService {
     const diffDays = (start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
     if (Number.isNaN(diffDays)) return 0;
-    if (diffDays <= 7 && diffDays >= 0) return 6;
-    if (diffDays <= 14 && diffDays >= 0) return 4;
-    if (diffDays <= 30 && diffDays >= 0) return 2;
-    return 0;
+    
+    // Find first matching threshold (config is ordered by maxDays ascending)
+    const boost = TAG_MATCHING_CONFIG.RECENCY_BOOSTS.find(b => diffDays <= b.maxDays && diffDays >= 0);
+    return boost ? boost.points : 0;
   }
 
   private static calculatePopularityBoost(event: Event): number {
     const attendees = event.attendeeCount ?? 0;
-    if (attendees > 1000) return 6;
-    if (attendees > 500) return 4;
-    if (attendees > 100) return 2;
-    return attendees > 0 ? 1 : 0;
+    // Find first matching threshold (config is ordered by minAttendees descending)
+    const boost = TAG_MATCHING_CONFIG.POPULARITY_BOOSTS.find(b => attendees > b.minAttendees);
+    return boost ? boost.points : 0;
   }
 
   private static toTitleCase(value: string): string {

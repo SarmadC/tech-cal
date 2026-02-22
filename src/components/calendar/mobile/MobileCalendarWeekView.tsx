@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import './mobile-calendar.css';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -41,6 +41,7 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get week days
   const weekDays = useMemo(() => {
@@ -125,8 +126,19 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
     }
     
     // Reset transition state after animation
-    setTimeout(() => setIsTransitioning(false), 300);
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    transitionTimeoutRef.current = setTimeout(() => setIsTransitioning(false), 300);
   }, [currentDayIndex, isTransitioning]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const { swipeHandlers } = useSwipeGestures({
     onSwipeLeft: () => handleDayChange('left'),

@@ -1,22 +1,23 @@
 // src/app/legal/terms/page.tsx
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 // Static generation for legal pages - static content
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service',
-    description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+    title: 'Terms of Service - Account Rules & Policies',
+    description: 'Review the Kure-Cal terms of service covering account rules, acceptable use policies, billing details, and your rights and responsibilities as a customer.',
     openGraph: {
-        title: 'Terms of Service | Kure-Cal',
-        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+        title: 'Terms of Service - Account Rules & Policies | Kure-Cal',
+        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use policies, billing details, and your rights and responsibilities as a customer.',
         type: 'website',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Terms of Service | Kure-Cal',
-        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use, billing, and your rights as a customer.',
+        title: 'Terms of Service - Account Rules & Policies | Kure-Cal',
+        description: 'Review the Kure-Cal terms of service covering account rules, acceptable use policies, billing details, and your rights and responsibilities as a customer.',
     },
 };
 
@@ -109,7 +110,7 @@ export default function TermsOfServicePage() {
 
             <h2>14. Contact</h2>
             <p>
-                Email: <a href="mailto:support@kurecal.app">support@kurecal.app</a>
+                Use our <Link href="/contact">contact form</Link>, or write to support [at] kurecal [dot] app.
             </p>
         </main>
     );

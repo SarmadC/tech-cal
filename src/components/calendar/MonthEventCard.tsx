@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Event, MultiDayEventInstance } from '@/types';
 import { isEventPast } from '@/utils/dateUtils';
 import { isParentMultiDayEvent } from '@/utils/multiDayEventUtils';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 interface MonthEventCardProps {
     event: Event | MultiDayEventInstance;
@@ -17,13 +18,10 @@ interface MonthEventCardProps {
 
 const FALLBACK_ACCENT = 'var(--accent-primary)';
 const getCategoryColor = (event: Event | MultiDayEventInstance) => {
-    // If the event has a specific color override, use it (assumed to be correct)
-    if (event.category?.color) return event.category.color;
-    if (event.color) return event.color;
-
     const categoryName = event.category?.name?.toLowerCase();
 
     // Return CSS variables instead of hardcoded hex values to support dark mode overrides
+    // We prioritize these over event.category.color to ensure the theme is respected
     switch (categoryName) {
         case 'tech summit':
         case 'summit':
@@ -44,9 +42,13 @@ const getCategoryColor = (event: Event | MultiDayEventInstance) => {
             return 'var(--color-category-product-launch, #f59e0b)';
         case 'training':
             return 'var(--color-category-training, #14b8a6)';
-        default:
-            return FALLBACK_ACCENT;
     }
+
+    // If the event has a specific color override, use it (assumed to be correct)
+    if (event.category?.color) return event.category.color;
+    if (event.color) return event.color;
+
+    return FALLBACK_ACCENT;
 };
 
 const formatDateRange = (start: Date, end: Date) => {
@@ -196,11 +198,14 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     const isMultiDayInstance =
         spanInfo !== null ||
         (isParentMultiDayEvent(event) && event.isMultiDay && !!event.endTime);
-    const isMultiDayFirstDay = spanInfo ? spanInfo.isFirst : !('isInstance' in event);
 
-    const timeLabel = isMultiDayInstance ? '' : timeLabelRaw;
-    const durationLabel = isMultiDayInstance ? null : durationLabelRaw;
-    const showCategory = event.category?.name && (!isMultiDayInstance || isMultiDayFirstDay);
+    const summaryLabelParts = [
+        isMultiDayInstance ? '' : timeLabelRaw,
+        isMultiDayInstance ? null : durationLabelRaw,
+    ].filter((value): value is string => Boolean(value));
+    const summaryLabel = summaryLabelParts.join(' · ');
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     const handleClick = (clickEvent: React.MouseEvent) => {
         clickEvent.stopPropagation();
@@ -226,7 +231,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             onMouseLeave={onLeave}
             tabIndex={0}
             role="button"
-            aria-label={`${event.title}`}
+            aria-label={`${event.title}${summaryLabel ? `, ${summaryLabel}` : ''}`}
         >
             <span className="month-event-card-accent" aria-hidden="true" />
 
@@ -246,6 +251,16 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             )}
 
             <span className="month-event-card-label" style={{ padding: '2px 0' }}>{event.title}</span>
+            {networkAttendingCount > 0 && (
+                <NetworkAttendingBadge
+                    eventId={event.id}
+                    telemetrySurface="calendar_month_card"
+                    count={networkAttendingCount}
+                    sampleAvatars={networkSampleAvatars}
+                    compact
+                    className="ml-2 hidden md:inline-flex"
+                />
+            )}
 
             {/* Redundant pills removed for cleaner look as per user request */}
         </div>

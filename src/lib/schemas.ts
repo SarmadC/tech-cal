@@ -33,6 +33,10 @@ export const ResetPasswordSchema = z.object({
 export const ProfileUpdateSchema = z.object({
     fullName: z.string().min(2, "Full name must be at least 2 characters.").optional().or(z.literal('')),
     timezone: z.string().optional(),
+    username: z.string().min(3, "Username must be at least 3 characters.").optional().nullable(),
+    headline: z.string().optional().nullable(),
+    profileVisibility: z.enum(['public', 'private']).optional(),
+    showAttendance: z.boolean().optional(),
 });
 
 // --- Event Schemas ---

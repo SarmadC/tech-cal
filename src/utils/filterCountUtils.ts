@@ -44,15 +44,24 @@ export function normalizeEventFormat(
  * Determine if an event is free based on price_min and priceRange
  * Defaults to paid (false) when uncertain, as most conferences/events are paid
  */
-export function isEventFree(event: Event): boolean {
+export function isEventFreeFromPricing(
+    priceMin: number | null | undefined,
+    priceRange: string | null | undefined,
+    options?: { priceMax?: number | null }
+): boolean {
     // If priceMin > 0, it's definitely not free
-    if (event.priceMin !== null && event.priceMin !== undefined && event.priceMin > 0) {
+    if (priceMin !== null && priceMin !== undefined && priceMin > 0) {
+        return false;
+    }
+
+    const priceMax = options?.priceMax;
+    if (priceMax !== null && priceMax !== undefined && priceMax > 0) {
         return false;
     }
     
     // If priceRange exists, check it for explicit indicators
-    if (event.priceRange) {
-        const priceRangeLower = event.priceRange.toLowerCase().trim();
+    if (priceRange) {
+        const priceRangeLower = priceRange.toLowerCase().trim();
         // If priceRange explicitly says "free", it's free
         if (priceRangeLower === 'free') {
             return true;
@@ -67,7 +76,14 @@ export function isEventFree(event: Event): boolean {
     
     // Default to paid (false) when uncertain - most events are paid
     // Only return true if priceMin is explicitly 0 (not null/undefined)
-    return event.priceMin === 0;
+    return priceMin === 0;
+}
+
+/**
+ * Determine if an event is free based on event pricing fields.
+ */
+export function isEventFree(event: Event): boolean {
+    return isEventFreeFromPricing(event.priceMin, event.priceRange);
 }
 
 /**
@@ -165,4 +181,3 @@ export function calculateFilterCounts(
 
     return counts;
 }
-

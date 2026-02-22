@@ -14,10 +14,10 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="absolute right-1 top-1 bottom-1 bg-white hover:bg-zinc-200 text-black font-medium px-6 rounded-full transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-sm"
+            className="bg-[#EDEDEF] hover:bg-white text-black font-medium px-4 py-2 rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-xs tracking-wide min-w-[90px]"
         >
-            {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? '...' : 'Start Free Trial'}
+            {pending && <CircleNotchIcon className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            {pending ? '...' : 'Subscribe'}
         </button>
     );
 }
@@ -43,52 +43,42 @@ export default function SubscribeForm() {
     }, [state, showSuccess, showError]);
 
     return (
-        <div className="w-full grid md:grid-cols-2 gap-12 items-end">
-            {/* Left: Newsletter */}
-            <div className="w-full max-w-lg">
-                <h2 className="text-xl md:text-2xl font-semibold text-white mb-6">
-                    Subscribe to our newsletter for daily industry insights
-                </h2>
-
-                <form ref={formRef} action={formAction} className="relative">
-                    <div className="relative">
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Enter Your Email"
-                            required
-                            className="w-full pl-6 pr-40 py-4 rounded-full bg-white/[0.03] border border-white/10 text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all"
-                        />
-                        <SubmitButton />
-                    </div>
-                </form>
-            </div>
-
-            {/* Right: Socials */}
-            <div className="md:pl-12 border-l border-white/5 md:border-l-0 md:border-white/10 hidden md:block">
-                <h3 className="text-lg font-medium text-white mb-2">Follow us</h3>
-                <p className="text-sm text-zinc-500 mb-4 max-w-xs">
-                    Get the latest news and travel inspiration.
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            <div>
+                <h3 className="text-xl font-medium text-[#EDEDEF] mb-2 tracking-tight">Stay updated</h3>
+                <p className="text-[#8A8F98] max-w-sm leading-relaxed">
+                    Get the latest articles and insights delivered to your inbox. No spam, ever.
                 </p>
-                <div className="flex items-center space-x-4">
-                    <Link href="https://twitter.com/kurecal" className="text-zinc-400 hover:text-white transition-colors">
-                        <TwitterLogo size={20} weight="fill" />
-                    </Link>
-                    <Link href="https://linkedin.com/company/kurecal" className="text-zinc-400 hover:text-white transition-colors">
-                        <LinkedinLogo size={20} weight="fill" />
-                    </Link>
-                </div>
             </div>
-            {/* Mobile Socials (visible only on mobile) */}
-            <div className="md:hidden mt-8">
-                <h3 className="text-lg font-medium text-white mb-2">Follow us</h3>
-                <div className="flex items-center space-x-4">
-                    <Link href="https://twitter.com/kurecal" className="text-zinc-400 hover:text-white transition-colors">
-                        <TwitterLogo size={20} weight="fill" />
-                    </Link>
-                    <Link href="https://linkedin.com/company/kurecal" className="text-zinc-400 hover:text-white transition-colors">
-                        <LinkedinLogo size={20} weight="fill" />
-                    </Link>
+
+            <div className="flex flex-col items-end gap-6 w-full md:w-auto">
+                <form action={formAction} ref={formRef} className="flex w-full md:w-auto gap-2">
+                    <label htmlFor="subscribe-email" className="sr-only">Email address</label>
+                    <input
+                        id="subscribe-email"
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        required
+                        className="bg-transparent border border-white/[0.08] text-[#EDEDEF] placeholder-[#575B66] rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:border-white/[0.16] focus:bg-white/[0.02] transition-colors text-sm"
+                    />
+                    <SubmitButton />
+                </form>
+                {state.message && (
+                    <p className={`text-sm ${state.status === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {state.message}
+                    </p>
+                )}
+
+                <div className="flex items-center gap-4">
+                    <a href="https://twitter.com/kure_cal" target="_blank" rel="noopener noreferrer" className="text-[#8A8F98] hover:text-[#EDEDEF] transition-colors p-2 hover:bg-white/[0.04] rounded-md">
+                        <span className="sr-only">Twitter</span>
+                        <TwitterLogo size={18} weight="fill" />
+                    </a>
+                    <a href="https://linkedin.com/company/kure-cal" target="_blank" rel="noopener noreferrer" className="text-[#8A8F98] hover:text-[#EDEDEF] transition-colors p-2 hover:bg-white/[0.04] rounded-md">
+                        <span className="sr-only">LinkedIn</span>
+                        <LinkedinLogo size={18} weight="fill" />
+                    </a>
                 </div>
             </div>
         </div>

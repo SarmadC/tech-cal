@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo, type ReactNode, useState, useEffect } from 'react';
+import { useMemo, type ReactNode, useEffect } from 'react';
 
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
@@ -207,7 +207,7 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                         </div>
                         <div className="flex-1">
                             <div className="text-sm text-foreground-tertiary">Admin User</div>
-                            <div className="text-xs text-foreground-muted">admin@tech-cal.com</div>
+                            <div className="text-xs text-foreground-muted">admin [at] tech-cal [dot] com</div>
                         </div>
                     </div>
                 </div>

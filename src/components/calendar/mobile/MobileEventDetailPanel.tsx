@@ -10,13 +10,7 @@ import {
     ShareNetworkIcon,
     DotsThreeVerticalIcon,
     DownloadSimpleIcon,
-    BookmarkSimple,
-    UserCheckIcon,
-    CheckIcon,
-    CircleNotchIcon,
-    MapPinIcon,
-    UsersIcon,
-    TagIcon
+    BookmarkSimple
 } from '@phosphor-icons/react';
 import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
@@ -25,7 +19,6 @@ import { useEventActions } from '@/hooks/useEventActions';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
-import { EventStatus } from '@/types';
 
 interface MobileEventDetailPanelProps {
     event: Event;
@@ -33,8 +26,7 @@ interface MobileEventDetailPanelProps {
     categories: EventType[];
 }
 
-const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClose, categories }) => {
-    const category = categories.find(c => c.id === event.eventTypeId);
+const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClose, categories: _categories }) => {
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
@@ -43,7 +35,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     // Add tracking functionality
     const { user } = useAuth();
     const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
-    const { getAttendanceStatus, setAttendanceStatus, isLoading: isAttendanceLoading } = useEventEngagement();
+    const { getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
 
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
@@ -90,35 +82,9 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
 
     const attendanceState = getAttendanceState();
 
-    const handleAttendanceToggle = async () => {
-        if (!user) return;
-
-        let newStatus: EventStatus | null = null;
-        if (attendanceState.nextAction === 'attending') {
-            newStatus = 'attending';
-        } else if (attendanceState.nextAction === 'attended') {
-            newStatus = 'attended';
-        } else {
-            newStatus = null; // Remove attendance
-        }
-
-        await setAttendanceStatus(trackingEventId, newStatus);
-    };
-
-    const getAttendanceIcon = () => {
-        if (isAttendanceLoading) {
-            return <CircleNotchIcon size={18} className="animate-spin" />;
-        }
-        if (attendanceState.state === 'attended') {
-            return <CheckIcon size={18} weight="fill" />;
-        }
-        return <UserCheckIcon size={18} weight={attendanceState.state === 'attending' ? 'fill' : 'regular'} />;
-    };
-
     // Fetch complete event details with agenda
     useEffect(() => {
         let isMounted = true;
-        let timeoutId: NodeJS.Timeout;
 
         const fetchEventWithAgenda = async () => {
             if (event.agenda && event.agenda.length > 0) {
@@ -126,17 +92,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
             }
 
             try {
-                timeoutId = setTimeout(() => {
-                    if (isMounted) {
-                    }
-                }, 10000);
-
                 const supabase = createClient();
                 const fetchEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
                 const fullEvent = await EventService.getEventWithAgenda(fetchEventId, supabase);
-
-                clearTimeout(timeoutId);
 
                 if (isMounted) {
                     if (fullEvent.agenda && fullEvent.agenda.length > 0) {
@@ -145,27 +104,18 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             agenda: fullEvent.agenda
                         }));
                     }
-
-                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
             } catch (error) {
-                clearTimeout(timeoutId);
                 console.warn('Failed to fetch event agenda:', error);
-            } finally {
-                if (isMounted) {
-                }
             }
         };
 
-        fetchEventWithAgenda();
+        void fetchEventWithAgenda();
 
         return () => {
             isMounted = false;
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
         };
-    }, [event.id, event]);
+    }, [event]);
 
     // Close more menu when clicking outside
     useEffect(() => {

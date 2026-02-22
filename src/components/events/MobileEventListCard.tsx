@@ -2,9 +2,10 @@
 
 import React, { useMemo } from 'react';
 import Image from 'next/image';
-import { formatDate, formatTime } from '@/utils/dateUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { Badge } from '@/components/ui/badge';
 import type { TrackedEvent, EventType } from '@/types';
+import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
 
 interface MobileEventListCardProps {
     event: TrackedEvent;
@@ -18,7 +19,6 @@ interface MobileEventListCardProps {
  */
 export default function MobileEventListCard({ event, category, onClick }: MobileEventListCardProps) {
     const dateDisplay = formatDate(event.startTime, event.timezone);
-    const timeDisplay = formatTime(event.startTime, event.timezone);
 
     // Fallback chain for logo: event image -> org logo -> first letter
     const logoSources = useMemo(() => {
@@ -26,7 +26,7 @@ export default function MobileEventListCard({ event, category, onClick }: Mobile
         if (event.eventImageUrl) sources.push(event.eventImageUrl);
         if (event.organization?.logo) sources.push(event.organization.logo);
         return sources;
-    }, [event.eventImageUrl, event.organization?.logo]);
+    }, [event.eventImageUrl, event.organization]);
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
 
@@ -46,6 +46,8 @@ export default function MobileEventListCard({ event, category, onClick }: Mobile
 
     // Format metadata: Date • Location splits handled in JSX for hierarchy
     const hasLocation = !!event.location;
+    const networkAttendingCount = event.networkAttendingCount ?? 0;
+    const networkSampleAvatars = event.networkSampleAvatars ?? [];
 
     return (
         <button
@@ -97,6 +99,17 @@ export default function MobileEventListCard({ event, category, onClick }: Mobile
                         </>
                     )}
                 </div>
+
+                {networkAttendingCount > 0 && (
+                    <NetworkAttendingBadge
+                        eventId={event.id}
+                        telemetrySurface="events_list_mobile_card"
+                        count={networkAttendingCount}
+                        sampleAvatars={networkSampleAvatars}
+                        compact
+                        className="mt-1.5 w-fit"
+                    />
+                )}
             </div>
 
             {/* Right Side: Category Badge + Chevron */}

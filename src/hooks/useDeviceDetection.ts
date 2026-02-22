@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 
 export interface DeviceInfo {
+  isReady: boolean;
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
@@ -27,6 +28,7 @@ const BREAKPOINTS = {
 
 export function useDeviceDetection(): DeviceInfo {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
+    isReady: false,
     isMobile: false,
     isTablet: false,
     isDesktop: true,
@@ -66,6 +68,7 @@ export function useDeviceDetection(): DeviceInfo {
       const isChrome = /chrome/.test(userAgent);
 
       setDeviceInfo({
+        isReady: true,
         isMobile,
         isTablet,
         isDesktop,

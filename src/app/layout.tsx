@@ -36,6 +36,7 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
+import { SITE_URL } from '@/config/site';
 
 
 const inter = Inter({
@@ -50,7 +51,7 @@ const dmSans = DM_Sans({
 
 // Refined Metadata for a more professional look
 export const metadata: Metadata = {
-    metadataBase: new URL('https://kure-cal.com'),
+    metadataBase: new URL(SITE_URL),
     title: {
         default: "Kure‑Cal: The All‑in‑One Tech Events Calendar",
         template: "%s | Kure‑Cal",
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
         type: 'website',
         locale: 'en_US',
         siteName: 'Kure-Cal',
-        url: 'https://kure-cal.com',
+        url: SITE_URL,
         images: [
             {
                 url: '/og-image.png',
@@ -94,7 +95,7 @@ export const metadata: Metadata = {
         },
     },
     alternates: {
-        canonical: 'https://kure-cal.com',
+        canonical: SITE_URL,
     },
 };
 
@@ -110,8 +111,12 @@ export default function RootLayout({
                 {/* Structured Data for SEO */}
                 <OrganizationJsonLd />
                 <WebsiteJsonLd />
+                <link rel="alternate" type="application/rss+xml" title="Kure-Cal Blog RSS Feed" href="/blog/feed.xml" />
             </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
+                <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded-md focus:text-sm focus:font-medium">
+                    Skip to main content
+                </a>
                 <PostHogProvider>
                     <GoogleAnalytics />
                     <Suspense fallback={null}>

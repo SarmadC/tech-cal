@@ -33,14 +33,14 @@ export const exportToPDF = () => {
  */
 export const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
   if (data.length === 0) return;
-  
+
   // Get headers from first object
   const headers = Object.keys(data[0]);
-  
+
   // Build CSV content
   const csvContent = [
     headers.join(','),
-    ...data.map(row => 
+    ...data.map(row =>
       headers.map(header => {
         const value = row[header];
         // Escape commas and quotes
@@ -50,14 +50,19 @@ export const exportToCSV = (data: Record<string, unknown>[], filename: string) =
       }).join(',')
     )
   ].join('\n');
-  
-  // Create download
+
+  // Create download with proper cleanup
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  try {
+    link.href = url;
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  } finally {
+    // Ensure URL is revoked even if click fails
+    URL.revokeObjectURL(url);
+  }
 };
 
 /**

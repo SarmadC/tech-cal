@@ -3,8 +3,40 @@
 
 import { SupabaseClientType } from '@/types';
 import { CareerProfileService } from './careerProfileService';
-import { AppProfile, TrackedEventRecord, Event } from '@/types';
+import { AppProfile, CareerProfile, TrackedEventRecord, Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
+import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
+import { getCanonicalSkillMeta } from '@/utils/skillTaxonomy';
+import { getRoleKeywords } from '@/utils/roleTaxonomy';
+
+const NETWORKING_KEYWORDS = [
+  'network',
+  'meetup',
+  'community',
+  'mixer',
+  'social',
+  'connect',
+  'roundtable',
+  'happy hour'
+] as const;
+
+const ADVANCEMENT_KEYWORDS = [
+  'leadership',
+  'management',
+  'career',
+  'promotion',
+  'mentor',
+  'executive',
+  'strategy',
+  'growth'
+] as const;
+
+const ADVANCEMENT_GOALS = new Set([
+  'career-advancement',
+  'leadership-growth',
+  'role-transition',
+  'salary-increase'
+]);
 
 export interface OptimizedAnalyticsData {
   averageImpactScore: number;
@@ -52,6 +84,180 @@ export interface OptimizedRecommendation {
 }
 
 export class OptimizedAnalyticsService {
+  private static clampScore(score: number): number {
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  private static toCareerImpactCategory(score: number): CareerImpactScoreLite['category'] {
+    if (score >= 90) return 'transformative';
+    if (score >= 80) return 'high';
+    if (score >= 50) return 'moderate';
+    return 'low';
+  }
+
+  private static toCareerImpactLite(score: number, confidence: number): CareerImpactScoreLite {
+    const normalized = this.clampScore(score);
+    return {
+      overall: normalized,
+      confidence,
+      category: this.toCareerImpactCategory(normalized),
+    };
+  }
+
+  private static containsKeyword(haystack: string, keyword: string): boolean {
+    const normalizedKeyword = keyword.toLowerCase().trim();
+    if (!normalizedKeyword || !haystack) return false;
+
+    if (normalizedKeyword.includes(' ') || /[^a-z0-9]/i.test(normalizedKeyword)) {
+      return haystack.includes(normalizedKeyword);
+    }
+
+    if (normalizedKeyword.length < 3) return false;
+
+    const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(haystack);
+  }
+
+  private static getEventSearchText(event: Event): string {
+    return [
+      event.title,
+      event.description,
+      event.category?.name,
+      event.organizer,
+      event.targetAudience,
+      event.eventTypeId,
+      ...(event.tags || []).map(tag => `${tag.name} ${tag.category}`),
+      ...(event.speakerLineup || []).map(speaker => `${speaker.name} ${speaker.title || ''} ${speaker.company || ''}`)
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+  }
+
+  private static hasExistingImpactScore(event: Event): boolean {
+    const scoredEvent = event as Event & {
+      careerImpactLite?: { overall?: number };
+      careerImpact?: { overall?: number };
+    };
+    return typeof scoredEvent.careerImpactLite?.overall === 'number' ||
+      typeof scoredEvent.careerImpact?.overall === 'number';
+  }
+
+  private static createScoreCacheKey(eventId: string, careerProfile?: CareerProfile): string {
+    if (!careerProfile) return `anon:${eventId}`;
+    return `${careerProfile.userId}:${eventId}`;
+  }
+
+  private static getEventImpactScore(
+    event: Event,
+    careerProfile?: CareerProfile,
+    scoreCache?: Map<string, number>
+  ): number {
+    const cacheKey = this.createScoreCacheKey(event.id, careerProfile);
+    if (scoreCache?.has(cacheKey)) {
+      return scoreCache.get(cacheKey)!;
+    }
+
+    const scoredEvent = event as Event & {
+      careerImpactLite?: { overall?: number };
+      careerImpact?: { overall?: number };
+    };
+    const existingScore = scoredEvent.careerImpactLite?.overall ?? scoredEvent.careerImpact?.overall;
+    if (typeof existingScore === 'number' && Number.isFinite(existingScore)) {
+      const normalizedExisting = this.clampScore(existingScore <= 1 ? existingScore * 100 : existingScore);
+      scoreCache?.set(cacheKey, normalizedExisting);
+      return normalizedExisting;
+    }
+
+    if (careerProfile) {
+      const computed = this.clampScore(calculateBaseScore(event, careerProfile).overall);
+      scoreCache?.set(cacheKey, computed);
+      return computed;
+    }
+
+    const fallback = this.calculateSimpleCareerImpact(event).overall;
+    scoreCache?.set(cacheKey, fallback);
+    return fallback;
+  }
+
+  private static attachImpactLite(
+    events: Event[],
+    careerProfile?: CareerProfile,
+    scoreCache?: Map<string, number>
+  ): Array<Event & { careerImpactLite?: CareerImpactScoreLite }> {
+    return events
+      .map(event => {
+        const score = this.getEventImpactScore(event, careerProfile, scoreCache);
+        const confidence = this.hasExistingImpactScore(event)
+          ? 0.9
+          : careerProfile
+            ? 0.8
+            : 0.7;
+        return {
+          ...event,
+          careerImpactLite: this.toCareerImpactLite(score, confidence)
+        };
+      })
+      .sort((a, b) => (b.careerImpactLite?.overall || 0) - (a.careerImpactLite?.overall || 0));
+  }
+
+  private static averageImpact(events: Array<Event & { careerImpactLite?: CareerImpactScoreLite }>): number {
+    if (events.length === 0) return 0;
+    const total = events.reduce((sum, event) => sum + (event.careerImpactLite?.overall || 0), 0);
+    return total / events.length;
+  }
+
+  private static impactToPriority(impact: number): 'high' | 'medium' | 'low' {
+    if (impact >= 75) return 'high';
+    if (impact >= 55) return 'medium';
+    return 'low';
+  }
+
+  private static isNetworkingEvent(event: Event): boolean {
+    const searchText = this.getEventSearchText(event);
+    return NETWORKING_KEYWORDS.some(keyword => searchText.includes(keyword));
+  }
+
+  private static getSkillKeywords(skill: string): string[] {
+    const canonical = getCanonicalSkillMeta(skill);
+    const candidates = new Set<string>();
+
+    candidates.add(skill.toLowerCase());
+    if (canonical) {
+      candidates.add(canonical.name.toLowerCase());
+      canonical.synonyms.forEach(synonym => candidates.add(synonym.toLowerCase()));
+      canonical.keywords.forEach(keyword => candidates.add(keyword.toLowerCase()));
+    }
+
+    return Array.from(candidates).filter(keyword => keyword.length >= 3);
+  }
+
+  private static doesEventMatchSkill(event: Event, skill: string): boolean {
+    const searchText = this.getEventSearchText(event);
+    return this.getSkillKeywords(skill).some(keyword => this.containsKeyword(searchText, keyword));
+  }
+
+  private static estimateSkillGapTimeline(eventsNeeded: number): string {
+    if (eventsNeeded <= 1) return '2-4 weeks';
+    if (eventsNeeded === 2) return '1-2 months';
+    return '2-3 months';
+  }
+
+  private static estimateAdvancementTimeline(timeframe: CareerProfile['timeframe']): string {
+    switch (timeframe) {
+      case 'immediate':
+        return '1-2 months';
+      case 'short-term':
+        return '2-4 months';
+      case 'medium-term':
+        return '4-9 months';
+      case 'long-term':
+        return '6-12 months';
+      default:
+        return '3-6 months';
+    }
+  }
+
   /**
    * Get comprehensive analytics using database-first approach
    * This replaces the heavy JavaScript calculations with optimized database queries
@@ -96,8 +302,12 @@ export class OptimizedAnalyticsService {
       const processingTime = Date.now() - startTime;
       console.log(`Optimized analytics generated in ${processingTime}ms`);
 
+      const validatedAnalytics = this.validateAnalyticsData(analyticsData)
+        ? analyticsData
+        : await this.getBasicAnalytics(userProfile, trackedEvents, upcomingEvents);
+
       return {
-        analytics: (analyticsData as unknown as OptimizedAnalyticsData) || {} as OptimizedAnalyticsData,
+        analytics: validatedAnalytics,
         recommendations
       };
     } catch (error) {
@@ -168,67 +378,98 @@ export class OptimizedAnalyticsService {
     if (!careerProfile) return [];
 
     const recommendations: OptimizedRecommendation[] = [];
+    const scoreCache = new Map<string, number>();
 
     // Skill gap recommendations
-    const skillGapRecs = await this.generateSkillGapRecommendations(
-      careerProfile as unknown as Record<string, unknown>,
+    const skillGapRecs = this.generateSkillGapRecommendations(
+      careerProfile,
+      trackedEvents,
       upcomingEvents,
-      supabaseClient
+      scoreCache
     );
     recommendations.push(...skillGapRecs);
 
     // Networking recommendations
     const networkingRecs = this.generateNetworkingRecommendations(
-      careerProfile as unknown as Record<string, unknown>,
+      careerProfile,
       trackedEvents,
-      upcomingEvents
+      upcomingEvents,
+      scoreCache
     );
     recommendations.push(...networkingRecs);
 
     // Career advancement recommendations
     const advancementRecs = this.generateAdvancementRecommendations(
-      careerProfile as unknown as Record<string, unknown>,
-      upcomingEvents
+      careerProfile,
+      upcomingEvents,
+      scoreCache
     );
     recommendations.push(...advancementRecs);
 
-    return recommendations.slice(0, 10); // Limit to top 10
+    return recommendations
+      .sort((a, b) => {
+        const priorityWeight = { high: 3, medium: 2, low: 1 };
+        const priorityDelta = priorityWeight[b.priority] - priorityWeight[a.priority];
+        if (priorityDelta !== 0) return priorityDelta;
+        return b.estimatedImpact - a.estimatedImpact;
+      })
+      .slice(0, 10);
   }
 
   /**
    * Generate skill gap recommendations using database queries
    */
-  private static async generateSkillGapRecommendations(
-    careerProfile: Record<string, unknown>,
+  private static generateSkillGapRecommendations(
+    careerProfile: CareerProfile,
+    trackedEvents: TrackedEventRecord[],
     upcomingEvents: Event[],
-    _supabaseClient: SupabaseClientType
-  ): Promise<OptimizedRecommendation[]> {
-    const targetSkills = Array.isArray(careerProfile?.targetSkills) ? careerProfile.targetSkills : [];
+    scoreCache?: Map<string, number>,
+  ): OptimizedRecommendation[] {
+    const targetSkills = careerProfile.skillsToLearn
+      .map(skill => skill.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+
     if (targetSkills.length === 0) return [];
+
+    const attendedEvents = trackedEvents
+      .filter(te => te.status === 'attended' && te.event)
+      .map(te => te.event as Event);
 
     const recommendations: OptimizedRecommendation[] = [];
 
-    for (const skill of targetSkills.slice(0, 3)) { // Limit to top 3 skills
-      const relatedEvents = upcomingEvents.filter(event =>
-        event.title.toLowerCase().includes(skill.toLowerCase()) ||
-        event.description?.toLowerCase().includes(skill.toLowerCase())
+    for (const skill of targetSkills) {
+      const attendedSkillEvents = attendedEvents.filter(event => this.doesEventMatchSkill(event, skill)).length;
+      const eventsNeeded = Math.max(0, 3 - attendedSkillEvents);
+      if (eventsNeeded === 0) {
+        continue;
+      }
+
+      const relatedEvents = this.attachImpactLite(
+        upcomingEvents.filter(event => this.doesEventMatchSkill(event, skill)),
+        careerProfile,
+        scoreCache
       ).slice(0, 3);
 
       if (relatedEvents.length > 0) {
+        const estimatedImpact = this.clampScore(
+          this.averageImpact(relatedEvents) + (eventsNeeded >= 2 ? 8 : 4)
+        );
+        const skillSlug = skill.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
         recommendations.push({
-          id: `skill-gap-${skill}`,
+          id: `skill-gap-${skillSlug || 'focus'}`,
           type: 'skill_gap',
           title: `Develop ${skill} Skills`,
-          description: `Strengthen your ${skill} expertise to advance your career goals.`,
-          priority: 'high',
-          events: relatedEvents.map(event => ({
-            ...event,
-            careerImpactLite: this.calculateSimpleCareerImpact(event)
-          })),
+          description: `Close your ${skill} gap with targeted events matched to your profile.`,
+          priority: eventsNeeded >= 2 ? 'high' : this.impactToPriority(estimatedImpact),
+          events: relatedEvents,
           actionable: true,
-          estimatedImpact: 85,
-          timeToComplete: '2-4 weeks',
-          reason: `${skill} is a key skill for your target role.`
+          estimatedImpact,
+          timeToComplete: this.estimateSkillGapTimeline(eventsNeeded),
+          reason: attendedSkillEvents > 0
+            ? `You've attended ${attendedSkillEvents} ${skill}-related event${attendedSkillEvents === 1 ? '' : 's'} so far; these help close the remaining gap.`
+            : `${skill} is currently underrepresented in your attended events.`
         });
       }
     }
@@ -240,40 +481,55 @@ export class OptimizedAnalyticsService {
    * Generate networking recommendations
    */
   private static generateNetworkingRecommendations(
-    careerProfile: Record<string, unknown>,
+    careerProfile: CareerProfile,
     trackedEvents: TrackedEventRecord[],
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    scoreCache?: Map<string, number>
   ): OptimizedRecommendation[] {
-    const networkingEvents = trackedEvents.filter(te =>
-      te.event && (
-        te.event.title.toLowerCase().includes('networking') ||
-        te.event.title.toLowerCase().includes('meetup')
-      )
+    const attendedNetworkingEvents = trackedEvents.filter(te =>
+      te.status === 'attended' &&
+      te.event &&
+      this.isNetworkingEvent(te.event)
     );
 
-    if (networkingEvents.length < 2) {
-      const upcomingNetworking = upcomingEvents.filter(event =>
-        event.title.toLowerCase().includes('networking') ||
-        event.title.toLowerCase().includes('meetup')
-      ).slice(0, 3);
+    const networkingIsPriority =
+      careerProfile.networkingGoals.length > 0 ||
+      careerProfile.careerGoals.includes('networking');
 
-      if (upcomingNetworking.length > 0) {
-        return [{
-          id: 'networking-boost',
-          type: 'networking',
-          title: 'Expand Your Professional Network',
-          description: 'Build valuable connections in your industry through networking events.',
-          priority: 'medium',
-          events: upcomingNetworking.map(event => ({
-            ...event,
-            careerImpactLite: this.calculateSimpleCareerImpact(event)
-          })),
-          actionable: true,
-          estimatedImpact: 75,
-          timeToComplete: '1-2 weeks',
-          reason: 'You have limited networking activity. Building professional relationships is crucial for career advancement.'
-        }];
-      }
+    const desiredNetworkingCadence = networkingIsPriority ? 3 : 2;
+    if (attendedNetworkingEvents.length >= desiredNetworkingCadence) {
+      return [];
+    }
+
+    const upcomingNetworking = this.attachImpactLite(
+      upcomingEvents.filter(event => this.isNetworkingEvent(event)),
+      careerProfile,
+      scoreCache
+    ).slice(0, 3);
+
+    if (upcomingNetworking.length > 0) {
+      const estimatedImpact = this.clampScore(
+        this.averageImpact(upcomingNetworking) + (networkingIsPriority ? 10 : 4)
+      );
+
+      return [{
+        id: 'networking-boost',
+        type: 'networking',
+        title: 'Expand Your Professional Network',
+        description: networkingIsPriority
+          ? 'Prioritize high-signal networking events aligned with your goals.'
+          : 'Build more professional connections to increase career optionality.',
+        priority: networkingIsPriority && attendedNetworkingEvents.length === 0
+          ? 'high'
+          : this.impactToPriority(estimatedImpact),
+        events: upcomingNetworking,
+        actionable: true,
+        estimatedImpact,
+        timeToComplete: '1-2 months',
+        reason: attendedNetworkingEvents.length > 0
+          ? `You have ${attendedNetworkingEvents.length} networking event${attendedNetworkingEvents.length === 1 ? '' : 's'} attended; increasing this will improve relationship leverage.`
+          : 'You have no completed networking events yet, which limits referral and mentorship opportunities.'
+      }];
     }
 
     return [];
@@ -283,34 +539,43 @@ export class OptimizedAnalyticsService {
    * Generate career advancement recommendations
    */
   private static generateAdvancementRecommendations(
-    careerProfile: Record<string, unknown>,
-    upcomingEvents: Event[]
+    careerProfile: CareerProfile,
+    upcomingEvents: Event[],
+    scoreCache?: Map<string, number>
   ): OptimizedRecommendation[] {
-    const targetRole = typeof careerProfile?.targetRole === 'string' ? careerProfile.targetRole : null;
-    if (!targetRole) return [];
+    const hasAdvancementGoal = careerProfile.careerGoals.some(goal => ADVANCEMENT_GOALS.has(goal));
+    if (!hasAdvancementGoal) return [];
 
-    const advancementEvents = upcomingEvents.filter(event =>
-      event.title.toLowerCase().includes('leadership') ||
-      event.title.toLowerCase().includes('management') ||
-      event.title.toLowerCase().includes(targetRole.toLowerCase()) ||
-      event.title.toLowerCase().includes('career')
+    const roleKeywords = getRoleKeywords(careerProfile.currentRole)
+      .map(keyword => keyword.toLowerCase())
+      .filter(keyword => keyword.length >= 3)
+      .slice(0, 8);
+
+    const keywordPool = [...ADVANCEMENT_KEYWORDS, ...roleKeywords];
+
+    const advancementEvents = this.attachImpactLite(
+      upcomingEvents.filter(event => {
+        const searchText = this.getEventSearchText(event);
+        return keywordPool.some(keyword => this.containsKeyword(searchText, keyword));
+      }),
+      careerProfile,
+      scoreCache
     ).slice(0, 3);
 
     if (advancementEvents.length > 0) {
+      const estimatedImpact = this.clampScore(this.averageImpact(advancementEvents) + 8);
+
       return [{
         id: 'career-advancement',
         type: 'career_advancement',
-        title: `Advance to ${targetRole}`,
-        description: `Develop leadership and management skills to advance to your target role.`,
-        priority: 'high',
-        events: advancementEvents.map(event => ({
-          ...event,
-          careerImpactLite: this.calculateSimpleCareerImpact(event)
-        })),
+        title: `Accelerate your ${careerProfile.currentRole} trajectory`,
+        description: 'Prioritize events that strengthen leadership, influence, and next-level career skills.',
+        priority: this.impactToPriority(estimatedImpact),
+        events: advancementEvents,
         actionable: true,
-        estimatedImpact: 90,
-        timeToComplete: '3-6 months',
-        reason: `These events will help you develop the skills needed for ${targetRole}.`
+        estimatedImpact,
+        timeToComplete: this.estimateAdvancementTimeline(careerProfile.timeframe),
+        reason: `These events align with your ${careerProfile.careerGoals.join(', ').replace(/-/g, ' ')} goals and current role context.`
       }];
     }
 
@@ -340,26 +605,19 @@ export class OptimizedAnalyticsService {
    */
   private static calculateSimpleImpactScore(trackedEvents: TrackedEventRecord[]): number {
     if (trackedEvents.length === 0) return 0;
+    const scoreCache = new Map<string, number>();
 
     const attendedEvents = trackedEvents.filter(te => te.status === 'attended' && te.event);
-    if (attendedEvents.length === 0) return 0.2; // Default for bookmarked events
+    if (attendedEvents.length === 0) {
+      const bookmarkedCount = trackedEvents.filter(te => te.isBookmarked).length;
+      return bookmarkedCount > 0 ? 25 : 0;
+    }
 
     const totalScore = attendedEvents.reduce((sum, te) => {
-      const event = te.event!;
-      let score = 0.2; // Base score
-      
-      // Increase score based on event characteristics
-      if (event.attendeeCount && event.attendeeCount > 500) score += 0.3;
-      else if (event.attendeeCount && event.attendeeCount > 100) score += 0.2;
-      else if (event.attendeeCount && event.attendeeCount > 50) score += 0.1;
-      
-      // High-value event keywords
-      if (this.isHighValueEvent(event)) score += 0.2;
-      
-      return sum + Math.min(score, 1.0);
+      return sum + this.getEventImpactScore(te.event as Event, undefined, scoreCache);
     }, 0);
 
-    return Math.round((totalScore / attendedEvents.length) * 100) / 100;
+    return this.clampScore(totalScore / attendedEvents.length);
   }
 
   /**
@@ -371,6 +629,7 @@ export class OptimizedAnalyticsService {
     skillsImproved: number;
     networkingEvents: number;
   } {
+    const scoreCache = new Map<string, number>();
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
@@ -380,8 +639,10 @@ export class OptimizedAnalyticsService {
 
     const eventsAttended = thisMonthEvents.filter(te => te.status === 'attended').length;
     
-    const highImpactEvents = thisMonthEvents.filter(te => 
-      te.event && this.isHighValueEvent(te.event)
+    const highImpactEvents = thisMonthEvents.filter(te =>
+      te.status === 'attended' &&
+      te.event &&
+      this.getEventImpactScore(te.event, undefined, scoreCache) >= 70
     ).length;
 
     const uniqueCategories = new Set(
@@ -392,10 +653,9 @@ export class OptimizedAnalyticsService {
     const skillsImproved = uniqueCategories.size;
 
     const networkingEvents = thisMonthEvents.filter(te =>
-      te.event && (
-        te.event.title.toLowerCase().includes('networking') ||
-        te.event.title.toLowerCase().includes('meetup')
-      )
+      te.status === 'attended' &&
+      te.event &&
+      this.isNetworkingEvent(te.event)
     ).length;
 
     return {
@@ -410,37 +670,38 @@ export class OptimizedAnalyticsService {
    * Get simple upcoming opportunities
    */
   private static getSimpleUpcomingOpportunities(upcomingEvents: Event[]): Array<Event & { careerImpactLite?: CareerImpactScoreLite }> {
-    return upcomingEvents
+    return this.attachImpactLite(
+      upcomingEvents
       .filter(event => new Date(event.startTime) > new Date())
-      .slice(0, 10)
-      .map(event => ({
-        ...event,
-        careerImpactLite: this.calculateSimpleCareerImpact(event)
-      }))
-      .sort((a, b) => (b.careerImpactLite?.overall || 0) - (a.careerImpactLite?.overall || 0));
+    ).slice(0, 10);
   }
 
   /**
    * Calculate simple career impact for an event
    */
   private static calculateSimpleCareerImpact(event: Event): CareerImpactScoreLite {
-    let overall = 0.3; // Base score
-    
+    let overall = 35;
+
     if (event.attendeeCount) {
-      if (event.attendeeCount > 500) overall = 0.8;
-      else if (event.attendeeCount > 100) overall = 0.6;
-      else if (event.attendeeCount > 50) overall = 0.4;
-    }
-    
-    if (this.isHighValueEvent(event)) {
-      overall = Math.min(overall + 0.2, 1.0);
+      if (event.attendeeCount > 1000) overall += 25;
+      else if (event.attendeeCount > 500) overall += 20;
+      else if (event.attendeeCount > 100) overall += 12;
+      else if (event.attendeeCount > 50) overall += 8;
     }
 
-    return {
-      overall: Math.round(overall * 100) / 100,
-      confidence: 0.7,
-      category: overall > 0.7 ? 'high' : overall > 0.4 ? 'moderate' : 'low'
-    };
+    if (this.isHighValueEvent(event)) {
+      overall += 15;
+    }
+
+    if ((event.speakerLineup?.length || 0) >= 3) {
+      overall += 8;
+    }
+
+    if (this.isNetworkingEvent(event)) {
+      overall += 6;
+    }
+
+    return this.toCareerImpactLite(overall, 0.65);
   }
 
   /**
@@ -459,9 +720,19 @@ export class OptimizedAnalyticsService {
    * Type guard to validate the structure of analytics data from RPC
    */
   private static validateAnalyticsData(data: unknown): data is OptimizedAnalyticsData {
-    // Simplified validation - just check if it's an object with some expected properties
-    return data !== null && 
-           typeof data === 'object' && 
-           data !== undefined;
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    const record = data as Record<string, unknown>;
+    return typeof record.averageImpactScore === 'number' &&
+      typeof record.impactTrend === 'string' &&
+      typeof record.trendPercentage === 'number' &&
+      Array.isArray(record.skillsGrowth) &&
+      typeof record.careerGoalProgress === 'object' &&
+      typeof record.monthlyStats === 'object' &&
+      Array.isArray(record.upcomingOpportunities) &&
+      typeof record.hasCareerProfile === 'boolean' &&
+      typeof record.userSummary === 'object';
   }
 }

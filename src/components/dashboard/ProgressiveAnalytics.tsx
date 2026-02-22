@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useServerSideAnalytics } from '@/hooks/useServerSideAnalytics';
 import { CareerAnalyticsCard } from '@/components/dashboard/CareerAnalyticsCard';
 import { CareerInsightsCard } from '@/components/dashboard/CareerInsightsCard';
@@ -24,7 +24,6 @@ export function ProgressiveAnalytics({
   upcomingEvents
 }: ProgressiveAnalyticsProps) {
   const [showDetailedAnalytics, setShowDetailedAnalytics] = useState(false);
-  const [hasLoadedDetailed, setHasLoadedDetailed] = useState(false);
 
   // Calculate basic analytics from props instead of API call
   const basicAnalytics = useMemo(() => {
@@ -36,7 +35,7 @@ export function ProgressiveAnalytics({
   //   return calculateUpcomingOpportunities(upcomingEvents);
   // }, [upcomingEvents]);
 
-  // Load detailed analytics only when requested or after delay
+  // Load detailed analytics only when explicitly requested.
   const { 
     data: detailedAnalytics, 
     isLoading: detailedLoading, 
@@ -48,21 +47,8 @@ export function ProgressiveAnalytics({
     enabled: showDetailedAnalytics && !!userProfile 
   });
 
-  // Auto-load detailed analytics after 2 seconds if basic analytics calculated successfully
-  useEffect(() => {
-    if (basicAnalytics && !hasLoadedDetailed && !showDetailedAnalytics) {
-      const timer = setTimeout(() => {
-        setShowDetailedAnalytics(true);
-        setHasLoadedDetailed(true);
-      }, 2000); // 2 second delay
-
-      return () => clearTimeout(timer);
-    }
-  }, [basicAnalytics, hasLoadedDetailed, showDetailedAnalytics]);
-
   const handleLoadDetailed = () => {
     setShowDetailedAnalytics(true);
-    setHasLoadedDetailed(true);
   };
 
   // Convert basic analytics to detailed format for compatibility

@@ -44,6 +44,47 @@ export interface TelemetrySummary {
     avgReturnedCount: number | null;
     topTags: Array<{ tag: string; count: number }>;
   };
+  socialStageGates: {
+    denominator: {
+      consentedActiveUsers: number;
+      note: string;
+    };
+    phaseA: {
+      attendanceOptInUsers: number;
+      attendanceOptInRate: number | null;
+      whosGoingImpressions: number;
+      whosGoingClicks: number;
+      whosGoingCtr: number | null;
+    };
+    phaseB: {
+      usersWhoFollowed: number;
+      followAdoptionRate: number | null;
+      profileViews: number;
+      followToReturnUsers: number;
+      followToReturnCohortUsers: number;
+      followToReturnRate: number | null;
+    };
+    phaseC: {
+      networkBadgeImpressions: number;
+      networkBadgeClicks: number;
+      networkBadgeCtr: number | null;
+      discoveryAttendanceToggleCount: number;
+      discoveryAttendanceToggleUsers: number;
+      discoveryAttendanceToggleRate: number | null;
+      discoveryAttendanceToggleSetCount: number;
+      discoveryAttendanceToggleClearCount: number;
+      discoveryAttendanceToggleUnknownActionCount: number;
+      discoveryAttendanceToggleBySurface: Array<{
+        surface: string;
+        count: number;
+      }>;
+      retentionFollowersReturnRate: number | null;
+      retentionNonFollowersReturnRate: number | null;
+      retentionDelta: number | null;
+      retentionFollowersCohortUsers: number;
+      retentionNonFollowersCohortUsers: number;
+    };
+  };
   rawSampleSize: number;
   truncated: boolean;
 }
@@ -56,11 +97,58 @@ interface SummaryOptions {
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
 const DEFAULT_MAX_EVENTS = 10_000;
+const RETENTION_WINDOW_DAYS = 7;
+const RETENTION_WINDOW_MS = RETENTION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+const MIN_RETURN_DELAY_MS = 24 * 60 * 60 * 1000;
+
+const RETURN_EVENT_TYPES = new Set([
+  'profile_view',
+  'follow_action',
+  'recommendation_interaction',
+  'recommendation_batch_displayed',
+  'discovery_card_click',
+  'discovery_filter_changed',
+  'discovery_ranking_changed',
+  'discovery_feedback_action',
+  'discovery_save_action',
+  'discovery_attendance_toggle',
+  'discovery_shortlist_action',
+  'whos_going_click',
+  'network_badge_click',
+  'attendance_opt_in',
+  'skill_rating_saved',
+  'skill_removed'
+]);
 
 const PROFICIENCIES: SkillProficiency[] = ['beginner', 'intermediate', 'advanced', 'expert'];
 
 function isPlainObject(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function ratio(numerator: number, denominator: number): number | null {
+  if (denominator <= 0) {
+    return null;
+  }
+
+  return numerator / denominator;
+}
+
+function hasReturnWithinWindow(eventTimestamps: number[], anchorTimestamp: number): boolean {
+  const minReturnTimestamp = anchorTimestamp + MIN_RETURN_DELAY_MS;
+  const maxReturnTimestamp = anchorTimestamp + RETENTION_WINDOW_MS;
+
+  for (const timestamp of eventTimestamps) {
+    if (timestamp < minReturnTimestamp) {
+      continue;
+    }
+    if (timestamp > maxReturnTimestamp) {
+      break;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 export class TelemetryAnalyticsService {
@@ -101,6 +189,23 @@ export class TelemetryAnalyticsService {
       string,
       { count: number; users: Set<string>; positions: number[] }
     >();
+    const consentedActiveUsers = new Set<string>();
+    const attendanceOptInUsers = new Set<string>();
+    const usersWhoFollowed = new Set<string>();
+    const userEventTimestamps = new Map<string, number[]>();
+    const userReturnEventTimestamps = new Map<string, number[]>();
+    const followEventTimestamps = new Map<string, number[]>();
+    let whosGoingImpressions = 0;
+    let whosGoingClicks = 0;
+    let profileViews = 0;
+    let networkBadgeImpressions = 0;
+    let networkBadgeClicks = 0;
+    let discoveryAttendanceToggleCount = 0;
+    let discoveryAttendanceToggleSetCount = 0;
+    let discoveryAttendanceToggleClearCount = 0;
+    let discoveryAttendanceToggleUnknownActionCount = 0;
+    const discoveryAttendanceToggleUsers = new Set<string>();
+    const discoveryAttendanceToggleBySurface = new Map<string, number>();
     const batchStats = {
       total: 0,
       totalReturned: 0,
@@ -126,6 +231,22 @@ export class TelemetryAnalyticsService {
       const metadata = isPlainObject(row.metadata) ? (row.metadata as JsonRecord) : {};
       const context = isPlainObject(row.context) ? (row.context as JsonRecord) : {};
       const normalizedUserId = addUser(row.user_id, context);
+      const occurredAtTimestamp =
+        typeof row.occurred_at === 'string' ? Date.parse(row.occurred_at) : Number.NaN;
+      if (row.user_id) {
+        consentedActiveUsers.add(row.user_id);
+        if (Number.isFinite(occurredAtTimestamp)) {
+          const timestamps = userEventTimestamps.get(row.user_id) ?? [];
+          timestamps.push(occurredAtTimestamp);
+          userEventTimestamps.set(row.user_id, timestamps);
+
+          if (RETURN_EVENT_TYPES.has(eventType)) {
+            const returnTimestamps = userReturnEventTimestamps.get(row.user_id) ?? [];
+            returnTimestamps.push(occurredAtTimestamp);
+            userReturnEventTimestamps.set(row.user_id, returnTimestamps);
+          }
+        }
+      }
 
       const byType = eventsByTypeMap.get(eventType) ?? {
         count: 0,
@@ -158,6 +279,67 @@ export class TelemetryAnalyticsService {
           }
           skillStats.set(skill, entry);
         }
+      }
+
+      if (eventType === 'attendance_opt_in' && row.user_id) {
+        attendanceOptInUsers.add(row.user_id);
+      }
+
+      if (eventType === 'whos_going_impression') {
+        whosGoingImpressions += 1;
+      }
+
+      if (eventType === 'whos_going_click') {
+        whosGoingClicks += 1;
+      }
+
+      if (eventType === 'profile_view') {
+        profileViews += 1;
+      }
+
+      if (eventType === 'follow_action' && row.user_id) {
+        const action = typeof metadata.action === 'string' ? metadata.action : null;
+        if (action === 'follow') {
+          usersWhoFollowed.add(row.user_id);
+          if (Number.isFinite(occurredAtTimestamp)) {
+            const followTimestamps = followEventTimestamps.get(row.user_id) ?? [];
+            followTimestamps.push(occurredAtTimestamp);
+            followEventTimestamps.set(row.user_id, followTimestamps);
+          }
+        }
+      }
+
+      if (eventType === 'network_badge_impression') {
+        networkBadgeImpressions += 1;
+      }
+
+      if (eventType === 'network_badge_click') {
+        networkBadgeClicks += 1;
+      }
+
+      if (eventType === 'discovery_attendance_toggle') {
+        discoveryAttendanceToggleCount += 1;
+
+        if (row.user_id) {
+          discoveryAttendanceToggleUsers.add(row.user_id);
+        }
+
+        const action = typeof metadata.action === 'string' ? metadata.action : 'unknown';
+        if (action === 'set_attending') {
+          discoveryAttendanceToggleSetCount += 1;
+        } else if (action === 'clear_attending') {
+          discoveryAttendanceToggleClearCount += 1;
+        } else {
+          discoveryAttendanceToggleUnknownActionCount += 1;
+        }
+
+        const contextSurface = typeof context.surface === 'string' ? context.surface : 'unknown';
+        const sourceSurface = typeof metadata.source === 'string' ? metadata.source : 'unknown';
+        const surfaceKey = `${contextSurface}:${sourceSurface}`;
+        discoveryAttendanceToggleBySurface.set(
+          surfaceKey,
+          (discoveryAttendanceToggleBySurface.get(surfaceKey) ?? 0) + 1
+        );
       }
 
       if (eventType === 'recommendation_interaction') {
@@ -260,6 +442,113 @@ export class TelemetryAnalyticsService {
         .slice(0, 15)
     };
 
+    const eligibleCohortCutoffTimestamp = endDate.getTime() - RETENTION_WINDOW_MS;
+    let followToReturnCohortUsers = 0;
+    let followToReturnUsers = 0;
+    let retentionNonFollowersCohortUsers = 0;
+    let retentionNonFollowersReturnUsers = 0;
+
+    for (const timestamps of userEventTimestamps.values()) {
+      timestamps.sort((a, b) => a - b);
+    }
+    for (const timestamps of userReturnEventTimestamps.values()) {
+      timestamps.sort((a, b) => a - b);
+    }
+    for (const timestamps of followEventTimestamps.values()) {
+      timestamps.sort((a, b) => a - b);
+    }
+
+    for (const [userId, followTimestamps] of followEventTimestamps.entries()) {
+      const returnTimestamps = userReturnEventTimestamps.get(userId) ?? [];
+
+      const cohortAnchor = followTimestamps.find(
+        (timestamp) => timestamp <= eligibleCohortCutoffTimestamp
+      );
+      if (cohortAnchor === undefined) {
+        continue;
+      }
+
+      followToReturnCohortUsers += 1;
+      if (hasReturnWithinWindow(returnTimestamps, cohortAnchor)) {
+        followToReturnUsers += 1;
+      }
+    }
+
+    for (const [userId, userTimestamps] of userEventTimestamps.entries()) {
+      const returnTimestamps = userReturnEventTimestamps.get(userId) ?? [];
+
+      if ((followEventTimestamps.get(userId)?.length ?? 0) > 0) {
+        continue;
+      }
+
+      const cohortAnchor = userTimestamps.find(
+        (timestamp) => timestamp <= eligibleCohortCutoffTimestamp
+      );
+      if (cohortAnchor === undefined) {
+        continue;
+      }
+
+      retentionNonFollowersCohortUsers += 1;
+      if (hasReturnWithinWindow(returnTimestamps, cohortAnchor)) {
+        retentionNonFollowersReturnUsers += 1;
+      }
+    }
+
+    const followToReturnRate = ratio(followToReturnUsers, followToReturnCohortUsers);
+    const retentionNonFollowersReturnRate = ratio(
+      retentionNonFollowersReturnUsers,
+      retentionNonFollowersCohortUsers
+    );
+    const retentionDelta =
+      followToReturnRate !== null && retentionNonFollowersReturnRate !== null
+        ? followToReturnRate - retentionNonFollowersReturnRate
+        : null;
+
+    const consentedActiveUserCount = consentedActiveUsers.size;
+    const socialStageGates = {
+      denominator: {
+        consentedActiveUsers: consentedActiveUserCount,
+        note: 'Rates use analytics-consented active users (users with telemetry events in this window).'
+      },
+      phaseA: {
+        attendanceOptInUsers: attendanceOptInUsers.size,
+        attendanceOptInRate: ratio(attendanceOptInUsers.size, consentedActiveUserCount),
+        whosGoingImpressions,
+        whosGoingClicks,
+        whosGoingCtr: ratio(whosGoingClicks, whosGoingImpressions)
+      },
+      phaseB: {
+        usersWhoFollowed: usersWhoFollowed.size,
+        followAdoptionRate: ratio(usersWhoFollowed.size, consentedActiveUserCount),
+        profileViews,
+        followToReturnUsers,
+        followToReturnCohortUsers,
+        followToReturnRate
+      },
+      phaseC: {
+        networkBadgeImpressions,
+        networkBadgeClicks,
+        networkBadgeCtr: ratio(networkBadgeClicks, networkBadgeImpressions),
+        discoveryAttendanceToggleCount,
+        discoveryAttendanceToggleUsers: discoveryAttendanceToggleUsers.size,
+        discoveryAttendanceToggleRate: ratio(
+          discoveryAttendanceToggleUsers.size,
+          consentedActiveUserCount
+        ),
+        discoveryAttendanceToggleSetCount,
+        discoveryAttendanceToggleClearCount,
+        discoveryAttendanceToggleUnknownActionCount,
+        discoveryAttendanceToggleBySurface: Array.from(discoveryAttendanceToggleBySurface.entries())
+          .map(([surface, count]) => ({ surface, count }))
+          .sort((a, b) => b.count - a.count),
+        retentionFollowersReturnRate: followToReturnRate,
+        retentionNonFollowersReturnRate,
+        retentionDelta,
+        retentionFollowersCohortUsers: followToReturnCohortUsers,
+        retentionNonFollowersCohortUsers
+      }
+    };
+
     return {
       timeWindow: {
         from: startDate.toISOString(),
@@ -274,6 +563,7 @@ export class TelemetryAnalyticsService {
       skillRatings,
       recommendationInteractions,
       recommendationBatches,
+      socialStageGates,
       rawSampleSize: events.length,
       truncated: events.length === maxEvents
     };

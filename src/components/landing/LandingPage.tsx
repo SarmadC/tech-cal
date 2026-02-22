@@ -15,7 +15,6 @@ import {
     MobileNavHeader,
     MobileNavToggle,
     MobileNavMenu,
-    NavbarThemeToggle,
 } from "@/components/ui/resizable-navbar";
 
 const ProductDemoSection = dynamic(
@@ -50,6 +49,10 @@ export default function LandingPage() {
         {
             name: "Pricing",
             link: "/pricing",
+        },
+        {
+            name: "Blog",
+            link: "/blog",
         },
         {
             name: "Contact",
@@ -87,7 +90,6 @@ export default function LandingPage() {
                             <NavbarLogo />
                             <NavItems items={navItems} />
                             <div className="flex items-center gap-4">
-                                <NavbarThemeToggle />
                                 <NavbarButton
                                     variant="secondary"
                                     onClick={() => router.push("/login")}
@@ -111,7 +113,6 @@ export default function LandingPage() {
                             <MobileNavHeader>
                                 <NavbarLogo />
                                 <div className="flex items-center gap-3">
-                                    <NavbarThemeToggle />
                                     <MobileNavToggle
                                         isOpen={isMobileMenuOpen}
                                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

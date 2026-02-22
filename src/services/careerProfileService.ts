@@ -165,6 +165,84 @@ export class CareerProfileService {
   }
 
   /**
+   * Fetch peer profiles for cohort comparison.
+   * Prioritizes same role + industry, then broadens to industry + seniority.
+   */
+  static async getPeerProfilesForComparison(
+    userId: string,
+    careerProfile: CareerProfile,
+    supabaseClient: SupabaseClientType,
+    limit: number = 120
+  ): Promise<CareerProfile[]> {
+    const normalizedLimit = Math.max(20, Math.min(limit, 250));
+    const peerProfileSelect = `
+      user_id,
+      created_at,
+      updated_at,
+      current_role,
+      seniority,
+      industry,
+      company_size,
+      primary_skills,
+      skills_to_learn,
+      interests,
+      skill_tags,
+      career_goals,
+      timeframe,
+      learning_style,
+      available_time,
+      budget,
+      networking_goals,
+      preferred_event_types
+    `;
+
+    try {
+      const { data: roleScopedData, error: roleScopedError } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('career_profiles')
+        .select(peerProfileSelect)
+        .neq('user_id', userId)
+        .eq('industry', careerProfile.industry)
+        .eq('current_role', careerProfile.currentRole)
+        .limit(normalizedLimit);
+
+      if (roleScopedError) {
+        console.warn('[CareerProfileService] Failed role-scoped peer query:', roleScopedError);
+      }
+
+      const roleScopedProfiles: CareerProfile[] = (roleScopedData || [])
+        .map((row: CareerProfileRow) => this.transformRowToCareerProfile(row));
+
+      if (roleScopedProfiles.length >= 10) {
+        return roleScopedProfiles;
+      }
+
+      const { data: fallbackData, error: fallbackError } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('career_profiles')
+        .select(peerProfileSelect)
+        .neq('user_id', userId)
+        .eq('industry', careerProfile.industry)
+        .eq('seniority', careerProfile.seniority)
+        .limit(normalizedLimit);
+
+      if (fallbackError) {
+        console.warn('[CareerProfileService] Failed fallback peer query:', fallbackError);
+        return roleScopedProfiles;
+      }
+
+      const merged = new Map<string, CareerProfile>();
+      roleScopedProfiles.forEach(profile => merged.set(profile.userId, profile));
+      const fallbackProfiles: CareerProfile[] = (fallbackData || [])
+        .map((row: CareerProfileRow) => this.transformRowToCareerProfile(row));
+      fallbackProfiles.forEach(profile => merged.set(profile.userId, profile));
+
+      return Array.from(merged.values()).slice(0, normalizedLimit);
+    } catch (error) {
+      console.warn('[CareerProfileService] Error fetching peer profiles for comparison:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get user's career profile from their preferences (legacy method for backward compatibility)
    */
   static getCareerProfileFromPreferences(userProfile: AppProfile | null): CareerProfile | null {

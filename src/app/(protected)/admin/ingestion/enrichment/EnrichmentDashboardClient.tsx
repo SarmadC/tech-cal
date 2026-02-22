@@ -95,9 +95,24 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     });
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const streamAbortControllerRef = useRef<AbortController | null>(null);
+    const streamReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
     const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent } = useAdminToolbar();
     const { showInfo, showSuccess, showError } = useSnackbar();
+
+    useEffect(() => {
+        return () => {
+            if (streamAbortControllerRef.current) {
+                streamAbortControllerRef.current.abort();
+                streamAbortControllerRef.current = null;
+            }
+            if (streamReaderRef.current) {
+                void streamReaderRef.current.cancel().catch(() => {});
+                streamReaderRef.current = null;
+            }
+        };
+    }, []);
 
     // Load column visibility from localStorage
     useEffect(() => {
@@ -265,12 +280,24 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
             });
 
             const endpoint = mode === 'enrich' ? '/api/admin/ingestion/enrich-stream' : '/api/admin/ingestion/infer-stream';
+            let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
+            if (streamAbortControllerRef.current) {
+                streamAbortControllerRef.current.abort();
+            }
+            if (streamReaderRef.current) {
+                await streamReaderRef.current.cancel().catch(() => {});
+                streamReaderRef.current = null;
+            }
+            const streamController = new AbortController();
+            streamAbortControllerRef.current = streamController;
 
             try {
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ eventIds }),
+                    signal: streamController.signal,
                 });
 
                 if (!response.ok) {
@@ -278,19 +305,30 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     throw new Error(payload.error || `Failed to trigger ${mode}`);
                 }
 
-                const reader = response.body?.getReader();
+                reader = response.body?.getReader() ?? null;
                 if (!reader) {
                     throw new Error('No response body');
                 }
+                streamReaderRef.current = reader;
 
                 const decoder = new TextDecoder();
                 let buffer = '';
+                // Maximum buffer size to prevent memory issues on malformed streams (1MB)
+                const MAX_BUFFER_SIZE = 1024 * 1024;
 
                 while (true) {
+                    if (streamController.signal.aborted) break;
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
+
+                    // Prevent unbounded buffer growth
+                    if (buffer.length > MAX_BUFFER_SIZE) {
+                        console.warn('[EnrichmentDashboard] Stream buffer exceeded maximum size, resetting');
+                        buffer = '';
+                    }
+
                     const lines = buffer.split('\n\n');
                     buffer = lines.pop() || '';
 
@@ -347,10 +385,22 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 await refresh();
                 setSelectedRows([]);
             } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return;
+                }
                 console.error(error);
                 showError(error instanceof Error ? error.message : `Failed to ${mode}`);
                 setBulkProgress(null);
             } finally {
+                if (reader) {
+                    await reader.cancel().catch(() => {});
+                }
+                if (streamReaderRef.current === reader) {
+                    streamReaderRef.current = null;
+                }
+                if (streamAbortControllerRef.current === streamController) {
+                    streamAbortControllerRef.current = null;
+                }
                 setLoading(false);
             }
         },

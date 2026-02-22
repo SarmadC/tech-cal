@@ -3,23 +3,23 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'About Kure-Cal',
-    description: 'Learn about Kure-Cal and the mission to make tech events easier to discover, track, and attend.',
+    title: 'About Kure-Cal - Our Mission & Story',
+    description: 'Learn about Kure-Cal and our mission to make tech events easier to discover, track, and attend. We organize conferences, meetups, and hackathons into one trusted calendar.',
     openGraph: {
-        title: 'About Kure-Cal',
-        description: 'Learn about Kure-Cal and the mission to make tech events easier to discover, track, and attend.',
+        title: 'About Kure-Cal - Our Mission & Story',
+        description: 'Learn about Kure-Cal and our mission to make tech events easier to discover, track, and attend. We organize conferences, meetups, and hackathons into one trusted calendar.',
         type: 'website',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'About Kure-Cal',
-        description: 'Learn about Kure-Cal and the mission to make tech events easier to discover, track, and attend.',
+        title: 'About Kure-Cal - Our Mission & Story',
+        description: 'Learn about Kure-Cal and our mission to make tech events easier to discover, track, and attend. We organize conferences, meetups, and hackathons into one trusted calendar.',
     },
 };
 
 export default function AboutPage() {
     return (
-        <main className="min-h-screen bg-background-main pt-20">
+        <main id="main-content" className="min-h-screen bg-background-main pt-20">
             <section className="py-16 px-6 bg-background-secondary">
                 <div className="max-w-[1600px] mx-auto">
                     <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">

@@ -19,6 +19,7 @@ We combine high-quality curation, adaptive scoring, intelligent scheduling, and 
   - [Getting Started](#getting-started)
     - [Local Development](#local-development)
   - [Environment Variables](#environment-variables)
+  - [Community & Social Features](#community--social-features)
   - [Testing Strategy](#testing-strategy)
   - [Design Principles](#design-principles)
   - [Tech Stack](#tech-stack)
@@ -219,6 +220,24 @@ NEXT_PUBLIC_SHOW_BUDGET_HINT=false   # Optional UI hint toggle
 
 ---
 
+## Community & Social Features
+
+Kure-Cal includes a comprehensive social networking system for professional connections and event discovery.
+
+**Key Features:**
+- Follow/unfollow with progressive trust level requirements
+- Block users with mutual invisibility
+- Public profiles at clean `/u/username` URLs
+- See who's attending events with network context
+- Searchable community directory
+
+**Quick Navigation:**
+- **Full Documentation:** [Community & Social Features Guide](./docs/COMMUNITY.md)
+- **Try It Out:** `/community` (community directory), `/u/[username]` (public profiles), `/dashboard/settings` (social settings)
+
+For comprehensive architecture, API reference, testing guidelines, and troubleshooting, see [docs/COMMUNITY.md](./docs/COMMUNITY.md).
+
+---
 
 ## Testing Strategy
 

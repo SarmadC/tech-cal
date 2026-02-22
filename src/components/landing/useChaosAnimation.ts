@@ -180,6 +180,7 @@ export function useScrollAnimation(
     scrollProgressRef: MutableRefObject<number>
 ) {
     const hasAnimatedRef = useRef(false);
+    const initialVisibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (!sectionRef.current || !containerRef.current || !domCacheRef.current.cards || positions.order.length === 0) return;
@@ -313,9 +314,14 @@ export function useScrollAnimation(
         };
 
         // Check after a short delay to ensure DOM is ready
-        setTimeout(checkInitialVisibility, 100);
+        initialVisibilityTimeoutRef.current = setTimeout(checkInitialVisibility, 100);
 
         return () => {
+            // Clear the initial visibility timeout to prevent state updates on unmounted component
+            if (initialVisibilityTimeoutRef.current) {
+                clearTimeout(initialVisibilityTimeoutRef.current);
+                initialVisibilityTimeoutRef.current = null;
+            }
             observer.disconnect();
             masterTimeline.kill();
             // Ensure scrolling is re-enabled on cleanup

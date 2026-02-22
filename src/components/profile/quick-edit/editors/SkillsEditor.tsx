@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { CareerProfile } from '@/types/career';
+import { CareerProfile, INTEREST_AREAS } from '@/types/career';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
 import { LinearFormField } from '../components/LinearInputs';
 
@@ -71,6 +71,9 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
                     selectedSkills={formData.interests}
                     onSkillsChange={handleInterestsChange}
                     placeholder="Add interests..."
+                    suggestions={INTEREST_AREAS}
+                    suggestionHeaderLabel="Suggested Interests"
+                    entityName="interests"
                 />
             </LinearFormField>
         </div>

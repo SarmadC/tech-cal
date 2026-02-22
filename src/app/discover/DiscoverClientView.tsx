@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Event, EventType, AppProfile } from '@/types';
 import { isProfileEmpty, extractCareerProfile } from '@/utils/profileTypeGuards';
-import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
+import { useUnifiedServerFiltering, UnifiedFilterOptions } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 
 import { CalendarProvider } from '@/contexts/CalendarContext';
@@ -17,7 +17,7 @@ import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { useIsMobile } from '@/hooks/useDeviceDetection';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
 // IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
 const MobileDiscoveryViewDynamic = dynamic(
@@ -31,9 +31,49 @@ const EventDetailSidebarDynamic = dynamic(
     { ssr: false }
 );
 
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
+    { ssr: false }
+);
+
 interface DiscoverClientViewProps {
     initialCategories: EventType[];
     profile: AppProfile | null;
+}
+
+const DISCOVERY_RESUME_STATE_KEY = 'discover-resume-state-v1';
+
+type SerializableFilters = Omit<UnifiedFilterOptions, 'dateRange'> & {
+    dateRange: {
+        start: string | null;
+        end: string | null;
+    };
+};
+
+interface DiscoveryResumeState {
+    filters: SerializableFilters;
+    scrollY: number;
+    savedAt: string;
+}
+
+function serializeFilters(filters: UnifiedFilterOptions): SerializableFilters {
+    return {
+        ...filters,
+        dateRange: {
+            start: filters.dateRange.start ? filters.dateRange.start.toISOString() : null,
+            end: filters.dateRange.end ? filters.dateRange.end.toISOString() : null,
+        },
+    };
+}
+
+function deserializeFilters(filters: SerializableFilters): UnifiedFilterOptions {
+    return {
+        ...filters,
+        dateRange: {
+            start: filters.dateRange.start ? new Date(filters.dateRange.start) : null,
+            end: filters.dateRange.end ? new Date(filters.dateRange.end) : null,
+        },
+    };
 }
 
 export default function DiscoverClientView({
@@ -42,7 +82,7 @@ export default function DiscoverClientView({
 }: DiscoverClientViewProps) {
     const router = useRouter();
     const nav = useNavigation(router);
-    const isMobile = useIsMobile();
+    const { isMobile, isReady: isDeviceReady } = useDeviceDetection();
 
     const initialFilters = useMemo(() => {
         const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
@@ -50,16 +90,9 @@ export default function DiscoverClientView({
         try {
             // Safely extract career profile using the shared utility
             // This handles the correct path: profile.preferences.careerProfile
-            const careerProfile = extractCareerProfile(profile);
-            const budget = careerProfile?.budget;
-
-            if (budget && typeof budget === 'string') {
-                // Validate budget is one of the allowed values
-                const validBudgets = ['all', 'free-only', 'low', 'moderate', 'high', 'unlimited'] as const;
-                if (validBudgets.includes(budget as typeof validBudgets[number])) {
-                    filters.budget = budget as typeof validBudgets[number];
-                }
-            }
+            // Note: We deliberately do NOT set the budget filter here anymore.
+            // Users should start with "All Budgets" and apply filters manually if desired.
+            // This prevents the "No events found for budget tier" message on initial load.
         } catch {
             // no-op
         }
@@ -82,6 +115,114 @@ export default function DiscoverClientView({
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [showPersonalizedHint, setShowPersonalizedHint] = useState(true);
     const currentDate = new Date();
+    const hasRestoredResumeRef = useRef(false);
+    const filtersRef = useRef(eventData.filters);
+
+    useEffect(() => {
+        filtersRef.current = eventData.filters;
+    }, [eventData.filters]);
+
+    const persistResumeState = useCallback((scrollY?: number) => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const payload: DiscoveryResumeState = {
+            filters: serializeFilters(filtersRef.current),
+            scrollY: typeof scrollY === 'number' ? scrollY : window.scrollY,
+            savedAt: new Date().toISOString(),
+        };
+
+        try {
+            sessionStorage.setItem(DISCOVERY_RESUME_STATE_KEY, JSON.stringify(payload));
+        } catch {
+            // no-op
+        }
+    }, []);
+
+    useEffect(() => {
+        if (hasRestoredResumeRef.current || typeof window === 'undefined') {
+            return;
+        }
+
+        hasRestoredResumeRef.current = true;
+
+        try {
+            const raw = sessionStorage.getItem(DISCOVERY_RESUME_STATE_KEY);
+            if (!raw) {
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as DiscoveryResumeState;
+            if (!parsed?.filters) {
+                return;
+            }
+
+            const restoredFilters = deserializeFilters(parsed.filters);
+
+            eventData.updateFilter('searchTerm', restoredFilters.searchTerm);
+            eventData.updateFilter('categories', restoredFilters.categories);
+            eventData.updateFilter('tags', restoredFilters.tags);
+            eventData.updateFilter('locations', restoredFilters.locations);
+            eventData.updateFilter('dateRange', restoredFilters.dateRange);
+            eventData.updateFilter('budget', restoredFilters.budget);
+            eventData.updateFilter('format', restoredFilters.format);
+            eventData.updateFilter('cost', restoredFilters.cost);
+            eventData.updateFilter('difficulty', restoredFilters.difficulty);
+            eventData.updateFilter('availability', restoredFilters.availability);
+            eventData.updateFilter('popularity', restoredFilters.popularity);
+            eventData.updateFilter('duration', restoredFilters.duration);
+            eventData.updateFilter('myTracked', restoredFilters.myTracked);
+            eventData.updateFilter('myNetwork', restoredFilters.myNetwork);
+            eventData.updateFilter('recommended', restoredFilters.recommended);
+            eventData.updateFilter('sortBy', restoredFilters.sortBy);
+            eventData.updateFilter('sortDirection', restoredFilters.sortDirection);
+
+            if (typeof parsed.scrollY === 'number' && parsed.scrollY > 0) {
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: parsed.scrollY, behavior: 'auto' });
+                });
+            }
+        } catch {
+            // no-op
+        }
+    }, [eventData, eventData.updateFilter]);
+
+    useEffect(() => {
+        persistResumeState();
+    }, [eventData.filters, persistResumeState]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const handleScroll = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            timeoutId = setTimeout(() => {
+                persistResumeState(window.scrollY);
+            }, 160);
+        };
+
+        const handleBeforeUnload = () => {
+            persistResumeState(window.scrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [persistResumeState]);
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
@@ -123,7 +264,7 @@ export default function DiscoverClientView({
     const loadingSkeleton = <EventsLoadingSkeleton />;
 
     // Main content - Unified responsive view
-    const mainContent = isMobile ? (
+    const mainContent = !isDeviceReady ? loadingSkeleton : isMobile ? (
         <MobileDiscoveryViewDynamic
             events={eventData.filteredEvents}
             categories={initialCategories}
@@ -266,12 +407,20 @@ export default function DiscoverClientView({
                     </main>
 
                     {/* Event Detail Panel */}
-                    {selectedEvent && !isMobile && (
-                        <EventDetailSidebarDynamic
-                            event={selectedEvent}
-                            onClose={handleCloseEventDetail}
-                            categories={initialCategories}
-                        />
+                    {selectedEvent && isDeviceReady && (
+                        isMobile ? (
+                            <MobileEventDetailPanelDynamic
+                                event={selectedEvent}
+                                onClose={handleCloseEventDetail}
+                                categories={initialCategories}
+                            />
+                        ) : (
+                            <EventDetailSidebarDynamic
+                                event={selectedEvent}
+                                onClose={handleCloseEventDetail}
+                                categories={initialCategories}
+                            />
+                        )
                     )}
                 </div>
             </SidebarProvider>
