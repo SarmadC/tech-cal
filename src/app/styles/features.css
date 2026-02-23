@@ -24,7 +24,7 @@
 
 /* Enhanced Features Section */
 .features-enhanced {
-    padding: var(--space-24) 0;
+    padding: 72px 0;
     max-width: 1400px;
     margin: 0 auto;
     position: relative;
@@ -32,6 +32,7 @@
     min-height: 100vh;
     margin-top: 0;
     color: var(--landing-text-primary);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* Dark mode features section background */
@@ -110,9 +111,10 @@ html.dark .features-enhanced {
     top: 24vh;
     margin-bottom: var(--space-6);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 2px solid rgba(255, 255, 255, 0.12);
     background: linear-gradient(135deg, #020202 0%, #0d0d0d 50%, #020202 100%);
     padding: var(--space-8);
-    box-shadow: 
+    box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.12),
         0 1px 2px rgba(0, 0, 0, 0.24);
 }

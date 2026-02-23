@@ -5,7 +5,7 @@
 .footer-container {
     background: transparent;
     color: var(--landing-text-primary);
-    margin-top: var(--space-24, 96px);
+    margin-top: 0;
     position: relative;
     overflow: hidden;
 }
@@ -26,10 +26,11 @@ html.light .footer-container {
 
 /* Main Footer Section */
 .footer-main {
-    padding: 80px 40px;
+    padding: 64px 40px;
     position: relative;
     border-top: 1px solid var(--landing-border-light);
 }
+
 
 /* Light mode footer main */
 :root:not(.dark) .footer-main,
@@ -39,13 +40,14 @@ html.light .footer-main {
 }
 
 .footer-content {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
     gap: 40px;
     position: relative;
     z-index: 2;
+    padding: 0 var(--space-12);
 }
 
 @media (max-width: 1200px) {
@@ -58,6 +60,7 @@ html.light .footer-main {
     .footer-content {
         grid-template-columns: 1fr 1fr;
         gap: 40px;
+        padding: 0 var(--space-8);
     }
 
     .footer-intro {
@@ -67,12 +70,13 @@ html.light .footer-main {
 
 @media (max-width: 700px) {
     .footer-main {
-        padding: 64px 24px;
+        padding: 48px 0;
     }
 
     .footer-content {
         grid-template-columns: 1fr;
         gap: 32px;
+        padding: 0 var(--space-6);
     }
 
     .footer-intro-title {

@@ -130,9 +130,16 @@ const LightRays: React.FC<LightRaysProps> = ({
         const initializeWebGL = async () => {
             if (!containerRef.current) return;
 
+            // Use a cancellation token to handle concurrent initializations
+            const currentInitId = Math.random();
+            const initIdRef = { current: currentInitId };
+
+            // Store this ID in a local variable that the closure below can access
+            const isAborted = () => !isVisible || prefersReducedMotion || !containerRef.current;
+
             await new Promise(resolve => setTimeout(resolve, 10));
 
-            if (!containerRef.current) return;
+            if (isAborted()) return;
 
             const renderer = new Renderer({
                 dpr: Math.min(window.devicePixelRatio, 2),

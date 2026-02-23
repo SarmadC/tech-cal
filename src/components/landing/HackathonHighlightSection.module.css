@@ -2,7 +2,7 @@
 
 .section {
     position: relative;
-    padding: 96px 0;
+    padding: 72px 0;
     background: var(--hackathon-bg);
     background-image: var(--hackathon-bg-gradient);
     overflow: hidden;

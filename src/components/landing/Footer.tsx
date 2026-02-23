@@ -124,7 +124,7 @@ export function Footer() {
             {/* Footer Bottom */}
             <section className="footer-bottom">
                 <div className="footer-copyright">
-                    © 2025 Kure-Cal. All rights reserved.
+                    © {new Date().getFullYear()} Kure-Cal. All rights reserved.
                     <Link href="/legal/privacy" className="footer-bottom-link">Privacy Policy</Link> •
                     <Link href="/legal/terms" className="footer-bottom-link">Terms of Service</Link>
                 </div>

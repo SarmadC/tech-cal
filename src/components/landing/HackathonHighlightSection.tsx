@@ -119,14 +119,22 @@ function CountUp({ target, isInView, prefersReducedMotion }: { target: number; i
         hasAnimated.current = true;
         const duration = 1200;
         const start = performance.now();
+        let rafId: number;
+
         const step = (now: number) => {
             const elapsed = now - start;
             const progress = Math.min(elapsed / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 3);
             setValue(Math.round(eased * target));
-            if (progress < 1) requestAnimationFrame(step);
+            if (progress < 1) {
+                rafId = requestAnimationFrame(step);
+            }
         };
-        requestAnimationFrame(step);
+        rafId = requestAnimationFrame(step);
+
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+        };
     }, [isInView, target, prefersReducedMotion]);
 
     return <>{value}%</>;

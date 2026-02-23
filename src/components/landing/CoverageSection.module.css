@@ -4,7 +4,8 @@
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: var(--space-24, 96px) 0;
+    padding: 64px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* Dark mode section background */
@@ -98,9 +99,10 @@
     background: linear-gradient(135deg, #060606 0%, #0f0f12 50%, #080808 100%);
     border: 1px solid var(--border-default);
     border-radius: 12px;
-    text-align: center;
+    text-align: left;
     transition: all 0.25s ease;
     box-shadow: var(--shadow-sm);
+    border-top: 2px solid rgba(255, 255, 255, 0.08);
 }
 
 .metricCard:hover {
