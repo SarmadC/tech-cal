@@ -51,6 +51,7 @@ export interface AdminDataTableProps<T> {
     onPageSizeChange?: (pageSize: number) => void;
     toolbar?: React.ReactNode;
     stickyHeader?: boolean;
+    hideInnerBorders?: boolean;
     className?: string;
     containerClassName?: string;
     footerClassName?: string;
@@ -85,6 +86,7 @@ export function AdminDataTable<T>({
     onPageSizeChange,
     toolbar,
     stickyHeader = true,
+    hideInnerBorders = false,
     className,
     containerClassName,
     footerClassName,
@@ -200,19 +202,23 @@ export function AdminDataTable<T>({
     return (
         <div className={cn('space-y-3', className)}>
             {toolbar && (
-                <div className="rounded-lg border border-default bg-background-main p-3">
+                <div className={cn(
+                    'bg-background-main p-3',
+                    !hideInnerBorders && 'rounded-lg border border-default'
+                )}>
                     {toolbar}
                 </div>
             )}
 
             <div className={cn(
-                'relative overflow-hidden rounded-lg shadow-sm',
-                containerClassName ?? 'border border-default bg-background-main'
+                'relative overflow-hidden',
+                !hideInnerBorders && 'rounded-lg shadow-sm',
+                containerClassName ?? (!hideInnerBorders ? 'border border-default bg-background-main' : 'bg-transparent')
             )}>
                 <div className={cn('relative max-h-[70vh] overflow-y-auto', stickyHeader && 'supports-[position:sticky]:[&_thead]:sticky supports-[position:sticky]:[&_thead]:top-0 supports-[position:sticky]:[&_thead]:z-10')}>
                     <Table className={cn('min-w-full', tableClassName)}>
                         <TableHeader className={cn(headerClassName ?? 'bg-background-main text-foreground-muted')}>
-                            <TableRow className={cn('border-b border-default', headerRowClassName)}>
+                            <TableRow className={cn(!hideInnerBorders && 'border-b border-default', headerRowClassName)}>
                                 {selectable && (
                                     <TableHead className="w-10 px-3">
                                         <label className="flex cursor-pointer items-center justify-center">
@@ -298,7 +304,8 @@ export function AdminDataTable<T>({
                                         <TableRow
                                             key={rowId}
                                             className={cn(
-                                                'group border-b border-default text-sm text-foreground-tertiary transition-colors hover:bg-accent-primary-light',
+                                                'group text-sm text-foreground-tertiary transition-colors hover:bg-accent-primary-light',
+                                                !hideInnerBorders && 'border-b border-default',
                                                 isSelected && 'bg-accent-primary-light/50',
                                                 onRowClick && 'cursor-pointer',
                                                 bodyRowClassName
@@ -363,8 +370,9 @@ export function AdminDataTable<T>({
             </div>
 
             <div className={cn(
-                'flex flex-col gap-3 rounded-lg px-4 py-3 text-sm shadow-sm md:flex-row md:items-center md:justify-between',
-                footerClassName ?? 'border border-default bg-background-main text-foreground-muted'
+                'flex flex-col gap-3 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between',
+                !hideInnerBorders && 'rounded-lg shadow-sm',
+                footerClassName ?? (!hideInnerBorders ? 'border border-default bg-background-main text-foreground-muted' : 'text-foreground-muted')
             )}>
                 <div className="flex items-center gap-2">
                     <span className="text-foreground-muted">Rows per page:</span>
@@ -378,7 +386,10 @@ export function AdminDataTable<T>({
                             onPageSizeChange?.(nextPageSize);
                         }}
                     >
-                        <SelectTrigger className="h-7 w-20 rounded-md border border-default bg-background-tertiary text-xs text-foreground-tertiary">
+                        <SelectTrigger className={cn(
+                            "h-7 w-20 rounded-md bg-background-tertiary text-xs text-foreground-tertiary",
+                            !hideInnerBorders ? "border border-default" : "border-none shadow-none focus:ring-0"
+                        )}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-background-main border-default text-foreground-tertiary">
@@ -401,22 +412,28 @@ export function AdminDataTable<T>({
                     <div className="flex items-center gap-2">
                         <Button
                             type="button"
-                            variant="outline"
+                            variant={hideInnerBorders ? "ghost" : "outline"}
                             size="sm"
                             onClick={() => onPageChange?.(Math.max(1, clampedPage - 1))}
                             disabled={clampedPage <= 1}
-                            className="h-7 bg-background-tertiary text-foreground-tertiary hover:bg-accent-primary-light border-default"
+                            className={cn(
+                                "h-7 bg-background-tertiary text-foreground-tertiary hover:bg-accent-primary-light",
+                                !hideInnerBorders && "border border-default"
+                            )}
                         >
                             <MaterialIcon name="chevron_left" size={14} />
                             Prev
                         </Button>
                         <Button
                             type="button"
-                            variant="outline"
+                            variant={hideInnerBorders ? "ghost" : "outline"}
                             size="sm"
                             onClick={() => onPageChange?.(Math.min(totalPages, clampedPage + 1))}
                             disabled={clampedPage >= totalPages}
-                            className="h-7 bg-background-tertiary text-foreground-tertiary hover:bg-accent-primary-light border-default"
+                            className={cn(
+                                "h-7 bg-background-tertiary text-foreground-tertiary hover:bg-accent-primary-light",
+                                !hideInnerBorders && "border border-default"
+                            )}
                         >
                             Next
                             <MaterialIcon name="chevron_right" size={14} />

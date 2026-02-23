@@ -706,12 +706,13 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                 isLoading={isLoading}
                                                 onRowClick={(row) => handleOpenDetails(row.event)}
                                                 className="w-full"
+                                                hideInnerBorders={true}
                                                 containerClassName="rounded-none shadow-none border-none bg-transparent"
                                                 footerClassName="bg-transparent text-zinc-500 mt-0 px-0 py-4"
                                                 tableClassName="text-zinc-900 dark:text-zinc-100"
                                                 headerClassName="bg-transparent text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500 pl-4"
-                                                headerRowClassName="border-b border-zinc-200 dark:border-zinc-800 h-9 hover:bg-transparent"
-                                                bodyRowClassName="border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors h-[52px] cursor-pointer group"
+                                                headerRowClassName="h-9 hover:bg-transparent"
+                                                bodyRowClassName="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors h-[52px] cursor-pointer group"
                                                 pageSize={pagination.pageSize}
                                                 pageSizeOptions={pageSizeOptions}
                                                 onPageSizeChange={handlePageSizeChange}
