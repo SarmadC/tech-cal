@@ -370,7 +370,7 @@ export function SquadNetworkMockup() {
                     Don&apos;t hack alone.
                 </h3>
                 <p className={`text-sm mt-3 leading-relaxed max-w-sm ${styles.squadBody}`}>
-                    Problem identified: finding the right team is half the battle. We match you with complementary skills and shared goals instantly. Connect, collaborate, and ship—before the clock starts.
+                    Finding the right team is half the battle. Kure Cal matches you by skill, timezone, and past experience so you can start building, not searching.
                 </p>
                 {/* Filter Pills */}
                 <div className="mt-6">
@@ -606,9 +606,9 @@ export default function HackathonHighlightSection() {
                 <div className={styles.headerGrid}>
                     <div className={styles.headerMainContent}>
                         <span className={styles.label}>Hackathons</span>
-                        <h2 className={styles.title} style={{ fontSize: '36px', marginBottom: '16px' }}>Build the future. Win big.</h2>
+                        <h2 className={styles.title} style={{ fontSize: '36px', marginBottom: '16px' }}>Hackathons with real prizes and real teams</h2>
                         <p className={styles.description}>
-                            Join a global community of builders. Compete in high-stakes hackathons, collaborate with top talent, and ship real products.
+                            Browse high-stakes hackathons, find teammates with matching skills, and compete across dedicated tracks, all from one place.
                         </p>
                     </div>
                     <div className={styles.headerContextContent}>

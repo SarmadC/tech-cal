@@ -126,13 +126,13 @@ export function HeroSection() {
             <div className="hero-content">
                 {/* Main Heading */}
                 <h1 className="hero-title">
-                    The <span className="text-gradient-mono">Professional</span> Tech Calendar
+                    Calendar that <span className="text-gradient-mono">grows your career</span>
                 </h1>
 
                 {/* Sub Heading */}
                 <p className="hero-subtitle">
-                    Curated conferences, effortless filtering, and zero noise. <br className="hidden md:block" />
-                    The only calendar designed for serious engineering careers.
+                    Vetted tech events. Smart filters. One-tap Google Calendar sync. <br className="hidden md:block" />
+                    Built for engineers who invest in growth.
                 </p>
 
                 {/* CTA Buttons */}
@@ -142,7 +142,7 @@ export function HeroSection() {
                         aria-label="Discover personalized tech events"
                         className={`hero-primary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} animate-shimmer motion-reduce:animate-none items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
                     >
-                        Discover Events
+                        Browse Events Free
                     </Link>
                     <Link
                         href="#product-demo"
@@ -156,7 +156,7 @@ export function HeroSection() {
                             }
                         }}
                     >
-                        View Live Demo
+                        See It in Action
                     </Link>
                 </div>
             </div>

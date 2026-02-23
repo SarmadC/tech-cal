@@ -24,7 +24,7 @@ const DEMO_PERSONAS: DemoPersonaPreset[] = [
     {
         id: 'frontend',
         label: 'Frontend Engineer',
-        rationale: 'Focused on UI frameworks, frontend stack updates, and shippable product sessions.',
+        rationale: 'Shows virtual events about UI frameworks, frontend tooling, and hands-on product sessions.',
         filters: {
             searchTerm: 'frontend',
             format: 'virtual',
@@ -35,7 +35,7 @@ const DEMO_PERSONAS: DemoPersonaPreset[] = [
     {
         id: 'ai',
         label: 'AI Engineer',
-        rationale: 'Optimized for practical AI sessions, model tooling, and events with strong impact potential.',
+        rationale: 'Surfaces AI sessions, model tooling workshops, and high-impact career events, sorted by career relevance.',
         filters: {
             searchTerm: 'ai',
             format: 'all',
@@ -46,7 +46,7 @@ const DEMO_PERSONAS: DemoPersonaPreset[] = [
     {
         id: 'founder',
         label: 'Founder',
-        rationale: 'Designed to surface investor-facing launches, networking opportunities, and high-signal gatherings.',
+        rationale: 'Free networking events, launch showcases, and investor-facing meetups, sorted by popularity.',
         filters: {
             searchTerm: 'networking',
             cost: 'free',
@@ -255,17 +255,13 @@ export default function ProductDemoSection() {
             <div className="container mx-auto px-0 sm:px-4 relative z-10">
                 <div className="text-center max-w-4xl mx-auto mb-12">
                     <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-                        <span className="text-gradient-mono">Discovery, Exactly In-App</span>
-                        <br />
-                        <span className="text-muted-foreground text-3xl md:text-4xl font-normal">
-                            Product Preview
-                        </span>
+                        <span className="text-gradient-mono">Try the real product</span>
                     </h2>
 
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                        Mock data with the exact discovery UI and interactions users get in the platform.
+                        This is the actual discovery UI, loaded with sample data.
                         <br />
-                        Search, filter, and inspect full event details including timeline and track views.
+                        Search, filter, and inspect full event details, including agendas and speaker lineups.
                     </p>
 
                     <div className="mt-8 flex flex-wrap items-center justify-center gap-2">

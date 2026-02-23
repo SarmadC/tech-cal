@@ -14,23 +14,23 @@ type FAQ = {
 const faqs: FAQ[] = [
     {
         question: "How fresh is the event data?",
-        answer: "We refresh event metadata weekly and prioritize recency signals so stale or cancelled events are filtered down.",
+        answer: "Events are refreshed weekly. Stale or cancelled events are automatically filtered out so your feed stays current.",
     },
     {
-        question: "Will one-tap add overwrite my calendar colors?",
-        answer: "No. We respect your existing Google Calendar settings and only add the event with the metadata shown in the card.",
+        question: "Will adding events change my calendar settings?",
+        answer: "No. Your existing Google Calendar colors and settings stay untouched. Only the event details shown on the card are added.",
     },
     {
-        question: "Do I need to install an app?",
-        answer: "No installs required. Connect your Google Calendar account and add events directly with one tap.",
+        question: "Do I need to install anything?",
+        answer: "No. Kure Cal works entirely in your browser. Just connect your Google account and start adding events.",
     },
     {
-        question: "How do you handle spammy events?",
-        answer: "Location scoring, source reputation, and manual curation reduce low-quality events before they reach your feed.",
+        question: "How do you keep out low-quality events?",
+        answer: "Every event goes through source checks and manual curation. Spammy or low-quality events are removed before they reach your feed.",
     },
     {
-        question: "What calendar integrations are available?",
-        answer: "Currently, we support Google Calendar integration. Connect your account in settings to sync events automatically.",
+        question: "Which calendars do you support?",
+        answer: "Google Calendar right now. Connect your account in settings and events sync automatically.",
     },
 ];
 
