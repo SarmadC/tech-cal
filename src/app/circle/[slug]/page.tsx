@@ -13,8 +13,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { generateEventSlug } from '@/utils/slugUtils';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import UserMenu from '@/components/common/UserMenu';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import TopBarUtilities from '@/components/common/TopBarUtilities';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CIRCLE_TAG_MAPPINGS } from '@/config/circleTagMappings';
 import type { PostType } from '@/components/social/PostFeedItem';
@@ -312,10 +311,7 @@ id,
                     />
 
                     {/* Top Right Utilities for Desktop */}
-                    <div className="hidden md:flex items-center justify-end p-6 gap-4 absolute top-0 right-0 z-50">
-                        <ThemeToggle />
-                        <UserMenu />
-                    </div>
+                    <TopBarUtilities />
 
                     <main className="flex-1 pb-24 pt-16 md:pt-0">
                         <div className="sticky top-16 md:top-0 z-30">

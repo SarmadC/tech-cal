@@ -8,7 +8,7 @@ import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import Navbar from '@/components/common/Navbar';
+import TopBarUtilities from '@/components/common/TopBarUtilities';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
@@ -418,8 +418,9 @@ export default function EventListView({ initialCategories, profile, locationOpti
             {isMobile && <MobileBottomNav />}
             <div className="flex h-screen bg-white dark:bg-[#08090a]">
                 {!isMobile && <AppSidebar />}
-                <main className="flex-1 flex flex-col overflow-hidden">
-                    {!isMobile && <Navbar />}
+                <main className="flex-1 flex flex-col overflow-hidden relative">
+                    {/* Top-right utilities (ThemeToggle + UserMenu) */}
+                    <TopBarUtilities />
                     <div ref={scrollContainerRef} className="flex-1 overflow-auto">
                         <div className="min-h-screen relative bg-white dark:bg-[#08090a]">
 
