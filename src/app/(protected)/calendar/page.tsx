@@ -24,7 +24,7 @@ export default async function CalendarPage({
     if (!view) {
         redirect('/calendar?view=month');
     }
-    
+
     // Redirect discover view to the dedicated discover page
     if (view === 'discover') {
         redirect('/events');
@@ -43,11 +43,32 @@ export default async function CalendarPage({
         } catch (_profileError) {
             // This is fine - new users don't have profiles yet
         }
+
+        // Parse search params into initial filters
+        const parseArrayParam = (param: string | string[] | undefined) =>
+            param ? (Array.isArray(param) ? param : param.split(',')) : [];
+
+        const tags = parseArrayParam(params.tags);
+        if (params.circle) {
+            tags.push(Array.isArray(params.circle) ? params.circle[0] : params.circle);
+        }
+
+        const initialFilters = {
+            categories: parseArrayParam(params.categories),
+            tags: tags.length > 0 ? tags : undefined,
+            locations: parseArrayParam(params.locations),
+            format: typeof params.format === 'string' ? params.format : undefined,
+            cost: typeof params.cost === 'string' ? params.cost : undefined,
+            difficulty: typeof params.difficulty === 'string' ? params.difficulty : undefined,
+            budget: typeof params.budget === 'string' ? params.budget : undefined,
+        };
+
         return (
             <CalendarClientView
                 initialEvents={[]} // No longer needed - events loaded via server-side filtering
                 initialCategories={categories}
                 profile={profile}
+                initialFilters={initialFilters}
             />
         );
 
@@ -60,6 +81,7 @@ export default async function CalendarPage({
                 initialEvents={[]}
                 initialCategories={[]}
                 profile={null}
+                initialFilters={{}}
             />
         );
     }

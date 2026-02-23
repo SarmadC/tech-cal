@@ -56,6 +56,17 @@ import {
     PaletteIcon,
     CrosshairIcon,
     ReceiptIcon,
+    LightningIcon,
+    GlobeIcon,
+    HeartIcon,
+    TrophyIcon,
+    FlaskIcon,
+    BooksIcon,
+    MicrophoneIcon,
+    CameraIcon,
+    GameControllerIcon,
+    UsersThreeIcon,
+    SparkleIcon,
 } from '@phosphor-icons/react';
 
 export type IconName =
@@ -113,7 +124,19 @@ export type IconName =
     | 'palette'
     | 'my_location'
     | 'hourglass_empty'
-    | 'receipt_long';
+    | 'receipt_long'
+    | 'users-three'
+    | 'lightning'
+    | 'globe'
+    | 'heart'
+    | 'trophy'
+    | 'flask'
+    | 'books'
+    | 'microphone'
+    | 'camera'
+    | 'game-controller'
+    | 'sparkle'
+    | 'palette';
 
 interface IconProps {
     name: IconName;
@@ -174,10 +197,21 @@ const iconMap = {
     'arrow-up': ArrowUpIcon,
     'work': BriefcaseIcon,
     'extension': PuzzlePieceIcon,
-    'palette': PaletteIcon,
     'my_location': CrosshairIcon,
     'hourglass_empty': ClockIcon,
     'receipt_long': ReceiptIcon,
+    'users-three': UsersThreeIcon,
+    'lightning': LightningIcon,
+    'globe': GlobeIcon,
+    'heart': HeartIcon,
+    'trophy': TrophyIcon,
+    'flask': FlaskIcon,
+    'books': BooksIcon,
+    'microphone': MicrophoneIcon,
+    'camera': CameraIcon,
+    'game-controller': GameControllerIcon,
+    'sparkle': SparkleIcon,
+    'palette': PaletteIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({

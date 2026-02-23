@@ -11,7 +11,7 @@ import { useScrollListener } from '@/hooks/useEventListener';
 import UserMenu from '@/components/common/UserMenu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
-export default function Navbar() {
+export default function Navbar({ className = '' }: { className?: string }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const pathname = usePathname();
@@ -54,7 +54,7 @@ export default function Navbar() {
 
     return (
         <nav
-            className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
+            className={`${className || 'fixed top-0 left-0 right-0 z-[100]'} transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
                 }`}
             style={{ border: 'none', borderWidth: 0, borderColor: 'transparent' }}
         >
@@ -70,16 +70,23 @@ export default function Navbar() {
 
                     {/* Desktop Navigation - Center */}
                     <div className="hidden md:flex items-center space-x-8 absolute left-1/2 -translate-x-1/2">
-                        {allNavLinks.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`text-sm font-medium transition-colors hover:text-accent-primary ${pathname === link.href ? 'text-accent-primary' : 'text-foreground-secondary'
-                                    }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                        {allNavLinks.map((link) => {
+                            // Compare only the pathname portion (strip query string from href)
+                            const linkPath = link.href.split('?')[0];
+                            const isActive = pathname != null && (
+                                pathname === linkPath ||
+                                pathname.startsWith(linkPath + '/')
+                            );
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={`text-sm font-medium transition-colors hover:text-accent-primary ${isActive ? 'text-accent-primary' : 'text-foreground-secondary'}`}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     {/* Desktop User Menu / Auth Buttons - Right */}
