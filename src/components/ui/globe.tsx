@@ -3,6 +3,7 @@
 import createGlobe from 'cobe';
 import { useEffect, useRef } from 'react';
 import { useSpring } from 'react-spring';
+import { useTheme } from 'next-themes';
 
 interface GlobeProps {
     className?: string;
@@ -18,6 +19,9 @@ export function Globe({ className, locations, focusOn }: GlobeProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const pointerInteracting = useRef<number | null>(null);
     const pointerInteractionMovement = useRef(0);
+    const { theme, resolvedTheme } = useTheme();
+    const isDark = (theme || resolvedTheme) === 'dark';
+
     const [{ r }, api] = useSpring(() => ({
         r: 0,
         config: {
@@ -46,13 +50,13 @@ export function Globe({ className, locations, focusOn }: GlobeProps) {
             height: width * 2,
             phi: 0,
             theta: 0.3,
-            dark: 1,
-            diffuse: 0.4,
+            dark: isDark ? 1 : 0,
+            diffuse: 1.2,
             mapSamples: 16000,
-            mapBrightness: 1.2,
-            baseColor: [0.3, 0.3, 0.3],
-            markerColor: [0.1, 0.8, 1],
-            glowColor: [0.1, 0.1, 0.2],
+            mapBrightness: isDark ? 6 : 1.2,
+            baseColor: isDark ? [0.3, 0.3, 0.3] : [1, 1, 1],
+            markerColor: isDark ? [0.1, 0.8, 1] : [0.97, 0.45, 0.08], // brand-primary for light mode
+            glowColor: isDark ? [0.1, 0.1, 0.2] : [1, 1, 1],
             markers: locations.map(loc => ({
                 location: [loc.lat, loc.lng],
                 size: loc.size || 0.05
@@ -74,12 +78,14 @@ export function Globe({ className, locations, focusOn }: GlobeProps) {
                 state.height = width * 2;
             },
         });
-        setTimeout(() => (canvasRef.current!.style.opacity = '1'));
+        setTimeout(() => {
+            if (canvasRef.current) canvasRef.current.style.opacity = '1';
+        });
         return () => {
             globe.destroy();
             window.removeEventListener('resize', onResize);
         };
-    }, [locations, r]);
+    }, [locations, r, isDark]);
 
     return (
         <div

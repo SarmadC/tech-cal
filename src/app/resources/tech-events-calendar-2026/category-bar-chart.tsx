@@ -28,7 +28,7 @@ export function CategoryBarChart({ categories }: CategoryBarChartProps) {
                     </span>
 
                     {/* Track */}
-                    <div className="h-8 w-full bg-white/5 rounded-sm overflow-hidden flex items-center px-1">
+                    <div className="h-8 w-full bg-foreground-primary/5 rounded-sm overflow-hidden flex items-center px-1">
                         <motion.div
                             initial={{ width: 0 }}
                             // Minimum width of 2px

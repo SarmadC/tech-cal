@@ -5,6 +5,7 @@ import { BreadcrumbJsonLd } from '@/components/seo';
 import { cityNameToSlug } from '@/utils/categorySlugUtils';
 import { SITE_URL } from '@/config/site';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr';
+import MarketingNavbar from '@/components/common/MarketingNavbar';
 import { AnimatedHero } from './AnimatedHero';
 import { InteractiveGlobeSection } from './InteractiveGlobeSection';
 import { CategoryBarChart } from './category-bar-chart';
@@ -279,6 +280,7 @@ export default async function TechEventsCalendar2026Page() {
             />
 
             <div className="min-h-screen bg-background-main pb-32">
+                <MarketingNavbar />
                 {/* Enhanced Hero Section - Extracted to Client Component */}
                 <AnimatedHero totalCount={totalCount} />
 
@@ -321,10 +323,10 @@ export default async function TechEventsCalendar2026Page() {
                                                     className="w-full rounded-md bg-gradient-to-t from-primary/85 to-primary/55 group-hover:from-primary group-hover:to-primary/70 group-focus-visible:from-primary group-focus-visible:to-primary/70 transition-all duration-300 relative overflow-hidden"
                                                     style={{ height: `${barHeight}%` }}
                                                 >
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                                    <div className="absolute inset-0 bg-foreground-primary/10" />
                                                 </div>
                                                 {/* Tooltip */}
-                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground-primary text-background-main text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg z-20">
+                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-foreground-primary text-background-main text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap shadow-lg z-20 border border-border-subtle">
                                                     {count} events
                                                 </div>
                                             </button>

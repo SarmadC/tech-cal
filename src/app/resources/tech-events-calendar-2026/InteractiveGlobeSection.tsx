@@ -109,7 +109,7 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                                             'w-full flex items-center justify-between py-3 px-2 transition-all duration-200 border-b border-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                                             isActive
                                                 ? 'bg-foreground-primary/10'
-                                                : 'hover:bg-background-tertiary/60'
+                                                : 'hover:bg-background-tertiary/40'
                                         )}
                                     >
                                         <span className="flex items-center gap-4 min-w-0">
@@ -117,7 +117,7 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                                                 className={cn(
                                                     'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0',
                                                     idx < 3
-                                                        ? 'bg-white text-black'
+                                                        ? 'bg-foreground-primary text-background-main'
                                                         : 'bg-background-tertiary text-foreground-tertiary'
                                                 )}
                                             >
@@ -249,7 +249,7 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                         <div className="p-4 border-t border-border-subtle bg-background-tertiary/70 rounded-b-xl">
                             <Link
                                 href={`/events/cities/${selectedCity.slug}`}
-                                className="flex items-center justify-center w-full px-4 py-2 bg-primary hover:bg-primary/90 text-black text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                className="flex items-center justify-center w-full px-4 py-2 bg-foreground-primary hover:opacity-90 text-background-main text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             >
                                 View full calendar
                             </Link>
@@ -258,9 +258,9 @@ export function InteractiveGlobeSection({ topCities, className }: InteractiveGlo
                 )}
             </AnimatePresence>
 
-            <div className="flex-grow flex items-center justify-center bg-background-tertiary/60 relative cursor-grab active:cursor-grabbing">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background-main/50 pointer-events-none" />
-                <div className="absolute left-0 top-0 bottom-0 w-1/3 bg-gradient-to-r from-background-secondary/80 to-transparent z-10 pointer-events-none" />
+            <div className="flex-grow flex items-center justify-center bg-background-tertiary/40 relative cursor-grab active:cursor-grabbing">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background-main/30 pointer-events-none" />
+                <div className="absolute left-0 top-0 bottom-0 w-1/3 bg-gradient-to-r from-background-secondary/40 to-transparent z-10 pointer-events-none" />
 
                 <motion.div
                     className="w-full h-full min-h-[500px] flex items-center justify-center will-change-transform"

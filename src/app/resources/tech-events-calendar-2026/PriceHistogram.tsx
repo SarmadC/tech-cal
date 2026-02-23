@@ -22,13 +22,13 @@ interface PriceHistogramProps {
 }
 
 const TOOLTIP_STYLE = {
-    backgroundColor: 'rgba(24, 24, 27, 0.92)',
-    borderColor: 'rgba(63, 63, 70, 0.55)',
+    backgroundColor: 'var(--background-secondary)',
+    borderColor: 'var(--border-default)',
     backdropFilter: 'blur(8px)',
-    color: '#fafafa',
+    color: 'var(--foreground-primary)',
     borderRadius: '8px',
     padding: '8px 12px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+    boxShadow: 'var(--shadow-lg)',
 };
 
 export function PriceHistogram({ bins }: PriceHistogramProps) {
@@ -96,20 +96,20 @@ export function PriceHistogram({ bins }: PriceHistogramProps) {
                                 dataKey="label"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                                tick={{ fill: 'var(--foreground-tertiary)', fontSize: 11 }}
                             />
                             <Tooltip
-                                cursor={{ fill: 'rgba(113, 113, 122, 0.12)' }}
+                                cursor={{ fill: 'var(--foreground-primary)', fillOpacity: 0.05 }}
                                 contentStyle={TOOLTIP_STYLE}
-                                itemStyle={{ color: '#fafafa' }}
+                                itemStyle={{ color: 'var(--foreground-primary)' }}
                                 formatter={(
                                     value: number,
                                     _name: string,
                                     item: { payload?: { percent: number } }
                                 ) => [
-                                    `${value} events (${item?.payload?.percent ?? 0}%)`,
-                                    'Count',
-                                ]}
+                                        `${value} events (${item?.payload?.percent ?? 0}%)`,
+                                        'Count',
+                                    ]}
                                 labelFormatter={(label) => {
                                     const current = chartData.find((bin) => bin.label === label);
                                     return current?.range || label;
@@ -125,7 +125,7 @@ export function PriceHistogram({ bins }: PriceHistogramProps) {
                                 <LabelList
                                     dataKey="valueLabel"
                                     position="top"
-                                    fill="#a1a1aa"
+                                    fill="var(--foreground-tertiary)"
                                     fontSize={11}
                                 />
                             </Bar>
