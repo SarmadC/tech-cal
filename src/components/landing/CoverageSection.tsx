@@ -5,13 +5,9 @@ import styles from './CoverageSection.module.css';
 const metrics = [
     { label: "cities covered", value: "75+", detail: "The cities where tech professionals actually travel and attend." },
     { label: "filters & tags", value: "120+", detail: "Stack, topic, format, seniority, accessibility, and more." },
+    { label: "events tracked", value: "500+", detail: "Conferences, workshops, hackathons, and meetups updated weekly." },
 ];
 
-const trustNotes = [
-    "Events are refreshed weekly, with new and changed events prioritized.",
-    "Filters respond in milliseconds, even with multiple active at once.",
-    "No inbox scraping. Every calendar add is opt-in from the event card.",
-];
 
 export function CoverageSection() {
     return (
@@ -34,13 +30,6 @@ export function CoverageSection() {
                     ))}
                 </div>
 
-                <div className={styles.trustNotes}>
-                    {trustNotes.map((note) => (
-                        <div className={styles.trustNote} key={note}>
-                            {note}
-                        </div>
-                    ))}
-                </div>
             </div>
         </section>
     );

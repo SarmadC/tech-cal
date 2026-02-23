@@ -2,18 +2,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { useTheme as useNextTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-
-// Lazy‑load MUI surfaces only when needed to keep them out of the base bundle
-const MuiSnackbar = dynamic(() => import('@mui/material/Snackbar'), { ssr: false });
-const MuiAlert = dynamic(() => import('@mui/material/Alert'), { ssr: false });
-const MuiDialog = dynamic(() => import('@mui/material/Dialog'), { ssr: false });
-const MuiDialogActions = dynamic(() => import('@mui/material/DialogActions'), { ssr: false });
-const MuiDialogContent = dynamic(() => import('@mui/material/DialogContent'), { ssr: false });
-const MuiDialogContentText = dynamic(() => import('@mui/material/DialogContentText'), { ssr: false });
-const MuiDialogTitle = dynamic(() => import('@mui/material/DialogTitle'), { ssr: false });
+import MuiSnackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
+import MuiDialog from '@mui/material/Dialog';
+import MuiDialogActions from '@mui/material/DialogActions';
+import MuiDialogContent from '@mui/material/DialogContent';
+import MuiDialogContentText from '@mui/material/DialogContentText';
+import MuiDialogTitle from '@mui/material/DialogTitle';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 

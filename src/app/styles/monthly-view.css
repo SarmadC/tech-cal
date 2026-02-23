@@ -17,7 +17,7 @@
 
 .month-grid-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   background: var(--background-secondary);
   border-bottom: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
 }
@@ -25,7 +25,7 @@
 /* Dark mode header border */
 @media (prefers-color-scheme: dark) {
   .month-grid-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid #2A2A2A;
   }
 }
 
@@ -41,7 +41,8 @@
 /* Dark mode header column borders */
 @media (prefers-color-scheme: dark) {
   .month-grid-day-header {
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid #2A2A2A;
+    color: #e5e7eb;
   }
 }
 
@@ -50,27 +51,27 @@
 }
 
 .month-grid-day-header.weekend {
-  background: var(--calendar-month-weekend-bg, var(--background-tertiary)) !important;
-  color: var(--calendar-month-weekend-text, var(--foreground-tertiary)) !important;
+  background: rgba(0, 0, 0, 0.015) !important;
+  color: inherit !important;
 }
 
 /* Dark mode support for weekend headers */
 @media (prefers-color-scheme: dark) {
   .month-grid-day-header.weekend {
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #9ca3af !important;
+    background: rgba(255, 255, 255, 0.015) !important;
+    color: inherit !important;
   }
 }
 
 .month-grid-days {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(6, 1fr);
   flex: 1;
   min-height: 1080px; /* Increased minimum height for 6 rows × 180px */
   gap: 0;
-  border-left: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
-  border-top: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
+  border-left: 1px solid var(--calendar-month-grid-line, rgba(0, 0, 0, 0.04));
+  border-top: 1px solid var(--calendar-month-grid-line, rgba(0, 0, 0, 0.04));
 }
 
 .month-grid-weeks {
@@ -85,33 +86,34 @@
 
 .month-week-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
   padding-top: 8px;
 }
 
 .month-grid-day {
-  border-right: 1px solid var(--calendar-month-grid-line-soft, var(--border-subtle));
-  border-bottom: 1px solid var(--calendar-month-grid-line-soft, var(--border-subtle));
+  border-right: 1px solid var(--calendar-month-grid-line-soft, rgba(0, 0, 0, 0.04));
+  border-bottom: 1px solid var(--calendar-month-grid-line-soft, rgba(0, 0, 0, 0.04));
   padding: var(--month-day-padding, 6px);
   min-height: var(--month-day-min-height, 160px);
   display: flex !important;
   flex-direction: column !important;
   position: relative;
   height: 100% !important;
+  overflow: visible !important;
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 /* Dark mode grid lines */
 @media (prefers-color-scheme: dark) {
   .month-grid-day {
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid #2A2A2A;
+    border-bottom: 1px solid #2A2A2A;
   }
   
   .month-grid-days {
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid #2A2A2A;
+    border-top: 1px solid #2A2A2A;
   }
 }
 
@@ -130,12 +132,12 @@
 @media (prefers-color-scheme: dark) {
   .month-grid-day.other-month {
     background: rgba(255, 255, 255, 0.02);
-    color: #6b7280;
+    color: #9ca3af;
     opacity: 0.5;
   }
   
   .month-grid-day.other-month .month-grid-day-number {
-    color: #6b7280;
+    color: #9ca3af;
   }
 }
 
@@ -230,6 +232,7 @@
   height: auto;
   min-height: 0;
   flex-shrink: 0;
+  overflow: visible !important;
 }
 
 /* Responsive adjustments */
@@ -345,13 +348,30 @@
 }
 
 /* Weekend styling */
-.weekend-day {
-  background: var(--calendar-month-weekend-bg, var(--background-tertiary)) !important;
+.weekend-day,
+.weekend-col {
+  background: rgba(0, 0, 0, 0.015) !important;
 }
 
-.weekend-day:hover {
-  background: var(--calendar-month-cell-hover-bg, var(--background-tertiary)) !important;
+@media (prefers-color-scheme: dark) {
+  .weekend-day,
+  .weekend-col {
+    background: rgba(255, 255, 255, 0.015) !important;
+  }
 }
+
+.weekend-day:hover,
+.weekend-col:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .weekend-day:hover,
+  .weekend-col:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+}
+
 
 /* Today cell styling */
 .today-cell {
@@ -422,10 +442,10 @@
 .month-event-card {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
-  padding: var(--month-chip-padding, 4px 8px);
-  border-radius: var(--month-chip-radius, 8px);
+  padding: 4px 8px;
+  border-radius: 4px;
   background: color-mix(
     in srgb,
     var(--calendar-month-accent-mix-base, var(--background-main)),
@@ -436,8 +456,51 @@
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   position: relative;
-  min-height: var(--month-chip-height, 24px);
-  height: var(--month-chip-height, 24px);
+  font-weight: 600;
+  min-height: 26px;
+  height: 26px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MULTI-DAY EVENT CONTINUITY — data-continuation attribute
+   The parent .month-grid-day has 6px padding. We use negative margins and
+   width overrides to bridge the padding + 1px grid border gaps so spanning
+   events render as a single continuous ribbon.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Single-day: slight inset for breathing room */
+.month-event-card[data-continuation="single"] {
+  margin-left: -2px;
+  margin-right: -2px;
+  width: calc(100% + 4px);
+  border-radius: 4px;
+}
+
+/* Start: rounded left, flat right to connect to next cell */
+.month-event-card[data-continuation="start"] {
+  margin-left: -2px;
+  margin-right: -7px;
+  width: calc(100% + 9px);
+  border-radius: 4px 0 0 4px;
+  z-index: 10;
+}
+
+/* Middle: flat both sides, bridges padding + border on both sides */
+.month-event-card[data-continuation="middle"] {
+  margin-left: -7px;
+  margin-right: -7px;
+  width: calc(100% + 14px);
+  border-radius: 0;
+  z-index: 10;
+}
+
+/* End: flat left to connect to prev cell, rounded right */
+.month-event-card[data-continuation="end"] {
+  margin-left: -7px;
+  margin-right: -2px;
+  width: calc(100% + 9px);
+  border-radius: 0 4px 4px 0;
+  z-index: 10;
 }
 
 .month-event-card:hover,
@@ -457,25 +520,26 @@
   outline-offset: 1px;
 }
 
-/* Dark mode override for "Pastel" look - solid light background, dark text */
+/* Dark mode override for "Pastel" look - strong contrast on dark foundation */
 .dark .month-event-card {
-  background: var(--event-accent-color);
-  color: #0c0a09; /* Dark text for contrast against pastel */
-  border-color: transparent;
+  background: color-mix(in srgb, var(--event-accent-color) 15%, #111827);
+  color: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--event-accent-color) 25%, #111827);
 }
 
 .dark .month-event-card:hover {
-  background: color-mix(in srgb, var(--event-accent-color), white 15%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--event-accent-color) 25%, #111827);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  border-color: color-mix(in srgb, var(--event-accent-color) 35%, #111827);
 }
 
 .dark .month-event-card-label,
 .dark .month-event-card .month-event-card-meta-text {
-  color: #0c0a09;
+  color: #ffffff;
 }
 
 .dark .month-event-card .month-event-card-accent {
-  background: rgba(0, 0, 0, 0.2); /* Subtle contrast for the accent pill */
+  background: var(--event-accent-color);
 }
 
 .month-event-card--past {
@@ -1333,7 +1397,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: var(--month-chip-padding, 4px 8px);
+  padding: var(--month-chip-padding, 6px 8px);
   border-radius: var(--month-chip-radius, 8px);
   border: 1px solid var(--calendar-month-chip-border, var(--border-subtle));
   background: color-mix(
@@ -1346,8 +1410,8 @@
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   text-align: left;
   flex-shrink: 0;
-  min-height: var(--month-chip-height, 24px);
-  height: var(--month-chip-height, 24px);
+  min-height: var(--month-chip-height, 26px);
+  height: auto;
 }
 
 .month-inline-event:hover,
@@ -1365,6 +1429,28 @@
 .month-inline-event:focus-visible {
   outline: 2px solid var(--calendar-month-chip-focus, var(--accent-primary));
   outline-offset: 1px;
+}
+
+.dark .month-inline-event {
+  background: color-mix(in srgb, var(--event-accent-color) 20%, transparent);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--event-accent-color) 30%, transparent);
+}
+
+.dark .month-inline-event:hover,
+.dark .month-inline-event:focus-visible {
+  background: color-mix(in srgb, var(--event-accent-color) 30%, transparent);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--event-accent-color) 40%, transparent);
+}
+
+.dark .month-inline-event-title,
+.dark .month-inline-event-meta {
+  color: #f3f4f6;
+}
+
+.dark .month-inline-event-accent {
+  background: var(--event-accent-color);
 }
 
 .month-inline-event-accent {

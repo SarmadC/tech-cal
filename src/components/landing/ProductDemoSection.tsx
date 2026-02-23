@@ -1,17 +1,22 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowCounterClockwise } from '@phosphor-icons/react';
+import { CalendarBlank, MagnifyingGlass } from '@phosphor-icons/react';
 import MockEventDetailPanel from '@/components/calendar/MockEventDetailPanel';
 import DiscoveryLayout from '@/components/discovery/DiscoveryLayout';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
 import EventCard from '@/components/discovery/EventCard';
-import { MOCK_EVENTS, MOCK_CATEGORIES } from './MockData';
+import DemoCalendarView from './DemoCalendarView';
+import { MOCK_EVENTS, MOCK_CATEGORIES, MOCK_MANAGER_JUSTIFICATION_MAP } from './MockData';
+import { seedManagerJustificationCache } from '@/components/calendar/ManagerJustificationModal';
 import { UnifiedFilterOptions, UpdateFilterHandler, createDefaultUnifiedFilters } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, normalizeEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Event } from '@/types';
+
+type DemoTab = 'discovery' | 'calendar';
 
 interface DemoPersonaPreset {
     id: 'frontend' | 'ai' | 'founder';
@@ -63,6 +68,7 @@ const getDefaultDemoFilters = (overrides: Partial<UnifiedFilterOptions> = {}): U
         pageSize: 12,
         sortBy: 'date',
         sortDirection: 'asc',
+        format: 'hybrid',
         ...overrides,
     });
 
@@ -70,6 +76,7 @@ const getCareerImpactOverall = (event: Event): number =>
     (event as EventWithImpactPreview).careerImpact?.overall ?? 0;
 
 export default function ProductDemoSection() {
+    const [activeTab, setActiveTab] = useState<DemoTab>('discovery');
     const [filters, setFilters] = useState<UnifiedFilterOptions>(() => getDefaultDemoFilters());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -77,6 +84,12 @@ export default function ProductDemoSection() {
     const [activePersonaId, setActivePersonaId] = useState<DemoPersonaPreset['id'] | null>(null);
 
     const { showInfo } = useSnackbar();
+
+    useEffect(() => {
+        MOCK_MANAGER_JUSTIFICATION_MAP.forEach((data, eventId) => {
+            seedManagerJustificationCache(eventId, data);
+        });
+    }, []);
 
     const activePersona = useMemo(
         () => DEMO_PERSONAS.find((preset) => preset.id === activePersonaId) ?? null,
@@ -198,10 +211,7 @@ export default function ProductDemoSection() {
 
     const visibleEvents = sortedEvents;
 
-    const activeSelectedEvent = useMemo(
-        () => (selectedEvent && visibleEvents.some((event) => event.id === selectedEvent.id) ? selectedEvent : null),
-        [selectedEvent, visibleEvents]
-    );
+    const activeSelectedEvent = selectedEvent;
 
     const handleUpdateFilter: UpdateFilterHandler = (key, value) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
@@ -258,41 +268,71 @@ export default function ProductDemoSection() {
                         <span className="text-gradient-mono">Try the real product</span>
                     </h2>
 
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                        This is the actual discovery UI, loaded with sample data.
-                        <br />
-                        Search, filter, and inspect full event details, including agendas and speaker lineups.
+                    <p className="text-lg text-muted-foreground leading-relaxed whitespace-nowrap">
+                        This is the actual UI, loaded with sample data. Search, filter, and inspect full event details
                     </p>
 
-                    <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-                        {DEMO_PERSONAS.map((persona) => (
+                    {/* ── Tab switcher ─────────────────────────────────── */}
+                    <div className="mt-8 flex items-center justify-center">
+                        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-background/60 backdrop-blur-sm shadow-sm">
                             <button
-                                key={persona.id}
                                 type="button"
-                                onClick={() => handleApplyPersona(persona)}
-                                className={`px-3.5 py-2 rounded-full text-xs font-medium border transition-colors ${activePersonaId === persona.id
-                                    ? 'border-primary/60 bg-primary/15 text-foreground'
-                                    : 'border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30'
+                                onClick={() => setActiveTab('discovery')}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'discovery'
+                                    ? 'bg-card shadow-sm border border-border/60 text-foreground'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
                                     }`}
                             >
-                                {persona.label}
+                                <MagnifyingGlass size={15} weight={activeTab === 'discovery' ? 'bold' : 'regular'} />
+                                Discovery
                             </button>
-                        ))}
-                        {activePersonaId && (
                             <button
                                 type="button"
-                                onClick={handleClearPersona}
-                                className="px-3.5 py-2 rounded-full text-xs font-medium border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+                                onClick={() => setActiveTab('calendar')}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'calendar'
+                                    ? 'bg-card shadow-sm border border-border/60 text-foreground'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+                                    }`}
                             >
-                                Clear Persona
+                                <CalendarBlank size={15} weight={activeTab === 'calendar' ? 'bold' : 'regular'} />
+                                Calendar
                             </button>
-                        )}
+                        </div>
                     </div>
 
-                    {activePersona && (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            {activePersona.rationale}
-                        </p>
+                    {/* ── Persona presets (Discovery only) ─────────────── */}
+                    {activeTab === 'discovery' && (
+                        <>
+                            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                                {DEMO_PERSONAS.map((persona) => (
+                                    <button
+                                        key={persona.id}
+                                        type="button"
+                                        onClick={() => handleApplyPersona(persona)}
+                                        className={`px-3.5 py-2 rounded-full text-xs font-medium border transition-colors ${activePersonaId === persona.id
+                                            ? 'border-primary/60 bg-primary/15 text-foreground'
+                                            : 'border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30'
+                                            }`}
+                                    >
+                                        {persona.label}
+                                    </button>
+                                ))}
+                                {activePersonaId && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearPersona}
+                                        className="px-3.5 py-2 rounded-full text-xs font-medium border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+                                    >
+                                        Clear Persona
+                                    </button>
+                                )}
+                            </div>
+                            {activePersona && (
+                                <p className="mt-3 text-sm text-muted-foreground">
+                                    {activePersona.rationale}
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
@@ -304,88 +344,99 @@ export default function ProductDemoSection() {
                     <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 dark:opacity-60" />
 
                     <div className="product-demo-content p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
-                        <DiscoveryLayout
-                            className="min-h-0 product-demo-layout product-demo-contrast"
-                            minHeightClassName="min-h-0"
-                            isSidebarOpen={isSidebarOpen}
-                            onSidebarClose={() => setIsSidebarOpen(false)}
-                            gridClassName="product-demo-grid"
-                            sidebar={
-                                <DiscoverySidebar
-                                    filters={{
-                                        format: filters.format,
-                                        cost: filters.cost,
-                                        categories: filters.categories,
-                                        tags: filters.tags
-                                    }}
-                                    onUpdateFilter={handleUpdateFilter}
-                                    categories={MOCK_CATEGORIES}
-                                    events={sortedEvents}
-                                    counts={displayCounts}
-                                />
-                            }
-                            header={
-                                <DiscoveryHeader
-                                    searchTerm={filters.searchTerm}
-                                    onSearchChange={(value) => handleUpdateFilter('searchTerm', value)}
-                                    location={filters.locations[0] || ''}
-                                    onLocationChange={(value) => handleUpdateFilter('locations', value ? [value] : [])}
-                                    dateRange={filters.dateRange}
-                                    onDateRangeChange={(range) => handleUpdateFilter('dateRange', range)}
-                                    onSearch={() => { }}
-                                    onResetFilters={handleClearPersona}
-                                    activeFilterCount={activeFilterCount}
-                                    onFilterClick={() => setIsSidebarOpen(true)}
-                                    isDetectingLocation={false}
-                                />
-                            }
-                            resultCount={visibleEvents.length}
-                            actionControls={
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleResetDemo}
-                                        className="product-demo-reset-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-primary/45 bg-primary/12 text-foreground text-xs font-medium hover:border-primary/70 hover:bg-primary/20 transition-colors"
-                                    >
-                                        <ArrowCounterClockwise size={12} weight="bold" />
-                                        Reset demo state
-                                    </button>
-                                </div>
-                            }
-                        >
-                            {visibleEvents.length === 0 ? (
-                                <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-border/70 p-6 text-center bg-card/40">
-                                    <h3 className="text-base font-semibold text-foreground">No events in this view</h3>
-                                    <p className="mt-2 text-sm text-muted-foreground">
-                                        Adjust filters or reset persona to repopulate the demo instantly.
-                                    </p>
-                                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                        {activeTab === 'discovery' ? (
+                            <DiscoveryLayout
+                                className="min-h-0 product-demo-layout product-demo-contrast"
+                                minHeightClassName="min-h-0"
+                                isSidebarOpen={isSidebarOpen}
+                                onSidebarClose={() => setIsSidebarOpen(false)}
+                                gridClassName="product-demo-grid"
+                                sidebar={
+                                    <DiscoverySidebar
+                                        filters={{
+                                            format: filters.format,
+                                            cost: filters.cost,
+                                            categories: filters.categories,
+                                            tags: filters.tags
+                                        }}
+                                        onUpdateFilter={handleUpdateFilter}
+                                        categories={MOCK_CATEGORIES}
+                                        events={sortedEvents}
+                                        counts={displayCounts}
+                                    />
+                                }
+                                header={
+                                    <DiscoveryHeader
+                                        searchTerm={filters.searchTerm}
+                                        onSearchChange={(value) => handleUpdateFilter('searchTerm', value)}
+                                        location={filters.locations[0] || ''}
+                                        onLocationChange={(value) => handleUpdateFilter('locations', value ? [value] : [])}
+                                        dateRange={filters.dateRange}
+                                        onDateRangeChange={(range) => handleUpdateFilter('dateRange', range)}
+                                        onSearch={() => { }}
+                                        onResetFilters={handleClearPersona}
+                                        activeFilterCount={activeFilterCount}
+                                        onFilterClick={() => setIsSidebarOpen(true)}
+                                        isDetectingLocation={false}
+                                    />
+                                }
+                                resultCount={visibleEvents.length}
+                                actionControls={
+                                    <div className="flex items-center gap-2">
                                         <button
                                             type="button"
-                                            onClick={handleClearPersona}
-                                            className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                                            onClick={handleResetDemo}
+                                            className="product-demo-reset-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-primary/45 bg-primary/12 text-foreground text-xs font-medium hover:border-primary/70 hover:bg-primary/20 transition-colors"
                                         >
-                                            Reset filters
+                                            <ArrowCounterClockwise size={12} weight="bold" />
+                                            Reset demo state
                                         </button>
                                     </div>
-                                </div>
-                            ) : (
-                                visibleEvents.map((event) => (
-                                    <EventCard
-                                        key={event.id}
-                                        event={event}
-                                        onClick={() => setSelectedEvent(event)}
-                                        onBookmark={handleBookmark}
-                                        isBookmarked={bookmarkedEventIds.has(event.id)}
-                                        showWeekday={false}
-                                        whiteLogoBackgroundInDark
-                                        showActionControls
-                                        showShortlistAction={false}
-                                        showRecommendationContext
-                                    />
-                                ))
-                            )}
-                        </DiscoveryLayout>
+                                }
+                            >
+                                {visibleEvents.length === 0 ? (
+                                    <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-border/70 p-6 text-center bg-card/40">
+                                        <h3 className="text-base font-semibold text-foreground">No events in this view</h3>
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            Adjust filters or reset persona to repopulate the demo instantly.
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleClearPersona}
+                                                className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                                            >
+                                                Reset filters
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    visibleEvents.map((event) => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            onClick={() => setSelectedEvent(event)}
+                                            onBookmark={handleBookmark}
+                                            isBookmarked={bookmarkedEventIds.has(event.id)}
+                                            showWeekday={false}
+                                            whiteLogoBackgroundInDark
+                                            showActionControls
+                                            showShortlistAction={false}
+                                            showRecommendationContext
+                                        />
+                                    ))
+                                )}
+                            </DiscoveryLayout>
+                        ) : (
+                            <div
+                                className="product-demo-calendar"
+                                style={{ minHeight: '600px', ['--demo-day-height' as string]: '130px' }}
+                            >
+                                <DemoCalendarView
+                                    onEventSelect={(event) => setSelectedEvent(event)}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

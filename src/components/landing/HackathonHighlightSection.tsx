@@ -611,12 +611,6 @@ export default function HackathonHighlightSection() {
                             Browse high-stakes hackathons, find teammates with matching skills, and compete across dedicated tracks, all from one place.
                         </p>
                     </div>
-                    <div className={styles.headerContextContent}>
-                        <h3 className={styles.contextTitle}>Specialized Tracks</h3>
-                        <p className={styles.contextDescription}>
-                            Compete in focused categories with dedicated prize pools.
-                        </p>
-                    </div>
                 </div>
 
                 <div className={styles.bentoGrid}>

@@ -102,7 +102,7 @@ export function UseCasesSection() {
             <div className={styles.sectionContent}>
                 <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>
-                        Built for how you<br />actually grow
+                        Built for how you actually grow
                     </h2>
                     <p className={styles.sectionSubtitle}>
                         Three ways Kure Cal helps you invest in your career without the overhead.

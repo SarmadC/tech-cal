@@ -1,4 +1,5 @@
 import { AgendaItem, CareerImpactScore, Event, EventType } from '@/types';
+import type { ManagerJustificationData } from '@/types/managerJustification';
 
 export const MOCK_CATEGORIES: EventType[] = [
     { id: 'conference', name: 'Conference', description: 'Industry conferences', color: '#6366f1' },
@@ -367,6 +368,421 @@ const RAW_MOCK_EVENTS = [
         ],
         careerImpact: createDemoImpact(80, 'Operational maturity and automation insights for scaling teams.'),
         createdAt: new Date().toISOString()
+    },
+    // ── Additional events to make the demo calendar dense and impressive ──────
+    {
+        id: '10',
+        title: 'Microsoft Build 2026',
+        description: 'Microsoft\'s annual developer conference covering Azure, AI, and the future of development.',
+        startTime: '2026-05-19T09:00:00Z',
+        endTime: '2026-05-21T17:00:00Z',
+        location: 'Seattle, WA',
+        organizer: 'Microsoft',
+        status: 'published',
+        eventFormat: 'Hybrid',
+        priceMin: 0,
+        sourceUrl: 'https://build.microsoft.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'microsoft',
+            name: 'Microsoft',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg'
+        },
+        tags: [
+            { id: 't25', name: 'Azure', category: 'cloud', color: 'blue' },
+            { id: 't2', name: 'AI', category: 'tech', color: 'green' },
+            { id: 't3', name: 'Web', category: 'tech', color: 'indigo' }
+        ],
+        careerImpact: createDemoImpact(83, 'Broad platform coverage with Azure AI and dev tooling deep dives.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '11',
+        title: 'PyCon US 2026',
+        description: 'The largest annual gathering for the community that uses and develops the Python language.',
+        startTime: '2026-05-14T09:00:00Z',
+        endTime: '2026-05-18T17:00:00Z',
+        location: 'Pittsburgh, PA',
+        organizer: 'Python Software Foundation',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$400',
+        priceMin: 400,
+        sourceUrl: 'https://us.pycon.org',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'python',
+            name: 'Python Software Foundation',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg'
+        },
+        tags: [
+            { id: 't26', name: 'Python', category: 'lang', color: 'yellow' },
+            { id: 't2', name: 'AI', category: 'tech', color: 'green' },
+            { id: 't18', name: 'Workshop', category: 'format', color: 'purple' }
+        ],
+        careerImpact: createDemoImpact(78, 'Community networking and Python ecosystem sessions across ML and backend.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '12',
+        title: 'JSConf EU 2026',
+        description: 'Europe\'s premier JavaScript conference bringing together the global JS community.',
+        startTime: '2026-05-22T09:00:00Z',
+        endTime: '2026-05-23T17:00:00Z',
+        location: 'Berlin, Germany',
+        organizer: 'JSConf',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '€600',
+        priceMin: 600,
+        sourceUrl: 'https://jsconf.eu',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'jsconf',
+            name: 'JSConf',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png'
+        },
+        tags: [
+            { id: 't8', name: 'JavaScript', category: 'lang', color: 'yellow' },
+            { id: 't3', name: 'Web', category: 'tech', color: 'indigo' },
+            { id: 't7', name: 'React', category: 'framework', color: 'cyan' }
+        ],
+        careerImpact: createDemoImpact(77, 'Cutting-edge JS patterns and community connections for frontend engineers.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '13',
+        title: 'Stripe Sessions 2026',
+        description: 'Annual conference for developers and founders building on the Stripe platform.',
+        startTime: '2026-05-07T09:00:00Z',
+        endTime: '2026-05-07T18:00:00Z',
+        location: 'San Francisco, CA',
+        organizer: 'Stripe',
+        status: 'published',
+        eventFormat: 'Hybrid',
+        priceMin: 0,
+        sourceUrl: 'https://stripe.com/sessions',
+        eventTypeId: 'product',
+        category: { id: 'product', name: 'Product', color: '#10b981', description: 'Product Launch' },
+        organization: {
+            id: 'stripe',
+            name: 'Stripe',
+            logo: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/stripe.svg'
+        },
+        tags: [
+            { id: 't20', name: 'Startups', category: 'business', color: 'orange' },
+            { id: 't27', name: 'Fintech', category: 'industry', color: 'purple' },
+            { id: 't3', name: 'Web', category: 'tech', color: 'indigo' }
+        ],
+        careerImpact: createDemoImpact(73, 'Payments infrastructure insights and founder networking at high density.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '14',
+        title: 'KubeCon + CloudNativeCon Europe 2026',
+        description: 'The Cloud Native Computing Foundation\'s flagship conference for Kubernetes and cloud native ecosystems.',
+        startTime: '2026-05-04T09:00:00Z',
+        endTime: '2026-05-07T17:00:00Z',
+        location: 'London, UK',
+        organizer: 'CNCF',
+        status: 'published',
+        eventFormat: 'Hybrid',
+        priceRange: '$800',
+        priceMin: 800,
+        sourceUrl: 'https://events.linuxfoundation.org/kubecon-cloudnativecon-europe',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'cncf',
+            name: 'CNCF',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg'
+        },
+        tags: [
+            { id: 't28', name: 'Kubernetes', category: 'infrastructure', color: 'blue' },
+            { id: 't10', name: 'Cloud', category: 'infrastructure', color: 'orange' },
+            { id: 't24', name: 'Infrastructure', category: 'infrastructure', color: 'gray' }
+        ],
+        careerImpact: createDemoImpact(85, 'Core Kubernetes and cloud-native operational skills at scale.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '15',
+        title: 'GitHub Universe 2026',
+        description: 'GitHub\'s flagship developer conference — Copilot AI, platform updates, and developer productivity.',
+        startTime: '2026-05-28T09:00:00Z',
+        endTime: '2026-05-29T17:00:00Z',
+        location: 'San Francisco, CA',
+        organizer: 'GitHub',
+        status: 'published',
+        eventFormat: 'Hybrid',
+        priceMin: 0,
+        sourceUrl: 'https://githubuniverse.com',
+        eventTypeId: 'product',
+        category: { id: 'product', name: 'Product', color: '#10b981', description: 'Product Launch' },
+        organization: {
+            id: 'github',
+            name: 'GitHub',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg'
+        },
+        tags: [
+            { id: 't2', name: 'AI', category: 'tech', color: 'green' },
+            { id: 't29', name: 'DevTools', category: 'tools', color: 'black' },
+            { id: 't8', name: 'JavaScript', category: 'lang', color: 'yellow' }
+        ],
+        careerImpact: createDemoImpact(81, 'Copilot and CI/CD evolution — high signal for senior devs and team leads.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '16',
+        title: 'Figma Config 2026',
+        description: 'The annual design & dev conference from Figma celebrating the future of product design.',
+        startTime: '2026-05-08T09:00:00Z',
+        endTime: '2026-05-09T17:00:00Z',
+        location: 'San Francisco, CA',
+        organizer: 'Figma',
+        status: 'published',
+        eventFormat: 'Hybrid',
+        priceMin: 0,
+        sourceUrl: 'https://config.figma.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'figma',
+            name: 'Figma',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg'
+        },
+        tags: [
+            { id: 't9', name: 'UI/UX', category: 'design', color: 'pink' },
+            { id: 't30', name: 'Design Systems', category: 'design', color: 'orange' },
+            { id: 't16', name: 'Frontend', category: 'dev', color: 'blue' }
+        ],
+        careerImpact: createDemoImpact(71, 'Design-dev collaboration and component system patterns for product-minded engineers.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '17',
+        title: 'Deno Conf 2026',
+        description: 'The community conference for Deno, the secure JavaScript and TypeScript runtime.',
+        startTime: '2026-05-12T10:00:00Z',
+        endTime: '2026-05-12T18:00:00Z',
+        location: 'Online',
+        organizer: 'Deno Land',
+        status: 'published',
+        eventFormat: 'Online',
+        priceMin: 0,
+        sourceUrl: 'https://deno.com/conf',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'deno',
+            name: 'Deno Land',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/8/84/Deno.svg'
+        },
+        tags: [
+            { id: 't8', name: 'JavaScript', category: 'lang', color: 'yellow' },
+            { id: 't17', name: 'TypeScript', category: 'lang', color: 'blue' },
+            { id: 't15', name: 'Next.js', category: 'framework', color: 'black' }
+        ],
+        careerImpact: createDemoImpact(68, 'Modern JS runtime ecosystem exposure with practical backend patterns.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '18',
+        title: 'GraphQL Summit 2026',
+        description: 'The world\'s largest GraphQL conference — APIs, federation, and real-time data.',
+        startTime: '2026-05-26T09:00:00Z',
+        endTime: '2026-05-27T17:00:00Z',
+        location: 'Austin, TX',
+        organizer: 'Apollo GraphQL',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$500',
+        priceMin: 500,
+        sourceUrl: 'https://summit.graphql.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'apollo',
+            name: 'Apollo GraphQL',
+            logo: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/apollographql.svg'
+        },
+        tags: [
+            { id: 't31', name: 'GraphQL', category: 'api', color: 'pink' },
+            { id: 't3', name: 'Web', category: 'tech', color: 'indigo' },
+            { id: 't8', name: 'JavaScript', category: 'lang', color: 'yellow' }
+        ],
+        careerImpact: createDemoImpact(74, 'API design and federation patterns highly relevant for platform/backend roles.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '19',
+        title: 'StrangeLoop 2026',
+        description: 'A multi-disciplinary conference exploring emerging languages, technologies, science, and ideas.',
+        startTime: '2026-05-21T09:00:00Z',
+        endTime: '2026-05-22T17:00:00Z',
+        location: 'St. Louis, MO',
+        organizer: 'Strange Loop',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$350',
+        priceMin: 350,
+        sourceUrl: 'https://thestrangeloop.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'strangeloop',
+            name: 'Strange Loop',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Typescript_logo_2020.svg'
+        },
+        tags: [
+            { id: 't17', name: 'TypeScript', category: 'lang', color: 'blue' },
+            { id: 't32', name: 'Systems', category: 'arch', color: 'gray' },
+            { id: 't11', name: 'Serverless', category: 'arch', color: 'purple' }
+        ],
+        careerImpact: createDemoImpact(76, 'High intellectual density — emerging languages, distributed systems, and CS theory.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '20',
+        title: 'Netlify Compose 2026',
+        description: 'The composable web conference — edge, serverless, and the new frontend architecture.',
+        startTime: '2026-05-15T09:00:00Z',
+        endTime: '2026-05-15T17:00:00Z',
+        location: 'Online',
+        organizer: 'Netlify',
+        status: 'published',
+        eventFormat: 'Online',
+        priceMin: 0,
+        sourceUrl: 'https://netlify.com/compose',
+        eventTypeId: 'product',
+        category: { id: 'product', name: 'Product', color: '#10b981', description: 'Product Launch' },
+        organization: {
+            id: 'netlify',
+            name: 'Netlify',
+            logo: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/netlify.svg'
+        },
+        tags: [
+            { id: 't16', name: 'Frontend', category: 'dev', color: 'blue' },
+            { id: 't11', name: 'Serverless', category: 'arch', color: 'purple' },
+            { id: 't3', name: 'Web', category: 'tech', color: 'indigo' }
+        ],
+        careerImpact: createDemoImpact(70, 'Edge deployment and composable architecture — high relevance for fullstack engineers.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '21',
+        title: 'Monktoberfest 2026',
+        description: 'RedMonk\'s annual developer relations and community conference for the software industry.',
+        startTime: '2026-05-05T09:00:00Z',
+        endTime: '2026-05-06T17:00:00Z',
+        location: 'Portland, ME',
+        organizer: 'RedMonk',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$800',
+        priceMin: 800,
+        sourceUrl: 'https://monktoberfest.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'redmonk',
+            name: 'RedMonk',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg'
+        },
+        tags: [
+            { id: 't19', name: 'Networking', category: 'community', color: 'pink' },
+            { id: 't20', name: 'Startups', category: 'business', color: 'orange' },
+            { id: 't29', name: 'DevTools', category: 'tools', color: 'black' }
+        ],
+        careerImpact: createDemoImpact(69, 'Developer relations and community strategy — valued for senior IC and leadership tracks.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '22',
+        title: 'SREcon 2026 Americas',
+        description: 'A gathering of engineers who care deeply about site reliability, systems engineering, and working with complex distributed systems.',
+        startTime: '2026-05-27T09:00:00Z',
+        endTime: '2026-05-27T17:00:00Z',
+        location: 'Santa Clara, CA',
+        organizer: 'USENIX',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$1050',
+        priceMin: 1050,
+        sourceUrl: 'https://usenix.org/srecon',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'usenix',
+            name: 'USENIX',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg'
+        },
+        tags: [
+            { id: 't33', name: 'SRE', category: 'ops', color: 'red' },
+            { id: 't24', name: 'Infrastructure', category: 'infrastructure', color: 'gray' },
+            { id: 't32', name: 'Systems', category: 'arch', color: 'gray' }
+        ],
+        careerImpact: createDemoImpact(82, 'Site reliability at production scale — essential for SRE and platform engineering roles.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '23',
+        title: 'Collision 2026',
+        description: 'One of North America\'s fastest-growing tech conferences bringing together startups, investors, and tech leaders.',
+        startTime: '2026-06-01T09:00:00Z',
+        endTime: '2026-06-03T17:00:00Z',
+        location: 'Toronto, Canada',
+        organizer: 'Collision',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$799',
+        priceMin: 799,
+        sourceUrl: 'https://collisionconf.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'collision',
+            name: 'Collision',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg'
+        },
+        tags: [
+            { id: 't19', name: 'Networking', category: 'community', color: 'pink' },
+            { id: 't20', name: 'Startups', category: 'business', color: 'orange' },
+            { id: 't2', name: 'AI', category: 'tech', color: 'green' }
+        ],
+        careerImpact: createDemoImpact(75, 'High-density startup and investor networking — excellent for founders and senior hiring.'),
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: '24',
+        title: 'GopherCon 2026',
+        description: 'The world\'s largest conference dedicated to the Go programming language community.',
+        startTime: '2026-05-29T09:00:00Z',
+        endTime: '2026-05-30T17:00:00Z',
+        location: 'Chicago, IL',
+        organizer: 'GopherCon',
+        status: 'published',
+        eventFormat: 'In-person',
+        priceRange: '$600',
+        priceMin: 600,
+        sourceUrl: 'https://gophercon.com',
+        eventTypeId: 'conference',
+        category: { id: 'conference', name: 'Conference', color: '#6366f1', description: 'Tech Conference' },
+        organization: {
+            id: 'gophercon',
+            name: 'GopherCon',
+            logo: 'https://upload.wikimedia.org/wikipedia/commons/0/05/Go_Logo_Blue.svg'
+        },
+        tags: [
+            { id: 't34', name: 'Go', category: 'lang', color: 'cyan' },
+            { id: 't24', name: 'Infrastructure', category: 'infrastructure', color: 'gray' },
+            { id: 't10', name: 'Cloud', category: 'infrastructure', color: 'orange' }
+        ],
+        careerImpact: createDemoImpact(72, 'Go ecosystem and performance patterns — strong for backend platform and infra roles.'),
+        createdAt: new Date().toISOString()
     }
 ];
 
@@ -384,3 +800,46 @@ export const MOCK_EVENTS = RAW_MOCK_EVENTS.map((event, index) => {
         registrationUrl: eventWithShape.registrationUrl ?? null,
     };
 }) as unknown as Event[];
+
+function buildMockJustificationData(event: (typeof RAW_MOCK_EVENTS)[number]): ManagerJustificationData {
+    const impact = event.careerImpact;
+    return {
+        event: {
+            title: event.title,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            timezone: 'UTC',
+            location: event.location,
+            eventFormat: event.eventFormat as ManagerJustificationData['event']['eventFormat'],
+            organizer: event.organizer,
+            priceRange: 'priceRange' in event ? (event.priceRange as string) : null,
+            priceMin: event.priceMin,
+            registrationUrl: null,
+            description: event.description,
+            tags: event.tags.map((t) => t.name),
+            speakers: [],
+            difficulty: 'intermediate',
+            targetAudience: 'Software engineers and technical practitioners',
+        },
+        profile: {
+            currentRole: 'Senior Software Engineer',
+            seniority: 'Senior',
+            industry: 'Technology',
+            primarySkills: ['TypeScript', 'React', 'Node.js', 'System Design'],
+            skillsToLearn: event.tags.slice(0, 2).map((t) => t.name),
+            careerGoals: ['Technical Leadership', 'System Architecture', 'Team Growth'],
+        },
+        impact: {
+            overall: impact.overall,
+            confidence: impact.confidence,
+            components: impact.components,
+            topReasons: impact.explanation.reasons,
+            matchedSkills: impact.explanation.matchedSkills,
+            matchedGoals: ['Technical Leadership', 'System Architecture'],
+        },
+    };
+}
+
+export const MOCK_MANAGER_JUSTIFICATION_MAP: Map<string, ManagerJustificationData> = new Map(
+    RAW_MOCK_EVENTS.map((event) => [event.id, buildMockJustificationData(event)])
+);

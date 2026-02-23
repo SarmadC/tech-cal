@@ -170,7 +170,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     return (
         <div
-            className={`group/event-card relative flex flex-col rounded-xl border border-border/60 bg-card p-5 text-foreground shadow-sm transition-all duration-300 cursor-pointer dark:bg-card/40 hover:border-border-strong hover:-translate-y-1 hover:shadow-md ${accentClass}`}
+            className={`group/event-card relative flex flex-col rounded-xl border border-border/60 bg-card p-5 text-foreground shadow-sm transition-all duration-300 cursor-pointer dark:bg-card/40 hover:border-border-strong hover:-translate-y-1 hover:shadow-md hover:z-10 ${accentClass}`}
             onClick={handleCardClick}
             onMouseLeave={() => setIsActionMenuOpen(false)}
             role="article"
