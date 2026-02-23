@@ -8,7 +8,7 @@ import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import Navbar from '@/components/common/Navbar';
+import TopBarUtilities from '@/components/common/TopBarUtilities';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
@@ -34,6 +34,7 @@ interface EventListViewProps {
     initialCategories: EventType[];
     profile: AppProfile | null;
     locationOptions: string[];
+    initialCircleSlug?: string;
 }
 
 interface EventRow {
@@ -62,7 +63,7 @@ const EventDetailPanelDynamic = dynamic(
     { loading: () => <Loading /> },
 );
 
-export default function EventListView({ initialCategories, profile, locationOptions }: EventListViewProps) {
+export default function EventListView({ initialCategories, profile, locationOptions, initialCircleSlug }: EventListViewProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -133,7 +134,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
         sortDirection: 'asc' as const,
         pageSize: 20,
         dateRange: { start: startOfToday, end: null as Date | null },
-    }), [startOfToday]);
+        tags: initialCircleSlug ? [initialCircleSlug] : [],
+    }), [startOfToday, initialCircleSlug]);
 
     const locationSelectOptions = useMemo<MultiSelectOption[]>(() => locationOptions.map((value) => ({
         value,
@@ -181,6 +183,16 @@ export default function EventListView({ initialCategories, profile, locationOpti
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const isMobile = useIsMobile();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Clean up the close animation timer on unmount to prevent state updates after unmount
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current !== null) {
+                clearTimeout(closeTimerRef.current);
+            }
+        };
+    }, []);
 
     // Scroll to top when page changes
     useEffect(() => {
@@ -247,9 +259,11 @@ export default function EventListView({ initialCategories, profile, locationOpti
     const handleCloseDetails = useCallback(() => {
         setIsClosing(true);
         // Wait for animation to complete before removing from DOM
-        setTimeout(() => {
+        if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = setTimeout(() => {
             setSelectedEvent(null);
             setIsClosing(false);
+            closeTimerRef.current = null;
         }, 300); // Match the animation duration
     }, []);
 
@@ -404,8 +418,9 @@ export default function EventListView({ initialCategories, profile, locationOpti
             {isMobile && <MobileBottomNav />}
             <div className="flex h-screen bg-white dark:bg-[#08090a]">
                 {!isMobile && <AppSidebar />}
-                <main className="flex-1 flex flex-col overflow-hidden">
-                    {!isMobile && <Navbar />}
+                <main className="flex-1 flex flex-col overflow-hidden relative">
+                    {/* Top-right utilities (ThemeToggle + UserMenu) */}
+                    <TopBarUtilities />
                     <div ref={scrollContainerRef} className="flex-1 overflow-auto">
                         <div className="min-h-screen relative bg-white dark:bg-[#08090a]">
 

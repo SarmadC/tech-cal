@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { EnvelopeSimpleIcon, TwitterLogoIcon, LinkedinLogoIcon } from '@phosphor-icons/react';
-import { Highlight } from '../ui/hero-highlight';
 import '@/app/styles/footer.css';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
@@ -25,9 +24,7 @@ export function Footer() {
                 <div className="footer-content">
                     <div className="footer-intro">
                         <h2 className="footer-intro-title">
-                            <Highlight>
-                                Tech Events
-                            </Highlight> that matter to your career and interests
+                            Find the events that move your career forward
                         </h2>
 
                         {/* Prominent CTA Section */}
@@ -37,7 +34,7 @@ export function Footer() {
                                 className={`cta-button animate-shimmer motion-reduce:animate-none ${isMobile ? 'mobile-optimized' : ''}`}
                                 aria-label="Start your free account to access tech events calendar"
                             >
-                                <span>Start Free Account</span>
+                                <span>Start Free Trial</span>
                             </Link>
                         </div>
 
@@ -77,7 +74,7 @@ export function Footer() {
                     <div className="footer-card">
                         <h3 className="footer-section-title">Join the Community</h3>
                         <p className="footer-community-text">
-                            Follow us for the latest tech event updates and industry insights.
+                            Get weekly updates on the best upcoming tech events.
                         </p>
 
                         <form onSubmit={(e) => {
@@ -85,7 +82,7 @@ export function Footer() {
                             const email = (e.currentTarget.elements.namedItem('email') as HTMLInputElement).value;
                             if (email) {
                                 // Mock submission
-                                showSuccess("Thanks for subscribing! We'll keep you posted.", 3000);
+                                showSuccess("Thanks for subscribing! You'll get updates soon.", 3000);
                                 if (window.posthog) {
                                     window.posthog.capture('newsletter_signup', { location: 'footer' });
                                 }

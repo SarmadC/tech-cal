@@ -1,4 +1,5 @@
-// src/components/Navbar.tsx (Updated with API removed)
+// src/components/Navbar.tsx — Marketing / unauthenticated navigation only.
+// Authenticated pages use AppSidebar + TopBarUtilities instead.
 
 'use client';
 
@@ -11,11 +12,11 @@ import { useScrollListener } from '@/hooks/useEventListener';
 import UserMenu from '@/components/common/UserMenu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
-export default function Navbar() {
+export default function Navbar({ className = '' }: { className?: string }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const pathname = usePathname();
-    const { user, profile, loading } = useAuth();
+    const { user, loading } = useAuth();
 
     useScrollListener(() => {
         if (typeof window !== 'undefined') {
@@ -29,32 +30,11 @@ export default function Navbar() {
         { href: '/blog', label: 'Blog' },
     ];
 
-    // Add authenticated-only links
-    const authenticatedLinks = [
-        { href: '/discover', label: 'Discover' },
-        { href: '/calendar?view=month', label: 'Calendar' },
-        { href: '/events', label: 'Events' },
-        { href: '/dashboard', label: 'Dashboard' },
-    ];
-
-    // Show only authenticated links when logged in, marketing links when not
-    const allNavLinks = user ? authenticatedLinks : navLinks;
-
-    // Always show background on dashboard and other protected pages
-    const isProtectedPage = pathname?.startsWith('/dashboard') ||
-        pathname?.startsWith('/calendar') ||
-        pathname?.startsWith('/discover') ||
-        pathname?.startsWith('/events') ||
-        pathname?.startsWith('/hackathons');
-
-    const shouldShowBackground = isScrolled || isProtectedPage;
-
-    const userDisplayName = profile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-    const userAvatarUrl = profile?.avatarUrl || user?.user_metadata?.avatar_url;
+    const shouldShowBackground = isScrolled;
 
     return (
         <nav
-            className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
+            className={`${className || 'fixed top-0 left-0 right-0 z-[100]'} transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
                 }`}
             style={{ border: 'none', borderWidth: 0, borderColor: 'transparent' }}
         >
@@ -70,16 +50,23 @@ export default function Navbar() {
 
                     {/* Desktop Navigation - Center */}
                     <div className="hidden md:flex items-center space-x-8 absolute left-1/2 -translate-x-1/2">
-                        {allNavLinks.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`text-sm font-medium transition-colors hover:text-accent-primary ${pathname === link.href ? 'text-accent-primary' : 'text-foreground-secondary'
-                                    }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                        {navLinks.map((link) => {
+                            // Compare only the pathname portion (strip query string from href)
+                            const linkPath = link.href.split('?')[0];
+                            const isActive = pathname != null && (
+                                pathname === linkPath ||
+                                pathname.startsWith(linkPath + '/')
+                            );
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={`text-sm font-medium transition-colors hover:text-accent-primary ${isActive ? 'text-accent-primary' : 'text-foreground-secondary'}`}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     {/* Desktop User Menu / Auth Buttons - Right */}
@@ -109,7 +96,7 @@ export default function Navbar() {
                 <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
                     <div className="px-4 py-4 space-y-3">
                         {/* Navigation Links */}
-                        {allNavLinks.map((link) => (
+                        {navLinks.map((link) => (
                             <Link
                                 key={link.href}
                                 href={link.href}
@@ -125,53 +112,8 @@ export default function Navbar() {
                             {!loading && (
                                 <>
                                     {user ? (
-                                        /* Authenticated User Mobile Menu */
+                                        /* Authenticated mobile — just show UserMenu */
                                         <div className="space-y-3">
-                                            {/* User Info */}
-                                            <div className="flex items-center space-x-3 p-3 bg-background-secondary rounded-lg">
-                                                <div className="w-10 h-10 bg-accent-primary rounded-full flex items-center justify-center overflow-hidden">
-                                                    {userAvatarUrl ? (
-                                                        <Image src={userAvatarUrl} width={40} height={40} alt={userDisplayName} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="text-white font-semibold text-sm">
-                                                            {userDisplayName.charAt(0)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-foreground-primary truncate">
-                                                        {userDisplayName}
-                                                    </p>
-                                                    <p className="text-xs text-foreground-tertiary truncate">
-                                                        {user.email}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Mobile User Links */}
-                                            <Link
-                                                href="/dashboard"
-                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
-                                            >
-                                                Dashboard
-                                            </Link>
-                                            <Link
-                                                href="/profile"
-                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
-                                            >
-                                                Profile
-                                            </Link>
-                                            <Link
-                                                href="/settings"
-                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
-                                            >
-                                                Settings
-                                            </Link>
-
-                                            {/* Theme Toggle for Mobile */}
                                             <div className="flex items-center justify-between py-2">
                                                 <span className="text-sm font-medium text-foreground-secondary">Theme</span>
                                                 <ThemeToggle />

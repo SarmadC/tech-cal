@@ -3,26 +3,20 @@
 import styles from './CoverageSection.module.css';
 
 const metrics = [
-    { label: "vetted events / year", value: "3k+", detail: "Curated and de-duplicated before they hit your feed." },
-    { label: "cities covered", value: "75+", detail: "Weighted by audience density and travel likelihood." },
-    { label: "filters & tags", value: "120+", detail: "Stack, topic, format, seniority, and accessibility ready." },
+    { label: "cities covered", value: "75+", detail: "The cities where tech professionals actually travel and attend." },
+    { label: "filters & tags", value: "120+", detail: "Stack, topic, format, seniority, accessibility, and more." },
+    { label: "events tracked", value: "500+", detail: "Conferences, workshops, hackathons, and meetups updated weekly." },
 ];
 
-const trustNotes = [
-    "Refresh cadence: weekly, with priority on new and changed events.",
-    "Latency: tuned for fast server-side filtering; handles multi-filter queries.",
-    "Privacy: no inbox scraping; all adds are opt-in from the event card.",
-];
 
 export function CoverageSection() {
     return (
         <section className={styles.section} id="coverage">
             <div className={styles.sectionContent}>
                 <div className={styles.sectionHeader}>
-                    <p className={styles.sectionKicker}>Coverage & quality</p>
-                    <h2 className={styles.sectionTitle}>Built for reliability at scale</h2>
+                    <h2 className={styles.sectionTitle}>Reliable data you can trust</h2>
                     <p className={styles.sectionSubtitle}>
-                        Data stays fresh, filters stay fast, and your calendar stays clean.
+                        Fresh events, fast filters, and a clean calendar. Every week.
                     </p>
                 </div>
 
@@ -36,13 +30,6 @@ export function CoverageSection() {
                     ))}
                 </div>
 
-                <div className={styles.trustNotes}>
-                    {trustNotes.map((note) => (
-                        <div className={styles.trustNote} key={note}>
-                            {note}
-                        </div>
-                    ))}
-                </div>
             </div>
         </section>
     );

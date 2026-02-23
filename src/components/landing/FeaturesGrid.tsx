@@ -11,10 +11,10 @@ export function FeaturesGrid() {
         <section className="features-enhanced features-sticky" id="features">
             <div className="features-sticky-grid">
                 <div className="features-left">
-                    <h2 className="features-title">Stop Scrolling, Start Growing</h2>
+                    <h2 className="features-title">How it actually works</h2>
                     <p className="features-subtitle">
-                        Powered by advanced aggregation, smart filtering, and real-time processing
-                        to deliver curated tech events at scale. No noise, just signal.
+                        Events from 100+ sources, filtered for noise,
+                        and synced to your calendar, automatically.
                     </p>
                 </div>
                 <div className="features-right">

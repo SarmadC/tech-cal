@@ -138,6 +138,10 @@ function setCachedManagerJustification(eventId: string, data: ManagerJustificati
     });
 }
 
+export function seedManagerJustificationCache(eventId: string, data: ManagerJustificationData): void {
+    setCachedManagerJustification(eventId, data);
+}
+
 function parseManagerJustificationPayload(rawBody: string): ManagerJustificationApiResponse | null {
     if (!rawBody) return null;
 

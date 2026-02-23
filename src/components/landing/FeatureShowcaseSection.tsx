@@ -8,32 +8,32 @@ import styles from './FeatureShowcaseSection.module.css';
 const features = [
     {
         id: 'agenda',
-        title: 'Plan your day in minutes',
+        title: 'Pick your sessions in minutes',
         items: [
             {
                 label: 'Every session, time-stamped',
-                detail: 'Scan the full agenda with clear start and end times so you can build a precise, conflict-free plan.',
+                detail: 'Scan the full agenda with clear start and end times so you can build a conflict-free plan.',
             },
             {
-                label: 'Tracks and topic tags',
-                detail: 'Spot the sessions that match your focus with color-coded tracks and topic tags you can scan fast.',
+                label: 'Filter by track and topic',
+                detail: 'Find the sessions that match your focus with color-coded tracks and topic tags you can scan at a glance.',
             },
             {
-                label: 'One-tap calendar adds',
-                detail: 'Save the sessions you care about to your calendar in a click so you never miss a start time.',
+                label: 'Add to Google Calendar in one tap',
+                detail: 'Save any session to your calendar in one click so you don\'t miss a start time.',
             },
         ],
     },
     {
         id: 'timeline',
-        title: 'See the whole day at a glance',
-        description: 'A visual timeline shows every track and session so you can spot gaps, overlaps, and key moments instantly.',
+        title: 'See every track at a glance',
+        description: 'A visual timeline maps every track side-by-side so you spot gaps, overlaps, and must-see sessions instantly.',
         items: [], // Static blocks use description
     },
     {
         id: 'speakers',
-        title: 'Meet the minds behind the sessions',
-        description: 'See who\'s speaking, what they\'re covering, and where to catch them.',
+        title: 'Know who\'s speaking before you go',
+        description: 'See every speaker\'s name, topic, and session time so you can plan around the talks that matter most.',
     },
 ];
 

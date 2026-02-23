@@ -42,6 +42,16 @@ type RecommendationMetadata = {
   [key: string]: unknown;
 };
 
+type EventWithCareerImpact = Event & {
+  careerImpact?: {
+    overall?: number | null;
+    confidence?: number | null;
+    components?: unknown;
+    explanation?: { reasons?: string[] };
+    metadata?: { algorithmVersion?: string };
+  };
+};
+
 const DEFAULT_MATCHING_TELEMETRY_SAMPLE_RATE = 0.01; // 1%
 
 function getMatchingTelemetrySampleRate(): number {
@@ -115,8 +125,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
     const startTime = Date.now();
 
     // Get user profile and career profile
-    const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const careerProfile = await CareerProfileService.getCareerProfile(userProfile.id, supabase);
+    // Use user.id directly for the career profile lookup to avoid any profile ID mismatch
+    await CareerProfileService.getUserProfile(user.id, supabase);
+    const careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
 
     if (!careerProfile) {
       return NextResponse.json(
@@ -124,6 +135,33 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
         { status: 404 }
       );
     }
+
+    // Fetch user's joined circles to inject into their matching interests
+    // This gives them an immediate personalization boost for events
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: circleMembers } = await (supabase as any)
+      .from('circle_members')
+      .select(`
+        circles (
+          name,
+          slug
+        )
+      `)
+      .eq('user_id', user.id);
+
+    // Explicitly cast the query result since Supabase types nested joins as Arrays or Singletons
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const joinedCircleNames = (circleMembers as any[])?.flatMap(cm => [cm.circles?.name, cm.circles?.slug]).filter(Boolean) || [];
+
+    // Merge circle names into interests without mutating the original object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrichedCareerProfile = joinedCircleNames.length > 0
+      ? {
+          ...careerProfile,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          interests: Array.from(new Set([...((careerProfile as any).interests || []), ...joinedCircleNames])),
+        }
+      : careerProfile;
 
     const { data: consentRow } = await supabase
       .from('profiles')
@@ -145,7 +183,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
       // Get tag-based recommendations
       events = await EventService.getRecommendedEventsByTags(
         user.id,
-        careerProfile,
+        enrichedCareerProfile,
         supabase,
         limit
       );
@@ -171,7 +209,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
           const tagRankedEvents = events;
           const enrichedEvents = await rankEventsWithCanonicalPipeline({
             events: tagRankedEvents,
-            careerProfile,
+            careerProfile: enrichedCareerProfile,
             supabaseClient: supabase,
             userId: user.id,
             applyDiversityEnhancement: true,
@@ -210,7 +248,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
               // Keep diversity and rerank disabled here so telemetry reflects score divergence only.
               const advancedScoredForTelemetry = await rankEventsWithCanonicalPipeline({
                 events: tagRankedEvents,
-                careerProfile,
+                careerProfile: enrichedCareerProfile,
                 supabaseClient: supabase,
                 userId: user.id,
                 applyDiversityEnhancement: false,
@@ -346,20 +384,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
   } catch (error) {
     console.error('Event recommendations API error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }
     );
   }
 }
-type EventWithCareerImpact = Event & {
-  careerImpact?: {
-    overall?: number | null;
-    confidence?: number | null;
-    components?: unknown;
-    explanation?: { reasons?: string[] };
-    metadata?: { algorithmVersion?: string };
-  };
-};

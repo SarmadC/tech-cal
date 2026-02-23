@@ -75,7 +75,12 @@ async function getUpcomingEvents(): Promise<SSREvent[]> {
     return (data as unknown as SSREvent[]) || [];
 }
 
-export default async function EventsPage() {
+export default async function EventsPage(
+    props: { searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }
+) {
+    const searchParams = await props.searchParams;
+    const circleSlug = searchParams?.circle as string | undefined;
+
     const supabase = await createClient();
 
     // Parallel data fetching
@@ -151,6 +156,7 @@ export default async function EventsPage() {
                 initialCategories={categories}
                 profile={profile}
                 locationOptions={locationOptions}
+                initialCircleSlug={circleSlug}
             />
         </>
     );

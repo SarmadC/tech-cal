@@ -20,12 +20,15 @@ vi.mock('@/utils/supabase/server', () => ({
 }));
 
 vi.mock('@/lib/adminAuth', () => ({
-  isAdminUser: (...args: unknown[]) => mocks.isAdminUser(...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  isAdminUser: (...args: any[]) => mocks.isAdminUser(...args),
 }));
 
 vi.mock('@/utils/rateLimit', () => ({
-  createRateLimiter: (...args: unknown[]) => mocks.createRateLimiter(...args),
-  checkRateLimit: (...args: unknown[]) => mocks.checkRateLimit(...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createRateLimiter: (...args: any[]) => (mocks.createRateLimiter as any)(...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  checkRateLimit: (...args: any[]) => (mocks.checkRateLimit as any)(...args),
 }));
 
 vi.mock('@/services/telemetryAnalyticsService', () => ({

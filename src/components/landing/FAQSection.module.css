@@ -48,7 +48,7 @@
 }
 
 .sectionHeader {
-    text-align: center;
+    text-align: left;
     margin-bottom: var(--space-12);
 }
 
@@ -75,7 +75,6 @@
 .sectionSubtitle {
     color: var(--foreground-secondary);
     max-width: 720px;
-    margin: 0 auto;
     line-height: 1.6;
     font-size: 1.05rem;
     font-family: var(--font-sans);
@@ -84,8 +83,6 @@
 .faqGrid {
     display: grid;
     gap: var(--space-4);
-    max-width: 800px;
-    margin: 0 auto;
 }
 
 .faqItem {

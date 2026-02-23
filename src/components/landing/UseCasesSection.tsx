@@ -16,37 +16,37 @@ type UseCase = {
 const useCases: UseCase[] = [
     {
         id: 'discovery',
-        title: "Personalized discovery that matches your career goals",
-        description: "Our intelligent matching algorithm analyzes your skills, interests, and career trajectory to surface the most relevant tech events, conferences, and workshops. No more endless scrolling through irrelevant content.",
+        title: "Find the right events without the noise",
+        description: "Events matched to your skills, interests, and career goals so you spend less time searching and more time learning.",
         features: [
-            "AI-powered event recommendations based on your profile",
-            "Filter by technology stack, skill level, and career stage",
-            "Match score showing event relevance to your goals",
-            "Save and organize events into custom collections"
+            "Recommendations based on your profile and interests",
+            "Filter by stack, skill level, and career stage",
+            "Relevance score for every event",
+            "Save events into custom collections"
         ],
         graphic: <DiscoveryGraphic />,
     },
     {
         id: 'calendar-sync',
-        title: "One-tap planning that syncs with Google calendar",
-        description: "Seamlessly integrate your tech event schedule with Google Calendar. One tap is all it takes to block time, set reminders, and ensure you never miss an important session or networking opportunity.",
+        title: "Add to Google Calendar in one tap",
+        description: "One tap to block time, set reminders, and sync with Google Calendar. No more double-booking or missed sessions.",
         features: [
-            "Instant sync with Google Calendar",
-            "Smart conflict detection and resolution",
-            "Automatic timezone adjustments",
-            "Custom reminder notifications before events"
+            "Instant Google Calendar sync",
+            "Automatic conflict detection",
+            "Timezone adjustments built in",
+            "Custom reminders before every event"
         ],
         graphic: <CalendarSyncGraphic />,
     },
     {
         id: 'insights',
-        title: "Career insights that track your growth",
-        description: "Visualize your professional development journey with comprehensive analytics. Track events attended, skills developed, and connections made to understand how each experience contributes to your career growth.",
+        title: "See how your career is growing",
+        description: "Track the events you attend, the skills you build, and the connections you make, all in one dashboard.",
         features: [
-            "Attendance history and engagement metrics",
-            "Skill progression tracking over time",
-            "Networking impact analysis",
-            "Personalized growth recommendations"
+            "Attendance history at a glance",
+            "Skill progression over time",
+            "Networking impact tracking",
+            "Personalized growth tips"
         ],
         graphic: <InsightsGraphic />,
     },
@@ -102,11 +102,10 @@ export function UseCasesSection() {
             <div className={styles.sectionContent}>
                 <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>
-                        Made for serious<br />engineering careers
+                        Built for how you actually grow
                     </h2>
                     <p className={styles.sectionSubtitle}>
-                        Kure Cal is shaped by the practices that distinguish focused professionals from the rest:
-                        personalized discovery, effortless planning, and a commitment to career growth.
+                        Three ways Kure Cal helps you invest in your career without the overhead.
                     </p>
                 </div>
 

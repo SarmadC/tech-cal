@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useRef, useReducer } from 'react';
+import { useMemo, useCallback, useRef, useReducer, useEffect } from 'react';
 import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -101,7 +101,7 @@ function useCalendarUIState() {
 }
 
 // Custom hook for event data management - now uses server-side filtering
-function useEventData(profile: AppProfile | null) {
+function useEventData(profile: AppProfile | null, initialFilters: any) {
     const {
         filteredEvents: enrichedEvents,
         isLoading,
@@ -118,7 +118,7 @@ function useEventData(profile: AppProfile | null) {
         counts
     } = useUnifiedServerFiltering(
         profile,
-        {},
+        initialFilters,
         { surface: 'calendar', autoLoadAllPages: true }
     );
 
@@ -156,47 +156,13 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        // First, let's see what events we have
-        console.log('All tracked events:', enrichedEvents.map(te => ({
-            title: te.title || 'No title',
-            startTime: te.startTime || 'No start time',
-            endTime: te.endTime || 'No end time',
-            isMultiDay: 'isMultiDay' in te ? te.isMultiDay : false
-        })));
-
         const filtered = enrichedEvents
             .filter((trackedEvent: TrackedEvent) => {
                 // TrackedEvent is EventWithTracking, so properties are spread directly
                 const eventStart = new Date(trackedEvent.startTime);
                 const eventEnd = trackedEvent.endTime ? new Date(trackedEvent.endTime) : eventStart;
-                const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
-
-                // Debug each event's date range - simplified
-                if (trackedEvent.title.includes('Microsoft') || trackedEvent.title.includes('Ignite')) {
-                    console.log('Microsoft Ignite event check:', {
-                        title: trackedEvent.title,
-                        eventStart: trackedEvent.startTime,
-                        eventEnd: trackedEvent.endTime,
-                        parsedStart: eventStart.toISOString(),
-                        parsedEnd: eventEnd.toISOString(),
-                        dayStart: dayStart.toISOString(),
-                        dayEnd: dayEnd.toISOString(),
-                        inRange: inRange,
-                        isMultiDay: 'isMultiDay' in trackedEvent ? trackedEvent.isMultiDay : false
-                    });
-                }
-
-                return inRange;
+                return eventStart <= dayEnd && eventEnd >= dayStart;
             });
-
-        console.log('Day events filtered:', {
-            totalTrackedEvents: enrichedEvents.length,
-            filteredCount: filtered.length,
-            viewDate: currentDate.toDateString(),
-            dayStart: dayStart.toISOString(),
-            dayEnd: dayEnd.toISOString(),
-            filteredEvents: filtered.map(e => ({ title: e.title, startTime: e.startTime }))
-        });
 
         return filtered as unknown as MultiDayEvent[];
     }, [enrichedEvents, searchParams]);
@@ -246,12 +212,14 @@ interface CalendarClientViewProps {
     initialEvents: (Event | MultiDayEvent)[];
     initialCategories: EventType[];
     profile: AppProfile | null;
+    initialFilters?: any;
 }
 
 export default function CalendarClientView({
     initialEvents: _initialEvents, // No longer needed with server-side filtering
     initialCategories,
     profile,
+    initialFilters = {},
 }: CalendarClientViewProps) {
     const calendarRef = useRef<FullCalendar | null>(null);
     const searchParams = useSearchParams();
@@ -260,7 +228,7 @@ export default function CalendarClientView({
 
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
-    const eventData = useEventData(profile);
+    const eventData = useEventData(profile, initialFilters);
     const { countsByEventId } = useNetworkEventCounts(eventData.enrichedEvents.map((event) => event.id));
 
     const enrichedEventsWithNetwork = useMemo(() => {
@@ -306,12 +274,49 @@ export default function CalendarClientView({
         return new Date();
     }, [searchParams]);
 
+    // Derive stable primitive keys from array filters to avoid object referential instability
+    // causing the sync effect to re-run on every render.
+    const filterCategoriesKey = eventData.filters.categories?.join(',') ?? '';
+    const filterTagsKey = eventData.filters.tags?.join(',') ?? '';
+    const filterLocationsKey = eventData.filters.locations?.join(',') ?? '';
+    const filterFormat = eventData.filters.format;
+    const filterCost = eventData.filters.cost;
+    const filterDifficulty = eventData.filters.difficulty;
+    const filterBudget = eventData.filters.budget;
 
+    // Sync filters to URL when they change
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
 
+        const updateArrayParam = (key: string, values: string[] | undefined) => {
+            if (values && values.length > 0) params.set(key, values.join(','));
+            else params.delete(key);
+        };
 
+        updateArrayParam('categories', filterCategoriesKey ? filterCategoriesKey.split(',') : []);
+        updateArrayParam('tags', filterTagsKey ? filterTagsKey.split(',') : []);
+        updateArrayParam('locations', filterLocationsKey ? filterLocationsKey.split(',') : []);
 
+        if (filterFormat && filterFormat !== 'all') params.set('format', filterFormat);
+        else params.delete('format');
 
-    // Event handlers using simplified state management
+        if (filterCost && filterCost !== 'all') params.set('cost', filterCost);
+        else params.delete('cost');
+
+        if (filterDifficulty && filterDifficulty !== 'all') params.set('difficulty', filterDifficulty);
+        else params.delete('difficulty');
+
+        if (filterBudget && filterBudget !== 'all') params.set('budget', filterBudget);
+        else params.delete('budget');
+
+        // Only update if the URL actually changed to prevent infinite loops
+        const newQuery = params.toString();
+        const currentQuery = searchParams.toString();
+
+        if (newQuery !== currentQuery) {
+            router.replace(`/calendar?${newQuery}`, { scroll: false });
+        }
+    }, [filterCategoriesKey, filterTagsKey, filterLocationsKey, filterFormat, filterCost, filterDifficulty, filterBudget, router, searchParams]);    // Event handlers using simplified state management
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         const eventData = clickInfo.event.extendedProps as Event;
         actions.selectEvent(eventData);

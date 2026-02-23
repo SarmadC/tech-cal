@@ -24,6 +24,7 @@ export interface UserSearchUser {
     sharedSavedEventCount: number;
     recentFollowerCount: number;
     isViewerFollowing: boolean;
+    sharedCircleCount: number;
   };
 }
 
@@ -251,16 +252,34 @@ export class UserSearchService {
       .eq('user_id', viewerId)
       .eq('is_bookmarked', true);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const viewerCirclesPromise = (viewerScopedClient as any)
+      .from('circle_members')
+      .select('circle_id')
+      .eq('user_id', viewerId);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const visibleUsersCirclesPromise = visibleIds.length > 0
+      ? (readClient as any)
+          .from('circle_members')
+          .select('user_id, circle_id')
+          .in('user_id', visibleIds)
+      : Promise.resolve({ data: [], error: null });
+
     const [
       attendanceResult,
       recentFollowsResult,
       viewerFollowingResult,
       viewerSavedResult,
+      viewerCirclesResult,
+      visibleUsersCirclesResult,
     ] = await Promise.all([
       attendancePromise,
       recentFollowsPromise,
       viewerFollowingPromise,
       viewerSavedPromise,
+      viewerCirclesPromise,
+      visibleUsersCirclesPromise,
     ]);
 
     const attendanceRows = (attendanceResult.data || []) as AttendanceRow[];
@@ -301,6 +320,26 @@ export class UserSearchService {
       }
     }
 
+    const viewerCircleIds = new Set<string>();
+    if (viewerCirclesResult.error) {
+      console.error('User search viewer circles query failed:', viewerCirclesResult.error);
+    } else {
+      for (const row of viewerCirclesResult.data || []) {
+        viewerCircleIds.add(row.circle_id);
+      }
+    }
+
+    const circlesByUserId = new Map<string, Set<string>>();
+    if (visibleUsersCirclesResult.error) {
+      console.error('User search visible users circles query failed:', visibleUsersCirclesResult.error);
+    } else {
+      for (const row of visibleUsersCirclesResult.data || []) {
+        const userCircles = circlesByUserId.get(row.user_id) ?? new Set<string>();
+        userCircles.add(row.circle_id);
+        circlesByUserId.set(row.user_id, userCircles);
+      }
+    }
+
     const allAttendingEventIds = Array.from(new Set(attendanceRows.map((row) => row.event_id)));
     const eventStartById = new Map<string, number>();
     if (allAttendingEventIds.length > 0) {
@@ -329,6 +368,7 @@ export class UserSearchService {
         sharedSavedEventCount: number;
         recentFollowerCount: number;
         isViewerFollowing: boolean;
+        sharedCircleCount: number;
       }
     >();
 
@@ -357,12 +397,21 @@ export class UserSearchService {
         }
       }
 
+      let sharedCircleCount = 0;
+      const userCircleIds = circlesByUserId.get(userId) ?? new Set<string>();
+      for (const circleId of userCircleIds) {
+        if (viewerCircleIds.has(circleId)) {
+          sharedCircleCount += 1;
+        }
+      }
+
       activityByUserId.set(userId, {
         upcomingAttendingCount,
         attendingThisWeekCount,
         sharedSavedEventCount,
         recentFollowerCount: recentFollowerCountByUserId.get(userId) ?? 0,
         isViewerFollowing: viewerFollowingSet.has(userId),
+        sharedCircleCount,
       });
     }
 
@@ -374,6 +423,7 @@ export class UserSearchService {
         sharedSavedEventCount: 0,
         recentFollowerCount: 0,
         isViewerFollowing: false,
+        sharedCircleCount: 0,
       };
 
       return {
@@ -420,7 +470,11 @@ export class UserSearchService {
         const joinedTimestamp = Date.parse(user.joinedAt);
         return Number.isFinite(joinedTimestamp) && joinedTimestamp >= newMemberCutoffTimestamp;
       })
-      .sort((left, right) => Date.parse(right.joinedAt || '') - Date.parse(left.joinedAt || ''))
+      .sort((left, right) => {
+        const r = Date.parse(right.joinedAt ?? '');
+        const l = Date.parse(left.joinedAt ?? '');
+        return (Number.isFinite(r) ? r : 0) - (Number.isFinite(l) ? l : 0);
+      })
       .slice(0, HIGHLIGHT_LIMIT);
 
     const lastRow = pageRows[pageRows.length - 1];

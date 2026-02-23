@@ -5,15 +5,17 @@ export interface CommunityLaunchpadMetrics {
   weeklyActiveThreshold: number;
 }
 
+export type CommunityTelemetryEvent = 'profile_completion_started';
+
 export interface CommunityLaunchpadTask {
-  id: 'add_headline' | 'pick_interests' | 'set_profile_public';
+  id: 'add_photo' | 'add_headline' | 'pick_interests' | 'set_profile_public';
   title: string;
   description: string;
   completed: boolean;
   weight: number;
   ctaLabel: string;
   ctaHref: string;
-  telemetryEvent: 'profile_completion_started';
+  telemetryEvent: CommunityTelemetryEvent;
 }
 
 export interface CommunityLaunchpadProgress {
@@ -38,6 +40,9 @@ export interface CommunityLaunchpadCircle {
   name: string;
   description: string;
   href: string;
+  isJoined: boolean;
+  memberCount: number;
+  icon?: string;
 }
 
 export interface CommunityLaunchpadPrompt {
@@ -73,4 +78,33 @@ export interface CommunityLaunchpadData {
   upcomingEvent: CommunityLaunchpadEvent | null;
   starterResources: CommunityLaunchpadResource[];
   inviteTarget: number;
+}
+
+// ── Community Hub (redesigned page) ──────────────────────────────
+
+export interface CommunityFeedPost {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; fullName: string | null; avatarUrl: string | null };
+  circle: { slug: string; name: string };
+  commentCount: number;
+  isTrending: boolean;
+}
+
+export interface CommunityUpcomingEvent {
+  id: string;
+  slug: string;
+  title: string;
+  startTime: string;
+  location: string | null;
+  format: string | null;
+}
+
+export interface CommunityHubData {
+  feed: CommunityFeedPost[];
+  circles: CommunityLaunchpadCircle[];
+  progress: CommunityLaunchpadProgress;
+  upcomingEvents: CommunityUpcomingEvent[];
+  suggestedMembers: CommunityLaunchpadMember[];
 }

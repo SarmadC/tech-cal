@@ -75,7 +75,7 @@ export default function ClientLayout({
         );
     }
 
-    // Navigation items for UnifiedMobileNavbar
+    // Navigation items for UnifiedMobileNavbar (marketing only)
     const mobileNavItems = [
         { name: 'Features', href: '/#features' },
         { name: 'Pricing', href: '/pricing' },
@@ -83,14 +83,8 @@ export default function ClientLayout({
         { name: 'Contact', href: '/contact' },
     ];
 
-    // Add authenticated links for mobile
-    if (user) {
-        mobileNavItems.push(
-            { name: 'Discover', href: '/events' },
-            { name: 'Calendar', href: '/calendar?view=month' },
-            { name: 'Dashboard', href: '/dashboard' }
-        );
-    } else {
+    // Add sign-in link for unauthenticated users
+    if (!user) {
         mobileNavItems.push(
             { name: 'Sign In', href: '/login' }
         );
