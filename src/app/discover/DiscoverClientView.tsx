@@ -11,7 +11,6 @@ import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/Deskto
 import { CalendarProvider } from '@/contexts/CalendarContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import TopBarUtilities from '@/components/common/TopBarUtilities';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
@@ -319,8 +318,6 @@ export default function DiscoverClientView({
                     <h1 className="sr-only">Discover tech events</h1>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden relative">
-                        {/* Top-right utilities (ThemeToggle + UserMenu) */}
-                        <TopBarUtilities />
                         <div className="flex-1 overflow-auto">
                             {/* Main background - Notion/Linear dark theme */}
                             <div className="min-h-screen bg-background relative font-sans">

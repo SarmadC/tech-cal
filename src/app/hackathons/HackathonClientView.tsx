@@ -20,7 +20,6 @@ import { TeamSearchFilter } from '@/components/hackathon/TeamSearchFilter';
 import { EnhancedTeamCard } from '@/components/hackathon/EnhancedTeamCard';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import TopBarUtilities from '@/components/common/TopBarUtilities';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import { createHackathonActions } from '@/utils/hackathonActions';
@@ -611,7 +610,6 @@ export default function HackathonClientView({
                 <div className="flex h-screen bg-background">
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden relative">
-                        <TopBarUtilities />
                         <div className="flex-1 overflow-auto">
                             <div className="min-h-screen glass-bg-gradient relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
@@ -642,7 +640,6 @@ export default function HackathonClientView({
             <div className="flex h-screen bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden relative">
-                    <TopBarUtilities />
                     <div className="flex-1 overflow-auto">
                         <div className="min-h-screen glass-bg-gradient relative">
                             {/* Subtle atmospheric overlay */}

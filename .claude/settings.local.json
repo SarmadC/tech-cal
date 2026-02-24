@@ -87,7 +87,8 @@
       "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
       "Bash(squirrel audit:*)",
       "Skill(audit-website)",
-      "Bash(npx vitest run:*)"
+      "Bash(npx vitest run:*)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []

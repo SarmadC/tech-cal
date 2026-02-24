@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTER HOOKS
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useAuth } from '@/contexts/AuthContext';
-import UserMenu from '@/components/common/UserMenu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { formatDateForURL } from '@/utils/dateUtils';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
@@ -37,7 +36,6 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     onToggleSidebar: _onToggleSidebar,
     isSidebarOpen: _isSidebarOpen = true
 }) => {
-    const { user } = useAuth();
     const router = useRouter(); // 2. INITIALIZE THE ROUTER
     const searchParams = useSearchParams(); // 3. GET CURRENT URL PARAMS
 
@@ -239,18 +237,9 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
                 <div className="h-4 w-[1px] bg-border-subtle mx-1 hidden md:block"></div>
 
-                {/* User & Theme Actions */}
+                {/* Theme Actions */}
                 <div className="flex items-center gap-2">
                     <ThemeToggle />
-                    {user ? (
-                        <UserMenu />
-                    ) : (
-                        <Link href="/login">
-                            <button className="text-xs font-medium px-3 py-1.5 bg-accent-primary text-accent-primary-foreground rounded-md hover:bg-accent-primary-hover transition-colors">
-                                Sign In
-                            </button>
-                        </Link>
-                    )}
                 </div>
             </div>
 

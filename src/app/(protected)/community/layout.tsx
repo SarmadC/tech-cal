@@ -3,7 +3,6 @@
 import { ReactNode } from 'react';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import TopBarUtilities from '@/components/common/TopBarUtilities';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 
 export default function CommunityLayout({ children }: { children: ReactNode }) {
@@ -27,8 +26,6 @@ function SidebarProviderBody({ children }: { children: ReactNode }) {
                     }`}
             >
                 <h1 className="sr-only">Community</h1>
-                {/* Top-right utilities (ThemeToggle + UserMenu) */}
-                <TopBarUtilities />
                 <div className="flex-1 overflow-auto">
                     {children}
                 </div>

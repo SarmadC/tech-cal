@@ -9,7 +9,6 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollListener } from '@/hooks/useEventListener';
-import UserMenu from '@/components/common/UserMenu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function Navbar({ className = '' }: { className?: string }) {
@@ -72,7 +71,6 @@ export default function Navbar({ className = '' }: { className?: string }) {
                     {/* Desktop User Menu / Auth Buttons - Right */}
                     <div className="hidden md:flex items-center space-x-4 ml-auto">
                         <ThemeToggle />
-                        <UserMenu />
                     </div>
 
                     {/* Mobile Menu Button */}

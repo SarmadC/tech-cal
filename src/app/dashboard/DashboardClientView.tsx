@@ -28,7 +28,6 @@ const PastEventAttendancePrompt = dynamic(
 );
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import TopBarUtilities from '@/components/common/TopBarUtilities';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
@@ -130,8 +129,6 @@ export default function DashboardClientView({
                 <h1 className="sr-only">Dashboard</h1>
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden relative">
-                    {/* Top-right utilities (ThemeToggle + UserMenu) */}
-                    <TopBarUtilities />
                     <div className="flex-1 overflow-auto">
                         <PageErrorBoundary name="Dashboard">
                             {/* Detailed Grid Dashboard with flat background */}
