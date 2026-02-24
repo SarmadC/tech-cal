@@ -109,6 +109,10 @@ export const metadata: Metadata = {
     },
     alternates: {
         canonical: SITE_URL,
+        languages: {
+            en: SITE_URL,
+            'x-default': SITE_URL,
+        },
     },
 };
 

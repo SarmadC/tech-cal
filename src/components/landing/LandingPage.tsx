@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import posthog from 'posthog-js';
+import { usePostHog } from 'posthog-js/react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import {
     Navbar,
@@ -38,6 +38,7 @@ import {
 
 export default function LandingPage() {
     const router = useRouter();
+    const posthog = usePostHog();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { isMobile } = useDeviceDetection();
 
@@ -99,7 +100,7 @@ export default function LandingPage() {
                                 <NavbarButton
                                     variant="primary"
                                     href="/pricing?checkout=monthly"
-                                    onClick={() => posthog.capture('start_trial_click', { location: 'navbar_desktop' })}
+                                    onClick={() => posthog?.capture('start_trial_click', { location: 'navbar_desktop' })}
                                 >
                                     Start Free Trial
                                 </NavbarButton>
@@ -159,7 +160,7 @@ export default function LandingPage() {
                                         href="/pricing?checkout=monthly"
                                         onClick={() => {
                                             setIsMobileMenuOpen(false);
-                                            posthog.capture('start_trial_click', { location: 'navbar_mobile' });
+                                            posthog?.capture('start_trial_click', { location: 'navbar_mobile' });
                                         }}
                                         variant="primary"
                                         className="w-full py-4 text-lg font-semibold rounded-lg"

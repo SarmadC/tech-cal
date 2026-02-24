@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import posthog from 'posthog-js';
+import { usePostHog } from 'posthog-js/react';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction } from '@/app/auth/actions';
@@ -22,11 +22,12 @@ const initialState: AuthFormState = {
 
 export default function SignupPage() {
     const router = useRouter();
+    const posthog = usePostHog();
     const emailInputRef = useRef<HTMLInputElement>(null);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         // Track OAuth signup initiated
-        posthog.capture('oauth_signup_initiated', {
+        posthog?.capture('oauth_signup_initiated', {
             provider: provider,
             page: 'signup',
         });
@@ -41,7 +42,7 @@ export default function SignupPage() {
         } catch (error) {
             // This is an actual error
             console.error('[SignupPage] OAuth sign-in error:', error);
-            posthog.captureException(error);
+            posthog?.captureException(error);
         }
     };
 

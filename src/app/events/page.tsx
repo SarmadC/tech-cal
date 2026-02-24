@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     },
     alternates: {
         canonical: `${SITE_URL}/events`,
+        languages: {
+            en: `${SITE_URL}/events`,
+            'x-default': `${SITE_URL}/events`,
+        },
     },
 };
 

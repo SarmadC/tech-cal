@@ -6,17 +6,20 @@ import React, { useEffect } from 'react';
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
-        if (
-            typeof window !== 'undefined' &&
-            process.env.NEXT_PUBLIC_POSTHOG_KEY
-        ) {
-            posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-                api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
-                person_profiles: 'identified_only',
-                // Disable automatic pageview capture if we want manual control, 
-                // but usually true is fine for SPA transition handling in Next.js
-                capture_pageview: false
-            });
+        if (typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+
+        const init = () => posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+            api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
+            person_profiles: 'identified_only',
+            capture_pageview: false,
+        });
+
+        if ('requestIdleCallback' in window) {
+            const id = requestIdleCallback(init, { timeout: 3000 });
+            return () => cancelIdleCallback(id);
+        } else {
+            const t = setTimeout(init, 1500);
+            return () => clearTimeout(t);
         }
     }, []);
 

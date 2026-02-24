@@ -22,6 +22,13 @@ export const metadata: Metadata = {
         description: 'Stay informed with insights, tutorials, and news from the tech events world.',
         images: [`${SITE_URL}/og-image.png`],
     },
+    alternates: {
+        canonical: `${SITE_URL}/blog`,
+        languages: {
+            en: `${SITE_URL}/blog`,
+            'x-default': `${SITE_URL}/blog`,
+        },
+    },
 };
 import Image from 'next/image';
 import BlogFilters from './BlogFilters';

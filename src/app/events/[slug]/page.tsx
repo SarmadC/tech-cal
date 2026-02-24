@@ -207,6 +207,10 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
         },
         alternates: {
             canonical: `${SITE_URL}/events/${event.slug}`,
+            languages: {
+                en: `${SITE_URL}/events/${event.slug}`,
+                'x-default': `${SITE_URL}/events/${event.slug}`,
+            },
         },
     };
 }

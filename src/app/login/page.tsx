@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import posthog from 'posthog-js';
+import { usePostHog } from 'posthog-js/react';
 
 import { loginAction, resendVerificationAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
@@ -98,6 +98,7 @@ function LoginPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { showError, showInfo } = useSnackbar();
+    const posthog = usePostHog();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
     const [oauthStartTime, setOauthStartTime] = useState<number | null>(null);
     const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
@@ -221,7 +222,7 @@ function LoginPageContent() {
         setPendingProvider(provider);
 
         // Track OAuth login initiated
-        posthog.capture('oauth_login_initiated', {
+        posthog?.capture('oauth_login_initiated', {
             provider: provider,
             page: 'login',
         });
@@ -241,7 +242,7 @@ function LoginPageContent() {
         } catch (error) {
             // This is an actual error
             console.error('[LoginPage] OAuth sign-in error:', error);
-            posthog.captureException(error);
+            posthog?.captureException(error);
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);

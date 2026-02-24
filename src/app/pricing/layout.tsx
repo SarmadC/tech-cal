@@ -17,6 +17,13 @@ export const metadata: Metadata = {
         title: 'Tech Event Calendar Pricing Plans | Kure-Cal',
         description: 'Simple, transparent pricing for Kure-Cal. Choose from Free, Pro, or Team plans.',
     },
+    alternates: {
+        canonical: `${SITE_URL}/pricing`,
+        languages: {
+            en: `${SITE_URL}/pricing`,
+            'x-default': `${SITE_URL}/pricing`,
+        },
+    },
 };
 
 export default function PricingLayout({
