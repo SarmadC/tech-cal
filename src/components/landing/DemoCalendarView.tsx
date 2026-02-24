@@ -6,15 +6,12 @@
  *
  * Features:
  *  - CalendarHeader-style header: Today btn, ‹/› chevrons, month+year label,
- *    Month/Week/Day segmented switcher (Month always active, others tease real UX)
- *  - Multi-day ribbon overlays using the same MonthEventCard via CSS grid
- *    (identical to TechCalendarMonthView's week-level overlay)
- *  - Inline single-day event rows using MonthInlineEventRow styles
- *  - Weekend column tinting (bg-background-secondary/50)
- *  - Today cell highlight (blue ring + number badge)
- *  - +N more overflow popup (MonthDayPopover-style inline popover)
- *  - Organisation logo in ribbon chips
- *  - All CSS from @/app/styles/monthly-view.css reused
+ *    Month/Week/Day segmented switcher
+ *  - Multi-day ribbon overlays in Month view
+ *  - Week view via TechCalendarWeekView (production component)
+ *  - Day view via TechCalendarDayView (production component)
+ *  - Event filtering by title and organization (icon button + popover)
+ *  - All CSS from production views reused where possible
  */
 
 import React, {
@@ -39,14 +36,8 @@ const MONTH_NAMES = [
 ];
 
 /** May 2026 has the most mock events and is a great first-impression month */
-const DEFAULT_YEAR = 2026;
-const DEFAULT_MONTH = 4; // 0-indexed → May
+const DEFAULT_DATE = new Date(2026, 4, 1);
 
-/** Match TechCalendarMonthView constants exactly */
-const MAX_VISIBLE_EVENTS_PER_DAY = 3;
-const MAX_RIBBON_ROWS = 3;
-const DAY_HEADER_HEIGHT = 24;
-const DAY_HEADER_GAP = 8;
 const MAX_VISIBLE_SLOTS = 3;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -87,10 +78,6 @@ const startOfDay = (d: Date) => {
 const toDateKey = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-const diffDays = (later: Date, earlier: Date) =>
-    Math.round((later.getTime() - earlier.getTime()) / 86_400_000);
-
-/** Replicate getInlineAccent from TechCalendarMonthView exactly */
 const getAccentColor = (event: DemoEvent): string => {
     const cat = event.category?.name?.toLowerCase();
     switch (cat) {
@@ -111,11 +98,8 @@ const getAccentColor = (event: DemoEvent): string => {
     return 'var(--accent-primary)';
 };
 
-
-
-/** Build the 42-cell (6 × 7) day grid for a given year/month. */
-const buildMonthDays = (year: number, month: number): Date[] => {
-    const firstOfMonth = new Date(year, month, 1);
+const buildMonthDays = (baseDate: Date): Date[] => {
+    const firstOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
     const start = new Date(firstOfMonth);
     start.setDate(start.getDate() - start.getDay()); // rewind to Sunday
     return Array.from({ length: 42 }, (_, i) => {
@@ -125,19 +109,15 @@ const buildMonthDays = (year: number, month: number): Date[] => {
     });
 };
 
-/**
- * Compute all 6 WeekData objects for the displayed month.
- * Replicates the ribbon-allocation logic from TechCalendarMonthView.
- */
-const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number): WeekData[] => {
+const computeMonthWeeks = (monthDays: Date[], events: DemoEvent[], viewDate: Date): WeekData[] => {
     const weeks: WeekData[] = [];
+    const viewMonth = viewDate.getMonth();
 
     for (let w = 0; w < 6; w++) {
         const weekDays = monthDays.slice(w * 7, w * 7 + 7);
         const weekStart = weekDays[0];
         const weekEnd = weekDays[6];
 
-        // 1. Gather all events overlapping this week
         const weekEvents: { event: DemoEvent; startIdx: number; endIdx: number; span: number }[] = [];
         for (const ev of events) {
             const evStart = startOfDay(new Date(ev.startTime));
@@ -155,10 +135,8 @@ const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number)
             weekEvents.push({ event: ev, startIdx, endIdx, span });
         }
 
-        // Sort: longer spans first, earlier start second
         weekEvents.sort((a, b) => b.span !== a.span ? b.span - a.span : a.startIdx - b.startIdx);
 
-        // 2. Assign strictly aligned slots
         const MAX_SLOTS = 15;
         const occupancy: boolean[][] = Array.from({ length: MAX_SLOTS }, () => new Array(7).fill(false));
         const eventSlots = new Map<DemoEvent, number>();
@@ -185,15 +163,12 @@ const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number)
             eventSlots.set(wev.event, placedSlot);
         }
 
-        // 3. Build DayData
         const daysData: DayData[] = weekDays.map((targetDate, colIdx) => {
             const isToday = toDateKey(targetDate) === toDateKey(startOfDay(new Date()));
             const isCurrentMonth = targetDate.getMonth() === viewMonth;
 
             const slots: SlotItem[] = [];
             const overflowEvents: DemoEvent[] = [];
-
-            // Find events mapped to this day
             const dayEvents = weekEvents.filter(wev => wev.startIdx <= colIdx && wev.endIdx >= colIdx);
 
             const maxSlotForDay = Math.min(
@@ -201,13 +176,11 @@ const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number)
                 Math.max(-1, ...dayEvents.map(e => eventSlots.get(e.event)!).filter(s => s < MAX_VISIBLE_SLOTS))
             );
 
-            // Populate slots with either the event or an invisible spacer to preserve alignment
             for (let i = 0; i <= maxSlotForDay; i++) {
                 const wev = dayEvents.find(e => eventSlots.get(e.event) === i);
                 if (wev) {
                     const evStart = startOfDay(new Date(wev.event.startTime));
                     const evEnd = wev.event.endTime ? startOfDay(new Date(wev.event.endTime)) : evStart;
-
                     const isActualStart = toDateKey(evStart) === toDateKey(targetDate);
                     const isActualEnd = toDateKey(evEnd) === toDateKey(targetDate);
 
@@ -223,7 +196,6 @@ const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number)
                 }
             }
 
-            // Populate overflow for any events assigned to slot index >= MAX_VISIBLE_SLOTS
             for (const wev of dayEvents) {
                 if (eventSlots.get(wev.event)! >= MAX_VISIBLE_SLOTS) {
                     overflowEvents.push(wev.event);
@@ -246,8 +218,6 @@ const computeWeeks = (monthDays: Date[], events: DemoEvent[], viewMonth: number)
     return weeks;
 };
 
-
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const CellSlot: React.FC<{
@@ -255,13 +225,11 @@ const CellSlot: React.FC<{
     onClick: (ev: DemoEvent) => void;
 }> = ({ item, onClick }) => {
     if (item.type === 'spacer') {
-        // Invisible spacer to maintain slot height and prevent "Tetris" misalignments
         return <div aria-hidden="true" style={{ height: '26px' }} />;
     }
 
     const { event, continuationType } = item;
     const accent = getAccentColor(event);
-
     const showContent = continuationType === 'start' || continuationType === 'single';
 
     return (
@@ -306,7 +274,6 @@ const CellSlot: React.FC<{
     );
 };
 
-/** Overflow popover — mirrors MonthDayPopover */
 const OverflowPopover: React.FC<{
     date: Date;
     events: DemoEvent[];
@@ -361,17 +328,18 @@ const OverflowPopover: React.FC<{
             <div className="month-day-popover-content">
                 <div className="month-day-popover-events">
                     {events.map(ev => {
+                        const accent = getAccentColor(ev);
                         return (
                             <div key={ev.id} className="month-day-popover-event">
                                 <button
                                     type="button"
                                     className="month-inline-event w-full"
-                                    style={{ ['--event-accent-color' as string]: getAccentColor(ev) }}
+                                    style={{ ['--event-accent-color' as string]: accent }}
                                     onClick={() => { onEventClick(ev); onClose(); }}
                                 >
                                     <span
                                         className="month-inline-event-accent"
-                                        style={{ backgroundColor: getAccentColor(ev) }}
+                                        style={{ backgroundColor: accent }}
                                         aria-hidden="true"
                                     />
                                     <span className="month-inline-event-content" style={{ flex: 1, minWidth: 0, gap: '4px' }}>
@@ -393,6 +361,51 @@ const OverflowPopover: React.FC<{
     );
 };
 
+// ─── View Context Components ──────────────────────────────────────────────────
+
+const MonthView = ({ weeks, handleEventClick, handleMoreClick }: {
+    weeks: WeekData[];
+    handleEventClick: (ev: DemoEvent) => void;
+    handleMoreClick: (day: DayData, e: React.MouseEvent<HTMLButtonElement>) => void;
+}) => (
+    <div className="month-grid-weeks flex-1 min-h-0">
+        {weeks.map((week, wi) => (
+            <div key={wi} className="month-week flex-1 flex flex-col">
+                <div className="month-week-grid flex-1">
+                    {week.days.map((day, di) => {
+                        const isWeekend = di === 0 || di === 6;
+                        return (
+                            <div
+                                key={day.dateKey}
+                                className={[
+                                    'month-grid-day flex flex-col',
+                                    day.isCurrentMonth ? 'current-month' : 'other-month',
+                                    day.isToday ? 'today' : '',
+                                    isWeekend ? 'weekend-col' : '',
+                                ].filter(Boolean).join(' ')}
+                            >
+                                <div className="month-grid-day-number">{day.date.getDate()}</div>
+                                <div className="month-grid-day-events" style={{ marginTop: '0px', gap: '5px' }}>
+                                    {day.slots.map((item, idx) => (
+                                        <div key={idx} className="month-grid-event">
+                                            <CellSlot item={item} onClick={handleEventClick} />
+                                        </div>
+                                    ))}
+                                    {day.overflowEvents.length > 0 && (
+                                        <button type="button" className="month-grid-more-button" onClick={e => handleMoreClick(day, e)}>
+                                            +{day.overflowEvents.length} more
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface DemoCalendarViewProps {
@@ -400,8 +413,7 @@ interface DemoCalendarViewProps {
 }
 
 export default function DemoCalendarView({ onEventSelect }: DemoCalendarViewProps) {
-    const [year, setYear] = useState(DEFAULT_YEAR);
-    const [month, setMonth] = useState(DEFAULT_MONTH);
+    const [viewDate, setViewDate] = useState(DEFAULT_DATE);
 
     const [popover, setPopover] = useState<{
         open: boolean;
@@ -412,24 +424,20 @@ export default function DemoCalendarView({ onEventSelect }: DemoCalendarViewProp
 
     const goTo = useCallback((dir: 'prev' | 'next' | 'today') => {
         if (dir === 'today') {
-            setYear(DEFAULT_YEAR);
-            setMonth(DEFAULT_MONTH);
+            setViewDate(DEFAULT_DATE);
             return;
         }
-        setMonth(m => {
-            if (dir === 'prev') {
-                if (m === 0) { setYear(y => y - 1); return 11; }
-                return m - 1;
-            } else {
-                if (m === 11) { setYear(y => y + 1); return 0; }
-                return m + 1;
-            }
+        setViewDate(prev => {
+            const next = new Date(prev);
+            next.setMonth(prev.getMonth() + (dir === 'next' ? 1 : -1));
+            return next;
         });
     }, []);
 
-    const monthDays = useMemo(() => buildMonthDays(year, month), [year, month]);
-    const events = useMemo(() => MOCK_EVENTS as unknown as DemoEvent[], []);
-    const weeks = useMemo(() => computeWeeks(monthDays, events, month), [monthDays, events, month]);
+    const allEvents = useMemo(() => MOCK_EVENTS as unknown as DemoEvent[], []);
+
+    const monthDays = useMemo(() => buildMonthDays(viewDate), [viewDate]);
+    const monthWeeks = useMemo(() => computeMonthWeeks(monthDays, allEvents, viewDate), [monthDays, allEvents, viewDate]);
 
     const handleEventClick = useCallback((ev: DemoEvent) => {
         onEventSelect?.(ev as unknown as Event);
@@ -450,149 +458,60 @@ export default function DemoCalendarView({ onEventSelect }: DemoCalendarViewProp
     }, []);
 
     return (
-        <div className="demo-calendar-view flex flex-col h-full min-h-0">
+        <div className="demo-calendar-view flex flex-col h-full min-h-0 bg-background-main border border-border-subtle rounded-xl overflow-hidden shadow-2xl">
 
             {/* ── Header ────────────────────────────────────────────────── */}
-            <header className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border-subtle bg-background-secondary/50 backdrop-blur-sm z-50">
+            <header className="h-16 flex-shrink-0 px-6 flex items-center justify-between border-b border-border-subtle bg-background-secondary/30 backdrop-blur-xl z-50">
 
-                {/* Left group: Today + nav + month label */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <button
                         type="button"
                         onClick={() => goTo('today')}
-                        className="text-xs font-medium text-foreground-secondary hover:text-foreground-primary px-3 py-1.5 rounded-md border border-border-subtle hover:bg-background-tertiary transition-colors shadow-xs"
+                        className="text-xs font-bold text-foreground-primary px-4 py-2 rounded-lg border border-border-subtle bg-background-main hover:bg-background-tertiary transition-all shadow-sm active:scale-95"
                     >
                         Today
                     </button>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 p-1 bg-background-tertiary/50 rounded-lg">
                         <button
                             type="button"
                             onClick={() => goTo('prev')}
-                            className="p-1 text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary rounded transition-colors"
-                            aria-label="Previous month"
+                            className="p-1.5 text-foreground-tertiary hover:text-foreground-primary hover:bg-background-main rounded-md transition-all active:scale-90"
+                            aria-label="Previous"
                         >
-                            <CaretLeft size={18} weight="bold" />
+                            <CaretLeft size={20} weight="bold" />
                         </button>
                         <button
                             type="button"
                             onClick={() => goTo('next')}
-                            className="p-1 text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary rounded transition-colors"
-                            aria-label="Next month"
+                            className="p-1.5 text-foreground-tertiary hover:text-foreground-primary hover:bg-background-main rounded-md transition-all active:scale-90"
+                            aria-label="Next"
                         >
-                            <CaretRight size={18} weight="bold" />
+                            <CaretRight size={20} weight="bold" />
                         </button>
                     </div>
 
-                    {/* Month + year */}
-                    <div className="flex items-center gap-1 px-2 py-1 rounded hover:bg-background-tertiary transition-colors">
-                        <span className="text-sm font-medium text-foreground-primary">
-                            {MONTH_NAMES[month]} {year}
-                        </span>
-                        {/* Dropdown chevron — decorative only */}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground-tertiary" aria-hidden="true">
-                            <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                    </div>
-                </div>
-
-                {/* Right group: filter icon + Month/Week/Day switcher */}
-                <div className="flex items-center gap-3">
-
-
-                    {/* Filter icon — decorative only in demo */}
-                    <div className="flex items-center justify-center p-1.5 rounded-md text-foreground-tertiary" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z" />
-                        </svg>
-                    </div>
-
-                    <div className="h-4 w-[1px] bg-border-subtle mx-1" />
-
-                    {/* View switcher — Month is always "active" in demo */}
-                    <div className="flex items-center p-0.5 bg-background-tertiary rounded-lg border border-border-subtle/50">
-                        {(['Month', 'Week', 'Day'] as const).map(v => (
-                            <div
-                                key={v}
-                                className={`px-3 py-1 text-xs rounded-md capitalize transition-colors ${v === 'Month'
-                                    ? 'bg-white dark:bg-[#33353A] text-gray-900 dark:text-gray-100 font-bold shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                                    : 'font-medium text-foreground-secondary hover:text-foreground-primary'
-                                    }`}
-                            >
-                                {v}
-                            </div>
-                        ))}
-                    </div>
+                    <span className="text-lg font-black text-foreground-primary leading-tight">
+                        {MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}
+                    </span>
                 </div>
             </header>
 
-            {/* ── Calendar grid ──────────────────────────────────────────── */}
-            <div className="custom-month-grid flex-1 flex flex-col min-h-0">
-
-                {/* Day-of-week header */}
-                <div className="month-grid-header">
-                    {DAY_NAMES.map((name, i) => (
-                        <div
-                            key={name}
-                            className={`month-grid-day-header ${i === 0 || i === 6 ? 'weekend' : ''}`}
-                        >
-                            {name}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Weeks */}
-                <div className="month-grid-weeks flex-1 min-h-0">
-                    {weeks.map((week, wi) => (
-                        <div key={wi} className="month-week flex-1 flex flex-col">
-
-                            {/* ── Day cells ──────────────────────────────── */}
-                            <div className="month-week-grid flex-1">
-                                {week.days.map((day, di) => {
-                                    const isWeekend = di === 0 || di === 6;
-
-                                    return (
-                                        <div
-                                            key={day.dateKey}
-                                            className={[
-                                                'month-grid-day flex flex-col',
-                                                day.isCurrentMonth ? 'current-month' : 'other-month',
-                                                day.isToday ? 'today' : '',
-                                                isWeekend ? 'weekend-col' : '',
-                                            ].filter(Boolean).join(' ')}
-                                        >
-                                            <div className="month-grid-day-number">
-                                                {day.date.getDate()}
-                                            </div>
-
-                                            {/* Strictly Aligned Slots */}
-                                            <div
-                                                className="month-grid-day-events"
-                                                style={{ marginTop: '0px', gap: '5px' }}
-                                            >
-                                                {day.slots.map((item, idx) => (
-                                                    <div key={idx} className="month-grid-event">
-                                                        <CellSlot item={item} onClick={handleEventClick} />
-                                                    </div>
-                                                ))}
-
-                                                {/* +N more */}
-                                                {day.overflowEvents.length > 0 && (
-                                                    <button
-                                                        type="button"
-                                                        className="month-grid-more-button"
-                                                        onClick={e => handleMoreClick(day, e)}
-                                                    >
-                                                        +{day.overflowEvents.length} more
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+            {/* ── Content ────────────────────────────────────────────────── */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="custom-month-grid flex-1 flex flex-col min-h-0">
+                    <div className="month-grid-header">
+                        {DAY_NAMES.map((name, i) => (
+                            <div key={name} className={`month-grid-day-header ${i === 0 || i === 6 ? 'weekend' : ''}`}>
+                                {name}
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    <MonthView
+                        weeks={monthWeeks}
+                        handleEventClick={handleEventClick}
+                        handleMoreClick={handleMoreClick}
+                    />
                 </div>
             </div>
 

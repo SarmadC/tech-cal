@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowCounterClockwise } from '@phosphor-icons/react';
-import { CalendarBlank, MagnifyingGlass } from '@phosphor-icons/react';
 import MockEventDetailPanel from '@/components/calendar/MockEventDetailPanel';
 import DiscoveryLayout from '@/components/discovery/DiscoveryLayout';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
@@ -272,33 +271,6 @@ export default function ProductDemoSection() {
                         This is the actual UI, loaded with sample data. Search, filter, and inspect full event details
                     </p>
 
-                    {/* ── Tab switcher ─────────────────────────────────── */}
-                    <div className="mt-8 flex items-center justify-center">
-                        <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-border/60 bg-background/60 backdrop-blur-sm shadow-sm">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('discovery')}
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'discovery'
-                                    ? 'bg-card shadow-sm border border-border/60 text-foreground'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
-                                    }`}
-                            >
-                                <MagnifyingGlass size={15} weight={activeTab === 'discovery' ? 'bold' : 'regular'} />
-                                Discovery
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('calendar')}
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'calendar'
-                                    ? 'bg-card shadow-sm border border-border/60 text-foreground'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
-                                    }`}
-                            >
-                                <CalendarBlank size={15} weight={activeTab === 'calendar' ? 'bold' : 'regular'} />
-                                Calendar
-                            </button>
-                        </div>
-                    </div>
 
                     {/* ── Persona presets (Discovery only) ─────────────── */}
                     {activeTab === 'discovery' && (
@@ -337,7 +309,27 @@ export default function ProductDemoSection() {
                 </div>
             </div>
 
-            <div className="product-demo-shell w-full max-w-[1400px] mx-auto relative group perspective-1000">
+            <div className="w-full max-w-[1400px] mx-auto">
+
+                {/* ── Tabs sticking out of the demo container ─────────── */}
+                <div className="flex items-end gap-px pl-8 relative z-10">
+                    {(['discovery', 'calendar'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-5 py-2.5 text-sm font-semibold rounded-t-xl border transition-all duration-200 capitalize ${
+                                activeTab === tab
+                                    ? 'bg-card/95 dark:bg-[#0a0a0a]/80 border-border/70 dark:border-white/10 border-b-transparent text-foreground translate-y-px'
+                                    : 'bg-transparent border-border/40 dark:border-white/5 text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            {tab === 'discovery' ? 'Discovery' : 'Calendar'}
+                        </button>
+                    ))}
+                </div>
+
+            <div className="product-demo-shell relative group perspective-1000">
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
 
                 <div className="product-demo-frame relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
@@ -440,6 +432,7 @@ export default function ProductDemoSection() {
                     </div>
                 </div>
             </div>
+            </div>{/* end tabs + demo wrapper */}
 
             <MockEventDetailPanel
                 isOpen={Boolean(activeSelectedEvent)}
