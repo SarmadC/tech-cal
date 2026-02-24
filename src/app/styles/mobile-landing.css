@@ -764,32 +764,7 @@ html.light .mobile-hero {
   fill: #ffffff !important;
 }
 
-/* ChromeCross animation background - fixed height at top */
-.mobile-hero-background-animation {
-  position: relative;
-  width: 100%;
-  height: 55vh;
-  min-height: 300px;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  /* Allow clicks to pass through to navbar */
-  margin-top: -40px;
-  /* Move cross higher in viewport */
-}
-
-/* Ensure ChromeCross fills the container */
-.mobile-hero-background-animation>div {
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  /* Ensure animation doesn't block clicks */
-}
-
-.mobile-hero-background-animation canvas {
-  pointer-events: none !important;
-  /* Force canvas to not block clicks */
-}
+/* ChromeCross animation background - fixed height at top removed as component is deleted */
 
 /* Overlay gradient removed to reveal ChromeCross animation */
 .mobile-hero-overlay-gradient {
