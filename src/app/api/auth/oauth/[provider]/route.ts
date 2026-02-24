@@ -2,18 +2,81 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { getOAuthRedirectUrl } from '@/utils/authUtils'
 import type { OAuthProvider } from '@/types'
+import { SITE_URL } from '@/config/site'
 
-function getRequestOrigin(request: NextRequest): string {
-    const requestUrl = new URL(request.url)
-    const forwardedHost = request.headers.get('x-forwarded-host')
-    const forwardedProto = request.headers.get('x-forwarded-proto')
+function normalizeOrigin(value: string): string | null {
+    try {
+        const normalized = new URL(value);
+        return normalized.origin;
+    } catch {
+        return null;
+    }
+}
 
-    if (forwardedHost) {
-        const protocol = forwardedProto || requestUrl.protocol.replace(':', '')
-        return `${protocol}://${forwardedHost}`
+function normalizeHostToOrigin(host: string, proto: string): string | null {
+    const firstHost = host.split(',')[0]?.trim();
+    if (!firstHost || firstHost.includes('/') || firstHost.includes(' ')) {
+        return null;
+    }
+    return normalizeOrigin(`${proto}://${firstHost}`);
+}
+
+function getAllowedOrigins(): Set<string> {
+    const allowed = new Set<string>();
+    const add = (value: string | undefined | null) => {
+        if (!value) return;
+        const normalized = normalizeOrigin(value);
+        if (normalized) {
+            allowed.add(normalized);
+        }
+    };
+
+    add(SITE_URL);
+    add(process.env.NEXT_PUBLIC_SITE_URL);
+    add(process.env.SITE_URL);
+
+    if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+        const value = process.env.NEXT_PUBLIC_VERCEL_URL.startsWith('http')
+            ? process.env.NEXT_PUBLIC_VERCEL_URL
+            : `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+        add(value);
     }
 
-    return requestUrl.origin
+    if (process.env.VERCEL_URL) {
+        add(`https://${process.env.VERCEL_URL}`);
+    }
+
+    const extraOrigins = process.env.AUTH_ALLOWED_ORIGINS;
+    if (extraOrigins) {
+        extraOrigins.split(',').map((origin) => origin.trim()).forEach(add);
+    }
+
+    add('http://localhost:3000');
+    add('http://127.0.0.1:3000');
+
+    return allowed;
+}
+
+function resolveTrustedOrigin(request: NextRequest): string {
+    const allowedOrigins = getAllowedOrigins();
+    const requestOrigin = new URL(request.url).origin;
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = (request.headers.get('x-forwarded-proto') || 'https').split(',')[0]?.trim() || 'https';
+    const forwardedOrigin = forwardedHost ? normalizeHostToOrigin(forwardedHost, forwardedProto) : null;
+
+    const candidates = [requestOrigin, forwardedOrigin].filter((origin): origin is string => !!origin);
+    for (const candidate of candidates) {
+        if (allowedOrigins.has(candidate)) {
+            return candidate;
+        }
+    }
+
+    const defaultOrigin = normalizeOrigin(SITE_URL) || 'https://www.kure-cal.com';
+    console.warn('[OAuth Route Handler] Falling back to default origin because no trusted origin matched', {
+        requestOrigin,
+        forwardedOrigin,
+    });
+    return defaultOrigin;
 }
 
 export async function GET(
@@ -33,9 +96,8 @@ export async function GET(
             )
         }
 
-        // Build callback origin from the current request/proxy headers.
-        // Avoid hardcoding https so localhost callbacks remain http in local dev.
-        const origin = getRequestOrigin(request)
+        // Build callback origin from an explicit allowlist.
+        const origin = resolveTrustedOrigin(request)
 
         // Get the redirect URL for the callback
         const redirectTo = getOAuthRedirectUrl(nextPath, origin);

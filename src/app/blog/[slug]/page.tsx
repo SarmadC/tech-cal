@@ -10,6 +10,7 @@ import { EventService } from '@/services/eventServices';
 import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import type { AgendaItem } from '@/types/events';
 import { SITE_URL } from '@/config/site';
+import { sanitizeBlogHtml } from '@/lib/sanitizeHtml';
 
 // Revalidate every hour
 export const revalidate = 3600;
@@ -178,6 +179,11 @@ export default async function BlogPostPage({ params }: Props) {
         notFound();
     }
 
+    const rawContent = (post.content || '')
+        .replace(/5 W&#39;s|5 W's/g, 'Property')
+        .replace(/Details/g, 'Value');
+    const safeContent = sanitizeBlogHtml(rawContent);
+
     const ctaEventData = post.cta_event || null;
     const ctaEvent = Array.isArray(ctaEventData) ? ctaEventData[0] : ctaEventData;
 
@@ -293,13 +299,11 @@ export default async function BlogPostPage({ params }: Props) {
                             [&_th]:text-left [&_th]:py-3 [&_th]:px-4 [&_th]:text-[13px] [&_th]:font-medium [&_th]:text-[#8A8F98] [&_th]:bg-transparent [&_th]:border-0 [&_th]:align-top first:[&_th]:!w-[180px] first:[&_th]:!min-w-[180px] first:[&_th]:!max-w-[180px]
                             [&_td]:py-3 [&_td]:px-4 [&_td]:border-b [&_td]:border-white/[0.04] [&_td]:text-[#EDEDEF] [&_td]:bg-transparent [&_td]:align-top first:[&_td]:text-[#9CA3AF] first:[&_td]:font-normal first:[&_td]:!w-[180px] first:[&_td]:!min-w-[180px] first:[&_td]:!max-w-[180px] first:[&_td]:border-0 [&_td:last-child]:border-0
                             [&_tr]:border-b [&_tr]:border-white/[0.04] last:[&_tr]:border-0
-                            [&_tr:hover]:bg-transparent
-                            [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-lg [&_iframe]:my-8
-                            [&_h2]:!pl-0 [&_h2]:!ml-0"
+                                [&_tr:hover]:bg-transparent
+                                [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-lg [&_iframe]:my-8
+                                [&_h2]:!pl-0 [&_h2]:!ml-0"
                                 dangerouslySetInnerHTML={{
-                                    __html: (post.content || '')
-                                        .replace(/5 W&#39;s|5 W's/g, 'Property')
-                                        .replace(/Details/g, 'Value')
+                                    __html: safeContent
                                 }}
                             />
                         </article>

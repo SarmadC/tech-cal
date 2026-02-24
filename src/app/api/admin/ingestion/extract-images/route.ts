@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
+import { fetchWithSafeRedirects, validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
 // Use Node.js runtime for better fetch support and external URL access
 export const runtime = 'nodejs';
@@ -225,15 +226,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required field: url' }, { status: 400 });
         }
 
-        // Validate URL format
-        let parsedUrl: URL;
-        try {
-            parsedUrl = new URL(url);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-                throw new Error('Invalid protocol');
-            }
-        } catch {
-            return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+        const validation = await validateUrlForServerFetch(url);
+        if (!validation.valid) {
+            return NextResponse.json({ error: validation.reason }, { status: 400 });
         }
 
         // Check if URL is a direct image URL
@@ -244,7 +239,7 @@ export async function POST(request: NextRequest) {
 
             try {
                 // Try HEAD first (lightweight check)
-                let response = await fetch(url, {
+                let response = await fetchWithSafeRedirects(url, {
                     method: 'HEAD',
                     headers: {
                         'User-Agent':
@@ -260,12 +255,11 @@ export async function POST(request: NextRequest) {
                         'Sec-Fetch-Site': 'cross-site',
                     },
                     signal: controller.signal,
-                    redirect: 'follow', // Explicitly follow redirects
                 });
 
                 // If HEAD fails (405 Method Not Allowed or 404), try GET as fallback
                 if (!response.ok && (response.status === 405 || response.status === 404)) {
-                    response = await fetch(url, {
+                    response = await fetchWithSafeRedirects(url, {
                         method: 'GET',
                         headers: {
                             'User-Agent':
@@ -281,7 +275,6 @@ export async function POST(request: NextRequest) {
                             'Sec-Fetch-Site': 'cross-site',
                         },
                         signal: controller.signal,
-                        redirect: 'follow', // Explicitly follow redirects
                     });
                 }
 
@@ -349,7 +342,7 @@ export async function POST(request: NextRequest) {
 
         let html: string;
         try {
-            const response = await fetch(url, {
+            const response = await fetchWithSafeRedirects(url, {
                 headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -368,7 +361,6 @@ export async function POST(request: NextRequest) {
                     'Connection': 'keep-alive',
                 },
                 signal: controller.signal,
-                redirect: 'follow', // Explicitly follow redirects
             });
 
             clearTimeout(timeoutId);

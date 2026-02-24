@@ -79,21 +79,7 @@ export default function CalendarIntegrationSettings() {
         if (!requireProAccess()) return;
         setConnecting(true);
         try {
-            // Custom OAuth flow - bypass Supabase OAuth
-            const redirectUri = `${window.location.origin}/api/calendar/google/callback`;
-
-            const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-            authUrl.searchParams.set('client_id', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!);
-            authUrl.searchParams.set('redirect_uri', redirectUri);
-            authUrl.searchParams.set('response_type', 'code');
-            // Use full calendar scope - calendar.events might not be enough for calendarList.get()
-            authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/calendar');
-            authUrl.searchParams.set('access_type', 'offline');
-            authUrl.searchParams.set('prompt', 'consent');
-            authUrl.searchParams.set('state', 'calendar_connect');
-
-            // Redirect to Google OAuth
-            window.location.href = authUrl.toString();
+            window.location.href = '/api/calendar/google/start';
         } catch (error: unknown) {
             console.error('Error connecting calendar:', getErrorMessage(error));
             showError('Failed to connect calendar. Please try again.');

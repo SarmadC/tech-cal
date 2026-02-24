@@ -5,7 +5,6 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { getErrorMessage } from '@/utils/errorHandling';
 import { Button } from '@/components/ui/button';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 
 interface CalendarStatus {
     connected: boolean;
@@ -48,16 +47,7 @@ export default function SettingsMobileIntegration() {
     const handleConnect = async () => {
         setConnecting(true);
         try {
-            const redirectUri = `${window.location.origin}/api/calendar/google/callback`;
-            const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-            authUrl.searchParams.set('client_id', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!);
-            authUrl.searchParams.set('redirect_uri', redirectUri);
-            authUrl.searchParams.set('response_type', 'code');
-            authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/calendar');
-            authUrl.searchParams.set('access_type', 'offline');
-            authUrl.searchParams.set('prompt', 'consent');
-            authUrl.searchParams.set('state', 'calendar_connect');
-            window.location.href = authUrl.toString();
+            window.location.href = '/api/calendar/google/start';
         } catch (error: unknown) {
             console.error('Error connecting calendar:', getErrorMessage(error));
             showError('Failed to connect calendar. Please try again.');
@@ -74,7 +64,7 @@ export default function SettingsMobileIntegration() {
             showSuccess('Disconnected');
             setStatus(prev => prev ? { ...prev, connected: false, isActive: false, calendarId: undefined } : null);
             setShowManage(false); // Close manage view
-        } catch (error) {
+        } catch (_error) {
             showError('Failed to disconnect');
         } finally {
             setDisconnecting(false);
@@ -97,7 +87,7 @@ export default function SettingsMobileIntegration() {
             } else {
                 throw new Error(result.error);
             }
-        } catch (error) {
+        } catch (_error) {
             showError('Sync failed');
         } finally {
             setBulkSyncing(false);

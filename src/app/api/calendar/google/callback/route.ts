@@ -3,11 +3,35 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { GoogleCalendarService } from '@/services/googleCalendarService';
 import { encryptToken } from '@/utils/tokenEncryption';
+import crypto from 'crypto';
+
+const OAUTH_STATE_COOKIE = 'calendar_oauth_state';
+
+function timingSafeEqual(a: string, b: string): boolean {
+    const aBuffer = Buffer.from(a);
+    const bBuffer = Buffer.from(b);
+    if (aBuffer.length !== bBuffer.length) {
+        return false;
+    }
+    return crypto.timingSafeEqual(aBuffer, bBuffer);
+}
 
 async function handleCallback(request: NextRequest) {
+    const origin = new URL(request.url).origin;
+    const redirectToSettings = (errorCode: string) => {
+        const response = NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=${errorCode}`);
+        response.cookies.set({
+            name: OAUTH_STATE_COOKIE,
+            value: '',
+            maxAge: 0,
+            path: '/api/calendar/google/callback',
+        });
+        return response;
+    };
+
     try {
         logger.debug('[CALENDAR CALLBACK] Request received:', request.url);
-        const { searchParams, origin } = new URL(request.url);
+        const { searchParams } = new URL(request.url);
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
@@ -15,12 +39,17 @@ async function handleCallback(request: NextRequest) {
 
         if (error) {
             console.error('[CALENDAR CALLBACK] OAuth error:', error);
-            return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=oauth_error`);
+            return redirectToSettings('oauth_error');
         }
 
-        if (!code || state !== 'calendar_connect') {
-            console.error('[CALENDAR CALLBACK] Invalid request - missing code or state mismatch:', { hasCode: !!code, state });
-            return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=invalid_request`);
+        const expectedState = request.cookies.get(OAUTH_STATE_COOKIE)?.value;
+        if (!code || !state || !expectedState || !timingSafeEqual(state, expectedState)) {
+            console.error('[CALENDAR CALLBACK] Invalid request - code/state validation failed:', {
+                hasCode: !!code,
+                hasState: !!state,
+                hasExpectedState: !!expectedState,
+            });
+            return redirectToSettings('invalid_request');
         }
 
         // Exchange authorization code for tokens
@@ -41,16 +70,22 @@ async function handleCallback(request: NextRequest) {
         if (!tokenResponse.ok) {
             const errorData = await tokenResponse.text();
             console.error('[CALENDAR CALLBACK] Token exchange failed:', errorData);
-            return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=token_exchange_failed`);
+            return redirectToSettings('token_exchange_failed');
         }
 
         const tokens = await tokenResponse.json();
-        logger.debug('[CALENDAR CALLBACK] Tokens received:', tokens);
+        logger.debug('[CALENDAR CALLBACK] Tokens received from OAuth provider', {
+            hasAccessToken: !!tokens?.access_token,
+            hasRefreshToken: !!tokens?.refresh_token,
+        });
         const { access_token, refresh_token } = tokens;
 
         if (!access_token || !refresh_token) {
-            console.error('[CALENDAR CALLBACK] Missing tokens in response:', tokens);
-            return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=missing_tokens`);
+            console.error('[CALENDAR CALLBACK] Missing tokens in OAuth response', {
+                hasAccessToken: !!access_token,
+                hasRefreshToken: !!refresh_token,
+            });
+            return redirectToSettings('missing_tokens');
         }
 
         // Get user's primary calendar
@@ -62,7 +97,7 @@ async function handleCallback(request: NextRequest) {
 
         if (userError || !user) {
             console.error('[CALENDAR CALLBACK] User not authenticated:', userError);
-            return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&error=not_authenticated`);
+            return redirectToSettings('not_authenticated');
         }
 
         // Store connection in database
@@ -128,7 +163,14 @@ async function handleCallback(request: NextRequest) {
         logger.debug('[CALENDAR CALLBACK] Calendar connection created/updated successfully');
 
         // Redirect back to settings with success
-        return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&connected=true`);
+        const successResponse = NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&connected=true`);
+        successResponse.cookies.set({
+            name: OAUTH_STATE_COOKIE,
+            value: '',
+            maxAge: 0,
+            path: '/api/calendar/google/callback',
+        });
+        return successResponse;
 
     } catch (error) {
         console.error('[CALENDAR CALLBACK] Unexpected error:', error);
@@ -136,17 +178,10 @@ async function handleCallback(request: NextRequest) {
             console.error('[CALENDAR CALLBACK] Error message:', error.message);
             console.error('[CALENDAR CALLBACK] Error stack:', error.stack);
         }
-        // Get origin from request URL for error redirect
-        const requestOrigin = new URL(request.url).origin;
-        return NextResponse.redirect(`${requestOrigin}/dashboard/settings?tab=integrations&error=callback_error`);
+        return redirectToSettings('callback_error');
     }
 }
 
-// Export both GET and POST handlers
 export async function GET(request: NextRequest) {
-    return handleCallback(request);
-}
-
-export async function POST(request: NextRequest) {
     return handleCallback(request);
 }

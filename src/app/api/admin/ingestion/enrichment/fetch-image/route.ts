@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
+import { fetchWithSafeRedirects, validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
 export async function POST(request: NextRequest) {
     try {
@@ -31,15 +32,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required field: imageUrl' }, { status: 400 });
         }
 
-        // Validate URL format
-        let parsedUrl: URL;
-        try {
-            parsedUrl = new URL(imageUrl);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-                throw new Error('Invalid protocol');
-            }
-        } catch {
-            return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+        const validation = await validateUrlForServerFetch(imageUrl);
+        if (!validation.valid) {
+            return NextResponse.json({ error: validation.reason }, { status: 400 });
         }
 
         // Fetch the image server-side (bypasses CSP)
@@ -47,7 +42,7 @@ export async function POST(request: NextRequest) {
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
         try {
-            const response = await fetch(imageUrl, {
+            const response = await fetchWithSafeRedirects(imageUrl, {
                 headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -130,4 +125,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-
