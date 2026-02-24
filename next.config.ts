@@ -71,6 +71,20 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // These packages are server-only but get pulled into the client bundle
+      // transitively via eventServices -> careerImpactEnrichmentService -> @vercel/kv.
+      // Setting them to false tells webpack to resolve them as empty modules in the browser.
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        '@vercel/kv': false,
+        '@upstash/redis': false,
+        '@upstash/ratelimit': false,
+      };
+    }
+    return config;
+  },
   async redirects() {
     return [
       {

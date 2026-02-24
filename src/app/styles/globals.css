@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Aeonik:wght@300;400;500;700&display=swap');
+/* Fonts are loaded via next/font in layout.tsx — no render-blocking @import needed */
 @import './event-type-colors.css';
 @import './utilities.css';
 @import './mobile-design-system.css';
@@ -174,8 +173,8 @@ textarea:not([class*="fc-"]):focus {
   --chart-5-explicit: hsl(340, 75%, 55%);
 
   --font-sans: var(--font-dm-sans, 'DM Sans'), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Courier New', monospace;
+  --font-serif: var(--font-playfair, 'Playfair Display'), Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-jetbrains-mono, 'JetBrains Mono'), 'SF Mono', Consolas, 'Courier New', monospace;
 
   --space-1: 4px;
   --space-2: 8px;

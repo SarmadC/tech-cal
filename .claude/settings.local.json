@@ -88,7 +88,9 @@
       "Bash(squirrel audit:*)",
       "Skill(audit-website)",
       "Bash(npx vitest run:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(cat .next/build-manifest.json | python3 -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\n# Check app dir pages\napp_pages = data.get\\('__routerFilterStatic', {}\\)\npages = data.get\\('pages', {}\\)\nsortedPages = sorted\\(pages.items\\(\\)\\)\nfor page, chunks in sortedPages:\n    for chunk in chunks:\n        if '8876' in chunk or '929-a7a' in chunk:\n            print\\(f'{page}: {chunk}'\\)\n\" 2>/dev/null)",
+      "Bash(# The issue is likely @vercel/kv being a dual-mode package \\(client+server\\)\n# Check the package itself to understand why it leaks\ncat node_modules/@vercel/kv/package.json | python3 -c \"\nimport sys, json\nd = json.load\\(sys.stdin\\)\nprint\\('exports:', json.dumps\\(d.get\\('exports', {}\\), indent=2\\)[:500]\\)\nprint\\('main:', d.get\\('main'\\)\\)\nprint\\('module:', d.get\\('module'\\)\\)\n\" 2>/dev/null)"
     ],
     "deny": [],
     "ask": []
