@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useState, useCallback, useRef } from 'react';
+import { FC, useState, useCallback, useRef, useEffect } from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, EventType, AppProfile } from '@/types';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
@@ -31,6 +31,14 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
     const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
     const [lastScrollY, setLastScrollY] = useState(0);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Advanced swipe gestures for view-specific actions
     // Only enable horizontal swipes to prevent interference with vertical scrolling

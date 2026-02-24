@@ -83,6 +83,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     useEffect(() => {
         let isMounted = true;
         let timeoutId: NodeJS.Timeout;
+        let transitionTimeoutId: NodeJS.Timeout;
 
         const fetchEventWithAgenda = async () => {
             // If event already has agenda, no need to fetch
@@ -125,7 +126,9 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     }
 
                     // Ensure minimum loading time for smooth transition (300ms)
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await new Promise<void>(resolve => {
+                        transitionTimeoutId = setTimeout(resolve, 300);
+                    });
                 }
             } catch (error) {
                 clearTimeout(timeoutId);
@@ -144,6 +147,9 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             isMounted = false;
             if (timeoutId) {
                 clearTimeout(timeoutId);
+            }
+            if (transitionTimeoutId) {
+                clearTimeout(transitionTimeoutId);
             }
         };
     }, [event.id, event]);

@@ -110,7 +110,8 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     };
     fetchSpeakers();
     return () => { isCancelled = true; };
-  }, [events, speakerCounts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthContainerRef = useRef<HTMLDivElement>(null);
