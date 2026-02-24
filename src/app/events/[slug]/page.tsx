@@ -181,14 +181,16 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 
     const { event } = result;
     const eventDate = formatMonthYear(new Date(event.start_time));
+    const locationPart = event.location ? ` in ${event.location}` : '';
+    const typePart = event.event_type?.name ? ` ${event.event_type.name}` : ' tech event';
     const description = event.description
         ? event.description.slice(0, 160) + (event.description.length > 160 ? '...' : '')
-        : `Join ${event.title} - a tech event happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}.`;
+        : `${event.title} is a${typePart} happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}${locationPart}. Browse the schedule, register, and add it to your calendar.`;
 
     const ogImage = event.event_image_url || `${SITE_URL}/og-image.png`;
 
     return {
-        title: `${event.title} - ${eventDate} | Kure-Cal`,
+        title: `${event.title} - ${eventDate}`,
         description,
         openGraph: {
             title: `${event.title} - ${eventDate}`,

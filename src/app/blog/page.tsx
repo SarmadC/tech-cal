@@ -4,6 +4,7 @@ export const revalidate = 3600; // 1 hour
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SITE_URL } from '@/config/site';
 
 export const metadata: Metadata = {
     title: 'Tech Events Insights, Tutorials, and News',
@@ -13,11 +14,13 @@ export const metadata: Metadata = {
         title: 'Tech Events Insights, Tutorials, and News | Kure-Cal',
         description: 'Stay informed with insights, tutorials, and news from the tech events world.',
         type: 'website',
+        images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630 }],
     },
     twitter: {
         card: 'summary_large_image',
         title: 'Tech Events Insights, Tutorials, and News | Kure-Cal',
         description: 'Stay informed with insights, tutorials, and news from the tech events world.',
+        images: [`${SITE_URL}/og-image.png`],
     },
 };
 import Image from 'next/image';

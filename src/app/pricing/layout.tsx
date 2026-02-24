@@ -1,5 +1,6 @@
 // src/app/pricing/layout.tsx
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/config/site';
 
 export const metadata: Metadata = {
     title: 'Tech Event Calendar Pricing Plans',
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
         title: 'Tech Event Calendar Pricing Plans | Kure-Cal',
         description: 'Simple, transparent pricing for Kure-Cal. Choose from Free, Pro, or Team plans.',
         type: 'website',
+        images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630 }],
     },
     twitter: {
         card: 'summary',

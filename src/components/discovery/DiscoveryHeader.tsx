@@ -327,6 +327,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Search events..."
                         maxLength={200}
+                        aria-label="Search events"
                         className="w-full pl-11 pr-16 py-2.5 bg-background focus:bg-background border border-border focus:border-black/20 dark:focus:border-white/20 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none shadow-sm"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
@@ -388,6 +389,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Location"
                         maxLength={100}
+                        aria-label="Filter by location"
                         className="w-full pl-9 pr-10 py-2.5 bg-transparent border-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
                         value={location}
                         onChange={(e) => onLocationChange(e.target.value)}
@@ -399,6 +401,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         disabled={isLoading}
                         className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md transition-all text-muted-foreground hover:text-primary hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title="Find events near me"
+                        aria-label="Find events near me"
                     >
                         {isLoading ? (
                             <SpinnerGap size={14} className="animate-spin" />
@@ -419,6 +422,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <button
                         type="button"
                         onClick={() => setIsDatePickerOpen(true)}
+                        aria-label="Select date range"
                         className="w-full pl-9 pr-4 py-2.5 bg-transparent border-none text-sm text-foreground text-left cursor-pointer hover:bg-accent/50 rounded-lg transition-colors truncate"
                     >
                         {formatDateRange(dateRange)}
@@ -449,6 +453,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <button
                         className="lg:hidden p-2 text-foreground hover:bg-accent/50 rounded-lg transition-colors"
                         onClick={onFilterClick}
+                        aria-label="Open filters"
                     >
                         <SlidersHorizontal size={20} />
                     </button>

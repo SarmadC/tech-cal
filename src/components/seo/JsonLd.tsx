@@ -46,7 +46,10 @@ export function OrganizationJsonLd() {
         '@id': ORGANIZATION_ID,
         name: SITE_NAME,
         url: SITE_URL,
-        logo: `${SITE_URL}/logo.svg`,
+        logo: {
+            '@type': 'ImageObject',
+            url: `${SITE_URL}/logo.svg`,
+        },
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         ...(sameAs.length > 0 && { sameAs }),
     };
@@ -67,7 +70,10 @@ export function WebsiteJsonLd() {
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         potentialAction: {
             '@type': 'SearchAction',
-            target: `${SITE_URL}/events?q={search_term_string}`,
+            target: {
+                '@type': 'EntryPoint',
+                urlTemplate: `${SITE_URL}/events?q={search_term_string}`,
+            },
             'query-input': 'required name=search_term_string',
         },
         publisher: {
@@ -144,7 +150,10 @@ export function ArticleJsonLd({
         publisher: {
             '@type': 'Organization',
             name: SITE_NAME,
-            logo: `${SITE_URL}/logo.svg`,
+            logo: {
+                '@type': 'ImageObject',
+                url: `${SITE_URL}/logo.svg`,
+            },
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
@@ -204,6 +213,7 @@ export function EventJsonLd({
         offers && (offers.priceMin !== null || offers.priceMax !== null)
             ? {
                 '@type': 'AggregateOffer',
+                offerCount: 1,
                 ...(offers.priceMin !== null && { lowPrice: offers.priceMin }),
                 ...(offers.priceMax !== null && { highPrice: offers.priceMax }),
                 priceCurrency: offers.currency || 'USD',
@@ -283,7 +293,7 @@ export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
             '@type': 'ListItem',
             position: index + 1,
             name: item.name,
-            ...(item.url && { item: item.url }),
+            ...(item.url && { item: { '@id': item.url } }),
         })),
     };
 

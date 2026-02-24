@@ -93,6 +93,11 @@ const nextConfig: NextConfig = {
         destination: 'https://www.kure-cal.com/:path*',
         permanent: true,
       },
+      {
+        source: '/privacy-policy',
+        destination: '/legal/privacy',
+        permanent: true,
+      },
     ];
   },
   // 2. Add the async headers function to your Next.js config.
