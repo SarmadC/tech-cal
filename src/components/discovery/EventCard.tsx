@@ -180,7 +180,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                     className="absolute right-4 top-4 z-20"
                     ref={actionMenuRef}
                 >
-                    <div className="flex items-center gap-1 rounded-md border border-border/70 bg-background/80 p-0.5 shadow-sm backdrop-blur-sm transition-all duration-200 opacity-0 pointer-events-none translate-y-1 group-hover/event-card:opacity-100 group-hover/event-card:pointer-events-auto group-hover/event-card:translate-y-0 group-focus-within/event-card:opacity-100 group-focus-within/event-card:pointer-events-auto group-focus-within/event-card:translate-y-0">
+                    <div className="flex items-center gap-1 rounded-md border border-border bg-background/95 p-1 shadow-md backdrop-blur-md transition-all duration-200 opacity-0 pointer-events-none translate-y-1 group-hover/event-card:opacity-100 group-hover/event-card:pointer-events-auto group-hover/event-card:translate-y-0 group-focus-within/event-card:opacity-100 group-focus-within/event-card:pointer-events-auto group-focus-within/event-card:translate-y-0 text-foreground">
                         {showShortlistAction && (
                             <button
                                 type="button"
@@ -188,7 +188,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                     e.stopPropagation();
                                     onShortlistToggle?.(event);
                                 }}
-                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'}`}
+                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/20'}`}
                                 aria-pressed={isInShortlist}
                                 aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                             >
@@ -202,7 +202,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 e.stopPropagation();
                                 onAttendanceToggle?.(event);
                             }}
-                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-400 hover:text-emerald-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-400 hover:text-emerald-300' : 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/20'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                             aria-pressed={isAttending}
                             aria-label={isAttending ? 'Remove attending status' : "Mark as attending"}
                             disabled={isAttendanceUpdating}
@@ -221,7 +221,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                 e.stopPropagation();
                                 onBookmark?.(event);
                             }}
-                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/20'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
                             aria-pressed={isBookmarked}
                             aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
                             disabled={isBookmarking}
@@ -246,7 +246,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                             onFocus={() => {
                                 void prefetchManagerJustification(event.id);
                             }}
-                            className="p-1.5 rounded-md transition-all text-muted-foreground/50 hover:text-foreground hover:bg-accent/10"
+                            className="p-1.5 rounded-md transition-all text-muted-foreground/75 hover:text-foreground hover:bg-accent/20"
                             aria-haspopup="menu"
                             aria-expanded={isActionMenuOpen}
                             aria-label="More actions"

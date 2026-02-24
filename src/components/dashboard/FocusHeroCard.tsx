@@ -188,12 +188,12 @@ export function FocusHeroCard({
                                     <div className="flex items-center gap-2">
                                         {/* Avatar/Logo Logic */}
                                         {metrics.topRecommendedEvent.event.organization?.logo ? (
-                                            <div className="relative w-5 h-5 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                            <div className="relative w-5 h-5 overflow-hidden">
                                                 <Image
                                                     src={metrics.topRecommendedEvent.event.organization.logo}
                                                     alt={metrics.topRecommendedEvent.event.organizer || 'Organizer'}
                                                     fill
-                                                    className="object-cover"
+                                                    className="object-contain"
                                                 />
                                             </div>
                                         ) : (

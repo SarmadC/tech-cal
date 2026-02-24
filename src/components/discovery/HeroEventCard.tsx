@@ -223,7 +223,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 e.stopPropagation();
                                 onAttendanceToggle?.(event);
                             }}
-                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-500 dark:text-emerald-400' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isAttending ? 'text-emerald-500 dark:text-emerald-400' : 'text-muted-foreground/75 hover:text-foreground hover:bg-accent/20'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                             aria-pressed={isAttending}
                             aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
                             disabled={isAttendanceUpdating}
@@ -237,7 +237,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 e.stopPropagation();
                                 onBookmark?.(event);
                             }}
-                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground/75 hover:text-foreground hover:bg-accent/20'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
                             aria-pressed={isBookmarked}
                             disabled={isBookmarking}
                         >
@@ -249,7 +249,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 e.stopPropagation();
                                 onShortlistToggle?.(event);
                             }}
-                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-500 bg-violet-500/10 dark:text-violet-300 dark:bg-violet-500/15' : 'text-muted-foreground/50 hover:text-foreground hover:bg-accent'}`}
+                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-500 bg-violet-500/10 dark:text-violet-300 dark:bg-violet-500/15' : 'text-muted-foreground/75 hover:text-foreground hover:bg-accent/20'}`}
                             aria-pressed={isInShortlist}
                             aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                         >
@@ -262,7 +262,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 e.stopPropagation();
                                 setIsActionMenuOpen((prev) => !prev);
                             }}
-                            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-md text-muted-foreground/75 hover:text-foreground hover:bg-accent/20 transition-colors"
                             aria-haspopup="menu"
                             aria-expanded={isActionMenuOpen}
                         >

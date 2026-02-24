@@ -284,27 +284,24 @@ export function useEventEngagement() {
     queryClient.setQueryData<TrackedEventRecord[]>(['trackedEvents', user.id], (old = []) => {
       const existing = old.find(te => te.eventId === eventId);
       if (existing) {
-        // Update existing
-        const shouldAutoBookmark = (status === 'attending' || status === 'attended') && !existing.isBookmarked;
+        // Update existing - DECOUPLED: no longer toggling isBookmarked
         return old.map(te => 
           te.eventId === eventId 
             ? { 
                 ...te, 
                 status,
-                notes: notes ?? te.notes,
-                isBookmarked: shouldAutoBookmark ? true : te.isBookmarked,
-                bookmarkedAt: shouldAutoBookmark ? (te.bookmarkedAt || new Date().toISOString()) : te.bookmarkedAt
+                notes: notes ?? te.notes
               }
             : te
         );
       } else if (status === 'attending' || status === 'attended') {
-        // Auto-bookmark creates new row
+        // New attendance - DECOUPLED: starting with isBookmarked = false
         return [...old, {
           trackingId: '',
           userId: user.id,
           eventId,
-          isBookmarked: true,
-          bookmarkedAt: new Date().toISOString(),
+          isBookmarked: false,
+          bookmarkedAt: null,
           status,
           notes: notes ?? null,
           trackedAt: new Date().toISOString(),

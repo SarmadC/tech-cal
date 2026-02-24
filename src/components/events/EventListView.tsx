@@ -11,6 +11,7 @@ import AppSidebar from '@/components/app-sidebar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
+import EventDetailSidebar from '@/components/calendar/EventDetailSidebar';
 import { Button } from '@/components/ui/button';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
 import { AdminDataTable, AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -57,8 +58,8 @@ function toInputValue(date: Date | null): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-const EventDetailPanelDynamic = dynamic(
-    () => import('@/components/calendar/EventDetailPanel'),
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
     { loading: () => <Loading /> },
 );
 
@@ -178,20 +179,9 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }, [filteredEvents, countsByEventId]);
 
     const [selectedEvent, setSelectedEvent] = useState<TrackedEvent | null>(null);
-    const [isClosing, setIsClosing] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const isMobile = useIsMobile();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Clean up the close animation timer on unmount to prevent state updates after unmount
-    useEffect(() => {
-        return () => {
-            if (closeTimerRef.current !== null) {
-                clearTimeout(closeTimerRef.current);
-            }
-        };
-    }, []);
 
     // Scroll to top when page changes
     useEffect(() => {
@@ -251,19 +241,11 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }), [eventsWithNetwork]);
 
     const handleOpenDetails = useCallback((event: TrackedEvent) => {
-        setIsClosing(false);
         setSelectedEvent(event);
     }, []);
 
     const handleCloseDetails = useCallback(() => {
-        setIsClosing(true);
-        // Wait for animation to complete before removing from DOM
-        if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = setTimeout(() => {
-            setSelectedEvent(null);
-            setIsClosing(false);
-            closeTimerRef.current = null;
-        }, 300); // Match the animation duration
+        setSelectedEvent(null);
     }, []);
 
     const columns: AdminDataTableColumn<EventRow>[] = useMemo(() => [
@@ -737,30 +719,20 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     </div>
                 </main>
 
-                {selectedEvent && !isMobile && (
-                    <div
-                        className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
-                            }`}
-                        onClick={handleCloseDetails}
-                        role="presentation"
-                    >
-                        <div
-                            className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${isClosing
-                                ? 'animate-out slide-out-to-right'
-                                : 'animate-in slide-in-from-right'
-                                }`}
-                            onClick={(event) => event.stopPropagation()}
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label="Event details"
-                        >
-                            <EventDetailPanelDynamic
-                                event={selectedEvent}
-                                categories={initialCategories}
-                                onClose={handleCloseDetails}
-                            />
-                        </div>
-                    </div>
+                {selectedEvent && (
+                    isMobile ? (
+                        <MobileEventDetailPanelDynamic
+                            event={selectedEvent}
+                            onClose={handleCloseDetails}
+                            categories={initialCategories}
+                        />
+                    ) : (
+                        <EventDetailSidebar
+                            event={selectedEvent}
+                            onClose={handleCloseDetails}
+                            categories={initialCategories}
+                        />
+                    )
                 )}
             </div>
         </SidebarProvider>

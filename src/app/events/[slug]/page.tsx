@@ -19,6 +19,7 @@ import { EmbedButton } from '@/components/social/EmbedButton';
 import WhosGoingSection from '@/components/events/WhosGoingSection';
 import { SITE_URL } from '@/config/site';
 import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
+import PublicEventShortcuts from '@/components/events/PublicEventShortcuts';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -387,54 +388,80 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                         )}
                     </div>
 
-                    {/* Right Rail - Minimal Ghost Style */}
+                    {/* Right Rail - Linear-inspired */}
                     <aside className="hidden lg:block lg:col-span-4">
-                        <div className="rounded-lg border border-border-subtle bg-background-secondary/40 overflow-hidden">
-                            <div className="p-4 space-y-3 border-b border-border-subtle">
-                                <AttendanceEventButton
-                                    eventId={event.id}
-                                    loginRedirect={`/events/${event.slug}`}
-                                />
-                                <BookmarkEventButton
-                                    eventId={event.id}
-                                    event={{
-                                        id: event.id,
-                                        title: event.title,
-                                        startTime: event.start_time,
-                                        location: event.location,
-                                        eventType: event.event_type?.name || null,
-                                        organizer: event.organizer?.name || null
-                                    }}
-                                    loginRedirect={`/events/${event.slug}`}
-                                />
-
+                        <div className="rounded-lg bg-background-secondary/30 p-1 space-y-6">
+                            {/* Primary & Secondary Actions Combined */}
+                            <div className="flex flex-col gap-3">
                                 {event.registration_url && (
                                     <a
                                         href={event.registration_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex w-full items-center justify-center h-10 border border-border-subtle hover:border-border-default rounded-md text-[13px] font-medium text-foreground-secondary transition-colors gap-2"
+                                        className="flex w-full items-center justify-between h-10 px-3 bg-white text-black hover:bg-white/90 rounded-md text-[13px] font-semibold transition-colors"
                                     >
-                                        Register on website
-                                        <ArrowSquareOut className="w-3.5 h-3.5 opacity-70" />
+                                        <div className="flex items-center gap-2">
+                                            Register on website
+                                            <ArrowSquareOut className="w-3.5 h-3.5 opacity-60" />
+                                        </div>
+                                        <span className="text-[10px] font-medium bg-black/10 border border-black/5 rounded-sm px-1.5 min-w-[18px] text-center shadow-sm">R</span>
                                     </a>
                                 )}
 
-                                <PublicEventMoreActions eventId={event.id} />
+                                <div className="flex items-center gap-2">
+                                    <div className="relative group">
+                                        <AttendanceEventButton
+                                            eventId={event.id}
+                                            loginRedirect={`/events/${event.slug}`}
+                                        />
+                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] bg-black border border-white/20 rounded w-3 h-3 text-white/40 pointer-events-none">A</span>
+                                    </div>
+                                    <div className="relative group">
+                                        <BookmarkEventButton
+                                            eventId={event.id}
+                                            event={{
+                                                id: event.id,
+                                                title: event.title,
+                                                startTime: event.start_time,
+                                                location: event.location,
+                                                eventType: event.event_type?.name || null,
+                                                organizer: event.organizer?.name || null
+                                            }}
+                                            loginRedirect={`/events/${event.slug}`}
+                                        />
+                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] bg-black border border-white/20 rounded w-3 h-3 text-white/40 pointer-events-none">B</span>
+                                    </div>
+                                    <PublicEventShortcuts
+                                        eventId={event.id}
+                                        slug={event.slug}
+                                        registrationUrl={event.registration_url}
+                                        eventData={{
+                                            id: event.id,
+                                            title: event.title,
+                                            startTime: event.start_time,
+                                            location: event.location,
+                                            eventType: event.event_type?.name || null,
+                                            organizer: event.organizer?.name || null
+                                        }}
+                                    />
+                                    <PublicEventMoreActions
+                                        eventId={event.id} slug={event.slug} title={event.title} />
+                                </div>
                             </div>
 
-                            <div className="divide-y divide-border-subtle">
+                            {/* Metadata Section - No dividers, small muted labels */}
+                            <div className="space-y-4 px-1">
                                 {organizer && (
-                                    <div className="flex items-center justify-between px-4 py-3">
-                                        <span className="text-[11px] text-foreground-tertiary/70">Organizer</span>
-                                        <span className="flex items-center gap-2 text-[11px] text-foreground-primary">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[12px] text-[#888888]">Organizer</span>
+                                        <span className="flex items-center gap-2 text-[12px] text-white font-medium">
                                             {organizer.logo_url && (
                                                 <Image
                                                     src={organizer.logo_url}
                                                     alt={`${organizer.name} logo`}
-                                                    width={20}
-                                                    height={20}
-                                                    className="h-5 w-5 object-contain"
+                                                    width={16}
+                                                    height={16}
+                                                    className="h-4 w-4 object-contain opacity-90"
                                                 />
                                             )}
                                             <span>{organizer.name}</span>
@@ -443,26 +470,21 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                 )}
 
                                 {eventType && (
-                                    <div className="flex items-center justify-between px-4 py-3">
-                                        <span className="text-[11px] text-foreground-tertiary/70">Type</span>
-                                        <span className="text-[11px] text-foreground-primary">{eventType.name}</span>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[12px] text-[#888888]">Type</span>
+                                        <span className="text-[12px] text-white font-medium">{eventType.name}</span>
                                     </div>
                                 )}
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[12px] text-[#888888]">Share</span>
+                                    <ShareButtons url={eventUrl} title={event.title} />
+                                </div>
                             </div>
 
-                            <div className="px-4 py-3 border-t border-border-subtle">
-                                <span className="text-[11px] text-foreground-tertiary/70 block mb-2">Share</span>
-                                <ShareButtons url={eventUrl} title={event.title} />
-                            </div>
-
-                            <div className="px-4 py-3 border-t border-border-subtle">
+                            <div className="px-1 pt-2">
                                 <WhosGoingSection eventId={event.id} />
                             </div>
-
-                            <div className="px-4 py-3 border-t border-border-subtle">
-                                <EmbedButton slug={event.slug} title={event.title} />
-                            </div>
-
                         </div>
                     </aside>
 

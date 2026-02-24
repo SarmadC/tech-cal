@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowCounterClockwise } from '@phosphor-icons/react';
-import MockEventDetailPanel from '@/components/calendar/MockEventDetailPanel';
+import dynamic from 'next/dynamic';
+import EventDetailSidebar from '@/components/calendar/EventDetailSidebar';
 import DiscoveryLayout from '@/components/discovery/DiscoveryLayout';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
@@ -13,7 +14,13 @@ import { seedManagerJustificationCache } from '@/components/calendar/ManagerJust
 import { UnifiedFilterOptions, UpdateFilterHandler, createDefaultUnifiedFilters } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, normalizeEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { Event } from '@/types';
+
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
+    { loading: () => <div className="fixed inset-0 z-50 bg-[#161618] animate-pulse" /> }
+);
 
 type DemoTab = 'discovery' | 'calendar';
 
@@ -81,6 +88,7 @@ export default function ProductDemoSection() {
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [bookmarkedEventIds, setBookmarkedEventIds] = useState<Set<string>>(() => new Set());
     const [activePersonaId, setActivePersonaId] = useState<DemoPersonaPreset['id'] | null>(null);
+    const isMobile = useIsMobile();
 
     const { showInfo } = useSnackbar();
 
@@ -318,128 +326,136 @@ export default function ProductDemoSection() {
                             key={tab}
                             type="button"
                             onClick={() => setActiveTab(tab)}
-                            className={`px-5 py-2.5 text-sm font-semibold rounded-t-xl border transition-all duration-200 capitalize ${
-                                activeTab === tab
+                            className={`px-5 py-2.5 text-sm font-semibold rounded-t-xl border transition-all duration-200 capitalize ${activeTab === tab
                                     ? 'bg-card/95 dark:bg-[#0a0a0a]/80 border-border/70 dark:border-white/10 border-b-transparent text-foreground translate-y-px'
                                     : 'bg-transparent border-border/40 dark:border-white/5 text-muted-foreground hover:text-foreground'
-                            }`}
+                                }`}
                         >
                             {tab === 'discovery' ? 'Discovery' : 'Calendar'}
                         </button>
                     ))}
                 </div>
 
-            <div className="product-demo-shell relative group perspective-1000">
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+                <div className="product-demo-shell relative group perspective-1000">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
 
-                <div className="product-demo-frame relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
-                    <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 dark:opacity-60" />
+                    <div className="product-demo-frame relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
+                        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 dark:opacity-60" />
 
-                    <div className="product-demo-content p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
-                        {activeTab === 'discovery' ? (
-                            <DiscoveryLayout
-                                className="min-h-0 product-demo-layout product-demo-contrast"
-                                minHeightClassName="min-h-0"
-                                isSidebarOpen={isSidebarOpen}
-                                onSidebarClose={() => setIsSidebarOpen(false)}
-                                gridClassName="product-demo-grid"
-                                sidebar={
-                                    <DiscoverySidebar
-                                        filters={{
-                                            format: filters.format,
-                                            cost: filters.cost,
-                                            categories: filters.categories,
-                                            tags: filters.tags
-                                        }}
-                                        onUpdateFilter={handleUpdateFilter}
-                                        categories={MOCK_CATEGORIES}
-                                        events={sortedEvents}
-                                        counts={displayCounts}
-                                    />
-                                }
-                                header={
-                                    <DiscoveryHeader
-                                        searchTerm={filters.searchTerm}
-                                        onSearchChange={(value) => handleUpdateFilter('searchTerm', value)}
-                                        location={filters.locations[0] || ''}
-                                        onLocationChange={(value) => handleUpdateFilter('locations', value ? [value] : [])}
-                                        dateRange={filters.dateRange}
-                                        onDateRangeChange={(range) => handleUpdateFilter('dateRange', range)}
-                                        onSearch={() => { }}
-                                        onResetFilters={handleClearPersona}
-                                        activeFilterCount={activeFilterCount}
-                                        onFilterClick={() => setIsSidebarOpen(true)}
-                                        isDetectingLocation={false}
-                                    />
-                                }
-                                resultCount={visibleEvents.length}
-                                actionControls={
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleResetDemo}
-                                            className="product-demo-reset-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-primary/45 bg-primary/12 text-foreground text-xs font-medium hover:border-primary/70 hover:bg-primary/20 transition-colors"
-                                        >
-                                            <ArrowCounterClockwise size={12} weight="bold" />
-                                            Reset demo state
-                                        </button>
-                                    </div>
-                                }
-                            >
-                                {visibleEvents.length === 0 ? (
-                                    <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-border/70 p-6 text-center bg-card/40">
-                                        <h3 className="text-base font-semibold text-foreground">No events in this view</h3>
-                                        <p className="mt-2 text-sm text-muted-foreground">
-                                            Adjust filters or reset persona to repopulate the demo instantly.
-                                        </p>
-                                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                        <div className="product-demo-content p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
+                            {activeTab === 'discovery' ? (
+                                <DiscoveryLayout
+                                    className="min-h-0 product-demo-layout product-demo-contrast"
+                                    minHeightClassName="min-h-0"
+                                    isSidebarOpen={isSidebarOpen}
+                                    onSidebarClose={() => setIsSidebarOpen(false)}
+                                    gridClassName="product-demo-grid"
+                                    sidebar={
+                                        <DiscoverySidebar
+                                            filters={{
+                                                format: filters.format,
+                                                cost: filters.cost,
+                                                categories: filters.categories,
+                                                tags: filters.tags
+                                            }}
+                                            onUpdateFilter={handleUpdateFilter}
+                                            categories={MOCK_CATEGORIES}
+                                            events={sortedEvents}
+                                            counts={displayCounts}
+                                        />
+                                    }
+                                    header={
+                                        <DiscoveryHeader
+                                            searchTerm={filters.searchTerm}
+                                            onSearchChange={(value) => handleUpdateFilter('searchTerm', value)}
+                                            location={filters.locations[0] || ''}
+                                            onLocationChange={(value) => handleUpdateFilter('locations', value ? [value] : [])}
+                                            dateRange={filters.dateRange}
+                                            onDateRangeChange={(range) => handleUpdateFilter('dateRange', range)}
+                                            onSearch={() => { }}
+                                            onResetFilters={handleClearPersona}
+                                            activeFilterCount={activeFilterCount}
+                                            onFilterClick={() => setIsSidebarOpen(true)}
+                                            isDetectingLocation={false}
+                                        />
+                                    }
+                                    resultCount={visibleEvents.length}
+                                    actionControls={
+                                        <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
-                                                onClick={handleClearPersona}
-                                                className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                                                onClick={handleResetDemo}
+                                                className="product-demo-reset-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-primary/45 bg-primary/12 text-foreground text-xs font-medium hover:border-primary/70 hover:bg-primary/20 transition-colors"
                                             >
-                                                Reset filters
+                                                <ArrowCounterClockwise size={12} weight="bold" />
+                                                Reset demo state
                                             </button>
                                         </div>
-                                    </div>
-                                ) : (
-                                    visibleEvents.map((event) => (
-                                        <EventCard
-                                            key={event.id}
-                                            event={event}
-                                            onClick={() => setSelectedEvent(event)}
-                                            onBookmark={handleBookmark}
-                                            isBookmarked={bookmarkedEventIds.has(event.id)}
-                                            showWeekday={false}
-                                            whiteLogoBackgroundInDark
-                                            showActionControls
-                                            showShortlistAction={false}
-                                            showRecommendationContext
-                                        />
-                                    ))
-                                )}
-                            </DiscoveryLayout>
-                        ) : (
-                            <div
-                                className="product-demo-calendar"
-                                style={{ minHeight: '600px', ['--demo-day-height' as string]: '130px' }}
-                            >
-                                <DemoCalendarView
-                                    onEventSelect={(event) => setSelectedEvent(event)}
-                                />
-                            </div>
-                        )}
+                                    }
+                                >
+                                    {visibleEvents.length === 0 ? (
+                                        <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-border/70 p-6 text-center bg-card/40">
+                                            <h3 className="text-base font-semibold text-foreground">No events in this view</h3>
+                                            <p className="mt-2 text-sm text-muted-foreground">
+                                                Adjust filters or reset persona to repopulate the demo instantly.
+                                            </p>
+                                            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearPersona}
+                                                    className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                                                >
+                                                    Reset filters
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        visibleEvents.map((event) => (
+                                            <EventCard
+                                                key={event.id}
+                                                event={event}
+                                                onClick={() => setSelectedEvent(event)}
+                                                onBookmark={handleBookmark}
+                                                isBookmarked={bookmarkedEventIds.has(event.id)}
+                                                showWeekday={false}
+                                                whiteLogoBackgroundInDark
+                                                showActionControls
+                                                showShortlistAction={false}
+                                                showRecommendationContext
+                                            />
+                                        ))
+                                    )}
+                                </DiscoveryLayout>
+                            ) : (
+                                <div
+                                    className="product-demo-calendar"
+                                    style={{ minHeight: '600px', ['--demo-day-height' as string]: '130px' }}
+                                >
+                                    <DemoCalendarView
+                                        onEventSelect={(event) => setSelectedEvent(event)}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
             </div>{/* end tabs + demo wrapper */}
 
-            <MockEventDetailPanel
-                isOpen={Boolean(activeSelectedEvent)}
-                onClose={() => setSelectedEvent(null)}
-                event={activeSelectedEvent ?? undefined}
-                categories={MOCK_CATEGORIES}
-            />
+            {selectedEvent && (
+                isMobile ? (
+                    <MobileEventDetailPanelDynamic
+                        event={selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        categories={MOCK_CATEGORIES}
+                    />
+                ) : (
+                    <EventDetailSidebar
+                        event={selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        categories={MOCK_CATEGORIES}
+                    />
+                )
+            )}
         </section>
     );
 }

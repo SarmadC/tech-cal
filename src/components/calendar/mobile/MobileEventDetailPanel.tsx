@@ -262,13 +262,13 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                     <PropertyRow label="HOST">
                         <div className="flex items-center gap-2">
                             {displayEvent.organization?.logo || displayEvent.eventImageUrl ? (
-                                <div className="w-6 h-6 rounded-full overflow-hidden bg-[#27272A] flex-shrink-0">
+                                <div className="w-6 h-6 overflow-hidden flex-shrink-0">
                                     <Image
                                         src={displayEvent.organization?.logo || displayEvent.eventImageUrl || ''}
                                         alt="Host"
                                         width={24}
                                         height={24}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                     />
                                 </div>
                             ) : (

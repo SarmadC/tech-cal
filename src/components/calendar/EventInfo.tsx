@@ -62,7 +62,7 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescrip
                         <img
                             src={event.organization.logo}
                             alt=""
-                            className="w-4 h-4 rounded-full object-cover bg-white/10"
+                            className="w-4 h-4 object-contain"
                         />
                     )}
                     <span>{event.organization?.name || event.organizer || 'Unknown Host'}</span>
