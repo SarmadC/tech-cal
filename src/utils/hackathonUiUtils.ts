@@ -18,7 +18,13 @@ export const formatDate = (dateString: string, options?: Intl.DateTimeFormatOpti
       day: 'numeric',
       year: 'numeric'
     };
-    return new Date(dateString).toLocaleDateString('en-US', { ...defaultOptions, ...options });
+    
+    // If options are provided, use them directly - but allowing options to be partial
+    // We want to merge but only if the specific key isn't provided.
+    // However, for this fix, if any options are provided, we should probably be careful.
+    // Actually, getDateRange provides a full set now.
+    
+    return new Date(dateString).toLocaleDateString('en-US', options || defaultOptions);
   } catch {
     return 'Invalid Date';
   }
@@ -42,10 +48,13 @@ export const formatTime = (dateString: string): string => {
 /**
  * Get date range string for hackathon
  */
-export const getDateRange = (hackathon: HackathonEvent, shortFormat = false): string => {
-  const options = shortFormat 
-    ? { month: 'short', day: 'numeric' } as Intl.DateTimeFormatOptions
-    : undefined;
+export const getDateRange = (hackathon: HackathonEvent, shortFormat = false, includeYear = true): string => {
+  const options = {
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+    ...(shortFormat ? {} : { weekday: 'short' })
+  } as Intl.DateTimeFormatOptions;
     
   const start = formatDate(hackathon.startDate, options);
   const end = hackathon.endDate ? formatDate(hackathon.endDate, options) : start;
@@ -129,4 +138,22 @@ export const getRegistrationCountdown = (
   } catch {
     return null;
   }
+};
+
+/**
+ * Format hackathon location for display
+ * Unifies logic for virtual status, city/country, and general location field
+ */
+export const formatLocation = (hackathon: HackathonEvent): string => {
+  if (hackathon.isVirtual) {
+    return hackathon.locationCity ? `Remote (${hackathon.locationCity})` : 'Remote';
+  }
+
+  if (hackathon.locationCity && hackathon.locationCountry) {
+    return `${hackathon.locationCity}, ${hackathon.locationCountry}`;
+  }
+
+  if (hackathon.locationCity) return hackathon.locationCity;
+  
+  return hackathon.location || 'Location TBD';
 };

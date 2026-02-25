@@ -25,7 +25,7 @@ import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import { createHackathonActions } from '@/utils/hackathonActions';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
-import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress, getRegistrationCountdown } from '@/utils/hackathonUiUtils';
+import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress, getRegistrationCountdown, formatLocation } from '@/utils/hackathonUiUtils';
 import { HackathonDetailPanel } from '@/components/hackathon/HackathonDetailPanel';
 
 interface HackathonClientViewProps {
@@ -131,13 +131,11 @@ function HackathonCard({
                 <div className="flex flex-wrap gap-2 mb-6 mt-auto">
                     <span className="px-2 py-1 rounded-md text-[10px] font-medium bg-white/5 text-white/50 border border-white/10 flex items-center gap-1">
                         <MaterialIcon name="calendar" size={10} />
-                        {getDateRange(hackathon)}
+                        {getDateRange(hackathon, false, false)}
                     </span>
                     <span className="px-2 py-1 rounded-md text-[10px] font-medium bg-white/5 text-white/50 border border-white/10 flex items-center gap-1">
                         <MaterialIcon name="location" size={10} />
-                        {hackathon.isVirtual
-                            ? (hackathon.locationCity ? `Remote (${hackathon.locationCity})` : 'Remote')
-                            : (hackathon.locationCity || 'Location TBD')}
+                        {formatLocation(hackathon)}
                     </span>
                 </div>
 

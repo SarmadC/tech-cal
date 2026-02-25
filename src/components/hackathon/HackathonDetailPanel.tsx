@@ -12,7 +12,7 @@ import {
 import { MaterialIcon } from '@/components/ui/Icon';
 import { TeamSearchFilter } from './TeamSearchFilter';
 import { EnhancedTeamCard } from './EnhancedTeamCard';
-import { formatDate, getDateRange } from '@/utils/hackathonUiUtils';
+import { formatDate, getDateRange, formatLocation } from '@/utils/hackathonUiUtils';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
 
 interface HackathonDetailPanelProps {
@@ -115,9 +115,7 @@ export function HackathonDetailPanel({
                             <span>Location</span>
                         </div>
                         <p className="text-sm text-white/80">
-                            {hackathon.locationCity && hackathon.locationCountry
-                                ? `${hackathon.locationCity}, ${hackathon.locationCountry}`
-                                : hackathon.location || 'Remote'}
+                            {formatLocation(hackathon)}
                         </p>
                     </div>
                     <div className="space-y-2">
