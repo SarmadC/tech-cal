@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { HackathonService } from '@/services/hackathonService';
@@ -12,21 +11,20 @@ import {
     HackathonTeam,
     isLongDurationHackathon,
     isHackathonRunning,
-    isHackathonEnded,
-    formatHackathonDuration
+    isHackathonEnded
 } from '@/types/hackathon';
 import { AppProfile } from '@/types';
-import { TeamSearchFilter } from '@/components/hackathon/TeamSearchFilter';
-import { EnhancedTeamCard } from '@/components/hackathon/EnhancedTeamCard';
 import { TeamSetupModal } from '@/components/hackathon/TeamSetupModal';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import { createHackathonActions } from '@/utils/hackathonActions';
-import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
-import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress, getRegistrationCountdown, formatLocation } from '@/utils/hackathonUiUtils';
 import { HackathonDetailPanel } from '@/components/hackathon/HackathonDetailPanel';
+import { HackathonCard } from '@/components/hackathon/HackathonCard';
+import { RecommendedHackathons } from '@/components/hackathon/RecommendedHackathons';
+import { getRecommendedHackathons } from '@/services/hackathonRecommendationService';
+import { CareerProfileService } from '@/services/careerProfileService';
 
 interface HackathonClientViewProps {
     initialHackathons: HackathonEvent[];
@@ -34,174 +32,12 @@ interface HackathonClientViewProps {
     userId: string;
 }
 
-interface HackathonCardProps {
-    hackathon: HackathonEvent;
-    userId: string;
-    isRegistered: boolean;
-    hasTeam: boolean;
-    hasEnded: boolean;
-    isRunning: boolean;
-    onViewDetails: (hackathon: HackathonEvent) => void;
-}
-
-// Individual modern hackathon card component
-function HackathonCard({
-    hackathon,
-    userId,
-    isRegistered,
-    hasTeam,
-    hasEnded,
-    isRunning,
-    onViewDetails,
-}: HackathonCardProps) {
-    const progress = useMemo(() => isRunning ? calculateProgress(hackathon) : 0, [isRunning, hackathon]);
-    const registrationCountdown = useMemo(() => getRegistrationCountdown(hackathon.registrationDeadline), [hackathon.registrationDeadline]);
-    const duration = useMemo(() => formatHackathonDuration(hackathon), [hackathon]);
-
-    // Primary CTA URL — fallback chain: registration → website → platform
-    const primaryUrl = hackathon.registrationUrl || hackathon.websiteUrl || hackathon.sourceUrl || hackathon.platformUrl;
-    const primaryUrlLabel = hackathon.registrationUrl ? 'Register Now' : (hackathon.websiteUrl || hackathon.sourceUrl) ? 'Visit Website' : 'View Details';
-
-    return (
-        <div
-            onClick={() => onViewDetails(hackathon)}
-            className="group relative flex flex-col h-full rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-blue-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden backdrop-blur-sm cursor-pointer"
-        >
-            {/* Status & Badge Overlay */}
-            <div className="absolute top-4 right-4 flex gap-2 z-10">
-                {hackathon.isVirtual ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider">
-                        <MaterialIcon name="wifi" size={10} className="mr-1 opacity-60" />
-                        Virtual
-                    </span>
-                ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider">
-                        <MaterialIcon name="location" size={10} className="mr-1 opacity-60" />
-                        In-Person
-                    </span>
-                )}
-                {isRunning ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 uppercase tracking-wider">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1 animate-pulse" />
-                        Live
-                    </span>
-                ) : hasEnded && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/30 border border-white/10 uppercase tracking-wider">
-                        Ended
-                    </span>
-                )}
-            </div>
-
-            <div className="p-6 flex-1 flex flex-col">
-                {/* Header Section */}
-                <div className="flex items-start gap-4 mb-4">
-                    {hackathon.organizerLogoUrl ? (
-                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0 p-2 relative">
-                            <Image
-                                src={hackathon.organizerLogoUrl}
-                                alt={hackathon.organizerName || 'Organizer'}
-                                fill
-                                className="object-contain p-1"
-                            />
-                        </div>
-                    ) : (
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center flex-shrink-0">
-                            <MaterialIcon name="trophy" size={24} className="text-white/20" />
-                        </div>
-                    )}
-
-                    <div className="min-w-0 pr-16">
-                        <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1 mb-0.5">
-                            {hackathon.title}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-white/40 mb-1">
-                            <span className="font-medium text-white/60">{hackathon.organizerName}</span>
-                            <span>•</span>
-                            <span>{duration}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Description */}
-                <p className="text-xs text-white/50 leading-relaxed mb-6 line-clamp-2">
-                    {hackathon.description}
-                </p>
-
-                {/* Simplified Info Pills */}
-                <div className="flex flex-wrap gap-2 mb-6 mt-auto">
-                    <span className="px-2 py-1 rounded-md text-[10px] font-medium bg-white/5 text-white/50 border border-white/10 flex items-center gap-1">
-                        <MaterialIcon name="calendar" size={10} />
-                        {getDateRange(hackathon, false, false)}
-                    </span>
-                    <span className="px-2 py-1 rounded-md text-[10px] font-medium bg-white/5 text-white/50 border border-white/10 flex items-center gap-1">
-                        <MaterialIcon name="location" size={10} />
-                        {formatLocation(hackathon)}
-                    </span>
-                </div>
-
-                {/* Registration Deadline Countdown (Visual only on card) */}
-                {registrationCountdown && !isRegistered && !hasEnded && (
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-semibold border ${registrationCountdown.urgency === 'high'
-                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                        : registrationCountdown.urgency === 'medium'
-                            ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                            : 'bg-white/5 text-white/50 border-white/5'
-                        }`}>
-                        <MaterialIcon name="hourglass_empty" size={12} />
-                        <span>{registrationCountdown.text}</span>
-                    </div>
-                )}
-
-                {/* Progress View (if Live) */}
-                {isRunning && progress > 0 && (
-                    <div className="space-y-1.5 mt-auto">
-                        <div className="flex items-center justify-between text-[10px]">
-                            <span className="text-white/40">Progress</span>
-                            <span className="text-orange-400 font-mono tracking-tighter">{formatProgress(hackathon)}</span>
-                        </div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500"
-                                style={{ width: `${progress}%` }}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Action Bar */}
-            <div className="p-4 bg-white/[0.02] flex items-center justify-between border-t border-white/5">
-                <div className="flex gap-2">
-                    {isRegistered ? (
-                        <div className="px-3 py-1.5 text-[10px] font-bold text-white/70 bg-white/5 rounded-lg border border-white/10 flex items-center gap-2">
-                            <MaterialIcon name="check-circle" size={14} className="text-blue-400" />
-                            Registered
-                        </div>
-                    ) : (
-                        <div className="px-3 py-1.5 text-[10px] font-bold text-white/40 flex items-center gap-2">
-                            {primaryUrlLabel}
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onViewDetails(hackathon);
-                        }}
-                        className="px-4 py-1.5 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
-                    >
-                        View Details
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
+// HackathonCard removed and moved to its own file
 
 export default function HackathonClientView({
     initialHackathons,
-    userId
+    userId,
+    profile
 }: HackathonClientViewProps) {
     const [filter, setFilter] = useState<'all' | 'upcoming' | 'running' | 'past'>('all');
     const [showShort, setShowShort] = useState(true);
@@ -257,6 +93,18 @@ export default function HackathonClientView({
         return filtered;
     }, [hackathons, filter, showShort]);
 
+    const recommendations = useMemo(() => {
+        const careerProfile = CareerProfileService.getCareerProfileFromPreferences(profile);
+        if (!careerProfile) return [];
+        return getRecommendedHackathons(hackathons, careerProfile);
+    }, [hackathons, profile]);
+    const showRecommendations = filter === 'all' && recommendations.length > 0;
+    const visibleHackathons = useMemo(() => {
+        if (!showRecommendations) return filteredHackathons;
+        const recommendedIds = new Set(recommendations.map((item) => item.hackathonId));
+        return filteredHackathons.filter((hackathon) => !recommendedIds.has(hackathon.id));
+    }, [filteredHackathons, recommendations, showRecommendations]);
+
     const _handleRegister = async (hackathonId: string) => {
         if (!actions) {
             showWarning('Please sign in to register for hackathons.');
@@ -295,7 +143,7 @@ export default function HackathonClientView({
         }
     };
 
-    const handleJoinTeam = async (hackathonId: string) => {
+    const _handleJoinTeam = async (hackathonId: string) => {
         if (!supabase) {
             showWarning('Please sign in to join teams.');
             return;
@@ -448,33 +296,45 @@ export default function HackathonClientView({
                                     </p>
                                 </div>
 
+                                {showRecommendations && (
+                                    <RecommendedHackathons
+                                        recommendations={recommendations}
+                                        onViewDetails={setSelectedHackathon}
+                                    />
+                                )}
+
                                 {/* Filters */}
-                                <div className="flex flex-wrap items-center gap-4 mb-6">
-                                    <div className="flex items-center glass-card p-1">
+                                <div className="flex flex-wrap items-center justify-between gap-6 mb-10 border-b border-white/5">
+                                    <div className="flex items-center gap-8">
                                         {(['all', 'upcoming', 'running', 'past'] as const).map(filterOption => (
                                             <button
                                                 key={filterOption}
                                                 onClick={() => setFilter(filterOption)}
-                                                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${filter === filterOption
-                                                    ? 'bg-white/10 text-glass-primary shadow-sm'
-                                                    : 'text-glass-tertiary hover:text-glass-secondary'
+                                                className={`pb-4 text-sm font-bold tracking-tight transition-all relative ${filter === filterOption
+                                                    ? 'text-blue-400'
+                                                    : 'text-white/30 hover:text-white/60'
                                                     }`}
                                             >
                                                 {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
-                                                <span className="ml-1 text-xs">({getFilterCount(filterOption)})</span>
+                                                {filter === filterOption && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                                )}
+                                                <span className={`ml-2 text-[10px] font-bold ${filter === filterOption ? 'text-blue-400/60' : 'text-white/20'}`}>
+                                                    {getFilterCount(filterOption)}
+                                                </span>
                                             </button>
                                         ))}
                                     </div>
 
                                     <button
                                         onClick={() => setShowShort(!showShort)}
-                                        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors glass-card ${showShort
-                                            ? 'text-glass-primary'
-                                            : 'text-glass-tertiary'
+                                        className={`pb-4 flex items-center gap-2 text-[11px] font-bold tracking-tight transition-colors ${showShort
+                                            ? 'text-white/60'
+                                            : 'text-white/20'
                                             }`}
                                     >
-                                        <MaterialIcon name="filter" size={16} />
-                                        Short Hackathons
+                                        <MaterialIcon name="filter" size={14} />
+                                        <span>Short events: {showShort ? 'Shown' : 'Hidden'}</span>
                                     </button>
                                 </div>
 
@@ -508,11 +368,20 @@ export default function HackathonClientView({
                                             {filter === 'all' && 'No hackathons available at the moment.'}
                                         </p>
                                     </div>
+                                ) : visibleHackathons.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <MaterialIcon name="check-circle" size={48} className="text-glass-tertiary mx-auto mb-4" />
+                                        <h3 className="text-lg font-semibold text-glass-primary mb-2">
+                                            No additional hackathons
+                                        </h3>
+                                        <p className="text-glass-secondary">
+                                            Your best matches are shown in recommendations above.
+                                        </p>
+                                    </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {filteredHackathons.map(hackathon => {
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                                        {visibleHackathons.map(hackathon => {
                                             const isRegistered = !!hackathon.userParticipation;
-                                            const hasTeam = !!hackathon.userParticipation?.teamId;
                                             const isRunning = isHackathonRunning(hackathon);
                                             const hasEnded = isHackathonEnded(hackathon);
 
@@ -520,9 +389,7 @@ export default function HackathonClientView({
                                                 <HackathonCard
                                                     key={hackathon.id}
                                                     hackathon={hackathon}
-                                                    userId={userId}
                                                     isRegistered={isRegistered}
-                                                    hasTeam={hasTeam}
                                                     hasEnded={hasEnded}
                                                     isRunning={isRunning}
                                                     onViewDetails={setSelectedHackathon}
@@ -561,7 +428,6 @@ export default function HackathonClientView({
                                 onClose={() => setSelectedHackathon(null)}
                                 userId={userId}
                                 isRegistered={!!selectedHackathon.userParticipation}
-                                onJoinTeam={handleJoinTeam}
                                 onJoinTeamById={handleJoinTeamById}
                                 onCreateTeam={handleCreateTeam}
                                 onDeleteTeam={handleDeleteTeam}

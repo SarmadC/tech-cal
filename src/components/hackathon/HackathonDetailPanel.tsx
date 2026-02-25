@@ -2,25 +2,23 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import { X, Globe, UsersThree, CalendarBlank, MapPin, Trophy, Timer, ArrowSquareOut, ArrowSquareIn, Plus, Trash, CheckCircle } from '@phosphor-icons/react';
+import { X, UsersThree, CalendarBlank, MapPin, Trophy, Timer, ArrowSquareOut, Plus, Trash, CheckCircle } from '@phosphor-icons/react';
 import {
     HackathonEvent,
     HackathonTeam,
-    isHackathonRunning,
     isHackathonEnded
 } from '@/types/hackathon';
-import { MaterialIcon } from '@/components/ui/Icon';
 import { TeamSearchFilter } from './TeamSearchFilter';
 import { EnhancedTeamCard } from './EnhancedTeamCard';
 import { formatDate, getDateRange, formatLocation } from '@/utils/hackathonUiUtils';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 interface HackathonDetailPanelProps {
     hackathon: HackathonEvent;
     onClose: () => void;
     userId: string;
     isRegistered: boolean;
-    onJoinTeam: (hackathonId: string) => void;
     onJoinTeamById: (teamId: string) => Promise<void>;
     onCreateTeam: (hackathonId: string) => void;
     onDeleteTeam: (teamId: string, teamName: string) => Promise<void>;
@@ -33,7 +31,6 @@ export function HackathonDetailPanel({
     onClose,
     userId,
     isRegistered,
-    onJoinTeam,
     onJoinTeamById,
     onCreateTeam,
     onDeleteTeam,
@@ -42,9 +39,17 @@ export function HackathonDetailPanel({
 }: HackathonDetailPanelProps) {
     const [filteredTeams, setFilteredTeams] = useState<HackathonTeam[]>([]);
 
-    const isRunning = isHackathonRunning(hackathon);
     const hasEnded = isHackathonEnded(hackathon);
     const hasTeam = !!hackathon.userParticipation?.team;
+    const organizerLogoSrc = useMemo(
+        () => getSafeImageSrc(hackathon.organizerLogoUrl),
+        [hackathon.organizerLogoUrl]
+    );
+
+    const headerImageSrc = useMemo(
+        () => getSafeImageSrc(hackathon.headerImageUrl),
+        [hackathon.headerImageUrl]
+    );
 
     // Get user's own team
     const userCreatedTeam = useMemo(() => getUserCreatedTeam(hackathon, userId), [hackathon, userId]);
@@ -64,37 +69,77 @@ export function HackathonDetailPanel({
 
     return (
         <div className="h-full flex flex-col bg-[#0A0A0A] border-l border-white/10 shadow-2xl relative overflow-hidden">
-            {/* Header / Top Bar */}
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
-                <div className="flex items-center gap-4">
-                    {hackathon.organizerLogoUrl && (
-                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden p-2 relative">
+            {/* Header Banner */}
+            {headerImageSrc ? (
+                <div className="relative w-full h-48 flex-shrink-0">
+                    <Image
+                        src={headerImageSrc}
+                        alt={hackathon.title}
+                        fill
+                        className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent" />
+
+                    {/* Close Button Overlay (High Visibility) */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-black/40 backdrop-blur-md text-white/70 hover:text-white hover:bg-black/60 transition-all z-20"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center justify-between p-6 border-b border-white/5">
+                    <div className="flex items-center gap-4">
+                        {organizerLogoSrc && (
+                            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden p-2 relative">
+                                <Image
+                                    src={organizerLogoSrc}
+                                    alt={hackathon.organizerName || 'Organizer'}
+                                    fill
+                                    className="object-contain p-1"
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <h2 className="text-xl font-bold text-white leading-tight">{hackathon.title}</h2>
+                            <p className="text-sm text-white/40">{hackathon.organizerName}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+            )}
+
+            {/* Title Section when Banner exists */}
+            {headerImageSrc && (
+                <div className="px-6 pb-2 -mt-12 relative z-10 flex items-end gap-4">
+                    {organizerLogoSrc && (
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden p-3 relative shadow-2xl">
                             <Image
-                                src={hackathon.organizerLogoUrl}
+                                src={organizerLogoSrc}
                                 alt={hackathon.organizerName || 'Organizer'}
                                 fill
-                                className="object-contain p-1"
+                                className="object-contain p-2"
                             />
                         </div>
                     )}
-                    <div>
-                        <h2 className="text-xl font-bold text-white leading-tight">{hackathon.title}</h2>
-                        <p className="text-sm text-white/40">{hackathon.organizerName}</p>
+                    <div className="pb-2">
+                        <h2 className="text-2xl font-bold text-white leading-tight drop-shadow-lg">{hackathon.title}</h2>
+                        <p className="text-sm text-white/60 font-medium drop-shadow-md">{hackathon.organizerName}</p>
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
-                >
-                    <X size={20} />
-                </button>
-            </div>
+            )}
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                 {/* Description */}
                 <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-white/30 uppercase tracking-widest">About</h3>
+                    <h3 className="text-xs font-bold text-white/30 tracking-tight">About</h3>
                     <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
                         {hackathon.description}
                     </p>
@@ -103,14 +148,14 @@ export function HackathonDetailPanel({
                 {/* Metadata Grid */}
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <CalendarBlank size={14} />
                             <span>Dates</span>
                         </div>
                         <p className="text-sm text-white/80">{getDateRange(hackathon)}</p>
                     </div>
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <MapPin size={14} />
                             <span>Location</span>
                         </div>
@@ -119,7 +164,7 @@ export function HackathonDetailPanel({
                         </p>
                     </div>
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <UsersThree size={14} />
                             <span>Team Size</span>
                         </div>
@@ -129,7 +174,7 @@ export function HackathonDetailPanel({
                     </div>
                     {hackathon.submissionDeadline && (
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                            <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                                 <Timer size={14} />
                                 <span>Submission</span>
                             </div>
@@ -141,7 +186,7 @@ export function HackathonDetailPanel({
                 {/* Awards & Tracks */}
                 {hackathon.prizePool && (
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <Trophy size={14} />
                             <span>Awards & Tracks</span>
                         </div>
@@ -158,11 +203,11 @@ export function HackathonDetailPanel({
                 {/* Teams Section */}
                 <div className="space-y-4 pt-4 border-t border-white/5">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-white/30 uppercase tracking-widest">Teams</h3>
+                        <h3 className="text-xs font-bold text-white/30 tracking-tight">Teams</h3>
                         {canUserCreateTeam(hackathon, userId).canCreate && !hasTeam && !hasEnded && (
                             <button
                                 onClick={() => onCreateTeam(hackathon.id)}
-                                className="text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-wider flex items-center gap-1 transition-colors"
+                                className="text-[10px] font-bold text-blue-400 hover:text-blue-300 tracking-tight flex items-center gap-1 transition-colors"
                             >
                                 <Plus size={14} />
                                 Create Team
@@ -175,7 +220,7 @@ export function HackathonDetailPanel({
                         <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/15 space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20 uppercase tracking-wider">Your Team</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20 tracking-tight">Your Team</span>
                                     <span className="text-sm font-bold text-white">{userCreatedTeam.name}</span>
                                 </div>
                                 {!hasEnded && (

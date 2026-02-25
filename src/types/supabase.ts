@@ -2360,6 +2360,7 @@ export type Database = {
           description: string | null
           end_date: string
           event_id: string | null
+          header_image_url: string | null
           id: string
           is_virtual: boolean | null
           location: string | null
@@ -2388,6 +2389,7 @@ export type Database = {
           description?: string | null
           end_date: string
           event_id?: string | null
+          header_image_url?: string | null
           id?: string
           is_virtual?: boolean | null
           location?: string | null
@@ -2416,6 +2418,7 @@ export type Database = {
           description?: string | null
           end_date?: string
           event_id?: string | null
+          header_image_url?: string | null
           id?: string
           is_virtual?: boolean | null
           location?: string | null

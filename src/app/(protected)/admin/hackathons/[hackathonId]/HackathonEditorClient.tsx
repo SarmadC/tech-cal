@@ -25,6 +25,7 @@ interface HackathonEditorState {
     registration_url: string;
     website_url: string;
     source_url: string;
+    header_image_url: string;
     prize_pool: string;
     prize_description: string;
 }
@@ -90,7 +91,11 @@ export default function HackathonEditorClient({
     const [deleting, setDeleting] = useState(false);
     const [logoUploading, setLogoUploading] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
+    const [headerImageUploading, setHeaderImageUploading] = useState(false);
+    const [showHeaderImageModal, setShowHeaderImageModal] = useState(false);
+    const [importingEventImage, setImportingEventImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const headerFileInputRef = useRef<HTMLInputElement>(null);
 
     const [fields, setFields] = useState<HackathonEditorState>({
         title: hackathon?.title ?? '',
@@ -107,6 +112,7 @@ export default function HackathonEditorClient({
         registration_url: hackathon?.registration_url ?? '',
         website_url: hackathon?.website_url ?? '',
         source_url: hackathon?.source_url ?? '',
+        header_image_url: hackathon?.header_image_url ?? '',
         prize_pool: hackathon?.prize_pool ?? '',
         prize_description: hackathon?.prize_description ?? '',
     });
@@ -279,6 +285,116 @@ export default function HackathonEditorClient({
         [uploadLogoFile]
     );
 
+    const uploadHeaderImageFile = useCallback(
+        async (file: File) => {
+            if (!hackathon?.id) {
+                showError('Create/save the hackathon first, then upload a header image.');
+                return;
+            }
+            setHeaderImageUploading(true);
+            try {
+                const fd = new FormData();
+                fd.append('hackathonId', hackathon.id);
+                fd.append('file', file);
+
+                const res = await fetch('/api/admin/hackathons/image', {
+                    method: 'POST',
+                    body: fd,
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+                if (data.imageUrl) {
+                    setField('header_image_url', data.imageUrl);
+                }
+                showSuccess('Header image updated!');
+            } catch (err) {
+                showError(err instanceof Error ? err.message : 'Header image upload failed');
+            } finally {
+                setHeaderImageUploading(false);
+            }
+        },
+        [hackathon?.id, setField, showError, showSuccess]
+    );
+
+    const handleHeaderImageFromUrl = useCallback(
+        async (imageUrl: string) => {
+            if (!hackathon?.id) {
+                showError('Create/save the hackathon first, then extract a header image.');
+                return;
+            }
+            setHeaderImageUploading(true);
+            try {
+                const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageUrl }),
+                });
+
+                const fetchData = await fetchResponse.json();
+                if (!fetchResponse.ok) {
+                    throw new Error(fetchData.error || 'Failed to fetch image from URL');
+                }
+
+                if (!fetchData.imageData || !fetchData.contentType || !fetchData.filename) {
+                    throw new Error('Invalid response from image fetch: missing required fields');
+                }
+
+                const binaryString = atob(fetchData.imageData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const blob = new Blob([bytes], { type: fetchData.contentType });
+                const file = new File([blob], fetchData.filename, {
+                    type: fetchData.contentType,
+                    lastModified: Date.now(),
+                });
+
+                await uploadHeaderImageFile(file);
+            } catch (err) {
+                showError(err instanceof Error ? err.message : 'Failed to update header image');
+            } finally {
+                setHeaderImageUploading(false);
+            }
+        },
+        [hackathon?.id, showError, uploadHeaderImageFile]
+    );
+
+    const handleHeaderFileInputChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (file) uploadHeaderImageFile(file);
+            e.target.value = '';
+        },
+        [uploadHeaderImageFile]
+    );
+
+    const handleImportFromLinkedEvent = useCallback(async () => {
+        if (!hackathon?.id) {
+            showError('Create/save the hackathon first.');
+            return;
+        }
+        setImportingEventImage(true);
+        try {
+            const res = await fetch(`/api/admin/hackathons/${hackathon.id}/import-event-image`, {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Import failed');
+            if (data.imageUrl) {
+                setField('header_image_url', data.imageUrl);
+            }
+            showSuccess('Imported header image from linked event!');
+        } catch (err) {
+            showError(err instanceof Error ? err.message : 'Failed to import from linked event');
+        } finally {
+            setImportingEventImage(false);
+        }
+    }, [hackathon?.id, setField, showError, showSuccess]);
+
     return (
         <div className="max-w-3xl mx-auto py-8 space-y-6">
             {/* Header */}
@@ -427,17 +543,15 @@ export default function HackathonEditorClient({
                         <span className="text-[13px] text-foreground-tertiary">Virtual / Online</span>
                     </label>
                 </div>
-                {!fields.is_virtual && (
-                    <Field label="Location">
-                        <input
-                            type="text"
-                            className={inputCls}
-                            value={fields.location}
-                            onChange={(e) => setField('location', e.target.value)}
-                            placeholder="City, Country or venue address"
-                        />
-                    </Field>
-                )}
+                <Field label={fields.is_virtual ? 'Location (Optional)' : 'Location'}>
+                    <input
+                        type="text"
+                        className={inputCls}
+                        value={fields.location}
+                        onChange={(e) => setField('location', e.target.value)}
+                        placeholder={fields.is_virtual ? 'Online (e.g. Discord, Zoom, etc.)' : 'City, Country or venue address'}
+                    />
+                </Field>
             </SectionCard>
 
             {/* Team Settings */}
@@ -502,6 +616,72 @@ export default function HackathonEditorClient({
                                 Use as Website
                             </Button>
                         )}
+                    </div>
+                </Field>
+
+                <Field label="Header Image">
+                    <div className="flex items-start gap-4">
+                        <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg border border-default bg-background-tertiary">
+                            {fields.header_image_url ? (
+                                <Image
+                                    src={fields.header_image_url}
+                                    alt="Hackathon header"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center text-foreground-muted">
+                                    <MaterialIcon name="image" size={20} />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                    ref={headerFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleHeaderFileInputChange}
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => headerFileInputRef.current?.click()}
+                                    disabled={headerImageUploading || !hackathon?.id || saving}
+                                    className="h-7 px-3 text-[12px] border-default text-foreground-tertiary hover:text-foreground-primary"
+                                >
+                                    <MaterialIcon name="arrow-up" size={13} className="mr-1.5" />
+                                    {headerImageUploading ? 'Uploading…' : 'Upload File'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowHeaderImageModal(true)}
+                                    disabled={headerImageUploading || !hackathon?.id || saving}
+                                    className="h-7 px-3 text-[12px] border-default text-foreground-tertiary hover:text-foreground-primary"
+                                >
+                                    <MaterialIcon name="globe" size={13} className="mr-1.5" />
+                                    Extract from URL
+                                </Button>
+                                {!isNew && hackathon?.event_id && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleImportFromLinkedEvent}
+                                        disabled={importingEventImage || headerImageUploading || saving}
+                                        className="h-7 px-3 text-[12px] border-default text-foreground-tertiary hover:text-foreground-primary"
+                                    >
+                                        <MaterialIcon name="copy" size={13} className="mr-1.5" />
+                                        {importingEventImage ? 'Importing…' : 'Import from Linked Event'}
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="mt-2 text-[12px] text-foreground-muted">
+                                Recommended: 1200x630px or larger. Create the hackathon first to upload.
+                            </p>
+                        </div>
                     </div>
                 </Field>
             </SectionCard>
@@ -594,6 +774,17 @@ export default function HackathonEditorClient({
                 title="Extract Organizer Logo"
                 description="Enter the organizer website URL to extract logo candidates"
                 contextName={organizer.name || 'Organizer'}
+            />
+
+            <ImageExtractorModal
+                isOpen={showHeaderImageModal}
+                onClose={() => setShowHeaderImageModal(false)}
+                onSelect={handleHeaderImageFromUrl}
+                onFileSelected={(file) => uploadHeaderImageFile(file)}
+                initialUrl={fields.source_url || fields.website_url || fields.registration_url || ''}
+                title="Update Hackathon Header Image"
+                description="Upload a file or extract from website"
+                contextName={fields.title || 'Hackathon'}
             />
         </div>
     );

@@ -9,6 +9,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
+import {
+    HACKATHON_FEATURE_VERSION,
+    buildRecommendationFeatures,
+    extractFeatureSignalsFromPayload,
+    mergeStoredAndExtractedTags
+} from '@/services/hackathonFeatureService';
 
 async function getAuthenticatedAdmin() {
     const supabase = await createClient();
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest) {
         submission_deadline,
         location,
         is_virtual,
+        min_team_size,
         max_team_size,
         organizer_id,
         organizer_name,
@@ -158,6 +165,26 @@ export async function POST(request: NextRequest) {
     }
 
     const resolvedOrganizerId = await resolveOrganizerId(serviceClient, organizer_id, organizer_name, organizer_website_url);
+    const payloadSignals = extractFeatureSignalsFromPayload(body as Record<string, unknown>);
+    const normalizedTags = mergeStoredAndExtractedTags([], title, description || null, payloadSignals.sourceTags);
+    const recommendationFeatures = buildRecommendationFeatures({
+        title,
+        description: description || null,
+        isVirtual: is_virtual ?? false,
+        minTeamSize: min_team_size ?? payloadSignals.minTeamSize ?? null,
+        maxTeamSize: max_team_size ?? payloadSignals.maxTeamSize ?? null,
+        soloAllowed: payloadSignals.soloAllowed,
+        prizePool: prize_pool || null,
+        expectedParticipants: payloadSignals.expectedParticipants,
+        durationHours: payloadSignals.durationHours,
+        eligibilityText: payloadSignals.eligibilityText,
+        tags: normalizedTags,
+        tracks: payloadSignals.tracks,
+        sponsors: payloadSignals.sponsors,
+        requirements: payloadSignals.requirements,
+        prizeCategories: payloadSignals.prizeCategories,
+        providedApis: payloadSignals.providedApis,
+    });
 
     const { data, error: insertError } = await serviceClient
         .from('hackathons')
@@ -171,7 +198,8 @@ export async function POST(request: NextRequest) {
             submission_deadline: submission_deadline || null,
             location: location || null,
             is_virtual: is_virtual ?? false,
-            max_team_size: max_team_size || null,
+            min_team_size: min_team_size ?? payloadSignals.minTeamSize ?? 1,
+            max_team_size: max_team_size ?? payloadSignals.maxTeamSize ?? null,
             organizer_id: resolvedOrganizerId,
             platform_url: platform_url || null,
             registration_url: registration_url || null,
@@ -179,6 +207,9 @@ export async function POST(request: NextRequest) {
             source_url: source_url || null,
             prize_pool: prize_pool || null,
             prize_description: prize_description || null,
+            tags: normalizedTags,
+            recommendation_features: recommendationFeatures,
+            feature_version: HACKATHON_FEATURE_VERSION,
         })
         .select()
         .single();

@@ -1,10 +1,12 @@
 // src/services/hackathonService.ts
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type {
   HackathonEvent,
   HackathonTeam,
   HackathonParticipant,
+  HackathonRecommendationFeatures,
+  TeamMessage,
   TeamFormData,
   HackathonRegistrationData,
   HackathonStatus,
@@ -528,6 +530,139 @@ export class HackathonService {
   }
 
   /**
+   * Get chat messages for a team.
+   */
+  static async getTeamMessages(
+    supabase: SupabaseClient,
+    teamId: string,
+    limit: number = 100
+  ): Promise<TeamMessage[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_messages')
+        .select('id, team_id, user_id, content, created_at')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        if (this.isUndefinedTableError(error)) return [];
+        this.handleDbError(error, 'fetching team messages');
+      }
+
+      if (!data || data.length === 0) return [];
+
+      const profileMap = await this.getProfileMapByIds(
+        supabase,
+        [...new Set(data.map(message => message.user_id).filter(Boolean))]
+      );
+
+      return data.map(message => ({
+        id: message.id,
+        teamId: message.team_id,
+        userId: message.user_id,
+        content: message.content,
+        createdAt: message.created_at,
+        user: profileMap.get(message.user_id) || undefined,
+      }));
+    } catch (error) {
+      if (this.isUndefinedTableError(error)) return [];
+      this.handleMethodError(error, 'getTeamMessages');
+    }
+  }
+
+  /**
+   * Send a chat message to a team.
+   */
+  static async sendTeamMessage(
+    supabase: SupabaseClient,
+    teamId: string,
+    userId: string,
+    content: string
+  ): Promise<TeamMessage> {
+    try {
+      const trimmed = content.trim();
+      if (!trimmed) {
+        throw new Error('Message cannot be empty');
+      }
+
+      const { data, error } = await supabase
+        .from('team_messages')
+        .insert({
+          team_id: teamId,
+          user_id: userId,
+          content: trimmed,
+        })
+        .select('id, team_id, user_id, content, created_at')
+        .single();
+
+      if (error || !data) {
+        this.handleDbError(error || new Error('Failed to send message'), 'sending team message');
+      }
+
+      const profileMap = await this.getProfileMapByIds(supabase, [userId]);
+      return {
+        id: data.id,
+        teamId: data.team_id,
+        userId: data.user_id,
+        content: data.content,
+        createdAt: data.created_at,
+        user: profileMap.get(data.user_id) || undefined,
+      };
+    } catch (error) {
+      this.handleMethodError(error, 'sendTeamMessage');
+    }
+  }
+
+  /**
+   * Subscribe to team chat messages via realtime.
+   */
+  static subscribeToTeamMessages(
+    supabase: SupabaseClient,
+    teamId: string,
+    onMessage: (message: TeamMessage) => void
+  ): RealtimeChannel {
+    const channel = supabase.channel(`team_messages:${teamId}`);
+
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'team_messages',
+          filter: `team_id=eq.${teamId}`,
+        },
+        async (payload) => {
+          const inserted = payload.new as {
+            id?: string;
+            team_id?: string;
+            user_id?: string;
+            content?: string;
+            created_at?: string;
+          };
+
+          if (!inserted.id || !inserted.team_id || !inserted.user_id || !inserted.created_at) {
+            return;
+          }
+
+          const profileMap = await this.getProfileMapByIds(supabase, [inserted.user_id]);
+          onMessage({
+            id: inserted.id,
+            teamId: inserted.team_id,
+            userId: inserted.user_id,
+            content: inserted.content || '',
+            createdAt: inserted.created_at,
+            user: profileMap.get(inserted.user_id) || undefined,
+          });
+        }
+      )
+      .subscribe();
+
+    return channel;
+  }
+
+  /**
    * Find compatible participants for team formation (simplified)
    */
   static async findCompatibleParticipants(
@@ -585,6 +720,36 @@ export class HackathonService {
     }
 
     return { isValid: true, message: 'Valid' };
+  }
+
+  private static async getProfileMapByIds(
+    supabase: SupabaseClient,
+    userIds: string[]
+  ): Promise<Map<string, { fullName: string | null; avatarUrl: string | null }>> {
+    const profileMap = new Map<string, { fullName: string | null; avatarUrl: string | null }>();
+    if (userIds.length === 0) return profileMap;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', userIds);
+
+    if (error || !data) return profileMap;
+
+    for (const profile of data) {
+      profileMap.set(profile.id, {
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
+      });
+    }
+
+    return profileMap;
+  }
+
+  private static isUndefinedTableError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const maybeCode = (error as { code?: string }).code;
+    return maybeCode === '42P01';
   }
 
 
@@ -893,6 +1058,7 @@ export class HackathonService {
       organizerId: dbHackathon.organizer_id,
       organizerName: organizerName || undefined,
       organizerLogoUrl,
+      headerImageUrl: dbHackathon.header_image_url ?? null,
       registrationDeadline: dbHackathon.registration_deadline,
       submissionDeadline: dbHackathon.submission_deadline,
       maxTeamSize: dbHackathon.max_team_size,
@@ -910,6 +1076,9 @@ export class HackathonService {
       locationLongitude: dbHackathon.location_longitude,
       prizePool: dbHackathon.prize_pool || dbHackathon.prize_description,
       prizeDescription: dbHackathon.prize_description,
+      tags: Array.isArray(dbHackathon.tags) ? dbHackathon.tags : [],
+      recommendationFeatures: (dbHackathon.recommendation_features as HackathonRecommendationFeatures | null) || null,
+      featureVersion: dbHackathon.feature_version,
       userParticipation: userParticipationMap.get(dbHackathon.id),
       teams: teamsMap.get(dbHackathon.id) || [],
       totalParticipants: participantCountMap.get(dbHackathon.id) || 0,
@@ -1004,6 +1173,7 @@ interface DatabaseHackathon {
   end_date: string;
   location?: string | null;
   organizer_id: string;
+  header_image_url?: string | null;
   registration_deadline?: string | null;
   submission_deadline?: string | null;
   max_team_size: number;
@@ -1021,6 +1191,9 @@ interface DatabaseHackathon {
   location_longitude?: number | null;
   prize_pool?: string | null;
   prize_description?: string | null;
+  tags?: string[] | null;
+  recommendation_features?: Record<string, unknown> | null;
+  feature_version?: number | null;
   created_at: string;
   updated_at: string;
   organizers?: {

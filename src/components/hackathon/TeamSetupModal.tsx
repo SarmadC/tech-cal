@@ -201,7 +201,7 @@ export function TeamSetupModal({
 
                                     {/* Project Idea */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-[#8A8A93] uppercase tracking-widest">Project Idea (Optional)</label>
+                                        <label className="text-[10px] font-bold text-[#8A8A93] tracking-tight">Project Idea (Optional)</label>
                                         <textarea
                                             placeholder="What are you building?"
                                             value={description}
@@ -235,7 +235,7 @@ export function TeamSetupModal({
                                                 exit={{ opacity: 0, height: 0 }}
                                                 className="space-y-3 overflow-hidden"
                                             >
-                                                <label className="text-[10px] font-bold text-[#8A8A93] uppercase tracking-widest">Who do you need?</label>
+                                                <label className="text-[10px] font-bold text-[#8A8A93] tracking-tight">Who do you need?</label>
                                                 <div className="flex flex-wrap gap-2">
                                                     {ROLES.map(role => (
                                                         <button
@@ -311,7 +311,7 @@ export function TeamSetupModal({
                                                         </div>
                                                     </div>
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-400 tracking-tight">
                                                             Join <CaretRight size={10} />
                                                         </div>
                                                     </div>

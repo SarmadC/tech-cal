@@ -2,6 +2,84 @@
 
 import type { SkillTag, TeamRole, CollaborationStyle, TeamSizePreference, CommunicationPreference, MentorshipPreference } from './career';
 
+// Team Matching Types
+export interface TeamMatchResult {
+  teamId: string;
+  overall: number;
+  breakdown: { role: number; skills: number; collaboration: number; communication: number; mentorship: number; };
+  suggestedRole: string | null;
+  missingSkills: string[];
+  complementarySkills: string[];
+  matchReasons: string[];
+}
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  hackathonId: string;
+  inviterId: string;
+  inviteeId: string;
+  status: 'pending' | 'accepted' | 'declined';
+  message?: string | null;
+  matchScore?: number | null;
+  createdAt: string;
+  inviter?: { fullName: string | null; avatarUrl: string | null };
+  team?: { name: string; hackathonTitle?: string };
+}
+
+export interface TeamMessage {
+  id: string;
+  teamId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user?: { fullName: string | null; avatarUrl: string | null };
+}
+
+// Recommendation Types
+export interface HackathonScoreBreakdown {
+  skills: number;
+  interests: number;
+  learning: number;
+  format: number;
+  careerGoals: number;
+  difficulty: number;
+}
+
+export interface HackathonRecommendation {
+  hackathonId: string;
+  hackathon: HackathonEvent;
+  overall: number;
+  breakdown: HackathonScoreBreakdown;
+  matchReasons: string[];
+  matchedSkills: string[];
+  learningOpportunities: string[];
+}
+
+export type HackathonDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'mixed' | 'unknown';
+export type HackathonCommitmentLevel = 'low' | 'medium' | 'high' | 'unknown';
+export type HackathonFormat = 'virtual' | 'in-person' | 'hybrid' | 'unknown';
+export type HackathonTeamMode = 'solo' | 'small' | 'medium' | 'large' | 'unknown';
+export type HackathonCompetitionLevel = 'low' | 'medium' | 'high' | 'unknown';
+export type HackathonPrizeTier = 'none' | 'low' | 'medium' | 'high' | 'unknown';
+
+export interface HackathonRecommendationFeatures {
+  themes: string[];
+  requiredTech: string[];
+  sponsorDomains: string[];
+  difficulty: HackathonDifficulty;
+  commitmentHours: number | null;
+  commitmentLevel: HackathonCommitmentLevel;
+  format: HackathonFormat;
+  teamMode: HackathonTeamMode;
+  prizeTier: HackathonPrizeTier;
+  expectedParticipants: number | null;
+  competitionLevel: HackathonCompetitionLevel;
+  beginnerFriendly: boolean | null;
+  eligibilityText: string | null;
+  featureVersion: number;
+}
+
 /**
  * Core hackathon event - independent from calendar events
  */
@@ -15,6 +93,7 @@ export interface HackathonEvent {
   organizerId: string;
   organizerName?: string;
   organizerLogoUrl?: string | null;
+  headerImageUrl?: string | null;
   registrationDeadline?: string | null;
   submissionDeadline?: string | null;
   maxTeamSize: number;
@@ -33,6 +112,8 @@ export interface HackathonEvent {
   prizePool?: string | null;
   prizeDescription?: string | null;
   tags?: string[];
+  recommendationFeatures?: HackathonRecommendationFeatures | null;
+  featureVersion?: number | null;
   userParticipation?: HackathonParticipant;
   teams?: HackathonTeam[];
   totalParticipants?: number;

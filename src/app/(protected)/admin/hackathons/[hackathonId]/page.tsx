@@ -20,6 +20,8 @@ export interface HackathonWithOrganizer {
     status: string | null;
     start_date: string;
     end_date: string;
+    event_id?: string | null;
+    header_image_url?: string | null;
     registration_deadline: string | null;
     submission_deadline: string | null;
     location: string | null;

@@ -10,6 +10,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
+import {
+    HACKATHON_FEATURE_VERSION,
+    buildRecommendationFeatures,
+    extractFeatureSignalsFromPayload,
+    mergeStoredAndExtractedTags
+} from '@/services/hackathonFeatureService';
+
+interface ExistingHackathonForFeatures {
+    title: string;
+    description: string | null;
+    is_virtual: boolean;
+    min_team_size: number | null;
+    max_team_size: number | null;
+    prize_pool: string | null;
+    tags?: string[] | null;
+    recommendation_features?: Record<string, unknown> | null;
+}
+
+function readStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+}
 
 async function getAuthenticatedAdmin() {
     const supabase = await createClient();
@@ -117,6 +139,7 @@ export async function PUT(
         submission_deadline,
         location,
         is_virtual,
+        min_team_size,
         max_team_size,
         organizer_id,
         organizer_name,
@@ -131,6 +154,56 @@ export async function PUT(
 
     const resolvedOrganizerId = await resolveOrganizerId(serviceClient, organizer_id, organizer_name, organizer_website_url);
 
+    const { data: existingHackathonRaw, error: existingError } = await serviceClient
+        .from('hackathons')
+        .select('*')
+        .eq('id', hackathonId)
+        .single();
+
+    if (existingError || !existingHackathonRaw) {
+        console.error('Error fetching existing hackathon for feature update:', existingError);
+        return NextResponse.json({ error: 'Hackathon not found' }, { status: 404 });
+    }
+
+    const existingHackathon = existingHackathonRaw as unknown as ExistingHackathonForFeatures;
+    const payloadSignals = extractFeatureSignalsFromPayload(body as Record<string, unknown>);
+    const existingFeatures = existingHackathon.recommendation_features || null;
+
+    const effectiveTitle = title !== undefined ? title : existingHackathon.title;
+    const effectiveDescription = description !== undefined ? (description || null) : existingHackathon.description;
+    const effectiveIsVirtual = is_virtual !== undefined ? is_virtual : existingHackathon.is_virtual;
+    const effectiveMinTeamSize = min_team_size !== undefined ? (min_team_size ?? null) : existingHackathon.min_team_size;
+    const effectiveMaxTeamSize = max_team_size !== undefined ? (max_team_size ?? null) : existingHackathon.max_team_size;
+    const effectivePrizePool = prize_pool !== undefined ? (prize_pool || null) : existingHackathon.prize_pool;
+    const effectiveTags = mergeStoredAndExtractedTags(
+        existingHackathon.tags || [],
+        effectiveTitle,
+        effectiveDescription,
+        payloadSignals.sourceTags
+    );
+
+    const recommendationFeatures = buildRecommendationFeatures({
+        title: effectiveTitle,
+        description: effectiveDescription,
+        isVirtual: effectiveIsVirtual,
+        minTeamSize: effectiveMinTeamSize,
+        maxTeamSize: effectiveMaxTeamSize,
+        soloAllowed: payloadSignals.soloAllowed,
+        prizePool: effectivePrizePool,
+        expectedParticipants: payloadSignals.expectedParticipants
+            ?? (typeof existingFeatures?.expectedParticipants === 'number' ? existingFeatures.expectedParticipants : null),
+        durationHours: payloadSignals.durationHours
+            ?? (typeof existingFeatures?.commitmentHours === 'number' ? existingFeatures.commitmentHours : null),
+        eligibilityText: payloadSignals.eligibilityText
+            ?? (typeof existingFeatures?.eligibilityText === 'string' ? existingFeatures.eligibilityText : null),
+        tags: effectiveTags,
+        tracks: payloadSignals.tracks.length > 0 ? payloadSignals.tracks : readStringArray(existingFeatures?.themes),
+        sponsors: payloadSignals.sponsors.length > 0 ? payloadSignals.sponsors : readStringArray(existingFeatures?.sponsorDomains),
+        requirements: payloadSignals.requirements.length > 0 ? payloadSignals.requirements : readStringArray(existingFeatures?.requiredTech),
+        prizeCategories: payloadSignals.prizeCategories,
+        providedApis: payloadSignals.providedApis,
+    });
+
     const updatePayload: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
     };
@@ -144,7 +217,8 @@ export async function PUT(
     if (submission_deadline !== undefined) updatePayload.submission_deadline = submission_deadline || null;
     if (location !== undefined) updatePayload.location = location || null;
     if (is_virtual !== undefined) updatePayload.is_virtual = is_virtual;
-    if (max_team_size !== undefined) updatePayload.max_team_size = max_team_size || null;
+    if (min_team_size !== undefined) updatePayload.min_team_size = min_team_size ?? null;
+    if (max_team_size !== undefined) updatePayload.max_team_size = max_team_size ?? null;
     updatePayload.organizer_id = resolvedOrganizerId;
     if (platform_url !== undefined) updatePayload.platform_url = platform_url || null;
     if (registration_url !== undefined) updatePayload.registration_url = registration_url || null;
@@ -152,6 +226,9 @@ export async function PUT(
     if (source_url !== undefined) updatePayload.source_url = source_url || null;
     if (prize_pool !== undefined) updatePayload.prize_pool = prize_pool || null;
     if (prize_description !== undefined) updatePayload.prize_description = prize_description || null;
+    updatePayload.tags = effectiveTags;
+    updatePayload.recommendation_features = recommendationFeatures;
+    updatePayload.feature_version = HACKATHON_FEATURE_VERSION;
 
     const { data, error: updateError } = await serviceClient
         .from('hackathons')
