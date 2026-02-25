@@ -78,3 +78,55 @@ export const calculateProgress = (hackathon: HackathonEvent): number => {
 export const formatProgress = (hackathon: HackathonEvent): string => {
   return `${Math.round(calculateProgress(hackathon))}%`;
 };
+
+/**
+ * Get human-readable time-until string
+ */
+export const getTimeUntil = (dateString: string): string => {
+  try {
+    const target = new Date(dateString).getTime();
+    const now = Date.now();
+    const diff = target - now;
+    if (diff <= 0) return 'Passed';
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    if (days > 30) return `${Math.ceil(days / 30)} month${days > 60 ? 's' : ''}`;
+    if (days > 0) return `${days} day${days !== 1 ? 's' : ''}`;
+    if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    return 'Less than an hour';
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * Get registration countdown with urgency level for color-coding
+ */
+export const getRegistrationCountdown = (
+  deadline: string | null | undefined
+): { text: string; urgency: 'low' | 'medium' | 'high' } | null => {
+  if (!deadline) return null;
+
+  try {
+    const target = new Date(deadline).getTime();
+    const now = Date.now();
+    const diff = target - now;
+    if (diff <= 0) return null; // deadline passed
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    const timeText = getTimeUntil(deadline);
+    const text = `Registration closes in ${timeText}`;
+
+    let urgency: 'low' | 'medium' | 'high' = 'low';
+    if (days <= 2) urgency = 'high';
+    else if (days <= 7) urgency = 'medium';
+
+    return { text, urgency };
+  } catch {
+    return null;
+  }
+};

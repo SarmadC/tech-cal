@@ -211,6 +211,10 @@ NEXT_PUBLIC_SENTRY_DSN=...           # Optional: Sentry breadcrumbs
 NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST=true
 NEXT_PUBLIC_ENABLE_DIVERSITY_ENHANCEMENT=true
 
+# Bug reporting (Contact page -> Linear)
+LINEAR_API_KEY=...                  # Server-only secret (create issues in Linear)
+LINEAR_TEAM_ID=...                  # Optional: team UUID, key (e.g. KUR), or name; required only if your API key can access multiple teams
+
 DISCOVERY_SCORING=server             # server|legacy|shadow
 DISCOVERY_RERANK=advanced            # off|advanced|shadow
 NEXT_PUBLIC_SHOW_BUDGET_HINT=false   # Optional UI hint toggle
@@ -321,4 +325,3 @@ Key themes: accessibility, animation quality, design system consistency, purpose
 
 **Happy shipping!**  
 Bookmark `npm run verify:all` before every deploy to keep the recommendation engine honest.
-

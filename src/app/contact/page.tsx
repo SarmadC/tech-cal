@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useCallback, type FormEvent } from 'react';
 import {
-    GithubLogo,
     DiscordLogo,
     Bug,
     Lightbulb,
@@ -46,7 +45,7 @@ const supportShortcuts: SupportShortcut[] = [
     {
         id: 'feature',
         label: 'Request a Feature',
-        description: 'Share feedback or ideas for the roadmap.',
+        description: 'Share feedback or ideas for the roadmap (tracked in Linear).',
         keywords: ['feature', 'idea', 'feedback', 'roadmap'],
         type: 'form',
         subject: 'feedback',
@@ -54,11 +53,10 @@ const supportShortcuts: SupportShortcut[] = [
     {
         id: 'bug',
         label: 'Report a Bug',
-        description: 'File an issue in our public GitHub tracker.',
-        keywords: ['bug', 'issue', 'error', 'github'],
-        type: 'link',
-        href: 'https://github.com/SarmadC/tech-cal/issues',
-        target: '_blank',
+        description: 'Report a bug and we’ll track it in Linear.',
+        keywords: ['bug', 'issue', 'error', 'linear'],
+        type: 'form',
+        subject: 'bug_report',
     },
     {
         id: 'community',
@@ -66,7 +64,7 @@ const supportShortcuts: SupportShortcut[] = [
         description: 'Connect with other builders on Discord.',
         keywords: ['discord', 'community', 'discussion', 'chat'],
         type: 'link',
-        href: 'https://discord.gg/kure-cal',
+        href: 'https://discord.gg/k9BDw8Jq',
         target: '_blank',
     },
     {
@@ -208,17 +206,16 @@ export default function ContactPage() {
                             <Bug className="h-5 w-5 text-neutral-500 group-hover:text-white transition-colors" />
                         </div>
                         <p className="text-neutral-400 text-sm mb-8 min-h-[40px]">
-                            Found a bug? We'd love to hear about it. Check our GitHub issues or report a new one.
+                            Found a bug? Report it here and we’ll track it in Linear.
                         </p>
-                        <a
-                            href="https://github.com/SarmadC/tech-cal/issues"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-md transition-colors"
+                        <button
+                            type="button"
+                            onClick={() => handleOpenForm('bug_report')}
+                            className="inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-md transition-colors w-max"
                         >
-                            Open GitHub Issue
-                            <GithubLogo className="ml-2 h-3.5 w-3.5" />
-                        </a>
+                            Report an issue
+                            <ArrowUpRight className="ml-2 h-3.5 w-3.5" />
+                        </button>
                     </div>
 
                     <div className="group p-6 rounded-xl bg-neutral-900/30 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/50 transition-all duration-300">
@@ -227,7 +224,7 @@ export default function ContactPage() {
                             <Lightbulb className="h-5 w-5 text-neutral-500 group-hover:text-amber-400 transition-colors" />
                         </div>
                         <p className="text-neutral-400 text-sm mb-8 min-h-[40px]">
-                            Want to suggest a new feature? Send us a request directly via our feedback form.
+                            Want to suggest a new feature? Send us a request and we’ll track it in Linear.
                         </p>
                         <button
                             type="button"
@@ -245,20 +242,11 @@ export default function ContactPage() {
                             <Chat className="h-5 w-5 text-neutral-500 group-hover:text-blue-400 transition-colors" />
                         </div>
                         <p className="text-neutral-400 text-sm mb-8 min-h-[40px]">
-                            Join our GitHub discussions or Discord server for help and general questions.
+                            Join our Discord server for help and general questions.
                         </p>
                         <div className="flex items-center gap-3">
                             <a
-                                href="https://github.com/SarmadC/tech-cal/discussions"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-md transition-colors"
-                            >
-                                Discussions
-                                <GithubLogo className="ml-2 h-3.5 w-3.5" />
-                            </a>
-                            <a
-                                href="https://discord.gg/kure-cal"
+                                href="https://discord.gg/k9BDw8Jq"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-black bg-white hover:bg-neutral-200 border border-white rounded-md transition-colors"

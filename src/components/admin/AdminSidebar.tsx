@@ -66,6 +66,12 @@ export default function AdminSidebar() {
                         icon: <MaterialIcon name="calendar" size={16} />,
                         hotkey: 'G A',
                     },
+                    {
+                        title: 'Hackathons',
+                        href: `${BASE_PATH}/hackathons`,
+                        icon: <MaterialIcon name="code" size={16} />,
+                        hotkey: 'G H',
+                    },
                 ],
             },
             {

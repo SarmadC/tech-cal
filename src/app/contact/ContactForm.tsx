@@ -59,6 +59,8 @@ export function ContactForm({ initialSubject = '', onClose }: ContactFormProps) 
     const initialState: ContactFormState = { message: '', success: false, errors: {} };
     const [state, formAction] = useActionState(submitContactFormAction, initialState);
     const [selectedSubject, setSelectedSubject] = useState(initialSubject);
+    const [pageUrl, setPageUrl] = useState('');
+    const [referrer, setReferrer] = useState('');
 
     // Update internal state if prop changes
     useEffect(() => {
@@ -66,6 +68,11 @@ export function ContactForm({ initialSubject = '', onClose }: ContactFormProps) 
             setSelectedSubject(initialSubject);
         }
     }, [initialSubject]);
+
+    useEffect(() => {
+        setPageUrl(window.location.href);
+        setReferrer(document.referrer);
+    }, []);
 
     useEffect(() => {
         if (state.message) {
@@ -115,6 +122,8 @@ export function ContactForm({ initialSubject = '', onClose }: ContactFormProps) 
 
                 <div className="p-8">
                     <form ref={formRef} action={formAction} className="space-y-6">
+                        <input type="hidden" name="pageUrl" value={pageUrl} />
+                        <input type="hidden" name="referrer" value={referrer} />
 
                         {/* Name & Email Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -190,6 +199,7 @@ export function ContactForm({ initialSubject = '', onClose }: ContactFormProps) 
                                     <SelectItem value="general" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">General Inquiry</SelectItem>
                                     <SelectItem value="sales" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">Enterprise Sales</SelectItem>
                                     <SelectItem value="support" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">Technical Support</SelectItem>
+                                    <SelectItem value="bug_report" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">Bug Report</SelectItem>
                                     <SelectItem value="feedback" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">Feature Request / Feedback</SelectItem>
                                     <SelectItem value="partnership" className="focus:bg-[#2D3136] focus:text-white cursor-pointer py-2.5 px-3 text-[13px]">Partnership</SelectItem>
                                 </SelectContent>

@@ -881,6 +881,7 @@ export class HackathonService {
     teamsMap: Map<string, HackathonTeam[]>
   ): HackathonEvent {
     const organizerName = dbHackathon.organizers?.name || null;
+    const organizerLogoUrl = dbHackathon.organizers?.logo_url || null;
 
     return {
       id: dbHackathon.id,
@@ -891,14 +892,24 @@ export class HackathonService {
       location: dbHackathon.location || '',
       organizerId: dbHackathon.organizer_id,
       organizerName: organizerName || undefined,
+      organizerLogoUrl,
       registrationDeadline: dbHackathon.registration_deadline,
       submissionDeadline: dbHackathon.submission_deadline,
       maxTeamSize: dbHackathon.max_team_size,
+      minTeamSize: dbHackathon.min_team_size,
       platformUrl: dbHackathon.platform_url,
       registrationUrl: dbHackathon.registration_url,
       websiteUrl: dbHackathon.website_url,
+      sourceUrl: dbHackathon.source_url,
       status: dbHackathon.status as HackathonStatus,
       isVirtual: dbHackathon.is_virtual,
+      eventId: dbHackathon.event_id,
+      locationCity: dbHackathon.location_city,
+      locationCountry: dbHackathon.location_country,
+      locationLatitude: dbHackathon.location_latitude,
+      locationLongitude: dbHackathon.location_longitude,
+      prizePool: dbHackathon.prize_pool || dbHackathon.prize_description,
+      prizeDescription: dbHackathon.prize_description,
       userParticipation: userParticipationMap.get(dbHackathon.id),
       teams: teamsMap.get(dbHackathon.id) || [],
       totalParticipants: participantCountMap.get(dbHackathon.id) || 0,
@@ -996,11 +1007,20 @@ interface DatabaseHackathon {
   registration_deadline?: string | null;
   submission_deadline?: string | null;
   max_team_size: number;
+  min_team_size: number;
   platform_url?: string | null;
   registration_url?: string | null;
   website_url?: string | null;
+  source_url?: string | null;
   status: string;
   is_virtual: boolean;
+  event_id?: string | null;
+  location_city?: string | null;
+  location_country?: string | null;
+  location_latitude?: number | null;
+  location_longitude?: number | null;
+  prize_pool?: string | null;
+  prize_description?: string | null;
   created_at: string;
   updated_at: string;
   organizers?: {

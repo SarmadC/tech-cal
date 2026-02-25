@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import { ContactFormEmail } from '@/components/emails/ContactFormEmail';
 import { ContactFormSchema } from '@/lib/schemas'; // Import from central location
 import { getPostHogClient } from '@/lib/posthog-server';
+import { createLinearIssue, getLinearTeamId } from '@/lib/linear';
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -25,16 +26,6 @@ export async function submitContactFormAction(
     prevState: ContactFormState,
     formData: FormData
 ): Promise<ContactFormState> {
-    // Add a check for the Resend API Key to prevent runtime errors
-    if (!process.env.RESEND_API_KEY) {
-        console.error("RESEND_API_KEY is not configured.");
-        return {
-            success: false,
-            message: "Server Configuration Error.",
-            errors: { _form: ["The contact form is currently unavailable."] }
-        }
-    }
-
     // Validate form data
     const validatedFields = ContactFormSchema.safeParse({
         name: formData.get('name'),
@@ -55,14 +46,68 @@ export async function submitContactFormAction(
     // Send the email within a try...catch block
     try {
         const { name, email, company, subject, message } = validatedFields.data;
-        
-        await resend.emails.send({
-            from: 'Kure-Cal Contact Form <noreply@kure-cal.com>', // Your correct setting
-            to: ['sarmad@kure-cal.com'],
-            subject: `New Contact Form Message: ${subject}`,
-            replyTo: email, // Your correct setting
-            react: <ContactFormEmail name={name} email={email} company={company} subject={subject} message={message} />,
-        });
+        const pageUrl = formData.get('pageUrl');
+        const referrer = formData.get('referrer');
+        const pageUrlValue = typeof pageUrl === 'string' ? pageUrl : undefined;
+        const referrerValue = typeof referrer === 'string' ? referrer : undefined;
+
+        const shouldCreateLinearIssue = subject === 'bug_report' || subject === 'feedback';
+
+        if (shouldCreateLinearIssue) {
+            if (!process.env.LINEAR_API_KEY) {
+                return {
+                    success: false,
+                    message: "Server Configuration Error.",
+                    errors: { _form: ["Issue tracking is currently unavailable."] },
+                };
+            }
+
+            const teamId = await getLinearTeamId(process.env.LINEAR_API_KEY, process.env.LINEAR_TEAM_ID);
+            await createLinearIssue({
+                apiKey: process.env.LINEAR_API_KEY,
+                teamId,
+                title: (() => {
+                    const firstLine = message.split('\n')[0]?.trim() ?? '';
+                    if (firstLine.length >= 6) {
+                        const prefix = subject === 'bug_report' ? 'Bug' : 'Feature';
+                        return `${prefix}: ${firstLine.slice(0, 80)}`;
+                    }
+                    if (subject === 'feedback') {
+                        return `Feature request from ${name}`;
+                    }
+                    return `Bug report from ${name}`;
+                })(),
+                description: [
+                    pageUrlValue ? `Page: ${pageUrlValue}` : null,
+                    referrerValue ? `Referrer: ${referrerValue}` : null,
+                    `Type: ${subject === 'bug_report' ? 'Bug Report' : 'Feature Request / Feedback'}`,
+                    `Reporter: ${name} <${email}>`,
+                    company ? `Company: ${company}` : null,
+                    '',
+                    message,
+                ]
+                    .filter(Boolean)
+                    .join('\n'),
+            });
+        } else {
+            // Add a check for the Resend API Key to prevent runtime errors
+            if (!process.env.RESEND_API_KEY) {
+                console.error("RESEND_API_KEY is not configured.");
+                return {
+                    success: false,
+                    message: "Server Configuration Error.",
+                    errors: { _form: ["The contact form is currently unavailable."] }
+                }
+            }
+
+            await resend.emails.send({
+                from: 'Kure-Cal Contact Form <noreply@kure-cal.com>', // Your correct setting
+                to: ['sarmad@kure-cal.com'],
+                subject: `New Contact Form Message: ${subject}`,
+                replyTo: email, // Your correct setting
+                react: <ContactFormEmail name={name} email={email} company={company} subject={subject} message={message} />,
+            });
+        }
 
         // Track contact form submission
         try {
@@ -82,10 +127,14 @@ export async function submitContactFormAction(
 
         return {
             success: true,
-            message: "Thank you for your message! We'll get back to you soon.",
+            message: subject === 'bug_report'
+                ? "Thanks! Your bug report has been sent."
+                : subject === 'feedback'
+                    ? "Thanks! Your feature request has been sent."
+                    : "Thank you for your message! We'll get back to you soon.",
         };
     } catch (error) {
-        console.error("Email sending error:", error);
+        console.error("Contact form submission error:", error);
         return {
             success: false,
             message: "Server Error.",

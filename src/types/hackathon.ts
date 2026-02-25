@@ -14,14 +14,25 @@ export interface HackathonEvent {
   location: string;
   organizerId: string;
   organizerName?: string;
+  organizerLogoUrl?: string | null;
   registrationDeadline?: string | null;
   submissionDeadline?: string | null;
   maxTeamSize: number;
+  minTeamSize: number;
   platformUrl?: string | null;
   registrationUrl?: string | null;
   websiteUrl?: string | null;
+  sourceUrl?: string | null;
   status: HackathonStatus;
   isVirtual: boolean;
+  eventId?: string | null;
+  locationCity?: string | null;
+  locationCountry?: string | null;
+  locationLatitude?: number | null;
+  locationLongitude?: number | null;
+  prizePool?: string | null;
+  prizeDescription?: string | null;
+  tags?: string[];
   userParticipation?: HackathonParticipant;
   teams?: HackathonTeam[];
   totalParticipants?: number;
@@ -43,6 +54,8 @@ export interface HackathonTeam {
   updatedAt: string;
   memberCount?: number;
   members?: HackathonParticipant[];
+  icon?: string | null;
+  roles?: string[];
 }
 
 /**

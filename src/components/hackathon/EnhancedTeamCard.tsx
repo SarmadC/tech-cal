@@ -6,149 +6,141 @@ import type { HackathonTeam } from '@/types/hackathon';
 import { getTeamStatus } from '@/utils/teamUtils';
 
 interface EnhancedTeamCardProps {
-  team: HackathonTeam;
-  maxTeamSize: number;
-  onJoin: (teamId: string) => void;
-  isJoining?: boolean;
-  canJoin?: boolean;
-  userId: string;
-  // Optional matching data
-  compatibilityScore?: number;
-  suggestedRole?: string;
-  missingSkills?: string[];
+    team: HackathonTeam;
+    maxTeamSize: number;
+    onJoin: (teamId: string) => void;
+    isJoining?: boolean;
+    canJoin?: boolean;
+    userId: string;
+    // Optional matching data
+    compatibilityScore?: number;
+    suggestedRole?: string;
+    missingSkills?: string[];
 }
 
-export function EnhancedTeamCard({ 
-  team, 
-  maxTeamSize, 
-  onJoin, 
-  isJoining = false, 
-  canJoin = true,
-  userId,
-  compatibilityScore,
-  suggestedRole,
-  missingSkills = []
+export function EnhancedTeamCard({
+    team,
+    maxTeamSize,
+    onJoin,
+    isJoining = false,
+    canJoin = true,
+    userId,
+    compatibilityScore,
+    suggestedRole,
+    missingSkills = []
 }: EnhancedTeamCardProps) {
-  const status = getTeamStatus(team, maxTeamSize, userId);
-  const { isFull, availableSpots } = status;
-  const isCreator = team.createdBy === userId;
+    const status = getTeamStatus(team, maxTeamSize, userId);
+    const { isFull, availableSpots } = status;
+    const isCreator = team.createdBy === userId;
 
-  const getCompatibilityColor = (score: number) => {
-    if (score >= 80) return 'text-green-400 bg-green-500/20 border-green-500/30 border';
-    if (score >= 60) return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30 border';
-    return 'text-red-400 bg-red-500/20 border-red-500/30 border';
-  };
+    const getCompatibilityColor = (score: number) => {
+        if (score >= 80) return 'text-green-400 bg-green-500/10 border-green-500/20';
+        if (score >= 60) return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+        return 'text-red-400 bg-red-500/10 border-red-500/20';
+    };
 
-  const formatRole = (role: string) => {
-    return role.split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
+    const formatRole = (role: string) => {
+        return role.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
 
-  return (
-    <div className="glass-card p-6">
-      {/* Team Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-glass-primary mb-1">{team.name}</h3>
-          {team.description && (
-            <p className="text-glass-secondary text-sm line-clamp-2">{team.description}</p>
-          )}
+    return (
+        <div className="flex flex-col h-full rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all duration-300 overflow-hidden">
+            {/* Team Header */}
+            <div className="p-4 flex-1">
+                <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-white mb-1 truncate group-hover/team:text-blue-400 transition-colors">
+                            {team.name}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${isFull ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'
+                                }`}>
+                                {isFull ? 'Full' : `${availableSpots} Open`}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {team.description && (
+                    <p className="text-xs text-white/50 leading-relaxed line-clamp-2 mb-4">
+                        {team.description}
+                    </p>
+                )}
+
+                {/* Compatibility Score */}
+                {compatibilityScore && (
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Compatibility</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getCompatibilityColor(compatibilityScore)}`}>
+                                {compatibilityScore}% Match
+                            </span>
+                        </div>
+                        <div className="w-full bg-white/5 rounded-full h-1">
+                            <div
+                                className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                                style={{ width: `${compatibilityScore}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Suggested Role & Skills */}
+                <div className="space-y-3">
+                    {suggestedRole && (
+                        <div className="flex items-center gap-2">
+                            <MaterialIcon name="person" className="text-blue-400/60" size={14} />
+                            <span className="text-[11px] text-white/60">
+                                Suggested: <span className="text-white font-medium">{formatRole(suggestedRole)}</span>
+                            </span>
+                        </div>
+                    )}
+
+                    {missingSkills.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {missingSkills.slice(0, 2).map((skill, index) => (
+                                <span key={index} className="px-1.5 py-0.5 bg-white/5 text-white/40 text-[9px] font-bold rounded uppercase border border-white/5">
+                                    {skill}
+                                </span>
+                            ))}
+                            {missingSkills.length > 2 && (
+                                <span className="text-[9px] text-white/20 font-bold self-center">
+                                    +{missingSkills.length - 2}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Team Stats & Action Footer */}
+            <div className="px-4 py-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] text-white/30 font-bold uppercase tracking-wider">
+                    <MaterialIcon name="people" size={14} className="text-white/20" />
+                    <span>{team.memberCount || 0}/{maxTeamSize}</span>
+                </div>
+
+                <div className="flex items-center">
+                    {isCreator ? (
+                        <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                            Manager
+                        </span>
+                    ) : (
+                        <button
+                            onClick={() => onJoin(team.id)}
+                            disabled={!canJoin || isFull || isJoining}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${!canJoin || isFull
+                                    ? 'text-white/20 cursor-not-allowed'
+                                    : 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10'
+                                }`}
+                        >
+                            {isJoining ? '...' : isFull ? 'Full' : 'Join'}
+                        </button>
+                    )}
+                </div>
+            </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-            isFull ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'
-          }`}>
-            {isFull ? 'Full' : `${availableSpots} spots left`}
-          </span>
-        </div>
-      </div>
-
-      {/* Compatibility Score */}
-      {compatibilityScore && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-glass-secondary">Compatibility</span>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCompatibilityColor(compatibilityScore)}`}>
-              {compatibilityScore}% match
-            </span>
-          </div>
-          <div className="w-full bg-white/10 rounded-full h-2">
-            <div 
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${compatibilityScore}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Suggested Role */}
-      {suggestedRole && (
-        <div className="mb-4">
-          <div className="flex items-center space-x-2">
-            <MaterialIcon name="person" className="text-blue-400" size={16} />
-            <span className="text-sm text-glass-secondary">
-              Suggested role: <span className="font-medium text-glass-primary">{formatRole(suggestedRole)}</span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Missing Skills */}
-      {missingSkills.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <MaterialIcon name="warning" className="text-amber-400" size={16} />
-            <span className="text-sm font-medium text-glass-secondary">Missing Skills</span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {missingSkills.slice(0, 3).map((skill, index) => (
-              <span key={index} className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full border border-amber-500/30">
-                {skill}
-              </span>
-            ))}
-            {missingSkills.length > 3 && (
-              <span className="px-2 py-1 bg-white/5 text-glass-tertiary text-xs rounded-full border border-white/10">
-                +{missingSkills.length - 3} more
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Team Stats */}
-      <div className="flex items-center justify-between text-sm text-glass-tertiary mb-4">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center space-x-1">
-            <MaterialIcon name="people" className="text-glass-tertiary" size={16} />
-            <span>{team.memberCount || 0}/{maxTeamSize} members</span>
-          </span>
-        </div>
-        <span className="text-xs">
-          Created {new Date(team.createdAt).toLocaleDateString()}
-        </span>
-      </div>
-
-      {/* Action Button */}
-      <div className="flex justify-end">
-        {isCreator ? (
-          <span className="px-4 py-2 bg-white/5 text-glass-secondary rounded-lg text-sm font-medium border border-white/10">
-            Your Team
-          </span>
-        ) : (
-          <button
-            onClick={() => onJoin(team.id)}
-            disabled={!canJoin || isFull || isJoining}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !canJoin || isFull
-                ? 'bg-white/5 text-glass-tertiary cursor-not-allowed border border-white/10'
-                : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-            }`}
-          >
-            {isJoining ? 'Joining...' : isFull ? 'Team Full' : 'Join Team'}
-          </button>
-        )}
-      </div>
-    </div>
-  );
+    );
 }

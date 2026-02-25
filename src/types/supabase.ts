@@ -2236,6 +2236,60 @@ export type Database = {
             referencedRelation: "hackathon_teams"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "hackathon_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "hackathon_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      hackathon_tags: {
+        Row: {
+          created_at: string | null
+          hackathon_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          hackathon_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          hackathon_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_tags_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "event_tags"
+            referencedColumns: ["id"]
+          },
         ]
       }
       hackathon_teams: {
@@ -2271,6 +2325,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "hackathon_teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "hackathon_teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "hackathon_teams_hackathon_id_fkey"
             columns: ["hackathon_id"]
             isOneToOne: false
@@ -2284,14 +2359,23 @@ export type Database = {
           created_at: string | null
           description: string | null
           end_date: string
+          event_id: string | null
           id: string
           is_virtual: boolean | null
           location: string | null
+          location_city: string | null
+          location_country: string | null
+          location_latitude: number | null
+          location_longitude: number | null
           max_team_size: number | null
+          min_team_size: number | null
           organizer_id: string | null
           platform_url: string | null
+          prize_description: string | null
+          prize_pool: string | null
           registration_deadline: string | null
           registration_url: string | null
+          source_url: string | null
           start_date: string
           status: string | null
           submission_deadline: string | null
@@ -2303,14 +2387,23 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           end_date: string
+          event_id?: string | null
           id?: string
           is_virtual?: boolean | null
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
           max_team_size?: number | null
+          min_team_size?: number | null
           organizer_id?: string | null
           platform_url?: string | null
+          prize_description?: string | null
+          prize_pool?: string | null
           registration_deadline?: string | null
           registration_url?: string | null
+          source_url?: string | null
           start_date: string
           status?: string | null
           submission_deadline?: string | null
@@ -2322,14 +2415,23 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           end_date?: string
+          event_id?: string | null
           id?: string
           is_virtual?: boolean | null
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
           max_team_size?: number | null
+          min_team_size?: number | null
           organizer_id?: string | null
           platform_url?: string | null
+          prize_description?: string | null
+          prize_pool?: string | null
           registration_deadline?: string | null
           registration_url?: string | null
+          source_url?: string | null
           start_date?: string
           status?: string | null
           submission_deadline?: string | null
@@ -2338,6 +2440,27 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hackathons_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathons_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathons_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hackathons_organizer_id_fkey"
             columns: ["organizer_id"]
@@ -4865,4 +4988,3 @@ export const Constants = {
     },
   },
 } as const
-

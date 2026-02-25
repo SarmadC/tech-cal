@@ -1,0 +1,155 @@
+{
+  "_instructions": "Extract ALL available data from the hackathon website. Use null for fields not found. Follow enum values exactly. All timestamps must be ISO 8601 format. Dates (start/end) use YYYY-MM-DD.",
+
+  "hackathon": {
+    "title": "Full official hackathon title",
+    "description": "Complete hackathon description (HTML or plain text, preserve formatting)",
+    "start_date": "YYYY-MM-DD (e.g. 2026-03-15)",
+    "end_date": "YYYY-MM-DD (e.g. 2026-03-17)",
+    "location": "Full address string or 'Virtual' (e.g. 'Moscone Center, 747 Howard St, San Francisco, CA 94103')",
+    "is_virtual": false,
+    "status": "active | cancelled | completed",
+    "max_team_size": null,
+    "min_team_size": null
+  },
+
+  "deadlines": {
+    "registration_deadline": "ISO 8601 timestamp with offset (e.g. 2026-03-10T23:59:00-07:00)",
+    "submission_deadline": "ISO 8601 timestamp with offset (e.g. 2026-03-17T17:00:00-07:00)"
+  },
+
+  "urls": {
+    "source_url": "URL of the page being extracted from",
+    "website_url": "Main hackathon website URL",
+    "registration_url": "Direct registration/sign-up URL",
+    "platform_url": "Hacking platform URL (e.g. Devpost, HackerEarth, MLH page)"
+  },
+
+  "location": {
+    "_note": "Structured location data. Set all to null if virtual-only.",
+    "city": "City name",
+    "country": "Country name (full, e.g. United States)",
+    "latitude": null,
+    "longitude": null,
+    "venue_name": "Venue name if in-person (e.g. 'Google Campus, Building 40')",
+    "full_address": "Complete street address"
+  },
+
+  "organizer": {
+    "name": "Organization or company name running the hackathon",
+    "description": "Brief description of organizer",
+    "website_url": "Organizer website URL",
+    "logo_url": "URL to organizer's logo",
+    "social_media": {
+      "twitter": "URL or handle",
+      "linkedin": "URL",
+      "discord": "Invite URL or server name",
+      "slack": "Invite URL or workspace name"
+    }
+  },
+
+  "prizes": {
+    "_note": "Extract ALL prize information. prize_pool is the total value, tiers are individual prizes.",
+    "prize_pool": "Total prize value as text (e.g. '$50,000 in prizes', '€10,000')",
+    "prize_description": "General prize description or summary",
+    "tiers": [
+      {
+        "place": "1st Place | 2nd Place | 3rd Place | Best Use of [API] | Category Name",
+        "prize": "Prize description (e.g. '$10,000 cash', 'MacBook Pro', 'Cloud credits')",
+        "value": null,
+        "currency": "USD",
+        "sponsor": "Sponsor name if category-specific prize"
+      }
+    ]
+  },
+
+  "tracks": [
+    {
+      "_note": "Many hackathons have themed tracks (e.g. AI, Web3, Social Impact). Extract all.",
+      "name": "Track name (e.g. 'AI/ML Track', 'Sustainability', 'Open Innovation')",
+      "description": "Track description or theme details",
+      "prize": "Track-specific prize if any"
+    }
+  ],
+
+  "schedule": [
+    {
+      "_note": "Extract the full hackathon schedule/timeline. Each item is one activity.",
+      "title": "Activity name (e.g. 'Opening Ceremony', 'Hacking Begins', 'Mentor Office Hours')",
+      "description": "Activity description",
+      "start_time": "ISO 8601 timestamp (e.g. 2026-03-15T09:00:00-07:00)",
+      "end_time": "ISO 8601 timestamp (e.g. 2026-03-15T10:00:00-07:00)",
+      "day_number": 1,
+      "activity_type": "ceremony | hacking | workshop | mentoring | judging | networking | meal | demo | other",
+      "location": "Room or area within the venue",
+      "is_required": false
+    }
+  ],
+
+  "mentors_judges": [
+    {
+      "_note": "Extract ALL mentors, judges, and notable speakers.",
+      "name": "Full name (required)",
+      "role": "mentor | judge | speaker | organizer",
+      "title": "Job title (e.g. Senior Software Engineer)",
+      "company": "Company or organization name",
+      "bio": "Brief biography",
+      "photo_url": "URL to headshot",
+      "linkedin_url": "LinkedIn profile URL",
+      "twitter_url": "Twitter/X profile URL",
+      "expertise": ["Area of expertise 1", "Area of expertise 2"]
+    }
+  ],
+
+  "sponsors": [
+    {
+      "_note": "Extract ALL sponsors with their tier level.",
+      "name": "Sponsor/company name",
+      "tier": "title | platinum | gold | silver | bronze | partner | community | in-kind",
+      "logo_url": "URL to sponsor logo",
+      "website_url": "Sponsor website URL",
+      "description": "What the sponsor provides (APIs, credits, prizes, etc.)"
+    }
+  ],
+
+  "requirements": {
+    "_note": "Eligibility and participation requirements.",
+    "eligibility": "Who can participate (e.g. 'Students only', '18+', 'Open to all')",
+    "team_size_min": null,
+    "team_size_max": null,
+    "solo_allowed": true,
+    "required_tools": ["Any required tools, APIs, or platforms (e.g. 'Must use Twilio API')"],
+    "prerequisites": "Any prior knowledge or setup required",
+    "age_restriction": null
+  },
+
+  "resources": {
+    "_note": "APIs, tools, datasets, and resources provided to participants.",
+    "provided_apis": [
+      {
+        "name": "API or tool name",
+        "provider": "Company providing it",
+        "description": "What it does / how to use it",
+        "documentation_url": "Link to docs"
+      }
+    ],
+    "datasets": ["Any provided datasets or data sources"],
+    "starter_kits": "URL or description of starter code/templates",
+    "communication_channel": "Discord invite, Slack workspace, or other comms channel URL"
+  },
+
+  "tags": [
+    "Technology and topic tags (e.g. 'AI', 'Web3', 'Healthcare', 'React', 'Climate', 'Open Source', 'Beginner-Friendly')"
+  ],
+
+  "metadata": {
+    "_note": "Additional context useful for scoring and categorization.",
+    "hackathon_type": "in-person | virtual | hybrid",
+    "duration_hours": null,
+    "expected_participants": null,
+    "previous_editions": null,
+    "mlh_affiliated": false,
+    "devpost_url": "Devpost project page URL if applicable",
+    "submission_format": "What participants submit (e.g. 'GitHub repo + demo video + Devpost submission')"
+  }
+}
