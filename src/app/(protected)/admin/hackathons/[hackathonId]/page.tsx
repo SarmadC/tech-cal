@@ -12,6 +12,7 @@ import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { redirect, notFound } from 'next/navigation';
 import HackathonEditorClient from './HackathonEditorClient';
+import type { HackathonPrize } from '@/types/hackathon';
 
 export interface HackathonWithOrganizer {
     id: string;
@@ -34,6 +35,7 @@ export interface HackathonWithOrganizer {
     source_url: string | null;
     prize_pool: string | null;
     prize_description: string | null;
+    prizes?: HackathonPrize[] | null;
     created_at: string | null;
     updated_at: string | null;
     organizer: {

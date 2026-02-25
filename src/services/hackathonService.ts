@@ -1077,6 +1077,7 @@ export class HackathonService {
       prizePool: dbHackathon.prize_pool || dbHackathon.prize_description,
       prizeDescription: dbHackathon.prize_description,
       tags: Array.isArray(dbHackathon.tags) ? dbHackathon.tags : [],
+      prizes: dbHackathon.prizes || [],
       recommendationFeatures: (dbHackathon.recommendation_features as HackathonRecommendationFeatures | null) || null,
       featureVersion: dbHackathon.feature_version,
       userParticipation: userParticipationMap.get(dbHackathon.id),
@@ -1191,6 +1192,7 @@ interface DatabaseHackathon {
   location_longitude?: number | null;
   prize_pool?: string | null;
   prize_description?: string | null;
+  prizes?: any[] | null;
   tags?: string[] | null;
   recommendation_features?: Record<string, unknown> | null;
   feature_version?: number | null;

@@ -31,6 +31,7 @@ export interface HackathonFeatureInput {
   requirements?: string[];
   prizeCategories?: string[];
   providedApis?: string[];
+  prizes?: any[] | null;
 }
 
 export interface HackathonPayloadSignals {
@@ -228,16 +229,34 @@ function readStringList(value: unknown, keys: string[] = ['name', 'value', 'titl
   return uniqueStrings(items);
 }
 
-function inferPrizeTier(prizePool?: string | null): HackathonPrizeTier {
-  if (!prizePool) return 'none';
-  const amountMatch = prizePool.replace(/,/g, '').match(/\$?\s*(\d+(?:\.\d+)?)/);
-  if (!amountMatch) return 'unknown';
-  const value = Number(amountMatch[1]);
-  if (!Number.isFinite(value)) return 'unknown';
-  if (value >= 25000) return 'high';
-  if (value >= 5000) return 'medium';
-  if (value > 0) return 'low';
-  return 'unknown';
+function inferPrizeTier(prizePool?: string | null, prizes?: any[] | null): HackathonPrizeTier {
+  if (prizePool) {
+    const amountMatch = prizePool.replace(/,/g, '').match(/\$?\s*(\d+(?:\.\d+)?)/);
+    if (amountMatch) {
+      const value = Number(amountMatch[1]);
+      if (Number.isFinite(value)) {
+        if (value >= 25000) return 'high';
+        if (value >= 5000) return 'medium';
+        if (value > 0) return 'low';
+      }
+    }
+  }
+
+  if (prizes && Array.isArray(prizes) && prizes.length > 0) {
+    // Basic heuristic: if there are multiple prizes or a high value prize
+    let totalValue = 0;
+    for (const p of prizes) {
+      if (p.type === 'cash' && p.value) {
+        const val = parseFloat(p.value.replace(/[^0-9.]/g, ''));
+        if (!isNaN(val)) totalValue += val;
+      }
+    }
+    if (totalValue >= 25000) return 'high';
+    if (totalValue >= 5000) return 'medium';
+    if (totalValue > 0) return 'low';
+  }
+
+  return prizePool ? 'unknown' : 'none';
 }
 
 function inferDifficulty(signalText: string): HackathonDifficulty {
@@ -450,8 +469,8 @@ export function buildRecommendationFeatures(input: HackathonFeatureInput): Hacka
     ...providedApis,
     input.eligibilityText || '',
   ].join(' '));
-
-  const prizeTier = inferPrizeTier(input.prizePool);
+  
+  const prizeTier = inferPrizeTier(input.prizePool, input.prizes);
   const difficulty = inferDifficulty(signalText);
   const commitmentHours = input.durationHours && input.durationHours > 0 ? Math.round(input.durationHours) : null;
   const commitmentLevel = inferCommitmentLevel(commitmentHours);

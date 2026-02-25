@@ -80,6 +80,13 @@ export interface HackathonRecommendationFeatures {
   featureVersion: number;
 }
 
+export interface HackathonPrize {
+  title: string;
+  type: 'cash' | 'track' | 'item';
+  value?: string | null;
+  description?: string | null;
+}
+
 /**
  * Core hackathon event - independent from calendar events
  */
@@ -111,6 +118,7 @@ export interface HackathonEvent {
   locationLongitude?: number | null;
   prizePool?: string | null;
   prizeDescription?: string | null;
+  prizes?: HackathonPrize[];
   tags?: string[];
   recommendationFeatures?: HackathonRecommendationFeatures | null;
   featureVersion?: number | null;

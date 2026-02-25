@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import { X, UsersThree, CalendarBlank, MapPin, Trophy, Timer, ArrowSquareOut, Plus, Trash, CheckCircle } from '@phosphor-icons/react';
+import { X, UsersThree, CalendarBlank, MapPin, Trophy, Timer, ArrowSquareOut, Plus, Trash, CheckCircle, CurrencyDollar, Package } from '@phosphor-icons/react';
 import {
     HackathonEvent,
     HackathonTeam,
@@ -184,7 +184,40 @@ export function HackathonDetailPanel({
                 </div>
 
                 {/* Awards & Tracks */}
-                {hackathon.prizePool && (
+                {(hackathon.prizes && hackathon.prizes.length > 0) ? (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
+                            <Trophy size={14} />
+                            <span>Awards & Tracks</span>
+                        </div>
+                        <div className="grid gap-3">
+                            {hackathon.prizes.map((prize, i) => (
+                                <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex gap-3 items-start group hover:bg-white/[0.05] transition-all">
+                                    <div className="mt-0.5 p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+                                        {prize.type === 'cash' ? <CurrencyDollar size={16} weight="bold" /> :
+                                            prize.type === 'item' ? <Package size={16} weight="bold" /> :
+                                                <Trophy size={16} weight="bold" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h4 className="text-sm font-bold text-white truncate">{prize.title}</h4>
+                                            {prize.value && (
+                                                <span className="shrink-0 text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                                                    {prize.value}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {prize.description && (
+                                            <p className="mt-1 text-xs text-white/40 leading-relaxed font-normal">
+                                                {prize.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : hackathon.prizePool && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <Trophy size={14} />

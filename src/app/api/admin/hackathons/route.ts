@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
         source_url,
         prize_pool,
         prize_description,
+        prizes,
     } = body;
 
     if (!title || !start_date || !end_date) {
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
         requirements: payloadSignals.requirements,
         prizeCategories: payloadSignals.prizeCategories,
         providedApis: payloadSignals.providedApis,
+        prizes: prizes || null,
     });
 
     const { data, error: insertError } = await serviceClient
@@ -207,6 +209,7 @@ export async function POST(request: NextRequest) {
             source_url: source_url || null,
             prize_pool: prize_pool || null,
             prize_description: prize_description || null,
+            prizes: prizes || [],
             tags: normalizedTags,
             recommendation_features: recommendationFeatures,
             feature_version: HACKATHON_FEATURE_VERSION,

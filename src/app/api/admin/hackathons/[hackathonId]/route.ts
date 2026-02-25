@@ -150,6 +150,7 @@ export async function PUT(
         source_url,
         prize_pool,
         prize_description,
+        prizes,
     } = body;
 
     const resolvedOrganizerId = await resolveOrganizerId(serviceClient, organizer_id, organizer_name, organizer_website_url);
@@ -202,6 +203,7 @@ export async function PUT(
         requirements: payloadSignals.requirements.length > 0 ? payloadSignals.requirements : readStringArray(existingFeatures?.requiredTech),
         prizeCategories: payloadSignals.prizeCategories,
         providedApis: payloadSignals.providedApis,
+        prizes: prizes !== undefined ? prizes : (existingHackathonRaw as any).prizes,
     });
 
     const updatePayload: Record<string, unknown> = {
@@ -226,6 +228,7 @@ export async function PUT(
     if (source_url !== undefined) updatePayload.source_url = source_url || null;
     if (prize_pool !== undefined) updatePayload.prize_pool = prize_pool || null;
     if (prize_description !== undefined) updatePayload.prize_description = prize_description || null;
+    if (prizes !== undefined) updatePayload.prizes = prizes || [];
     updatePayload.tags = effectiveTags;
     updatePayload.recommendation_features = recommendationFeatures;
     updatePayload.feature_version = HACKATHON_FEATURE_VERSION;

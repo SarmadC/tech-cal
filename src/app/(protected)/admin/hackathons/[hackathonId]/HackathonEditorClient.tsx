@@ -9,6 +9,7 @@ import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { getLogoUrlFromInput } from '@/utils/logoUtils';
 import type { HackathonWithOrganizer } from './page';
+import type { HackathonPrize } from '@/types/hackathon';
 
 interface HackathonEditorState {
     title: string;
@@ -28,6 +29,7 @@ interface HackathonEditorState {
     header_image_url: string;
     prize_pool: string;
     prize_description: string;
+    prizes: HackathonPrize[];
 }
 
 interface OrganizerState {
@@ -115,6 +117,7 @@ export default function HackathonEditorClient({
         header_image_url: hackathon?.header_image_url ?? '',
         prize_pool: hackathon?.prize_pool ?? '',
         prize_description: hackathon?.prize_description ?? '',
+        prizes: (hackathon?.prizes as HackathonPrize[]) ?? [],
     });
 
     const [organizer, setOrganizer] = useState<OrganizerState>({
@@ -166,6 +169,7 @@ export default function HackathonEditorClient({
                 source_url: fields.source_url.trim() || null,
                 prize_pool: fields.prize_pool.trim() || null,
                 prize_description: fields.prize_description.trim() || null,
+                prizes: fields.prizes,
             };
 
             let response: Response;
@@ -472,24 +476,134 @@ export default function HackathonEditorClient({
             </SectionCard>
 
             <SectionCard title="Prizes">
-                <Field label="Prize Pool">
-                    <input
-                        type="text"
-                        className={inputCls}
-                        value={fields.prize_pool}
-                        onChange={(e) => setField('prize_pool', e.target.value)}
-                        placeholder="e.g. $5,000, 1 BTC, etc."
-                    />
-                </Field>
-                <Field label="Prize Description">
-                    <textarea
-                        className={textareaCls}
-                        rows={3}
-                        value={fields.prize_description}
-                        onChange={(e) => setField('prize_description', e.target.value)}
-                        placeholder="List specific prizes, categories, or sponsor awards…"
-                    />
-                </Field>
+                <div className="space-y-6">
+                    {/* Summary Fields (Fallback) */}
+                    <div className="grid grid-cols-2 gap-4 border-b border-default pb-6">
+                        <Field label="Prize Pool Summary">
+                            <input
+                                type="text"
+                                className={inputCls}
+                                value={fields.prize_pool}
+                                onChange={(e) => setField('prize_pool', e.target.value)}
+                                placeholder="e.g. $5,000, 1 BTC, etc."
+                            />
+                        </Field>
+                        <Field label="Prize Notes">
+                            <input
+                                type="text"
+                                className={inputCls}
+                                value={fields.prize_description}
+                                onChange={(e) => setField('prize_description', e.target.value)}
+                                placeholder="General notes..."
+                            />
+                        </Field>
+                    </div>
+
+                    {/* Structured Prizes */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[12px] font-bold text-foreground-tertiary uppercase tracking-tight">Structured Prizes</h3>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const newPrize: HackathonPrize = { title: '', type: 'cash', value: '', description: '' };
+                                    setField('prizes', [...fields.prizes, newPrize]);
+                                }}
+                                className="h-7 px-3 text-[11px] border-default"
+                            >
+                                <MaterialIcon name="add" size={14} className="mr-1" />
+                                Add Prize
+                            </Button>
+                        </div>
+
+                        {fields.prizes.length === 0 ? (
+                            <div className="text-center py-8 border border-dashed border-default rounded-lg">
+                                <p className="text-[12px] text-foreground-muted">No structured prizes added yet.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {fields.prizes.map((prize, idx) => (
+                                    <div key={idx} className="p-3 rounded-lg border border-default bg-background-tertiary space-y-3 relative group">
+                                        <button
+                                            onClick={() => {
+                                                const newPrizes = [...fields.prizes];
+                                                newPrizes.splice(idx, 1);
+                                                setField('prizes', newPrizes);
+                                            }}
+                                            className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-md hover:bg-red-500/10 text-foreground-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            <MaterialIcon name="delete" size={14} />
+                                        </button>
+
+                                        <div className="grid grid-cols-12 gap-3">
+                                            <div className="col-span-6">
+                                                <Field label="Prize Title">
+                                                    <input
+                                                        type="text"
+                                                        className={inputCls}
+                                                        value={prize.title}
+                                                        onChange={(e) => {
+                                                            const newPrizes = [...fields.prizes];
+                                                            newPrizes[idx].title = e.target.value;
+                                                            setField('prizes', newPrizes);
+                                                        }}
+                                                        placeholder="e.g. 1st Place, Best AI Hack"
+                                                    />
+                                                </Field>
+                                            </div>
+                                            <div className="col-span-3">
+                                                <Field label="Type">
+                                                    <select
+                                                        className={inputCls}
+                                                        value={prize.type}
+                                                        onChange={(e) => {
+                                                            const newPrizes = [...fields.prizes];
+                                                            newPrizes[idx].type = e.target.value as HackathonPrize['type'];
+                                                            setField('prizes', newPrizes);
+                                                        }}
+                                                    >
+                                                        <option value="cash">Cash</option>
+                                                        <option value="track">Track</option>
+                                                        <option value="item">Item</option>
+                                                    </select>
+                                                </Field>
+                                            </div>
+                                            <div className="col-span-3">
+                                                <Field label="Value">
+                                                    <input
+                                                        type="text"
+                                                        className={inputCls}
+                                                        value={prize.value || ''}
+                                                        onChange={(e) => {
+                                                            const newPrizes = [...fields.prizes];
+                                                            newPrizes[idx].value = e.target.value;
+                                                            setField('prizes', newPrizes);
+                                                        }}
+                                                        placeholder="e.g. $1,000"
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                        <Field label="Description">
+                                            <textarea
+                                                className={textareaCls}
+                                                rows={2}
+                                                value={prize.description || ''}
+                                                onChange={(e) => {
+                                                    const newPrizes = [...fields.prizes];
+                                                    newPrizes[idx].description = e.target.value;
+                                                    setField('prizes', newPrizes);
+                                                }}
+                                                placeholder="What's included in this prize?"
+                                            />
+                                        </Field>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </SectionCard>
 
             {/* Dates */}
