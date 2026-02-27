@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,13 @@ const inputCls =
 const textareaCls =
     'w-full rounded-md border border-default bg-background-tertiary px-3 py-2 text-[13px] text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50 resize-none';
 
+function withCacheBuster(url: string, cacheKey: number) {
+    if (!url) return url;
+    const cleanUrl = url.split('?')[0];
+    const sep = cleanUrl.includes('?') ? '&' : '?';
+    return `${cleanUrl}${sep}t=${cacheKey}`;
+}
+
 export default function HackathonEditorClient({
     hackathon,
     isNew,
@@ -96,6 +103,7 @@ export default function HackathonEditorClient({
     const [headerImageUploading, setHeaderImageUploading] = useState(false);
     const [showHeaderImageModal, setShowHeaderImageModal] = useState(false);
     const [importingEventImage, setImportingEventImage] = useState(false);
+    const [headerImageCacheKey, setHeaderImageCacheKey] = useState(() => Date.now());
     const fileInputRef = useRef<HTMLInputElement>(null);
     const headerFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,6 +134,11 @@ export default function HackathonEditorClient({
         website_url: hackathon?.organizer?.website_url ?? '',
         logo_url: hackathon?.organizer?.logo_url ?? null,
     });
+
+    const headerImageDisplayUrl = useMemo(
+        () => (fields.header_image_url ? withCacheBuster(fields.header_image_url, headerImageCacheKey) : ''),
+        [fields.header_image_url, headerImageCacheKey]
+    );
 
     const setField = useCallback(<K extends keyof HackathonEditorState>(
         key: K,
@@ -311,6 +324,7 @@ export default function HackathonEditorClient({
 
                 if (data.imageUrl) {
                     setField('header_image_url', data.imageUrl);
+                    setHeaderImageCacheKey(Date.now());
                 }
                 showSuccess('Header image updated!');
             } catch (err) {
@@ -390,6 +404,7 @@ export default function HackathonEditorClient({
             if (!res.ok) throw new Error(data.error || 'Import failed');
             if (data.imageUrl) {
                 setField('header_image_url', data.imageUrl);
+                setHeaderImageCacheKey(Date.now());
             }
             showSuccess('Imported header image from linked event!');
         } catch (err) {
@@ -738,7 +753,7 @@ export default function HackathonEditorClient({
                         <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg border border-default bg-background-tertiary">
                             {fields.header_image_url ? (
                                 <Image
-                                    src={fields.header_image_url}
+                                    src={headerImageDisplayUrl}
                                     alt="Hackathon header"
                                     fill
                                     className="object-cover"

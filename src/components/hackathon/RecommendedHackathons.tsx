@@ -21,12 +21,8 @@ export function RecommendedHackathons({ recommendations, onViewDetails }: Recomm
         <div className="mb-12">
             {/* Section header */}
             <div className="flex items-center justify-between mb-6">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-
-                        <h2 className="text-2xl font-black text-white tracking-tight">Recommended for You</h2>
-                    </div>
-                    <p className="text-sm text-white/30 ml-10">Smart matching based on your skills and preferences</p>
+                <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-black text-white tracking-tight">Recommended for You</h2>
                 </div>
             </div>
 
