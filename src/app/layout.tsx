@@ -122,7 +122,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang="en" className="dark" suppressHydrationWarning>
             <head>
                 {/* FullCalendar CSS moved to calendar-specific components for better performance */}
                 {/* Structured Data for SEO */}
