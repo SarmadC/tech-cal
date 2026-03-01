@@ -48,7 +48,7 @@ export default function MarketingNavbar() {
                             <div className="flex items-center gap-4">
                                 <NavbarButton
                                     variant="secondary"
-                                    href="http://localhost:3000/resources/tech-events-calendar-2026"
+                                    href="/resources/tech-events-calendar-2026"
                                 >
                                     Resources
                                 </NavbarButton>
@@ -76,7 +76,7 @@ export default function MarketingNavbar() {
                             <div className="flex items-center gap-3">
                                 <NavbarButton
                                     variant="secondary"
-                                    href="http://localhost:3000/resources/tech-events-calendar-2026"
+                                    href="/resources/tech-events-calendar-2026"
                                 >
                                     Resources
                                 </NavbarButton>
