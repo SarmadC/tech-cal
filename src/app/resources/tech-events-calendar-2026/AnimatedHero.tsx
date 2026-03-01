@@ -10,21 +10,11 @@ interface AnimatedHeroProps {
 
 export function AnimatedHero({ totalCount }: AnimatedHeroProps) {
     return (
-        <div className="h-[38vh] min-h-[300px] max-h-[420px] flex items-end justify-center pb-10 sm:pb-14">
+        <div className="flex items-end justify-center px-0 pt-20 pb-8 sm:h-[30vh] sm:min-h-[230px] sm:max-h-[320px] sm:pt-0 sm:pb-10">
             <div className="max-w-[1600px] px-6 sm:px-8 w-full mx-auto">
                 <div className="max-w-5xl">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                    >
-                        <span className="inline-block py-1 px-3 rounded-full bg-foreground-primary/5 text-foreground-secondary text-xs font-medium tracking-wide uppercase mb-6 border border-foreground-primary/10">
-                            2026 Resource
-                        </span>
-                    </motion.div>
-
                     <motion.h1
-                        className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground-primary tracking-tight leading-[1.08] mb-4 whitespace-nowrap lg:whitespace-normal xl:whitespace-nowrap"
+                        className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground-primary tracking-tight leading-[1.08] mb-4 whitespace-normal"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
@@ -46,11 +36,11 @@ export function AnimatedHero({ totalCount }: AnimatedHeroProps) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-                        className="flex items-center gap-3"
+                        className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
                     >
                         <Link
                             href="/events"
-                            className="inline-flex items-center gap-2 h-12 px-8 rounded-full bg-accent-primary text-accent-primary-foreground text-[15px] font-medium hover:opacity-90 hover:scale-[1.02] transition-all duration-200"
+                            className="inline-flex w-full sm:w-auto justify-center items-center gap-2 h-12 px-8 rounded-full bg-accent-primary text-accent-primary-foreground text-[15px] font-medium hover:opacity-90 hover:scale-[1.02] transition-all duration-200"
                         >
                             Explore All Events
                             <ArrowRightIcon size={16} weight="bold" />

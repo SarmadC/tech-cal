@@ -31,7 +31,7 @@ export const AvatarCircles = ({
                     rel="noopener noreferrer"
                 >
                     <Image
-                        className="h-10 w-10 rounded-full border-2 border-white dark:border-gray-800 object-cover"
+                        className="h-10 w-10 rounded-full border-2 border-[var(--background-secondary)] object-cover"
                         src={url.imageUrl}
                         width={40}
                         height={40}
@@ -41,7 +41,7 @@ export const AvatarCircles = ({
             ))}
             {(numPeople ?? 0) > 0 && (
                 <a
-                    className="avatar-overflow-count flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-black text-center text-xs hover:bg-gray-600 dark:border-gray-800 dark:bg-white"
+                    className="avatar-overflow-count flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--background-secondary)] bg-[var(--background-tertiary)] text-[var(--foreground-primary)] text-center text-xs transition-colors hover:bg-[var(--background-elevated)]"
                     href="#"
                 >
                     +{numPeople}

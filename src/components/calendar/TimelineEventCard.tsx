@@ -6,7 +6,6 @@ import { MapPinIcon } from '@phosphor-icons/react';
 import { AgendaItem } from '@/types';
 import { getSpeakerAvatarUrl } from '@/utils/timelineUtils';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 interface TimelineEventCardProps {
     item: AgendaItem;
@@ -17,24 +16,14 @@ interface TimelineEventCardProps {
 }
 
 export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndividualTime, eventTimezone, isSelected, onClick }) => {
-    const theme = useTimelineTheme();
+    const containerClasses = isSelected
+        ? 'bg-[var(--accent-tertiary-light)] border-[var(--accent-tertiary)] shadow-md'
+        : 'bg-background-secondary border-border-subtle hover:border-border-default hover:bg-background-tertiary/80';
 
-    // Dynamic styles based on theme and selection state
-    const containerClasses = theme.isDark
-        ? isSelected
-            ? 'bg-white/10 border-zinc-500 shadow-md' // Selected Dark (Glass)
-            : 'bg-[#18181B] border-white/5 hover:border-zinc-700 hover:bg-white/5' // Default Dark
-        : isSelected
-            ? 'bg-blue-50 border-blue-300 shadow-md' // Selected Light
-            : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'; // Default Light
-
-    const tagClasses = theme.isDark
-        ? 'bg-white/5 border-white/10 text-zinc-400'
-        : 'bg-gray-50 border-gray-200 text-gray-500';
-
-    const titleColor = theme.isDark ? 'text-white' : 'text-gray-900';
-    const textColor = theme.isDark ? 'text-zinc-400' : 'text-gray-600';
-    const metaColor = theme.isDark ? 'text-zinc-400' : 'text-gray-500';
+    const tagClasses = 'bg-background-tertiary/80 border-border-subtle text-foreground-tertiary';
+    const titleColor = 'text-foreground-primary';
+    const textColor = 'text-foreground-secondary';
+    const metaColor = 'text-foreground-tertiary';
 
     return (
         <div
@@ -98,13 +87,13 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                 const overflowCount = Math.max(0, allSpeakers.length - 4);
 
                 return (
-                    <div className={`mt-3 pt-3 border-t border-dashed ${theme.isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
+                    <div className="mt-3 pt-3 border-t border-dashed border-border-subtle">
                         <div className="flex items-center -space-x-2">
                             {visibleSpeakers.map((speaker, index) => {
                                 return (
                                     <div
                                         key={speaker.id || index}
-                                        className={`relative w-6 h-6 rounded-full border-2 ${theme.isDark ? 'border-[#18181B]' : 'border-white'} overflow-hidden flex-shrink-0`}
+                                        className="relative w-6 h-6 rounded-full border-2 border-[var(--background-secondary)] overflow-hidden flex-shrink-0"
                                         title={speaker.name}
                                     >
                                         <Image
@@ -119,7 +108,7 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                             })}
                             {overflowCount > 0 && (
                                 <div
-                                    className={`relative w-6 h-6 rounded-full border-2 ${theme.isDark ? 'border-[#18181B] bg-zinc-700' : 'border-white bg-gray-200'} flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${theme.isDark ? 'text-zinc-300' : 'text-gray-600'}`}
+                                    className="relative w-6 h-6 rounded-full border-2 border-[var(--background-secondary)] bg-background-tertiary flex items-center justify-center text-[10px] font-medium flex-shrink-0 text-foreground-secondary"
                                     title={`+${overflowCount} more speaker${overflowCount !== 1 ? 's' : ''}`}
                                 >
                                     +{overflowCount}

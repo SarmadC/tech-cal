@@ -126,9 +126,9 @@ textarea:not([class*="fc-"]):focus {
   --accent-secondary-hover: #e5e5e5;
   --accent-secondary-light: rgba(255, 255, 255, 0.12);
 
-  --accent-tertiary: #ffffff;
-  --accent-tertiary-hover: #e5e5e5;
-  --accent-tertiary-light: rgba(255, 255, 255, 0.12);
+  --accent-tertiary: #5e6ad2;
+  --accent-tertiary-hover: #4c58b5;
+  --accent-tertiary-light: rgba(94, 106, 210, 0.12);
 
   /* Success - Emerald Green */
   --success: #10b981;
@@ -306,9 +306,9 @@ textarea:not([class*="fc-"]):focus {
   --accent-secondary: #000000;
   --accent-secondary-hover: #111111;
   --accent-secondary-light: rgba(0, 0, 0, 0.08);
-  --accent-tertiary: #000000;
-  --accent-tertiary-hover: #111111;
-  --accent-tertiary-light: rgba(0, 0, 0, 0.08);
+  --accent-tertiary: #5e6ad2;
+  --accent-tertiary-hover: #4c58b5;
+  --accent-tertiary-light: rgba(94, 106, 210, 0.12);
   --success-light: rgba(16, 185, 129, 0.1);
   --warning-light: rgba(245, 158, 11, 0.1);
   --error-light: rgba(239, 68, 68, 0.1);

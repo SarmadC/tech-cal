@@ -34,7 +34,7 @@ export default function ClientLayout({
 
     // Marketing pages that should always show navbar (excluding landing page which has custom nav)
     const marketingPaths = ['/pricing', '/contact'];
-    const marketingPathPrefixes = ['/blog', '/legal', '/resources'];
+    const marketingPathPrefixes = ['/blog', '/legal', '/resources', '/events'];
 
     // Cleanup analytics buffers on page unload
     useEffect(() => {

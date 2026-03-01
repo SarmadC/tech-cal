@@ -541,6 +541,11 @@ div.event-detail-glass-sidebar {
     -webkit-backdrop-filter: blur(12px);
 }
 
+.light .timeline-detail-glass-panel {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .dark .event-detail-glass-modal {
     background: rgba(30, 30, 30, 0.95) !important;
     backdrop-filter: blur(24px) saturate(120%) !important;

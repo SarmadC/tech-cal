@@ -1,11 +1,10 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { ClockIcon, CalendarIcon, CaretRightIcon, CaretDownIcon } from '@phosphor-icons/react';
+import { CalendarIcon, CaretRightIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
-import { getEmptyState, eventsOverlap } from '@/utils/timelineUtils';
+import { eventsOverlap } from '@/utils/timelineUtils';
 
 import { TimelineEventCard } from './TimelineEventCard';
 import { TimelineDetailPanel } from './TimelineDetailPanel';
@@ -15,7 +14,6 @@ interface TimelineViewProps {
 }
 
 const TimelineView: FC<TimelineViewProps> = ({ event }) => {
-    const theme = useTimelineTheme();
     // Get agenda from event
     const agenda = event.agenda || [];
 
@@ -49,13 +47,10 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     };
 
     if (agenda.length === 0) {
-        const emptyState = getEmptyState(theme.isDark);
         return (
             <div className="text-center py-8">
-                <CalendarIcon className={`w-12 h-12 mx-auto mb-4 ${emptyState.iconClass}`} />
-                <p className={`text-sm ${emptyState.textClass}`}>
-                    {emptyState.message}
-                </p>
+                <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
+                <p className="text-sm text-foreground-tertiary">No schedule available.</p>
             </div>
         );
     }
@@ -161,17 +156,14 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                         className="relative -ml-[33px] mb-4 flex items-center cursor-pointer group"
                                         onClick={() => toggleDay(day)}
                                     >
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors z-20 ${theme.isDark
-                                            ? 'bg-[#18181B] border-zinc-600 group-hover:border-zinc-400'
-                                            : 'bg-white border-gray-300 group-hover:border-gray-400'
-                                            }`}>
+                                        <div className="w-4 h-4 rounded-full border-2 border-border-default bg-background-main flex items-center justify-center transition-colors z-20 group-hover:border-border-strong">
                                             {isExpanded ? (
-                                                <CaretDownIcon className={`w-2.5 h-2.5 ${theme.isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
+                                                <CaretDownIcon className="w-2.5 h-2.5 text-foreground-tertiary" />
                                             ) : (
-                                                <CaretRightIcon className={`w-2.5 h-2.5 ${theme.isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
+                                                <CaretRightIcon className="w-2.5 h-2.5 text-foreground-tertiary" />
                                             )}
                                         </div>
-                                        <div className={`ml-4 text-xs font-bold uppercase tracking-wider ${theme.isDark ? 'text-zinc-400 group-hover:text-zinc-300' : 'text-gray-600 group-hover:text-gray-800'}`}>
+                                        <div className="ml-4 text-xs font-bold uppercase tracking-wider text-foreground-tertiary group-hover:text-foreground-secondary">
                                             Day {day}
                                         </div>
                                     </div>
@@ -183,7 +175,9 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                 return (
                                                     <div key={clusterIndex} className="relative">
                                                         {/* Timeline Node - Anchored to spine */}
-                                                        <div className="absolute -left-[32px] top-[18px] w-2.5 h-2.5 rounded-full bg-[#18181B] border-2 border-zinc-600 z-10 box-content" />
+                                                        <div
+                                                            className="absolute -left-[32px] top-[18px] w-2.5 h-2.5 rounded-full border-2 border-border-default bg-background-main z-10 box-content"
+                                                        />
 
                                                         {/* Content Area */}
                                                         <div>
@@ -219,7 +213,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                                             />
                                                                         </div>
                                                                     ))}
-                                                                    <div className="mt-1 text-[10px] text-zinc-500 text-right">
+                                                                    <div className="mt-1 text-[10px] text-right text-foreground-tertiary">
                                                                         {cluster.items.length} concurrent sessions
                                                                     </div>
                                                                 </div>
@@ -241,7 +235,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                 {selectedEvent ? (
                     <TimelineDetailPanel event={selectedEvent} eventTimezone={eventTimezone} />
                 ) : (
-                    <div className="h-full flex items-center justify-center text-zinc-500">
+                    <div className="h-full flex items-center justify-center text-foreground-tertiary">
                         Select an event to view details
                     </div>
                 )}

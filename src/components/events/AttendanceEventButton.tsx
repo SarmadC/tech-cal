@@ -26,7 +26,7 @@ export default function AttendanceEventButton({
 
     const desktopClasses = `flex flex-1 items-center justify-center w-10 h-10 rounded-md transition-all ${isAttending
             ? 'bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600/30'
-            : 'bg-transparent hover:bg-white/[0.05] text-[#888888] hover:text-white'
+            : 'bg-transparent text-foreground-tertiary hover:bg-background-tertiary/80 hover:text-foreground-primary'
         } disabled:opacity-60 disabled:cursor-not-allowed`;
 
     const mobileClasses = `flex-1 h-11 flex items-center justify-center rounded-lg text-[14px] font-medium transition-colors gap-2 ${isAttending

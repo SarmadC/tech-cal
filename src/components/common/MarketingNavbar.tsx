@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useDeviceDetection } from "@/hooks/useDeviceDetection";
 import {
     Navbar,
@@ -13,11 +12,9 @@ import {
     MobileNavHeader,
     MobileNavToggle,
     MobileNavMenu,
-    NavbarThemeToggle,
 } from "@/components/ui/resizable-navbar";
 
 export default function MarketingNavbar() {
-    const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { isMobile } = useDeviceDetection();
 
@@ -31,6 +28,10 @@ export default function MarketingNavbar() {
             link: "/pricing",
         },
         {
+            name: "Blog",
+            link: "/blog",
+        },
+        {
             name: "Contact",
             link: "/contact",
         },
@@ -41,15 +42,20 @@ export default function MarketingNavbar() {
             <Navbar>
                 {/* Desktop Navigation - Only show on desktop */}
                 {!isMobile && (
-                    <NavBody>
-                        <NavbarLogo />
-                        <NavItems items={navItems} />
-                        <div className="flex items-center gap-4">
-                            <NavbarThemeToggle />
-                            <NavbarButton
-                                variant="secondary"
-                                href="/login"
-                            >
+                        <NavBody>
+                            <NavbarLogo />
+                            <NavItems items={navItems} />
+                            <div className="flex items-center gap-4">
+                                <NavbarButton
+                                    variant="secondary"
+                                    href="http://localhost:3000/resources/tech-events-calendar-2026"
+                                >
+                                    Resources
+                                </NavbarButton>
+                                <NavbarButton
+                                    variant="secondary"
+                                    href="/login"
+                                >
                                 Login
                             </NavbarButton>
                             <NavbarButton
@@ -68,7 +74,12 @@ export default function MarketingNavbar() {
                         <MobileNavHeader>
                             <NavbarLogo />
                             <div className="flex items-center gap-3">
-                                <NavbarThemeToggle />
+                                <NavbarButton
+                                    variant="secondary"
+                                    href="http://localhost:3000/resources/tech-events-calendar-2026"
+                                >
+                                    Resources
+                                </NavbarButton>
                                 <MobileNavToggle
                                     isOpen={isMobileMenuOpen}
                                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

@@ -27,7 +27,7 @@ export const EventAgendaSection: FC<EventAgendaSectionProps> = ({ event, timezon
         <div className="space-y-6">
             <div className="flex items-center justify-between border-b border-border-subtle pb-3">
                 {title && (
-                    <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em]">
+                    <h2 className="text-sm font-semibold text-foreground-secondary">
                         {title}
                     </h2>
                 )}

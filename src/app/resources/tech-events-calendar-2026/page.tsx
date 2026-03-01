@@ -183,6 +183,7 @@ export default async function TechEventsCalendar2026Page() {
         }
     }
     const maxMonthCount = Math.max(...monthCounts, 1);
+    const peakMonthIndex = monthCounts.findIndex((count) => count === maxMonthCount);
 
     const categoryMap = new Map<
         string,
@@ -234,6 +235,8 @@ export default async function TechEventsCalendar2026Page() {
         ...c,
         avgPrice: c.countWithPrice > 0 ? Math.round(c.totalPrice / c.countWithPrice) : 0
     }));
+    const leadingCategory = categories[0];
+    const mobileTopCities = allCitiesSorted.slice(0, 6);
 
 
 
@@ -265,9 +268,6 @@ export default async function TechEventsCalendar2026Page() {
             }
         }
     }
-
-
-
     return (
         <>
             <BreadcrumbJsonLd
@@ -284,7 +284,211 @@ export default async function TechEventsCalendar2026Page() {
 
 
 
-                <main className="max-w-[1600px] mx-auto px-6 sm:px-8 -mt-8 relative z-10 space-y-16 sm:space-y-20">
+                <main className="md:hidden max-w-xl mx-auto px-4 -mt-4 relative z-10">
+                    <section className="border-y border-border-subtle bg-background/95 backdrop-blur-sm">
+                        <div className="px-1">
+                            <div className="px-4 py-4 border-b border-border-subtle">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                            2026 Snapshot
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold text-foreground-primary">
+                                            Mobile planning view
+                                        </h2>
+                                    </div>
+                                    <Link
+                                        href="/events"
+                                        className="inline-flex h-9 shrink-0 items-center text-[12px] font-medium text-foreground-secondary transition-colors hover:text-foreground-primary"
+                                    >
+                                        Browse all
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="divide-y divide-border-subtle">
+                                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                                    <span className="text-sm text-foreground-secondary">Total events</span>
+                                    <span className="text-sm font-medium text-foreground-primary">
+                                        {(totalCount || 0).toLocaleString('en-US')}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                                    <span className="text-sm text-foreground-secondary">Busiest month</span>
+                                    <span className="text-sm font-medium text-foreground-primary">
+                                        {peakMonthIndex >= 0 ? `${monthNames[peakMonthIndex]} (${maxMonthCount})` : 'N/A'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                                    <span className="text-sm text-foreground-secondary">Top city</span>
+                                    <span className="text-sm font-medium text-foreground-primary">
+                                        {mobileTopCities[0]?.city || 'N/A'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                                    <span className="text-sm text-foreground-secondary">Top category</span>
+                                    <span className="text-sm font-medium text-foreground-primary">
+                                        {leadingCategory?.name || 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="border-b border-border-subtle bg-background">
+                        <div className="px-1">
+                            <div className="px-4 py-4 border-b border-border-subtle">
+                                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                    Monthly flow
+                                </p>
+                                <h2 className="mt-1 text-lg font-semibold text-foreground-primary">
+                                    Event distribution
+                                </h2>
+                            </div>
+
+                            <div className="px-4 py-4">
+                                <div
+                                    role="list"
+                                    aria-label="Confirmed events by month in 2026"
+                                    className="grid grid-cols-6 gap-x-2 gap-y-4 items-end"
+                                >
+                                    {monthCounts.map((count, index) => (
+                                        <div key={monthNames[index]} role="listitem" className="flex flex-col items-center gap-1.5">
+                                            <span className="text-[10px] font-medium text-foreground-primary">
+                                                {count}
+                                            </span>
+                                            <div className="relative h-20 w-full overflow-hidden rounded-md bg-background-secondary/55">
+                                                <div
+                                                    className="absolute inset-x-1 bottom-1 rounded-sm bg-foreground-primary/75"
+                                                    style={{
+                                                        height: `${Math.max(Math.round((count / maxMonthCount) * 68), 4)}px`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-foreground-secondary">
+                                                {monthNames[index]}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {mobileTopCities.length > 0 && (
+                        <section className="border-b border-border-subtle bg-background">
+                            <div className="px-1">
+                                <div className="px-4 py-4 border-b border-border-subtle">
+                                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                        Top hubs
+                                    </p>
+                                    <h2 className="mt-1 text-lg font-semibold text-foreground-primary">
+                                        Where events are concentrated
+                                    </h2>
+                                </div>
+
+                                <div className="divide-y divide-border-subtle">
+                                    {mobileTopCities.map((city, index) => (
+                                        <Link
+                                            key={city.slug}
+                                            href={`/events/cities/${city.slug}`}
+                                            className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-background-secondary/40"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-foreground-primary">
+                                                    {index + 1}. {city.city}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-foreground-tertiary">
+                                                    {city.events[0]
+                                                        ? `Next: ${new Date(city.events[0].date).toLocaleDateString('en-US', {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                        })}`
+                                                        : 'See the full city calendar'}
+                                                </p>
+                                            </div>
+                                            <span className="text-sm font-medium text-foreground-primary">
+                                                {city.count}
+                                            </span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {categories.length > 0 && (
+                        <section className="border-b border-border-subtle bg-background">
+                            <div className="px-1">
+                                <div className="px-4 py-4 border-b border-border-subtle">
+                                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                        Categories
+                                    </p>
+                                    <h2 className="mt-1 text-lg font-semibold text-foreground-primary">
+                                        Most common event types
+                                    </h2>
+                                </div>
+
+                                <div className="px-2 py-4">
+                                    <CategoryBarChart categories={categories} />
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    <section className="border-b border-border-subtle bg-background">
+                        <div className="px-1">
+                            <div className="px-4 py-4 border-b border-border-subtle">
+                                <div className="flex items-end justify-between gap-3">
+                                    <div>
+                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                            Pricing
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold text-foreground-primary">
+                                            Price distribution
+                                        </h2>
+                                    </div>
+                                    <p className="text-[11px] text-foreground-tertiary">
+                                        {priceBins.find((bin) => bin.label === 'Unknown')?.count || 0} unknown
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="px-2 py-4">
+                                <PriceHistogram bins={priceBins} />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="border-b border-border-subtle bg-background mb-8">
+                        <div className="px-1">
+                            <div className="px-4 py-4 border-b border-border-subtle">
+                                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                                    More resources
+                                </p>
+                            </div>
+
+                            <div className="divide-y divide-border-subtle">
+                                <Link
+                                    href="/resources/cfp-calendar"
+                                    className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-background-secondary/40 hover:text-foreground-primary"
+                                >
+                                    CFP Deadlines
+                                    <ArrowRightIcon size={16} />
+                                </Link>
+                                <Link
+                                    href="/blog"
+                                    className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-background-secondary/40 hover:text-foreground-primary"
+                                >
+                                    Read Blog
+                                    <ArrowRightIcon size={16} />
+                                </Link>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                <main className="hidden md:block max-w-[1600px] mx-auto px-6 sm:px-8 -mt-8 relative z-10 space-y-16 sm:space-y-20">
 
 
                     {/* Bento Grid Layout */}

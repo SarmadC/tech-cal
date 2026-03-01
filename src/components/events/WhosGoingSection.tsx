@@ -189,10 +189,10 @@ export default function WhosGoingSection({ eventId, className }: WhosGoingSectio
     if (isLoading) {
         return (
             <section className={className}>
-                <span className="text-[12px] text-[#888888] block mb-2">Who&apos;s Going</span>
+                <span className="text-[12px] text-foreground-tertiary block mb-2">Who&apos;s Going</span>
                 <div className="animate-pulse flex space-x-2">
-                    <div className="rounded-full bg-white/5 h-6 w-6"></div>
-                    <div className="rounded-full bg-white/5 h-6 w-6"></div>
+                    <div className="rounded-full bg-background-tertiary h-6 w-6"></div>
+                    <div className="rounded-full bg-background-tertiary h-6 w-6"></div>
                 </div>
             </section>
         );
@@ -201,9 +201,9 @@ export default function WhosGoingSection({ eventId, className }: WhosGoingSectio
     if (authRequired) {
         return (
             <section className={className}>
-                <span className="text-[12px] text-[#888888] block mb-2">Who&apos;s Going</span>
-                <p className="text-[12px] text-[#888888]">
-                    <Link href="/login" className="underline hover:text-white transition-colors">
+                <span className="text-[12px] text-foreground-tertiary block mb-2">Who&apos;s Going</span>
+                <p className="text-[12px] text-foreground-tertiary">
+                    <Link href="/login" className="underline hover:text-foreground-primary transition-colors">
                         Sign in
                     </Link>{' '}
                     to view.
@@ -215,12 +215,12 @@ export default function WhosGoingSection({ eventId, className }: WhosGoingSectio
     if (!data || (data.totalAttending <= 0 && !data.viewerIsAttending)) {
         return (
             <section className={className}>
-                <span className="text-[12px] text-[#888888] block mb-2">Who&apos;s Going</span>
+                <span className="text-[12px] text-foreground-tertiary block mb-2">Who&apos;s Going</span>
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full border border-dashed border-white/20 flex items-center justify-center">
-                        <div className="w-1 h-1 rounded-full bg-white/20"></div>
+                    <div className="w-7 h-7 rounded-full border border-dashed border-border-subtle bg-background-tertiary/60 flex items-center justify-center">
+                        <div className="w-1 h-1 rounded-full bg-foreground-muted"></div>
                     </div>
-                    <p className="text-[12px] text-[#888888] italic">Be the first to attend</p>
+                    <p className="text-[12px] text-foreground-tertiary italic">Be the first to attend</p>
                 </div>
             </section>
         );
@@ -238,9 +238,9 @@ export default function WhosGoingSection({ eventId, className }: WhosGoingSectio
 
     return (
         <section className={className}>
-            <span className="text-[12px] text-[#888888] block mb-2">Who&apos;s Going</span>
-            <p className="text-[13px] text-white font-medium">{summary}</p>
-            <p className="text-[11px] text-[#888888] mt-1">{visibilityHint}</p>
+            <span className="text-[12px] text-foreground-tertiary block mb-2">Who&apos;s Going</span>
+            <p className="text-[13px] text-foreground-primary font-medium">{summary}</p>
+            <p className="text-[11px] text-foreground-tertiary mt-1">{visibilityHint}</p>
             {networkAttendingCount > 0 && (
                 <p className="mt-1 text-[11px] font-medium text-emerald-500">
                     {networkAttendingCount} in your network

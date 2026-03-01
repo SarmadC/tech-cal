@@ -23,7 +23,7 @@ const BookmarkEventButton = ({ eventId, event, loginRedirect }: BookmarkEventBut
         return (
             <Link
                 href={`/login?redirect=${encodeURIComponent(loginRedirect)}`}
-                className="flex items-center justify-center w-10 h-10 rounded-md bg-transparent hover:bg-white/[0.05] text-[#888888] hover:text-white transition-all"
+                className="flex items-center justify-center w-10 h-10 rounded-md bg-transparent text-foreground-tertiary hover:bg-background-tertiary/80 hover:text-foreground-primary transition-all"
                 title="Bookmark Event"
             >
                 <BookmarkSimple size={20} />
@@ -48,7 +48,7 @@ const BookmarkEventButton = ({ eventId, event, loginRedirect }: BookmarkEventBut
             disabled={isBusy}
             className={`flex items-center justify-center w-10 h-10 rounded-md transition-all disabled:opacity-60 disabled:cursor-not-allowed ${eventIsBookmarked
                     ? 'bg-amber-600/20 text-amber-500 hover:bg-amber-600/30'
-                    : 'bg-transparent hover:bg-white/[0.05] text-[#888888] hover:text-white'
+                    : 'bg-transparent text-foreground-tertiary hover:bg-background-tertiary/80 hover:text-foreground-primary'
                 }`}
             aria-pressed={eventIsBookmarked}
             title={eventIsBookmarked ? 'Bookmarked' : 'Bookmark Event'}

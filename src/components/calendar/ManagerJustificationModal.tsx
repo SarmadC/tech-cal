@@ -11,9 +11,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/utils/exportUtils';
-import { formatDate, formatTime } from '@/utils/dateUtils';
+import { formatDate } from '@/utils/dateUtils';
 import {
     IMPACT_LABELS,
     SCORE_THRESHOLDS,
@@ -214,12 +213,6 @@ function getImpactLabel(score: number): string {
     return IMPACT_LABELS.FAIR;
 }
 
-function getScoreBarClass(score: number): string {
-    if (score >= SCORE_THRESHOLDS.HIGH) return 'bg-emerald-500';
-    if (score >= SCORE_THRESHOLDS.STRONG) return 'bg-yellow-500';
-    return 'bg-orange-500';
-}
-
 function getCostDisplay(event: ManagerJustificationData['event']): string {
     if (event.priceRange?.trim()) return event.priceRange;
     if (typeof event.priceMin === 'number' && Number.isFinite(event.priceMin)) {
@@ -387,8 +380,6 @@ function buildPrintableHtml(
     const executiveSummary = context.executiveSummary || getExecutiveSummaryText(data, scoreLabel, context);
 
     const managerName = context.managerName.trim() || 'Manager';
-    const teamObjective = context.teamObjective.trim()
-        || `Advance ${data.profile.currentRole || 'team'} outcomes in ${data.profile.industry || 'our domain'}.`;
     const riskMitigation = context.riskMitigation.trim()
         || 'Coverage and priorities will be coordinated so delivery commitments are maintained.';
     const followUpDate = context.followUpDate
@@ -794,19 +785,6 @@ export default function ManagerJustificationModal({
         return getImpactLabel(data.impact.overall);
     }, [data]);
 
-    const eventDateLine = useMemo(() => {
-        if (!data) return '';
-        const start = `${formatDate(data.event.startTime, data.event.timezone)} at ${formatTime(data.event.startTime, data.event.timezone)}`;
-        if (!data.event.endTime) return start;
-        return `${start} - ${formatTime(data.event.endTime, data.event.timezone)}`;
-    }, [data]);
-
-    const handleReasonToggle = (reason: string) => {
-        setSelectedReasons((prev) =>
-            prev.includes(reason) ? prev.filter((item) => item !== reason) : [...prev, reason]
-        );
-    };
-
     const handleCopy = async () => {
         if (!data) return;
         const text = buildPlainText(data, selectedReasons, selectedSkills, selectedGoals, {
@@ -872,12 +850,12 @@ export default function ManagerJustificationModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[95vw] max-w-6xl h-[85vh] p-0 gap-0 grid-rows-[auto,1fr,auto] bg-[#18181B] border-[rgba(255,255,255,0.06)] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] sm:rounded-xl">
-                <DialogHeader className="px-6 py-4 border-b border-[rgba(255,255,255,0.06)] flex flex-row items-center justify-between space-y-0">
+            <DialogContent className="w-[95vw] max-w-6xl h-[85vh] p-0 gap-0 grid-rows-[auto,1fr,auto] bg-background-secondary border-border-default shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] sm:rounded-xl">
+                <DialogHeader className="px-6 py-4 border-b border-border-default flex flex-row items-center justify-between space-y-0">
                     <div className="flex items-center gap-3">
-                        <DialogTitle className="text-[14px] font-medium text-white">{UI_STRINGS.TITLE_REQUEST}</DialogTitle>
+                        <DialogTitle className="text-[14px] font-medium text-foreground-primary">{UI_STRINGS.TITLE_REQUEST}</DialogTitle>
                         <DialogDescription className="sr-only">{UI_STRINGS.DIALOG_DESCRIPTION}</DialogDescription>
-                        <span className="text-[12px] text-zinc-500 font-normal">
+                        <span className="text-[12px] text-foreground-tertiary font-normal">
                             {formatDate(new Date().toISOString())}
                         </span>
                     </div>
@@ -885,10 +863,10 @@ export default function ManagerJustificationModal({
 
                 <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1fr] overflow-hidden">
                     {/* Left Pane: Composer */}
-                    <div className="flex flex-col h-full overflow-hidden border-r border-[rgba(255,255,255,0.06)] bg-[#101012]">
+                    <div className="flex flex-col h-full overflow-hidden border-r border-border-default bg-background-main">
                         <div className="flex-1 overflow-y-auto p-6 space-y-8">
                             {isLoading && (
-                                <div className="text-sm text-zinc-500" data-testid="manager-justification-loading">
+                                <div className="text-sm text-foreground-tertiary" data-testid="manager-justification-loading">
                                     {UI_STRINGS.LOADING}
                                 </div>
                             )}
@@ -905,7 +883,7 @@ export default function ManagerJustificationModal({
                                             setIsLoading(true);
                                             setRequestNonce((prev) => prev + 1);
                                         }}
-                                        className="mt-2 h-auto p-0 text-[#ef4444] underline hover:text-[#dc2626]"
+                                        className="mt-2 h-auto p-0 text-destructive underline hover:text-destructive/80"
                                     >
                                         {UI_STRINGS.TRY_AGAIN}
                                     </Button>
@@ -918,27 +896,27 @@ export default function ManagerJustificationModal({
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="h-5 w-5 rounded-full bg-[#5E6AD2] flex items-center justify-center text-[10px] font-bold text-white">1</div>
-                                            <h3 className="text-[13px] font-medium text-zinc-100">Approval Context</h3>
+                                            <h3 className="text-[13px] font-medium text-foreground-primary">Approval Context</h3>
                                         </div>
-                                        <div className="space-y-4 pl-7 border-l border-[rgba(255,255,255,0.06)] ml-2.5">
+                                        <div className="space-y-4 pl-7 border-l border-border-subtle ml-2.5">
                                             <label className="block space-y-1.5">
-                                                <span className="text-[11px] font-medium text-zinc-400">Manager Name</span>
+                                                <span className="text-[11px] font-medium text-foreground-tertiary">Manager Name</span>
                                                 <input
                                                     type="text"
                                                     value={managerName}
                                                     onChange={(event) => setManagerName(event.target.value)}
                                                     placeholder="Who is approving this?"
-                                                    className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all"
+                                                    className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all"
                                                 />
                                             </label>
                                             <label className="block space-y-1.5">
-                                                <span className="text-[11px] font-medium text-zinc-400">Team Goal Alignment</span>
+                                                <span className="text-[11px] font-medium text-foreground-tertiary">Team Goal Alignment</span>
                                                 <textarea
                                                     value={teamObjective}
                                                     onChange={(event) => setTeamObjective(event.target.value)}
                                                     placeholder="Which team goal does this support?"
                                                     rows={2}
-                                                    className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all resize-none"
+                                                    className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all resize-none"
                                                 />
                                             </label>
                                         </div>
@@ -948,23 +926,23 @@ export default function ManagerJustificationModal({
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="h-5 w-5 rounded-full bg-[#5E6AD2] flex items-center justify-center text-[10px] font-bold text-white">2</div>
-                                            <h3 className="text-[13px] font-medium text-zinc-100">Event Impact</h3>
+                                            <h3 className="text-[13px] font-medium text-foreground-primary">Event Impact</h3>
                                         </div>
-                                        <div className="space-y-4 pl-7 border-l border-[rgba(255,255,255,0.06)] ml-2.5">
+                                        <div className="space-y-4 pl-7 border-l border-border-subtle ml-2.5">
                                             <label className="block space-y-1.5">
-                                                <span className="text-[11px] font-medium text-zinc-400">Summary Pitch ({scoreLabel})</span>
+                                                <span className="text-[11px] font-medium text-foreground-tertiary">Summary Pitch ({scoreLabel})</span>
                                                 <textarea
                                                     value={executiveSummary}
                                                     onChange={(e) => setExecutiveSummary(e.target.value)}
                                                     rows={4}
-                                                    className="w-full bg-[rgba(255,255,255,0.03)] rounded-md border border-[rgba(255,255,255,0.08)] focus:border-[#5E6AD2] focus:bg-[rgba(255,255,255,0.05)] px-3 py-2 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-all resize-none"
+                                                    className="w-full bg-background-secondary rounded-md border border-border-default focus:border-[#5E6AD2] focus:bg-background-secondary px-3 py-2 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none transition-all resize-none"
                                                 />
                                             </label>
 
                                             {/* Skills Tags */}
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-medium text-zinc-400 block">Skills you will gain</span>
+                                                    <span className="text-[11px] font-medium text-foreground-tertiary block">Skills you will gain</span>
                                                 </div>
 
                                                 <div className="space-y-3">
@@ -972,7 +950,7 @@ export default function ManagerJustificationModal({
                                                     <input
                                                         type="text"
                                                         placeholder="Add a skill (press Enter)..."
-                                                        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all"
+                                                        className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all"
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') {
                                                                 e.preventDefault();
@@ -986,7 +964,7 @@ export default function ManagerJustificationModal({
                                                     />
 
                                                     {selectedSkills.length === 0 ? (
-                                                        <p className="text-[13px] text-zinc-500 italic">No skills selected</p>
+                                                        <p className="text-[13px] text-foreground-tertiary italic">No skills selected</p>
                                                     ) : (
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {selectedSkills.map((skill) => (
@@ -994,7 +972,7 @@ export default function ManagerJustificationModal({
                                                                     key={skill}
                                                                     type="button"
                                                                     onClick={() => setSelectedSkills((prev) => prev.filter((value) => value !== skill))}
-                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] border border-transparent hover:border-[rgba(255,255,255,0.1)] text-[11px] text-zinc-300 transition-all group"
+                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-background-tertiary hover:bg-background-elevated border border-transparent hover:border-border-subtle text-[11px] text-foreground-secondary transition-all group"
                                                                 >
                                                                     {skill}
                                                                     <X size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1011,37 +989,37 @@ export default function ManagerJustificationModal({
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="h-5 w-5 rounded-full bg-[#5E6AD2] flex items-center justify-center text-[10px] font-bold text-white">3</div>
-                                            <h3 className="text-[13px] font-medium text-zinc-100">Investment & Return</h3>
+                                            <h3 className="text-[13px] font-medium text-foreground-primary">Investment & Return</h3>
                                         </div>
                                         <div className="space-y-4 pl-7 border-l border-transparent ml-2.5">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <label className="block space-y-1.5">
-                                                    <span className="text-[11px] font-medium text-zinc-400">Est. Cost</span>
+                                                    <span className="text-[11px] font-medium text-foreground-tertiary">Est. Cost</span>
                                                     <input
                                                         type="text"
                                                         value={eventCost}
                                                         onChange={(e) => setEventCost(e.target.value)}
-                                                        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all"
+                                                        className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all"
                                                     />
                                                 </label>
                                                 <label className="block space-y-1.5">
-                                                    <span className="text-[11px] font-medium text-zinc-400">Time Req.</span>
+                                                    <span className="text-[11px] font-medium text-foreground-tertiary">Time Req.</span>
                                                     <input
                                                         type="text"
                                                         value={eventDuration}
                                                         onChange={(e) => setEventDuration(e.target.value)}
-                                                        className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all"
+                                                        className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all"
                                                     />
                                                 </label>
                                             </div>
 
                                             <label className="block space-y-1.5">
-                                                <span className="text-[11px] font-medium text-zinc-400">Deliverables</span>
+                                                <span className="text-[11px] font-medium text-foreground-tertiary">Deliverables</span>
                                                 <textarea
                                                     value={expectedDeliverables}
                                                     onChange={(event) => setExpectedDeliverables(event.target.value)}
                                                     rows={3}
-                                                    className="w-full rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-[rgba(255,255,255,0.05)] transition-all resize-none"
+                                                    className="w-full rounded-[4px] border border-border-default bg-background-secondary px-2.5 py-1.5 text-[13px] text-foreground-primary placeholder:text-foreground-muted outline-none focus:border-[rgba(94,106,210,0.5)] focus:bg-background-secondary transition-all resize-none"
                                                 />
                                             </label>
                                         </div>
@@ -1052,8 +1030,8 @@ export default function ManagerJustificationModal({
                     </div>
 
                     {/* Right Pane: Live Preview */}
-                    <div className="hidden lg:block bg-[#1C1C1F] overflow-y-auto p-8 border-l border-[rgba(255,255,255,0.06)] relative">
-                        <div className="absolute top-4 right-6 text-[10px] font-medium tracking-wider text-zinc-500 uppercase">
+                    <div className="hidden lg:block bg-background-secondary overflow-y-auto p-8 border-l border-border-default relative">
+                        <div className="absolute top-4 right-6 text-[10px] font-medium tracking-wider text-foreground-tertiary uppercase">
                             Live Preview
                         </div>
 
@@ -1170,15 +1148,15 @@ export default function ManagerJustificationModal({
                     </div>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t border-[rgba(255,255,255,0.06)] bg-[#18181B] flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-4">
-                    <div className="text-[11px] text-zinc-500">
+                <DialogFooter className="px-6 py-4 border-t border-border-default bg-background-secondary flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-4">
+                    <div className="text-[11px] text-foreground-tertiary">
                         {UI_STRINGS.NOT_SPECIFIED === 'TBD' ? <span>Refines over time</span> : null}
                     </div>
                     <div className="flex items-center gap-3">
                         <Button
                             variant="ghost"
                             onClick={handleCopy}
-                            className="text-zinc-400 hover:text-zinc-200 hover:bg-[rgba(255,255,255,0.05)] text-[13px] h-9 px-4"
+                            className="text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary text-[13px] h-9 px-4"
                         >
                             {copyStatus === 'copied' ? (
                                 <span className="flex items-center gap-2 text-green-400">

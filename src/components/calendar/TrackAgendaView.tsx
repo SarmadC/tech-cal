@@ -1,10 +1,9 @@
 'use client';
 
 import { FC, useMemo, useState } from 'react';
-import { ClockIcon, MapPinIcon, UsersIcon, CaretDown, CaretUp } from '@phosphor-icons/react';
+import { MapPinIcon, UsersIcon, CaretDown, CaretUp } from '@phosphor-icons/react';
 
 import { AgendaItem } from '@/types';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
 import { formatTrackName } from '@/utils/timelineUtils';
 
@@ -96,8 +95,21 @@ const TIME_COLUMN_WIDTH = 84; // px
 const MIN_TRACK_WIDTH = 220; // px
 
 const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
-    const theme = useTimelineTheme();
     const eventTimezone = timezone;
+    const ghostSurface = 'bg-background-tertiary/60';
+    const subtleBorder = 'border-border-subtle';
+    const subtleBorderSoft = 'border-border-subtle';
+    const subtleHover = 'hover:bg-background-tertiary/80';
+    const subtleHoverBorder = 'hover:border-border-default';
+    const textPrimary = 'text-foreground-primary';
+    const textSecondary = 'text-foreground-secondary';
+    const textMuted = 'text-foreground-tertiary';
+    const bgCard = 'bg-background-secondary/80';
+    const bgElevated = 'bg-background-secondary';
+    const borderCard = 'border-border-default';
+    const borderLight = 'border-border-subtle';
+    const hoverBorder = 'hover:border-border-default';
+    const hoverCard = 'hover:bg-background-tertiary/80';
 
     const [selectedTrackNames, setSelectedTrackNames] = useState<Set<string> | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -221,7 +233,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
     if (tracks.length === 0) {
         return (
             <div className="text-center py-10">
-                <p className={`text-sm ${theme.textMuted}`}>
+                <p className={`text-sm ${textMuted}`}>
                     Track assignments are not available for this agenda.
                 </p>
             </div>
@@ -231,21 +243,21 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
     return (
         <div className="space-y-5">
             {/* Track Filter Control */}
-            <div className="flex flex-col gap-3 pb-2 border-b border-white/10">
+            <div className={`flex flex-col gap-3 pb-2 border-b ${subtleBorder}`}>
                 <div className="flex items-center justify-between">
-                    <h4 className={`text-sm font-medium ${theme.textPrimary}`}>
+                    <h4 className={`text-sm font-medium ${textPrimary}`}>
                         Filter Tracks
                     </h4>
                     <div className="flex gap-2">
                         <button
                             onClick={selectAll}
-                            className={`text-[11px] px-2 py-1 rounded-md hover:bg-white/5 transition-colors ${selectedTrackNames === null ? theme.textPrimary : theme.textMuted}`}
+                            className={`text-[11px] px-2 py-1 rounded-md transition-colors ${subtleHover} ${selectedTrackNames === null ? textPrimary : textMuted}`}
                         >
                             Select All
                         </button>
                         <button
                             onClick={clearAll}
-                            className={`text-[11px] px-2 py-1 rounded-md hover:bg-white/5 transition-colors ${selectedTrackNames !== null && selectedTrackNames.size === 0 ? theme.textPrimary : theme.textMuted}`}
+                            className={`text-[11px] px-2 py-1 rounded-md transition-colors ${subtleHover} ${selectedTrackNames !== null && selectedTrackNames.size === 0 ? textPrimary : textMuted}`}
                         >
                             Deselect All
                         </button>
@@ -298,7 +310,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                                 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all duration-200
                                                 ${isSelected
                                                     ? `${accent.bg} ${accent.border} ${accent.text} ring-1 ring-offset-0 ${accent.border}`
-                                                    : `bg-transparent border-white/10 ${theme.textMuted} hover:border-white/20`}
+                                                    : `bg-transparent ${subtleBorder} ${textMuted} ${subtleHoverBorder}`}
                                             `}
                                         >
                                             {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
@@ -310,7 +322,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                 {(hiddenCount > 0 || isExpanded) && (
                                     <button
                                         onClick={() => setIsExpanded(!isExpanded)}
-                                        className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border border-white/10 hover:bg-white/5 transition-colors ${theme.textMuted}`}
+                                        className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border transition-colors ${subtleBorder} ${subtleHover} ${textMuted}`}
                                     >
                                         {isExpanded ? (
                                             <>
@@ -331,8 +343,8 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
             </div>
 
             {visibleTrackNames.length === 0 ? (
-                <div className="text-center py-20 border rounded-xl border-dashed border-white/10">
-                    <p className={`text-sm ${theme.textMuted}`}>Select at least one track to view the schedule.</p>
+                <div className={`text-center py-20 border rounded-xl border-dashed ${subtleBorder}`}>
+                    <p className={`text-sm ${textMuted}`}>Select at least one track to view the schedule.</p>
                     <button
                         onClick={selectAll}
                         className="mt-3 text-sm text-blue-400 hover:text-blue-300 font-medium"
@@ -352,17 +364,17 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                             {visibleTrackNames.map(track => {
                                 const accent = getTrackAccent(track);
                                 return (
-                                    <div
-                                        key={track}
-                                        className={`rounded-2xl border px-4 py-3 shadow-sm transition-colors ${theme.bgCard} ${theme.borderCard}`}
-                                        aria-label={`${formatTrackName(track)} track`}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span
-                                                className={`text-sm font-semibold tracking-tight truncate ${theme.textPrimary}`}
-                                                title={formatTrackName(track)}
-                                            >
-                                                {formatTrackName(track)}
+                                        <div
+                                            key={track}
+                                            className={`rounded-2xl border px-4 py-3 shadow-sm transition-colors ${bgCard} ${borderCard}`}
+                                            aria-label={`${formatTrackName(track)} track`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span
+                                                    className={`text-sm font-semibold tracking-tight truncate ${textPrimary}`}
+                                                    title={formatTrackName(track)}
+                                                >
+                                                    {formatTrackName(track)}
                                             </span>
                                             <span
                                                 className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase rounded-md border ${accent.border} ${accent.bg} ${accent.text}`}
@@ -371,7 +383,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                                 Track
                                             </span>
                                         </div>
-                                        <p className={`mt-1 text-[12px] ${theme.textMuted}`}>
+                                        <p className={`mt-1 text-[12px] ${textMuted}`}>
                                             Sessions scheduled
                                         </p>
                                     </div>
@@ -404,7 +416,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                                 <div
                                                     key={track}
                                                     data-testid={`cell-${slot.key}-${track}`}
-                                                    className="min-h-[3.5rem] rounded-2xl border border-dashed border-white/5 dark:border-white/10"
+                                                    className={`min-h-[3.5rem] rounded-2xl border border-dashed ${subtleBorderSoft}`}
                                                 />
                                             );
                                         }
@@ -424,32 +436,32 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                                     return (
                                                         <article
                                                             key={`${track}-${item.id}-${item.startTime}`}
-                                                            className={`rounded-xl border p-3 transition-all duration-200 shadow-sm ${theme.bgElevated} ${theme.borderLight} ${theme.hoverBorder} ${theme.hoverCard}`}
+                                                            className={`rounded-xl border p-3 transition-all duration-200 shadow-sm ${bgElevated} ${borderLight} ${hoverBorder} ${hoverCard}`}
                                                         >
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="space-y-1">
                                                                     <div className="flex items-center justify-between gap-2">
-                                                                        <p className={`text-[10px] font-bold uppercase tracking-wider ${theme.textMuted}`}>
+                                                                        <p className={`text-[10px] font-bold tracking-wide ${textMuted}`}>
                                                                             {sessionType}
                                                                         </p>
-                                                                        <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                                        <span className={`text-[11px] font-medium whitespace-nowrap ${textMuted}`}>
                                                                             {timeDisplay}
                                                                         </span>
                                                                     </div>
-                                                                    <h5 className={`text-[13px] font-semibold leading-snug ${theme.textPrimary} line-clamp-3`} title={item.title}>
+                                                                    <h5 className={`text-[13px] font-semibold leading-snug ${textPrimary} line-clamp-3`} title={item.title}>
                                                                         {item.title}
                                                                     </h5>
                                                                 </div>
 
                                                                 {item.description && (
-                                                                    <p className={`text-[11px] leading-relaxed ${theme.textSecondary} line-clamp-2`}>
+                                                                    <p className={`text-[11px] leading-relaxed ${textSecondary} line-clamp-2`}>
                                                                         {item.description}
                                                                     </p>
                                                                 )}
 
-                                                                <div className="pt-2 border-t border-white/10 dark:border-white/5 flex flex-wrap items-center gap-2 text-[10px]">
+                                                                <div className={`pt-2 border-t flex flex-wrap items-center gap-2 text-[10px] ${subtleBorder}`}>
                                                                     {item.location && (
-                                                                        <span className={`inline-flex items-center gap-1 rounded bg-white/5 px-1.5 py-0.5 ${theme.textMuted}`}>
+                                                                        <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
                                                                             <MapPinIcon className="w-3 h-3" />
                                                                             <span className="truncate max-w-[80px]">{item.location}</span>
                                                                         </span>
@@ -458,14 +470,14 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                                                                         const speakerCount = item.speakers?.length || (item.speaker ? 1 : 0);
                                                                         if (!speakerCount) return null;
                                                                         return (
-                                                                            <span className={`inline-flex items-center gap-1 rounded bg-white/5 px-1.5 py-0.5 ${theme.textMuted}`}>
+                                                                            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
                                                                                 <UsersIcon className="w-3 h-3" />
                                                                                 {speakerCount}
                                                                             </span>
                                                                         );
                                                                     })()}
                                                                     {item.dayNumber && (
-                                                                        <span className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] font-medium text-gray-500">
+                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${ghostSurface} ${textMuted}`}>
                                                                             Day {item.dayNumber}
                                                                         </span>
                                                                     )}

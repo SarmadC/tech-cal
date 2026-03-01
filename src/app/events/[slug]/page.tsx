@@ -15,7 +15,6 @@ import {
 import BookmarkEventButton from '@/components/events/BookmarkEventButton';
 import AttendanceEventButton from '@/components/events/AttendanceEventButton';
 import { ShareButtons } from '@/components/social/ShareButtons';
-import { EmbedButton } from '@/components/social/EmbedButton';
 import WhosGoingSection from '@/components/events/WhosGoingSection';
 import { SITE_URL } from '@/config/site';
 import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
@@ -350,7 +349,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
 
                         {/* Section: Overview */}
                         <section>
-                            <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                            <h2 className="text-sm font-semibold text-foreground-secondary mb-6">
                                 Overview
                             </h2>
                             <div className="text-[15px] text-foreground-secondary leading-[1.7] max-w-prose">
@@ -365,7 +364,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                         {/* Section: Details */}
                         {(event.price_range || event.target_audience || event.difficulty) && (
                             <section>
-                                <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                                <h2 className="text-sm font-semibold text-foreground-secondary mb-6">
                                     Details
                                 </h2>
                                 <dl className="space-y-0">
@@ -396,7 +395,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
 
                     {/* Right Rail - Linear-inspired */}
                     <aside className="hidden lg:block lg:col-span-4">
-                        <div className="rounded-lg bg-background-secondary/30 p-1 space-y-6">
+                        <div className="rounded-lg border border-border-subtle bg-background-secondary/80 p-3 shadow-sm space-y-6">
                             {/* Primary & Secondary Actions Combined */}
                             <div className="flex flex-col gap-3">
                                 {event.registration_url && (
@@ -404,13 +403,13 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                         href={event.registration_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex w-full items-center justify-between h-10 px-3 bg-white text-black hover:bg-white/90 rounded-md text-[13px] font-semibold transition-colors"
+                                        className="flex w-full items-center justify-between h-10 px-3 rounded-md bg-[var(--accent-tertiary)] text-white hover:bg-[var(--accent-tertiary-hover)] text-[13px] font-semibold transition-colors"
                                     >
                                         <div className="flex items-center gap-2">
                                             Register on website
                                             <ArrowSquareOut className="w-3.5 h-3.5 opacity-60" />
                                         </div>
-                                        <span className="text-[10px] font-medium bg-black/10 border border-black/5 rounded-sm px-1.5 min-w-[18px] text-center shadow-sm">R</span>
+                                        <span className="text-[10px] font-medium rounded-sm border border-white/15 bg-white/10 text-white/90 px-1.5 min-w-[18px] text-center shadow-sm">R</span>
                                     </a>
                                 )}
 
@@ -420,7 +419,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                             eventId={event.id}
                                             loginRedirect={`/events/${event.slug}`}
                                         />
-                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] bg-black border border-white/20 rounded w-3 h-3 text-white/40 pointer-events-none">A</span>
+                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] rounded w-3 h-3 border border-border-subtle bg-background-main text-foreground-tertiary pointer-events-none">A</span>
                                     </div>
                                     <div className="relative group">
                                         <BookmarkEventButton
@@ -435,7 +434,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                             }}
                                             loginRedirect={`/events/${event.slug}`}
                                         />
-                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] bg-black border border-white/20 rounded w-3 h-3 text-white/40 pointer-events-none">B</span>
+                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] rounded w-3 h-3 border border-border-subtle bg-background-main text-foreground-tertiary pointer-events-none">B</span>
                                     </div>
                                     <PublicEventShortcuts
                                         eventId={event.id}
@@ -459,8 +458,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                             <div className="space-y-4 px-1">
                                 {organizer && (
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[12px] text-[#888888]">Organizer</span>
-                                        <span className="flex items-center gap-2 text-[12px] text-white font-medium">
+                                        <span className="text-[12px] text-foreground-tertiary">Organizer</span>
+                                        <span className="flex items-center gap-2 text-[12px] text-foreground-primary font-medium">
                                             {organizer.logo_url && (
                                                 <Image
                                                     src={organizer.logo_url}
@@ -477,13 +476,13 @@ export default async function PublicEventPage({ params }: EventPageProps) {
 
                                 {eventType && (
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[12px] text-[#888888]">Type</span>
-                                        <span className="text-[12px] text-white font-medium">{eventType.name}</span>
+                                        <span className="text-[12px] text-foreground-tertiary">Type</span>
+                                        <span className="text-[12px] text-foreground-primary font-medium">{eventType.name}</span>
                                     </div>
                                 )}
 
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[12px] text-[#888888]">Share</span>
+                                    <span className="text-[12px] text-foreground-tertiary">Share</span>
                                     <ShareButtons url={eventUrl} title={event.title} />
                                 </div>
                             </div>
@@ -521,7 +520,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                             if (transformedAgenda.length === 0) {
                                 return (
                                     <>
-                                        <h2 className="text-[11px] font-medium text-foreground-tertiary/70 uppercase tracking-[0.08em] mb-6">
+                                        <h2 className="text-sm font-semibold text-foreground-secondary mb-6">
                                             Schedule
                                         </h2>
                                         <p className="text-[13px] text-foreground-tertiary/60 italic">No schedule available for this event.</p>

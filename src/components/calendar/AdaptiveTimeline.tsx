@@ -1,9 +1,7 @@
 'use client';
 
 import { FC, useMemo } from 'react';
-import { CalendarIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import TimelineView from './TimelineView';
 
 interface AdaptiveTimelineProps {
@@ -11,8 +9,6 @@ interface AdaptiveTimelineProps {
 }
 
 const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event }) => {
-    const _theme = useTimelineTheme();
-    
     // Simple analysis for display purposes only
     const analysis = useMemo(() => {
         const agenda = event.agenda || [];
@@ -45,8 +41,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event }) => {
     return (
         <div className="space-y-4">
             {/* Simple event info header */}
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-                <CalendarIcon className="w-4 h-4" />
+            <div className="text-sm text-foreground-tertiary">
                 <span className="truncate">
                     {analysis.totalEvents} events
                     <span className="hidden sm:inline">
