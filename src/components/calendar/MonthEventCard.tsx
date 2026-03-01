@@ -16,40 +16,7 @@ interface MonthEventCardProps {
     style?: React.CSSProperties;
 }
 
-const FALLBACK_ACCENT = 'var(--accent-primary)';
-const getCategoryColor = (event: Event | MultiDayEventInstance) => {
-    const categoryName = event.category?.name?.toLowerCase();
-
-    // Return CSS variables instead of hardcoded hex values to support dark mode overrides
-    // We prioritize these over event.category.color to ensure the theme is respected
-    switch (categoryName) {
-        case 'tech summit':
-        case 'summit':
-            return 'var(--color-category-summit, #3b82f6)';
-        case 'workshop':
-            return 'var(--color-category-workshop, #8b5cf6)';
-        case 'networking':
-            return 'var(--color-category-networking, #10b981)';
-        case 'conference':
-            return 'var(--color-category-conference, #0ea5e9)';
-        case 'webinar':
-            return 'var(--color-category-webinar, #f97316)';
-        case 'startup':
-            return 'var(--color-category-startup, #ec4899)';
-        case 'trade show':
-            return 'var(--color-category-trade-show, #6366f1)';
-        case 'product launch':
-            return 'var(--color-category-product-launch, #f59e0b)';
-        case 'training':
-            return 'var(--color-category-training, #14b8a6)';
-    }
-
-    // If the event has a specific color override, use it (assumed to be correct)
-    if (event.category?.color) return event.category.color;
-    if (event.color) return event.color;
-
-    return FALLBACK_ACCENT;
-};
+import { getEventAccentColor } from '@/utils/calendarColorUtils';
 
 const formatDateRange = (start: Date, end: Date) => {
     const sameYear = start.getFullYear() === end.getFullYear();
@@ -165,7 +132,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     className = '',
     style = {}
 }) => {
-    const accentColor = getCategoryColor(event);
+    const accentColor = getEventAccentColor(event);
     const isPast = isEventPast(event.startTime, event.endTime);
     const timeLabelRaw = formatTimeLabel(event);
     const durationLabelRaw = getDurationLabel(event);

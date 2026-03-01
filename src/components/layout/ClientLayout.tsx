@@ -30,9 +30,11 @@ export default function ClientLayout({
 
     // Pages that should never show navbar (they have their own navigation)
     const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard', '/discover', '/events', '/embed'];
+    const authPagesWithCustomNav = ['/login', '/signup', '/forgot-password'];
 
     // Marketing pages that should always show navbar (excluding landing page which has custom nav)
-    const marketingPaths = ['/pricing', '/blog', '/contact', '/legal'];
+    const marketingPaths = ['/pricing', '/contact'];
+    const marketingPathPrefixes = ['/blog', '/legal', '/resources'];
 
     // Cleanup analytics buffers on page unload
     useEffect(() => {
@@ -48,15 +50,21 @@ export default function ClientLayout({
 
 
 
+    const hasCustomPageNavigation =
+        authPagesWithCustomNav.includes(pathname) || pathname.startsWith('/auth/');
+    const isMarketingPage =
+        marketingPaths.includes(pathname) ||
+        marketingPathPrefixes.some((prefix) => pathname.startsWith(prefix));
+
     // Show navbar for:
     // 1. Marketing pages (always) - excluding landing page
-    // 2. Unauthenticated users on non-excluded pages
+    // 2. Unauthenticated users on non-excluded pages that do not manage their own nav
     // 3. Note: Landing page uses its own custom resizable navbar
     const isEmbedPage = pathname.startsWith('/embed');
     const shouldShowNavbar =
         !isEmbedPage && (
-            marketingPaths.includes(pathname) ||
-            (!user && !loading && !excludedPaths.includes(pathname))
+            isMarketingPage ||
+            (!user && !loading && !excludedPaths.includes(pathname) && !hasCustomPageNavigation)
         );
 
     const shouldShowLegalFooter =
@@ -89,8 +97,6 @@ export default function ClientLayout({
             { name: 'Sign In', href: '/login' }
         );
     }
-
-    const isMarketingPage = marketingPaths.includes(pathname);
 
     return (
         <>

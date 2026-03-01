@@ -243,19 +243,19 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                             style={{
                                 // Range highlight (intermediate days)
                                 ...(inRange && {
-                                    backgroundColor: 'rgba(94, 106, 210, 0.15)',
-                                    color: '#EEEEEE',
+                                    backgroundColor: 'var(--ch-selection-soft, var(--calendar-selection-blue-light))',
+                                    color: 'var(--ch-selection-soft-text, var(--foreground-primary))',
                                 }),
                                 // Start/End or Single Selection
                                 ...((isSelected || isRangeStart || isRangeEnd) && {
-                                    backgroundColor: '#5E6AD2',
-                                    color: '#FFFFFF',
+                                    backgroundColor: 'var(--ch-selection, var(--calendar-selection-blue))',
+                                    color: 'var(--ch-selection-text, var(--calendar-selection-text))',
                                     fontWeight: 500,
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                    boxShadow: 'var(--ch-selection-shadow, var(--shadow-sm))'
                                 }),
                                 // Today indicator (small dot below if not selected) -- changed from border
                                 ...(day.isToday && !isSelected && !isRangeStart && !isRangeEnd && {
-                                    color: '#5E6AD2',
+                                    color: 'var(--ch-accent, var(--calendar-selection-blue))',
                                     fontWeight: 600
                                 })
                             }}
@@ -278,8 +278,8 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                                     className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full w-1 h-1"
                                     style={{
                                         backgroundColor: day.weight >= 4
-                                            ? '#5E6AD2'
-                                            : 'var(--foreground-tertiary)',
+                                            ? 'var(--ch-dot-strong, var(--calendar-selection-blue))'
+                                            : 'var(--ch-dot-muted, var(--foreground-tertiary))',
                                         opacity: 0.5
                                     }}
                                 />

@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { EventClickArg } from '@/types/fullcalendar';
 import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { getEventAccentColor } from '@/utils/calendarColorUtils';
 import { MonthEventCard } from './MonthEventCard';
 import MonthDayPopover from './MonthDayPopover';
 import '@/app/styles/event-card.css';
@@ -85,37 +86,7 @@ export interface TechCalendarMonthViewProps {
 
 type InlineEvent = Event | MultiDayEventInstance;
 
-const getInlineAccent = (event: InlineEvent) => {
-    const categoryName = event.category?.name?.toLowerCase();
-
-    // Map categories to CSS variables for dark mode support
-    // Prioritize this over data colors to enforce the theme
-    switch (categoryName) {
-        case 'tech summit':
-        case 'summit':
-            return 'var(--color-category-summit, #3b82f6)';
-        case 'workshop':
-            return 'var(--color-category-workshop, #8b5cf6)';
-        case 'networking':
-            return 'var(--color-category-networking, #10b981)';
-        case 'conference':
-            return 'var(--color-category-conference, #0ea5e9)';
-        case 'webinar':
-            return 'var(--color-category-webinar, #f97316)';
-        case 'startup':
-            return 'var(--color-category-startup, #ec4899)';
-        case 'trade show':
-            return 'var(--color-category-trade-show, #6366f1)';
-        case 'product launch':
-            return 'var(--color-category-product-launch, #f59e0b)';
-        case 'training':
-            return 'var(--color-category-training, #14b8a6)';
-    }
-
-    if (event.category?.color) return event.category.color;
-    if ('color' in event && event.color) return event.color;
-    return 'var(--accent-primary)';
-};
+// getInlineAccent removed in favor of getEventAccentColor from calendarColorUtils
 
 const formatInlineMeta = (_event: InlineEvent) => {
     // Don't show any metadata - keep inline events clean with just title
@@ -135,7 +106,7 @@ const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
     onHover,
     onLeave
 }) => {
-    const accent = getInlineAccent(event);
+    const accent = getEventAccentColor(event);
     const meta = formatInlineMeta(event);
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1504,7 +1475,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 };
 
 // Export helper components and functions for use in MonthDayPopover
-export { MonthInlineEventRow, getInlineAccent, formatInlineMeta };
+export { MonthInlineEventRow, formatInlineMeta };
 export type { InlineEvent };
 
 export default TechCalendarMonthView;

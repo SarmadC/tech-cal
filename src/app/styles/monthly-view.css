@@ -22,28 +22,13 @@
   border-bottom: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
 }
 
-/* Dark mode header border */
-@media (prefers-color-scheme: dark) {
-  .month-grid-header {
-    border-bottom: 1px solid #2A2A2A;
-  }
-}
-
 .month-grid-day-header {
   padding: 12px 8px;
   text-align: center;
   font-weight: 600;
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--foreground-secondary);
   border-right: 1px solid var(--calendar-month-grid-line-soft, var(--border-subtle));
-}
-
-/* Dark mode header column borders */
-@media (prefers-color-scheme: dark) {
-  .month-grid-day-header {
-    border-right: 1px solid #2A2A2A;
-    color: #e5e7eb;
-  }
 }
 
 .month-grid-day-header:last-child {
@@ -51,16 +36,8 @@
 }
 
 .month-grid-day-header.weekend {
-  background: rgba(0, 0, 0, 0.015) !important;
-  color: inherit !important;
-}
-
-/* Dark mode support for weekend headers */
-@media (prefers-color-scheme: dark) {
-  .month-grid-day-header.weekend {
-    background: rgba(255, 255, 255, 0.015) !important;
-    color: inherit !important;
-  }
+  background: var(--calendar-month-weekend-bg, var(--background-tertiary)) !important;
+  color: var(--calendar-month-weekend-text, var(--foreground-tertiary)) !important;
 }
 
 .month-grid-days {
@@ -70,8 +47,8 @@
   flex: 1;
   min-height: 1080px; /* Increased minimum height for 6 rows × 180px */
   gap: 0;
-  border-left: 1px solid var(--calendar-month-grid-line, rgba(0, 0, 0, 0.04));
-  border-top: 1px solid var(--calendar-month-grid-line, rgba(0, 0, 0, 0.04));
+  border-left: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
+  border-top: 1px solid var(--calendar-month-grid-line, var(--border-subtle));
 }
 
 .month-grid-weeks {
@@ -92,8 +69,8 @@
 }
 
 .month-grid-day {
-  border-right: 1px solid var(--calendar-month-grid-line-soft, rgba(0, 0, 0, 0.04));
-  border-bottom: 1px solid var(--calendar-month-grid-line-soft, rgba(0, 0, 0, 0.04));
+  border-right: 1px solid var(--calendar-month-grid-line-soft, var(--border-subtle));
+  border-bottom: 1px solid var(--calendar-month-grid-line-soft, var(--border-subtle));
   padding: var(--month-day-padding, 6px);
   min-height: var(--month-day-min-height, 160px);
   display: flex !important;
@@ -104,50 +81,24 @@
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-/* Dark mode grid lines */
-@media (prefers-color-scheme: dark) {
-  .month-grid-day {
-    border-right: 1px solid #2A2A2A;
-    border-bottom: 1px solid #2A2A2A;
-  }
-  
-  .month-grid-days {
-    border-left: 1px solid #2A2A2A;
-    border-top: 1px solid #2A2A2A;
-  }
-}
-
 .month-grid-day.other-month {
   background: var(--calendar-month-other-bg, var(--background-tertiary));
-  color: var(--foreground-tertiary);
-  opacity: 0.5;
+  color: var(--calendar-month-other-text, var(--foreground-tertiary));
+  opacity: var(--calendar-month-other-opacity, 0.5);
 }
 
 .month-grid-day.other-month .month-grid-day-number {
-  color: var(--foreground-tertiary);
+  color: var(--calendar-month-other-text, var(--foreground-tertiary));
   font-weight: 400;
-}
-
-/* Dark mode support for adjacent month dates */
-@media (prefers-color-scheme: dark) {
-  .month-grid-day.other-month {
-    background: rgba(255, 255, 255, 0.02);
-    color: #9ca3af;
-    opacity: 0.5;
-  }
-  
-  .month-grid-day.other-month .month-grid-day-number {
-    color: #9ca3af;
-  }
 }
 
 .month-grid-day.current-month {
   background: var(--background-main);
-  color: var(--text-primary);
+  color: var(--foreground-primary);
 }
 
 .month-grid-day.current-month .month-grid-day-number {
-  color: var(--text-primary);
+  color: var(--foreground-primary);
   font-weight: 500;
 }
 
@@ -165,18 +116,10 @@
 }
 
 .month-grid-day.expanded {
-  background: var(--background-elevated, var(--background-secondary));
-  border-color: var(--calendar-month-grid-line, var(--border-strong));
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+  background: var(--calendar-month-expanded-bg, var(--background-elevated));
+  border-color: var(--calendar-month-expanded-border, var(--calendar-month-grid-line, var(--border-strong)));
+  box-shadow: var(--calendar-month-expanded-shadow, var(--shadow-lg));
   z-index: 2;
-}
-
-@media (prefers-color-scheme: dark) {
-  .month-grid-day.expanded {
-    background: rgba(30, 41, 59, 0.72);
-    border-color: rgba(148, 163, 184, 0.55);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
-  }
 }
 
 .month-grid-day.today .month-grid-day-number {
@@ -350,26 +293,12 @@
 /* Weekend styling */
 .weekend-day,
 .weekend-col {
-  background: rgba(0, 0, 0, 0.015) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .weekend-day,
-  .weekend-col {
-    background: rgba(255, 255, 255, 0.015) !important;
-  }
+  background: var(--calendar-month-weekend-bg, var(--background-tertiary)) !important;
 }
 
 .weekend-day:hover,
 .weekend-col:hover {
-  background: rgba(0, 0, 0, 0.03) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .weekend-day:hover,
-  .weekend-col:hover {
-    background: rgba(255, 255, 255, 0.03) !important;
-  }
+  background: var(--calendar-month-weekend-hover-bg, var(--calendar-month-cell-hover-bg, var(--background-tertiary))) !important;
 }
 
 
@@ -446,14 +375,10 @@
   width: 100%;
   padding: 4px 8px;
   border-radius: 4px;
-  background: color-mix(
-    in srgb,
-    var(--calendar-month-accent-mix-base, var(--background-main)),
-    var(--event-accent-color, var(--accent-primary)) var(--calendar-month-accent-strength, 24%)
-  );
-  border: 1px solid var(--calendar-month-chip-border, var(--border-subtle));
-  color: var(--calendar-month-chip-text, var(--foreground-primary));
-  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background: var(--event-accent-color);
+  border: 1px solid color-mix(in srgb, var(--event-accent-color) 80%, var(--calendar-month-event-border-contrast, #0f172a));
+  color: var(--calendar-month-event-text, #1e293b);
+  transition: background 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   position: relative;
   font-weight: 600;
@@ -505,41 +430,14 @@
 
 .month-event-card:hover,
 .month-event-card:focus-visible {
-  background: color-mix(
-    in srgb,
-    var(--calendar-month-accent-mix-base, var(--background-main)),
-    var(--event-accent-color, var(--accent-primary)) var(--calendar-month-accent-hover-strength, 34%)
-  );
-  border-color: var(--calendar-month-chip-focus, var(--accent-primary));
-  box-shadow: 0 4px 10px var(--calendar-month-chip-shadow, var(--border-strong));
+  background: color-mix(in srgb, var(--event-accent-color) 85%, var(--calendar-month-event-border-contrast, #0f172a));
+  border-color: color-mix(in srgb, var(--event-accent-color) 70%, var(--calendar-month-event-border-contrast, #0f172a));
   outline: none;
 }
 
 .month-event-card:focus-visible {
   outline: 2px solid var(--calendar-month-chip-focus, var(--accent-primary));
   outline-offset: 1px;
-}
-
-/* Dark mode override for "Pastel" look - strong contrast on dark foundation */
-.dark .month-event-card {
-  background: color-mix(in srgb, var(--event-accent-color) 15%, #111827);
-  color: #ffffff;
-  border: 1px solid color-mix(in srgb, var(--event-accent-color) 25%, #111827);
-}
-
-.dark .month-event-card:hover {
-  background: color-mix(in srgb, var(--event-accent-color) 25%, #111827);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  border-color: color-mix(in srgb, var(--event-accent-color) 35%, #111827);
-}
-
-.dark .month-event-card-label,
-.dark .month-event-card .month-event-card-meta-text {
-  color: #ffffff;
-}
-
-.dark .month-event-card .month-event-card-accent {
-  background: var(--event-accent-color);
 }
 
 .month-event-card--past {
@@ -558,7 +456,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   line-height: 1.1;
-  color: var(--calendar-month-chip-text, var(--foreground-primary));
+  color: var(--calendar-month-event-text, #1e293b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -575,7 +473,7 @@
 
 .month-event-card-meta-text {
   font-size: 0.65rem;
-  color: var(--calendar-month-chip-meta, var(--foreground-secondary));
+  color: var(--calendar-month-event-meta-text, #334155);
   font-weight: 500;
 }
 
@@ -657,7 +555,7 @@
   justify-content: center;
   border-radius: 6px;
   overflow: hidden;
-  background: rgba(148, 163, 184, 0.16);
+  background: var(--calendar-month-logo-bg, rgba(148, 163, 184, 0.16));
   flex-shrink: 0;
 }
 
@@ -1252,7 +1150,7 @@
   align-items: center;
   justify-content: center;
   padding: 32px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--calendar-month-overlay-backdrop, rgba(15, 23, 42, 0.4));
   backdrop-filter: blur(6px);
   z-index: 90;
 }
@@ -1262,7 +1160,7 @@
   max-height: min(560px, 85vh);
   background: var(--background-elevated);
   border-radius: 16px;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
+  box-shadow: var(--calendar-month-overlay-shadow, 0 24px 80px rgba(15, 23, 42, 0.24));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1290,7 +1188,7 @@
   font-weight: 600;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: rgba(148, 163, 184, 0.14);
+  background: var(--calendar-month-overlay-chip-bg, rgba(148, 163, 184, 0.14));
   color: var(--foreground-secondary);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
@@ -1298,9 +1196,9 @@
 
 .month-overflow-close:hover,
 .month-overflow-close:focus-visible {
-  background: rgba(148, 163, 184, 0.24);
+  background: var(--calendar-month-overlay-chip-hover-bg, rgba(148, 163, 184, 0.24));
   color: var(--foreground-primary);
-  border-color: rgba(148, 163, 184, 0.4);
+  border-color: var(--calendar-month-overlay-chip-border, rgba(148, 163, 184, 0.4));
   outline: none;
 }
 
@@ -1331,7 +1229,7 @@
 
 .month-overflow-event-button:hover,
 .month-overflow-event-button:focus-visible {
-  background: rgba(148, 163, 184, 0.16);
+  background: var(--calendar-month-overlay-chip-bg, rgba(148, 163, 184, 0.16));
   outline: none;
 }
 
@@ -1385,7 +1283,7 @@
   color: var(--foreground-secondary);
   padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
+  background: var(--calendar-month-overlay-chip-bg, rgba(148, 163, 184, 0.18));
 }
 
 /* ==========================================================================
@@ -1429,28 +1327,6 @@
 .month-inline-event:focus-visible {
   outline: 2px solid var(--calendar-month-chip-focus, var(--accent-primary));
   outline-offset: 1px;
-}
-
-.dark .month-inline-event {
-  background: color-mix(in srgb, var(--event-accent-color) 20%, transparent);
-  color: #fff;
-  border-color: color-mix(in srgb, var(--event-accent-color) 30%, transparent);
-}
-
-.dark .month-inline-event:hover,
-.dark .month-inline-event:focus-visible {
-  background: color-mix(in srgb, var(--event-accent-color) 30%, transparent);
-  color: #fff;
-  border-color: color-mix(in srgb, var(--event-accent-color) 40%, transparent);
-}
-
-.dark .month-inline-event-title,
-.dark .month-inline-event-meta {
-  color: #f3f4f6;
-}
-
-.dark .month-inline-event-accent {
-  background: var(--event-accent-color);
 }
 
 .month-inline-event-accent {

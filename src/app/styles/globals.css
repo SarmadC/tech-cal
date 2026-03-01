@@ -114,6 +114,8 @@ textarea:not([class*="fc-"]):focus {
   --foreground-muted: rgba(255, 255, 255, 0.4);
 
   /* Monochrome Accents */
+  --brand-primary: #F97316;
+  --brand-primary-foreground: #ffffff;
   --accent-primary: #ffffff;
   --accent-primary-hover: #e5e5e5;
   --accent-primary-light: rgba(255, 255, 255, 0.12);
@@ -186,16 +188,16 @@ textarea:not([class*="fc-"]):focus {
   --space-16: 64px;
 
   /* Calendar Selection Colors - Dark Mode */
-  --calendar-selection-blue: #3B82F6;
-  /* bright blue for dark backgrounds */
-  --calendar-selection-blue-hover: #2563eb;
-  /* darker blue on hover */
-  --calendar-selection-blue-light: rgba(59, 130, 246, 0.1);
-  /* light blue background */
-  --calendar-selection-blue-medium: rgba(37, 99, 235, 0.12);
-  /* medium blue background */
-  --calendar-selection-blue-strong: rgba(37, 99, 235, 0.18);
-  /* stronger blue background */
+  --calendar-selection-blue: #5e6ad2;
+  /* shared indigo selection accent */
+  --calendar-selection-blue-hover: #4c58b5;
+  /* darker indigo on hover */
+  --calendar-selection-blue-light: rgba(94, 106, 210, 0.1);
+  /* light indigo background */
+  --calendar-selection-blue-medium: rgba(94, 106, 210, 0.12);
+  /* medium indigo background */
+  --calendar-selection-blue-strong: rgba(94, 106, 210, 0.18);
+  /* stronger indigo background */
   --calendar-selection-text: #ffffff;
   /* white text on blue circles */
   --calendar-weekday-text: var(--foreground-tertiary);
@@ -209,13 +211,19 @@ textarea:not([class*="fc-"]):focus {
   --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main), var(--accent-primary) 6%);
   --calendar-month-cell-hover-ring: color-mix(in srgb, var(--accent-primary) 40%, var(--background-main));
   --calendar-month-other-bg: color-mix(in srgb, var(--background-main) 85%, var(--foreground-primary));
+  --calendar-month-other-text: var(--foreground-tertiary);
+  --calendar-month-other-opacity: 0.5;
   --calendar-month-weekend-bg: color-mix(in srgb, var(--background-secondary) 85%, var(--foreground-primary));
+  --calendar-month-weekend-hover-bg: color-mix(in srgb, var(--background-secondary) 78%, var(--foreground-primary));
   --calendar-month-weekend-text: var(--foreground-tertiary);
   --calendar-month-today-bg: color-mix(in srgb, var(--brand-primary) 14%, var(--background-main));
   --calendar-month-today-border: color-mix(in srgb, var(--brand-primary) 40%, var(--background-main));
   --calendar-month-today-ring: color-mix(in srgb, var(--brand-primary) 60%, var(--background-main));
   --calendar-month-today-number-bg: color-mix(in srgb, var(--brand-primary) 24%, var(--background-main));
   --calendar-month-today-number-text: var(--foreground-primary);
+  --calendar-month-expanded-bg: color-mix(in srgb, var(--background-elevated) 88%, var(--foreground-primary));
+  --calendar-month-expanded-border: color-mix(in srgb, var(--border-strong) 72%, var(--foreground-primary));
+  --calendar-month-expanded-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
   --calendar-month-chip-bg: var(--background-secondary);
   --calendar-month-chip-border: var(--border-default);
   --calendar-month-chip-hover-bg: color-mix(in srgb, var(--background-secondary) 88%, var(--accent-primary));
@@ -229,6 +237,15 @@ textarea:not([class*="fc-"]):focus {
   --calendar-month-more-bg: var(--background-tertiary);
   --calendar-month-more-border: var(--border-strong);
   --calendar-month-more-text: var(--foreground-primary);
+  --calendar-month-event-text: #0f172a;
+  --calendar-month-event-meta-text: #334155;
+  --calendar-month-event-border-contrast: #0f172a;
+  --calendar-month-logo-bg: rgba(148, 163, 184, 0.16);
+  --calendar-month-overlay-backdrop: rgba(15, 23, 42, 0.6);
+  --calendar-month-overlay-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
+  --calendar-month-overlay-chip-bg: rgba(148, 163, 184, 0.14);
+  --calendar-month-overlay-chip-hover-bg: rgba(148, 163, 184, 0.24);
+  --calendar-month-overlay-chip-border: rgba(148, 163, 184, 0.4);
 }
 
 /* --- Light Theme Override --- */
@@ -315,16 +332,16 @@ textarea:not([class*="fc-"]):focus {
   --chart-5-explicit: hsl(340, 75%, 55%);
 
   /* Calendar Selection Colors - Light Mode */
-  --calendar-selection-blue: #2563eb;
-  /* darker blue for better contrast on light backgrounds */
-  --calendar-selection-blue-hover: #1d4ed8;
+  --calendar-selection-blue: #5e6ad2;
+  /* shared indigo selection accent */
+  --calendar-selection-blue-hover: #4c58b5;
   /* darker hover state */
-  --calendar-selection-blue-light: rgba(37, 99, 235, 0.1);
+  --calendar-selection-blue-light: rgba(94, 106, 210, 0.1);
   /* adjusted opacity for light mode */
-  --calendar-selection-blue-medium: rgba(37, 99, 235, 0.12);
-  /* medium blue background */
-  --calendar-selection-blue-strong: rgba(37, 99, 235, 0.18);
-  /* stronger blue background */
+  --calendar-selection-blue-medium: rgba(94, 106, 210, 0.12);
+  /* medium indigo background */
+  --calendar-selection-blue-strong: rgba(94, 106, 210, 0.18);
+  /* stronger indigo background */
   --calendar-selection-text: #ffffff;
   /* white text remains for contrast */
   --calendar-weekday-text: var(--foreground-tertiary);
@@ -338,13 +355,19 @@ textarea:not([class*="fc-"]):focus {
   --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main), var(--accent-primary) 4%);
   --calendar-month-cell-hover-ring: color-mix(in srgb, var(--accent-primary) 40%, var(--background-main));
   --calendar-month-other-bg: color-mix(in srgb, var(--background-main) 92%, var(--foreground-primary));
+  --calendar-month-other-text: var(--foreground-tertiary);
+  --calendar-month-other-opacity: 0.6;
   --calendar-month-weekend-bg: color-mix(in srgb, var(--background-secondary) 92%, var(--foreground-primary));
+  --calendar-month-weekend-hover-bg: color-mix(in srgb, var(--background-secondary) 88%, var(--foreground-primary));
   --calendar-month-weekend-text: var(--foreground-tertiary);
   --calendar-month-today-bg: color-mix(in srgb, var(--brand-primary) 12%, var(--background-main));
   --calendar-month-today-border: color-mix(in srgb, var(--brand-primary) 38%, var(--background-main));
   --calendar-month-today-ring: color-mix(in srgb, var(--brand-primary) 62%, var(--background-main));
   --calendar-month-today-number-bg: color-mix(in srgb, var(--brand-primary) 22%, var(--background-main));
   --calendar-month-today-number-text: var(--foreground-primary);
+  --calendar-month-expanded-bg: color-mix(in srgb, var(--background-elevated) 94%, var(--foreground-primary));
+  --calendar-month-expanded-border: color-mix(in srgb, var(--border-strong) 82%, var(--foreground-primary));
+  --calendar-month-expanded-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
   --calendar-month-chip-bg: var(--background-secondary);
   --calendar-month-chip-border: var(--border-default);
   --calendar-month-chip-hover-bg: color-mix(in srgb, var(--background-secondary) 90%, var(--accent-primary));
@@ -358,6 +381,15 @@ textarea:not([class*="fc-"]):focus {
   --calendar-month-more-bg: var(--background-tertiary);
   --calendar-month-more-border: var(--border-strong);
   --calendar-month-more-text: var(--foreground-primary);
+  --calendar-month-event-text: #1e293b;
+  --calendar-month-event-meta-text: #334155;
+  --calendar-month-event-border-contrast: #0f172a;
+  --calendar-month-logo-bg: rgba(15, 23, 42, 0.08);
+  --calendar-month-overlay-backdrop: rgba(15, 23, 42, 0.18);
+  --calendar-month-overlay-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+  --calendar-month-overlay-chip-bg: rgba(15, 23, 42, 0.06);
+  --calendar-month-overlay-chip-hover-bg: rgba(15, 23, 42, 0.1);
+  --calendar-month-overlay-chip-border: rgba(15, 23, 42, 0.18);
 }
 
 /* ============================================== */

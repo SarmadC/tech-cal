@@ -5,7 +5,6 @@ import { BreadcrumbJsonLd } from '@/components/seo';
 import { cityNameToSlug } from '@/utils/categorySlugUtils';
 import { SITE_URL } from '@/config/site';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr';
-import MarketingNavbar from '@/components/common/MarketingNavbar';
 import { AnimatedHero } from './AnimatedHero';
 import { InteractiveGlobeSection } from './InteractiveGlobeSection';
 import { CategoryBarChart } from './category-bar-chart';
@@ -280,7 +279,6 @@ export default async function TechEventsCalendar2026Page() {
             />
 
             <div className="min-h-screen bg-background-main pb-32">
-                <MarketingNavbar />
                 {/* Enhanced Hero Section - Extracted to Client Component */}
                 <AnimatedHero totalCount={totalCount} />
 

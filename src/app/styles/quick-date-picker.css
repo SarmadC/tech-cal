@@ -24,21 +24,25 @@
 }
 
 .quick-date-picker {
-    /* Premium Dark Theme Base */
-    --qdp-bg: #181818;
-    --qdp-border: rgba(255, 255, 255, 0.08); /* Ultra subtle */
-    --qdp-text-primary: #EEEEEE;
-    --qdp-text-secondary: #888888;
-    --qdp-hover-bg: rgba(255, 255, 255, 0.05);
-    --qdp-accent: #5E6AD2; /* Linear Violet */
-    --qdp-accent-glow: rgba(94, 106, 210, 0.3);
+    --qdp-bg: var(--background-secondary);
+    --qdp-bg-top: color-mix(in srgb, var(--background-elevated) 72%, var(--background-secondary));
+    --qdp-border: var(--border-default);
+    --qdp-border-strong: var(--border-strong);
+    --qdp-text-primary: var(--foreground-primary);
+    --qdp-text-secondary: var(--foreground-secondary);
+    --qdp-text-muted: var(--foreground-tertiary);
+    --qdp-hover-bg: var(--background-tertiary);
+    --qdp-accent: #5e6ad2;
+    --qdp-accent-hover: #4c58b5;
+    --qdp-accent-soft: rgba(94, 106, 210, 0.1);
+    --qdp-accent-text: var(--calendar-selection-text);
+    --qdp-danger: var(--error);
 
-    background: var(--qdp-bg);
+    background: linear-gradient(180deg, var(--qdp-bg-top) 0%, var(--qdp-bg) 100%);
     border-radius: 8px; /* Tighter corners */
     box-shadow:
         0 0 0 1px var(--qdp-border),
-        0 24px 48px -12px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(0, 0, 0, 0.2); /* Outer darkness ring */
+        var(--shadow-xl);
     width: 100%;
     max-width: 680px; /* Slightly more compact */
     max-height: 80vh;
@@ -48,7 +52,7 @@
     display: flex;
     flex-direction: column;
     color: var(--qdp-text-primary);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
 }
 
 @keyframes quickDatePickerSlideIn {
@@ -121,7 +125,7 @@
     height: 32px;
     background: transparent;
     border: none;
-    border-bottom: 1px solid #333; /* Explicit visibility as requested */
+    border-bottom: 1px solid var(--qdp-border-strong);
     color: var(--qdp-text-primary);
     border-radius: 0;
     padding: 0 0 4px 0;
@@ -136,7 +140,7 @@
 }
 
 .quick-date-input::placeholder {
-    color: var(--qdp-text-secondary);
+    color: var(--qdp-text-muted);
     opacity: 0.4;
 }
 
@@ -147,7 +151,7 @@
     min-height: 1.2em;
 }
 .quick-date-hint.valid { color: var(--qdp-accent); }
-.quick-date-hint.invalid { color: #d37373; }
+.quick-date-hint.invalid { color: var(--qdp-danger); }
 
 .quick-date-options {
     flex: 1;
@@ -193,7 +197,7 @@
 }
 
 .quick-date-option[aria-selected="true"] {
-    background: var(--qdp-hover-bg);
+    background: var(--qdp-accent-soft);
     color: var(--qdp-accent);
     font-weight: 500;
 }
@@ -239,16 +243,16 @@
     background: var(--qdp-accent);
     border: none;
     border-radius: 6px; /* Slightly smoother */
-    color: #fff;
+    color: var(--qdp-accent-text);
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .quick-date-picker-confirm:hover:not(:disabled) {
-    background: #4c58b5; 
+    background: var(--qdp-accent-hover);
     transform: translateY(-1px);
 }
 
@@ -267,6 +271,13 @@
     --ch-text-primary: var(--qdp-text-primary);
     --ch-text-secondary: var(--qdp-text-secondary);
     --ch-accent: var(--qdp-accent);
+    --ch-selection-soft: var(--qdp-accent-soft);
+    --ch-selection-soft-text: var(--qdp-text-primary);
+    --ch-selection: var(--qdp-accent);
+    --ch-selection-text: var(--qdp-accent-text);
+    --ch-selection-shadow: var(--shadow-sm);
+    --ch-dot-strong: var(--qdp-accent);
+    --ch-dot-muted: var(--qdp-text-muted);
 }
 
 @media (max-width: 640px) {

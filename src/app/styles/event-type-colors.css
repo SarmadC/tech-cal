@@ -62,16 +62,16 @@
   --event-default-border: #cbd5e1;
   --event-default-text: #475569;
 
-  /* Category Accents - Standard (Light Mode / Default) - Tailwind 500s */
-  --color-category-summit: #3b82f6;
-  --color-category-workshop: #8b5cf6;
-  --color-category-networking: #10b981;
-  --color-category-conference: #0ea5e9;
-  --color-category-webinar: #f97316;
-  --color-category-startup: #ec4899;
-  --color-category-trade-show: #6366f1;
-  --color-category-product-launch: #f59e0b;
-  --color-category-training: #14b8a6;
+  /* Category Accents - Pastel palette */
+  --color-category-summit: #f2bac9;       /* Soft Rose */
+  --color-category-workshop: #d4c4f5;     /* Lavender */
+  --color-category-networking: #b8f0d1;   /* Mint */
+  --color-category-conference: #bad7f2;   /* Soft Blue */
+  --color-category-webinar: #fdd8b0;      /* Peach */
+  --color-category-startup: #f5c6f0;      /* Pink Lilac */
+  --color-category-trade-show: #c4c0f5;   /* Periwinkle */
+  --color-category-product-launch: #f5eab0; /* Butter */
+  --color-category-training: #b0eff5;     /* Pale Cyan */
 }
 
 /* Dark mode overrides */
@@ -136,16 +136,16 @@
   --event-default-border: #475569;
   --event-default-text: #cbd5e1;
 
-  /* Category Accents - Dark Mode Overrides - User Requested Pastels */
-  --color-category-summit: #A0C4FF; /* Baby Blue Ice */
-  --color-category-workshop: #BDB2FF; /* Periwinkle */
-  --color-category-networking: #CAFFBF; /* Tea Green */
-  --color-category-conference: #9BF6FF; /* Soft Cyan */
-  --color-category-webinar: #FFD6A5; /* Apricot Cream */
-  --color-category-startup: #FFC6FF; /* Mauve */
-  --color-category-trade-show: #BDB2FF; /* Periwinkle (for Indigo) */
-  --color-category-product-launch: #FDFFB6; /* Lemon Chiffon */
-  --color-category-training: #9BF6FF; /* Soft Cyan (for Teal) */
+  /* Category Accents - Dark Mode - Same pastels for solid ribbon cards */
+  --color-category-summit: #f2bac9;       /* Soft Rose */
+  --color-category-workshop: #d4c4f5;     /* Lavender */
+  --color-category-networking: #b8f0d1;   /* Mint */
+  --color-category-conference: #bad7f2;   /* Soft Blue */
+  --color-category-webinar: #fdd8b0;      /* Peach */
+  --color-category-startup: #f5c6f0;      /* Pink Lilac */
+  --color-category-trade-show: #c4c0f5;   /* Periwinkle */
+  --color-category-product-launch: #f5eab0; /* Butter */
+  --color-category-training: #b0eff5;     /* Pale Cyan */
 }
 
 /* Event type tag classes */
