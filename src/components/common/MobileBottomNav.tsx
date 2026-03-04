@@ -16,7 +16,7 @@ const MobileBottomNav = () => {
     const router = useRouter();
 
     const navItems: NavItem[] = [
-        { name: 'Discover', href: '/events', icon: Compass },
+        { name: 'Discover', href: '/discover', icon: Compass },
         { name: 'Calendar', href: '/calendar', icon: CalendarBlank },
         { name: 'Community', href: '/community', icon: UsersThree },
         { name: 'Dashboard', href: '/dashboard', icon: SquaresFour },
