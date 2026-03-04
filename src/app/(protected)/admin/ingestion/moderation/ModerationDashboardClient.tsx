@@ -20,6 +20,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { cn } from '@/lib/utils';
+import ModerationPreviewPanel from '@/components/admin/ModerationPreviewPanel';
 
 const COLUMNS_STORAGE_KEY = 'techcal.admin.moderation.columns';
 
@@ -47,6 +48,7 @@ interface QueueItem {
                 startTime: string;
                 location: string;
                 organizer?: string;
+                sourceUrl?: string;
             };
         };
     } | null;
@@ -89,6 +91,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
     const [actionLoading, setActionLoading] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<QueueItem | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [selectAllMatching, setSelectAllMatching] = useState(false);
     const columnsPanelRef = useRef<HTMLDivElement>(null);
 
     const [searchTerm, setSearchTerm] = useState(queryParam);
@@ -274,11 +279,35 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         setSelectedRows((prev) =>
             prev.filter((id) => filteredItems.some((item) => item.id === id))
         );
+        setSelectAllMatching(false);
     }, [filteredItems]);
+
+    const refetchData = useCallback(async () => {
+        setIsRefreshing(true);
+        try {
+            const response = await fetch('/api/admin/ingestion/moderate?status=pending&limit=100', {
+                credentials: 'include',
+            });
+            if (!response.ok) throw new Error('Failed to refresh data');
+            const result = await response.json();
+            setData(result.items ?? result.data ?? []);
+            setSelectedRows([]);
+            setSelectAllMatching(false);
+            showSuccess('Queue refreshed.');
+        } catch (err) {
+            console.error('Error refreshing data:', err);
+            showError('Failed to refresh moderation queue.');
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [showSuccess, showError]);
 
     const handleBulkAction = useCallback(
         async (action: 'approve' | 'reject') => {
-            if (selectedRows.length === 0) {
+            const ids = selectAllMatching
+                ? filteredItems.map((i) => i.id)
+                : selectedRows;
+            if (ids.length === 0) {
                 showInfo('Select at least one queue item first.');
                 return;
             }
@@ -289,17 +318,18 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action,
-                        queueItemIds: selectedRows,
+                        queueItemIds: ids,
                     }),
                 });
                 const result = await response.json();
                 if (!result.success) {
                     throw new Error(result.error ?? 'Failed to process moderation action');
                 }
-                setData((prev) => prev.filter((item) => !selectedRows.includes(item.id)));
+                setData((prev) => prev.filter((item) => !ids.includes(item.id)));
                 setSelectedRows([]);
+                setSelectAllMatching(false);
                 showSuccess(
-                    `${action === 'approve' ? 'Approved' : 'Rejected'} ${selectedRows.length} entr${selectedRows.length === 1 ? 'y' : 'ies'} successfully.`
+                    `${action === 'approve' ? 'Approved' : 'Rejected'} ${ids.length} entr${ids.length === 1 ? 'y' : 'ies'} successfully.`
                 );
             } catch (err) {
                 console.error('Error performing bulk action:', err);
@@ -309,7 +339,7 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 setActionLoading(false);
             }
         },
-        [selectedRows, showError, showInfo, showSuccess]
+        [selectedRows, selectAllMatching, filteredItems, showError, showInfo, showSuccess]
     );
 
     const handleSingleAction = useCallback(
@@ -335,6 +365,42 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 console.error('Error performing action:', err);
                 Sentry.captureException(err);
                 showError(err instanceof Error ? err.message : 'Error performing moderation action.');
+            } finally {
+                setActionLoading(false);
+            }
+        },
+        [showError, showSuccess]
+    );
+
+    const handleEditAndApprove = useCallback(
+        async (item: QueueItem, eventData: Record<string, string>) => {
+            if (!item.event_id) {
+                showError('Cannot edit: no linked event found.');
+                return;
+            }
+            setActionLoading(true);
+            try {
+                const response = await fetch('/api/admin/ingestion/moderate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'edit',
+                        queueItemIds: [item.id],
+                        eventId: item.event_id,
+                        eventData,
+                    }),
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.error ?? 'Failed to edit and approve');
+                }
+                setData((prev) => prev.filter((entry) => entry.id !== item.id));
+                setPreviewItem(null);
+                showSuccess(`Edited and approved "${item.events?.title ?? 'Untitled'}".`);
+            } catch (err) {
+                console.error('Error editing and approving:', err);
+                Sentry.captureException(err);
+                showError(err instanceof Error ? err.message : 'Failed to edit and approve.');
             } finally {
                 setActionLoading(false);
             }
@@ -370,6 +436,12 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         onRejectSelected: () => handleBulkAction('reject'),
         onNavigateNext: () => moveSelection('next'),
         onNavigatePrevious: () => moveSelection('prev'),
+        onOpenPreview: () => {
+            if (selectedRows.length === 1) {
+                const item = paginatedItems.find((i) => i.id === selectedRows[0]);
+                if (item) setPreviewItem(item);
+            }
+        },
     });
 
     useEffect(() => {
@@ -389,6 +461,21 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         rejected: 'bg-rose-500/20 text-rose-300',
     };
 
+    const reasonCodeColor = (code: string): string => {
+        const trustCodes = ['low_source_trust', 'unverified_source', 'low_trust', 'source_trust'];
+        const qualityCodes = ['low_quality', 'low_score', 'quality_below_threshold'];
+        if (trustCodes.some((c) => code.includes(c)) || qualityCodes.some((c) => code.includes(c))) {
+            return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+        }
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    };
+
+    const qualityTooltip = (item: QueueItem): string => {
+        const qc = item.events?.ingestion_provenance?.quality_components;
+        if (!qc) return `Score: ${item.ingestion_quality_score.toFixed(0)}`;
+        return `Overall: ${item.ingestion_quality_score.toFixed(0)}\nSource Trust: ${qc.source_trust?.toFixed(0) ?? '—'}\nMetadata: ${qc.metadata_completeness?.toFixed(0) ?? '—'}\nSpeaker: ${qc.speaker_verification?.toFixed(0) ?? '—'}\nHistorical: ${qc.historical_performance?.toFixed(0) ?? '—'}`;
+    };
+
     const columns: AdminDataTableColumn<QueueItem>[] = useMemo(() => {
         const baseColumns: AdminDataTableColumn<QueueItem>[] = [
             {
@@ -399,12 +486,27 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                         item.events?.title ?? item.source_events?.raw_payload?.record?.title ?? 'Untitled Event';
                     const organizer =
                         item.events?.organizer?.name ?? item.source_events?.raw_payload?.record?.organizer ?? 'Unknown organizer';
+                    const eventDate = item.events?.start_time ?? item.source_events?.raw_payload?.record?.startTime;
+                    const hasSourceUrl = !!item.source_events?.raw_payload?.record?.sourceUrl;
                     return (
                         <div className="flex flex-col gap-0.5">
                             <div className="font-medium text-foreground-primary text-[13px]">{eventTitle}</div>
                             <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground-muted">
                                 <span>{organizer}</span>
-                                <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5">
+                                {eventDate && (
+                                    <span className="text-foreground-muted">
+                                        {format(new Date(eventDate), 'MMM d, yyyy')}
+                                    </span>
+                                )}
+                                {hasSourceUrl && (
+                                    <span title="Has source URL">
+                                        <MaterialIcon name="arrow-up-right" size={12} className="text-foreground-muted" />
+                                    </span>
+                                )}
+                                <span
+                                    className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5 cursor-help"
+                                    title={qualityTooltip(item)}
+                                >
                                     <MaterialIcon name="dashboard" size={12} />
                                     {item.ingestion_quality_score.toFixed(0)}
                                 </span>
@@ -437,11 +539,15 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 key: 'reason',
                 header: 'Flagged Reason',
                 render: (item) => (
-                    <div className="text-[11px] text-foreground-tertiary">
+                    <div className="flex flex-wrap gap-1">
                         {item.reason_codes.length === 0 ? (
-                            <span className="text-foreground-muted">No reason captured</span>
+                            <span className="text-[11px] text-foreground-muted">No reason captured</span>
                         ) : (
-                            item.reason_codes.map((code) => code.replace(/_/g, ' ')).join(', ')
+                            item.reason_codes.map((code) => (
+                                <Badge key={code} className={cn('px-1.5 py-0.5 text-[10px] border', reasonCodeColor(code))}>
+                                    {code.replace(/_/g, ' ')}
+                                </Badge>
+                            ))
                         )}
                     </div>
                 ),
@@ -569,6 +675,17 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 </div>
             </div>
             <div className="flex items-center gap-2">
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={refetchData}
+                    disabled={isRefreshing}
+                    className={cn("h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary", isRefreshing && "animate-spin")}
+                    title="Refresh queue"
+                >
+                    <MaterialIcon name="refresh" size={14} />
+                </Button>
                 <div ref={columnsPanelRef} className="relative">
                     <Button
                         type="button"
@@ -621,8 +738,38 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         );
     }
 
+    const allPageSelected = paginatedItems.length > 0 && paginatedItems.every((item) => selectedRows.includes(item.id));
+    const showSelectAllBanner = allPageSelected && filteredItems.length > paginatedItems.length && !selectAllMatching;
+
     return (
         <div className="space-y-4">
+            {/* Select all matching banner */}
+            {showSelectAllBanner && (
+                <div className="flex items-center justify-between rounded-lg border border-accent-primary/30 bg-accent-primary/5 px-4 py-2.5 text-sm text-foreground-secondary">
+                    <span>
+                        Selected {paginatedItems.length} on this page.{' '}
+                        <button
+                            onClick={() => setSelectAllMatching(true)}
+                            className="font-semibold text-accent-primary hover:underline"
+                        >
+                            Select all {filteredItems.length} matching
+                        </button>
+                    </span>
+                </div>
+            )}
+            {selectAllMatching && (
+                <div className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm text-foreground-secondary">
+                    <span>
+                        All {filteredItems.length} matching items selected.{' '}
+                        <button
+                            onClick={() => { setSelectAllMatching(false); setSelectedRows([]); }}
+                            className="font-semibold text-foreground-tertiary hover:underline"
+                        >
+                            Clear selection
+                        </button>
+                    </span>
+                </div>
+            )}
             <AdminDataTable
                 columns={columns}
                 rows={paginatedItems}
@@ -632,10 +779,11 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 onSortChange={() => {
                     // sorting not yet implemented - rely on API sort when available
                 }}
-                isLoading={actionLoading && paginatedItems.length === 0}
+                isLoading={(actionLoading && paginatedItems.length === 0) || isRefreshing}
                 selectable
                 selectedRowIds={selectedRows}
                 onSelectionChange={setSelectedRows}
+                onRowClick={(row) => setPreviewItem(row)}
                 bulkActions={bulkActions}
                 page={currentPage}
                 pageSize={pageSizeParam}
@@ -645,6 +793,22 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 toolbar={tableToolbar}
             />
             {shortcutsOpen && <ModerationShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
+            {previewItem && (
+                <ModerationPreviewPanel
+                    item={previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    onApprove={(item) => {
+                        handleSingleAction(item, 'approve');
+                        setPreviewItem(null);
+                    }}
+                    onReject={(item) => {
+                        handleSingleAction(item, 'reject');
+                        setPreviewItem(null);
+                    }}
+                    onEditAndApprove={handleEditAndApprove}
+                    actionLoading={actionLoading}
+                />
+            )}
         </div>
     );
 }
@@ -655,6 +819,7 @@ function ModerationShortcutsOverlay({ onClose }: { onClose: () => void }) {
         { keys: 'a', description: 'Approve selected rows' },
         { keys: 'r', description: 'Reject selected rows' },
         { keys: 'j / k', description: 'Move table selection down / up' },
+        { keys: 'Enter', description: 'Preview selected event' },
         { keys: '?', description: 'Show this help' },
     ];
 

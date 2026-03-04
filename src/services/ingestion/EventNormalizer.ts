@@ -138,6 +138,7 @@ export class EventNormalizer {
                 price_max: priceInfo.max,
                 currency: priceInfo.currency,
                 pricing_type: priceInfo.pricingType,
+                enrichment_status: 'pending',
                 ingestion_quality_score: null,
                 ingestion_source_id: record.provenance.source_id,
                 ingestion_provenance: record.provenance as unknown as Database['public']['Tables']['events']['Insert']['ingestion_provenance'],
@@ -626,4 +627,3 @@ export class EventNormalizer {
             .replace(/\-\-+/g, '-');  // Replace multiple - with single -
     }
 }
-

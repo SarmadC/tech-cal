@@ -547,6 +547,22 @@
   height: 100%;
 }
 
+.month-week-ribbon .month-event-card--quiet {
+  min-height: 22px;
+  padding: 3px 8px !important;
+  box-shadow: none;
+}
+
+.month-week-ribbon .month-event-card--quiet:hover,
+.month-week-ribbon .month-event-card--quiet:focus-visible {
+  box-shadow: none;
+}
+
+.month-week-ribbon .month-event-card--quiet .month-event-card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .month-event-card-logo {
   width: 20px;
   height: 20px;
@@ -1013,6 +1029,9 @@
 .month-grid-more-button {
   margin-top: auto;
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px 6px;
   font-size: 0.65rem;
   font-weight: 600;

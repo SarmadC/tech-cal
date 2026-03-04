@@ -13,6 +13,7 @@ export interface AdminHotkeyHandlers {
     onMarkPending?: NullableHandler;
     onNavigateNext?: NullableHandler;
     onNavigatePrevious?: NullableHandler;
+    onOpenPreview?: NullableHandler;
 }
 
 const NAV_KEYS: Record<string, string> = {
@@ -33,6 +34,11 @@ export function useAdminHotkeys(handlers: AdminHotkeyHandlers = {}) {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.defaultPrevented) return;
+
+            // Don't fire hotkeys when typing in form fields
+            const tag = (event.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
             const { key, metaKey, ctrlKey, altKey } = event;
 
             const metaPressed = metaKey || ctrlKey || altKey;
@@ -99,6 +105,10 @@ export function useAdminHotkeys(handlers: AdminHotkeyHandlers = {}) {
                     break;
                 case 'k':
                     handlersRef.current.onNavigatePrevious?.();
+                    event.preventDefault();
+                    break;
+                case 'Enter':
+                    handlersRef.current.onOpenPreview?.();
                     event.preventDefault();
                     break;
                 default:

@@ -9,6 +9,28 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventQueryBuilder = any;
 
+const LOCATION_FILTER_ALIASES: Record<string, string[]> = {
+  usa: ['united states', 'us', 'america'],
+  'united states': ['usa', 'us', 'america'],
+  us: ['usa', 'united states', 'america'],
+  uk: ['united kingdom', 'britain', 'england'],
+  'united kingdom': ['uk', 'britain', 'england'],
+  uae: ['united arab emirates'],
+  'united arab emirates': ['uae'],
+};
+
+function expandLocationAliases(location: string): string[] {
+  const trimmed = location.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const normalized = trimmed.toLowerCase();
+  const aliases = LOCATION_FILTER_ALIASES[normalized] ?? [];
+
+  return Array.from(new Set([trimmed, ...aliases]));
+}
+
 /**
  * Builds a Supabase query filter for location matching
  * Uses normalized fields (city, state, country) with fallback to exact location match
@@ -38,8 +60,8 @@ export function applyLocationFilter(
   // - location (original location text as fallback)
   const conditions = locations
     .filter(loc => loc && loc.trim().length > 0)
-    .map(loc => {
-      const normalized = loc.trim();
+    .flatMap(loc => expandLocationAliases(loc))
+    .map(normalized => {
       // Use ILIKE for case-insensitive partial matching
       // Each location can match any of the normalized fields or the original location
       return `location_city.ilike.%${normalized}%,location_state.ilike.%${normalized}%,location_country.ilike.%${normalized}%,location.ilike.%${normalized}%`;
@@ -118,7 +140,6 @@ export function applyLocationFilterExact(
   // Default to fuzzy matching
   return applyLocationFilter(query, locations);
 }
-
 
 
 

@@ -42,6 +42,13 @@ async function handler(request: NextRequest) {
 
     const result = await service.processBatch(limit);
 
+    console.log('Enrichment cron completed', {
+        processed: result.processed,
+        succeeded: result.succeeded,
+        failed: result.failed,
+        limit,
+    });
+
     return NextResponse.json({
         success: true,
         timestamp: new Date().toISOString(),
@@ -63,4 +70,3 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     return GET(request);
 }
-

@@ -133,11 +133,18 @@ const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, 
 };
 
 export interface DiscoverySidebarProps {
-    filters: Pick<UnifiedFilterOptions, 'format' | 'cost' | 'categories' | 'tags'>;
+    filters: Pick<UnifiedFilterOptions, 'format' | 'cost' | 'categories' | 'tags'> & {
+        locations?: string[];
+    };
     onUpdateFilter: UpdateFilterHandler;
     categories: EventType[];
+    locationOptions?: Array<{
+        value: string;
+        count: number;
+    }>;
     events?: Array<{
         id: string;
+        location?: string;
         tags?: Array<{
             id: string;
             name: string;
@@ -159,6 +166,7 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     filters,
     onUpdateFilter,
     categories,
+    locationOptions = [],
     events = [],
     counts = {},
     mobileMode = false
@@ -184,6 +192,14 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
         }
 
         onUpdateFilter('tags', updated);
+    };
+
+    const toggleLocation = (locationValue: string) => {
+        const current = filters.locations || [];
+        const updated = current.includes(locationValue)
+            ? current.filter((value) => value !== locationValue)
+            : [...current, locationValue];
+        onUpdateFilter('locations', updated);
     };
 
     return (
@@ -237,6 +253,20 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
                     />
                 </FilterSection>
 
+                {(locationOptions.length > 0 || (filters.locations?.length ?? 0) > 0) && (
+                    <FilterSection title="Location">
+                        {locationOptions.map((option) => (
+                            <CheckboxOption
+                                key={option.value}
+                                label={option.value}
+                                checked={(filters.locations || []).includes(option.value)}
+                                onChange={() => toggleLocation(option.value)}
+                                count={option.count}
+                            />
+                        ))}
+                    </FilterSection>
+                )}
+
                 <FilterSection title="Categories">
                     {categories.map(cat => {
                         const count = counts.categories?.[cat.id];
@@ -287,10 +317,17 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     return (
         prevProps.filters.format === nextProps.filters.format &&
         prevProps.filters.cost === nextProps.filters.cost &&
+        (prevProps.filters.locations || []).length === (nextProps.filters.locations || []).length &&
+        (prevProps.filters.locations || []).every((location, idx) => location === (nextProps.filters.locations || [])[idx]) &&
         categoriesEqual &&
         tagsEqual &&
         categoriesListEqual &&
         eventsEqual &&
+        prevProps.locationOptions?.length === nextProps.locationOptions?.length &&
+        (prevProps.locationOptions || []).every((option, idx) => {
+            const nextOption = (nextProps.locationOptions || [])[idx];
+            return option.value === nextOption?.value && option.count === nextOption?.count;
+        }) &&
         prevProps.counts?.format === nextProps.counts?.format &&
         prevProps.counts?.cost === nextProps.counts?.cost &&
         prevProps.counts?.categories === nextProps.counts?.categories &&

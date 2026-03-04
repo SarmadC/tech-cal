@@ -6,12 +6,11 @@ import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { getEventAccentColor } from '@/utils/calendarColorUtils';
 import { MonthEventCard } from './MonthEventCard';
-import MonthDayPopover from './MonthDayPopover';
 import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
 
-const MAX_VISIBLE_EVENTS_PER_DAY = 3;
-const MAX_RIBBON_ROWS = 3; // Limit to 3 rows to match max visible events
+const MAX_VISIBLE_EVENTS_PER_DAY = 2;
+const MAX_RIBBON_ROWS = 2;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const DAY_HEADER_HEIGHT = 24;
 const DAY_HEADER_GAP = 8;
@@ -220,24 +219,23 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const [_isMobile, setIsMobile] = useState(false);
     const noop = useCallback(() => { }, []);
     const [expandedDays, setExpandedDays] = useState<Record<string, true>>({});
-    const [popoverState, setPopoverState] = useState<{
-        isOpen: boolean;
-        dateKey: string;
-        date: Date;
-        events: (Event | MultiDayEventInstance)[];
-        position?: { x: number; y: number };
-    }>({
-        isOpen: false,
-        dateKey: '',
-        date: new Date(),
-        events: []
-    });
 
     const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
         onEventSelect?.(event);
     }, [onEventSelect]);
 
     const handleEventHover = useCallback((_event: Event | MultiDayEventInstance, _e: React.MouseEvent) => { }, []);
+    const toggleExpandedDay = useCallback((dateKey: string) => {
+        setExpandedDays((prev) => {
+            if (prev[dateKey]) {
+                const next = { ...prev };
+                delete next[dateKey];
+                return next;
+            }
+
+            return { ...prev, [dateKey]: true };
+        });
+    }, []);
 
     // Memoize the card style to prevent new object creation on every render
     const cardStyle = useMemo(() => ({
@@ -245,29 +243,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         minHeight: '24px',
         fontSize: '0.75rem'
     }), []);
-
-    const openOverflowPopover = useCallback((
-        dateKey: string,
-        date: Date,
-        events: (Event | MultiDayEventInstance)[],
-        e: React.MouseEvent<HTMLButtonElement>
-    ) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setPopoverState({
-            isOpen: true,
-            dateKey,
-            date,
-            events,
-            position: {
-                x: rect.left + rect.width / 2,
-                y: rect.bottom
-            }
-        });
-    }, []);
-
-    const closeOverflowPopover = useCallback(() => {
-        setPopoverState((prev) => ({ ...prev, isOpen: false }));
-    }, []);
 
     React.useEffect(() => {
         setExpandedDays({});
@@ -323,6 +298,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     onClick={() => handleEventClick(segment.cardEvent)}
                                                     onHover={(e) => handleEventHover(segment.cardEvent, e)}
                                                     onLeave={noop}
+                                                    className="month-event-card--quiet"
                                                     style={cardStyle}
                                                 />
                                             </div>
@@ -370,16 +346,19 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     <button
                                                         type="button"
                                                         className="month-grid-more-button"
-                                                        onClick={(e) => openOverflowPopover(dayData.dateKey, dayData.date, dayData.overflowEvents, e)}
+                                                        onClick={() => toggleExpandedDay(dayData.dateKey)}
                                                         onMouseEnter={noop}
                                                         onFocus={noop}
-                                                        aria-label={`Show ${dayData.overflowEvents.length} more events on ${dayData.date.toLocaleDateString(undefined, {
+                                                        aria-expanded={isExpanded}
+                                                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} events on ${dayData.date.toLocaleDateString(undefined, {
                                                             weekday: 'long',
                                                             month: 'long',
                                                             day: 'numeric'
                                                         })}`}
                                                     >
-                                                        {`+${dayData.overflowEvents.length} more`}
+                                                        {isExpanded
+                                                            ? 'Show less'
+                                                            : `View ${dayData.overflowEvents.length} more`}
                                                     </button>
                                                 )}
                                             </div>
@@ -1458,18 +1437,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     return (
         <div className={`tech-calendar-month-view ${className}`}>
             <CustomMonthGrid />
-
-            {/* Month Day Overflow Popover */}
-            <MonthDayPopover
-                events={popoverState.events}
-                date={popoverState.date}
-                isOpen={popoverState.isOpen}
-                onClose={closeOverflowPopover}
-                position={popoverState.position}
-                onEventSelect={handleEventClick}
-                onEventHover={handleEventHover}
-                onEventLeave={noop}
-            />
         </div>
     );
 };

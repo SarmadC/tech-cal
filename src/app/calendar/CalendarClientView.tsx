@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useRef, useReducer, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useReducer, useEffect, startTransition } from 'react';
 import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -12,12 +12,132 @@ import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
-import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
+import { useUnifiedServerFiltering, type UnifiedFilterOptions } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
 import { CalendarProvider } from '@/contexts';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
+
+const DEFAULT_REGION_FILTER_SESSION_KEY = 'calendar-default-region-filter:v1';
+
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+    'America/New_York': 'United States',
+    'America/Chicago': 'United States',
+    'America/Denver': 'United States',
+    'America/Los_Angeles': 'United States',
+    'America/Phoenix': 'United States',
+    'America/Anchorage': 'United States',
+    'Pacific/Honolulu': 'United States',
+    'America/Toronto': 'Canada',
+    'America/Vancouver': 'Canada',
+    'America/Montreal': 'Canada',
+    'America/Edmonton': 'Canada',
+    'Europe/London': 'United Kingdom',
+    'Europe/Dublin': 'Ireland',
+    'Europe/Paris': 'France',
+    'Europe/Berlin': 'Germany',
+    'Europe/Amsterdam': 'Netherlands',
+    'Asia/Tokyo': 'Japan',
+    'Asia/Seoul': 'South Korea',
+    'Asia/Singapore': 'Singapore',
+    'Asia/Hong_Kong': 'Hong Kong',
+    'Asia/Shanghai': 'China',
+    'Asia/Kolkata': 'India',
+    'Australia/Sydney': 'Australia',
+    'Australia/Melbourne': 'Australia'
+};
+
+function getProfileCountry(preferencesValue: AppProfile['preferences']): string | null {
+    if (!preferencesValue || typeof preferencesValue !== 'object' || Array.isArray(preferencesValue)) {
+        return null;
+    }
+
+    const preferences = preferencesValue as Record<string, unknown>;
+    const location = preferences.location;
+    if (!location || typeof location !== 'object' || Array.isArray(location)) {
+        return null;
+    }
+
+    const country = (location as Record<string, unknown>).country;
+    return typeof country === 'string' && country.trim().length > 0 ? country.trim() : null;
+}
+
+function getCountryFromTimezone(timezone: string | null | undefined): string | null {
+    if (!timezone) {
+        return null;
+    }
+
+    return TIMEZONE_TO_COUNTRY[timezone] ?? null;
+}
+
+function getDefaultRegionalLocation(
+    preferencesValue: AppProfile['preferences'],
+    timezoneValue: AppProfile['timezone']
+): string | null {
+    const profileCountry = getProfileCountry(preferencesValue);
+    if (profileCountry) {
+        return profileCountry;
+    }
+
+    const timezoneCountry = getCountryFromTimezone(timezoneValue);
+    if (timezoneCountry) {
+        return timezoneCountry;
+    }
+
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    return getCountryFromTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+}
+
+function normalizeLocationLabel(value: string): string {
+    const trimmed = value.trim();
+    const normalized = trimmed.toLowerCase();
+
+    if (normalized === 'usa' || normalized === 'us' || normalized === 'america') {
+        return 'United States';
+    }
+
+    if (normalized === 'uk' || normalized === 'britain' || normalized === 'england') {
+        return 'United Kingdom';
+    }
+
+    if (normalized === 'uae') {
+        return 'United Arab Emirates';
+    }
+
+    return trimmed;
+}
+
+function deriveCalendarLocationOptions(events: Event[]): Array<{ value: string; count: number }> {
+    const counts = new Map<string, number>();
+
+    events.forEach((event) => {
+        const rawLocation = event.location?.trim();
+        if (!rawLocation || rawLocation.toLowerCase() === 'online') {
+            return;
+        }
+
+        const parts = rawLocation.split(',').map((part) => part.trim()).filter(Boolean);
+        const candidate = parts.length > 1 ? parts[parts.length - 1] : rawLocation;
+        const label = normalizeLocationLabel(candidate);
+
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+    });
+
+    return Array.from(counts.entries())
+        .sort((a, b) => {
+            if (b[1] !== a[1]) {
+                return b[1] - a[1];
+            }
+
+            return a[0].localeCompare(b[0]);
+        })
+        .slice(0, 8)
+        .map(([value, count]) => ({ value, count }));
+}
 
 // Shared Desktop Sidebar
 const EventDetailSidebarDynamic = dynamic(
@@ -101,7 +221,7 @@ function useCalendarUIState() {
 }
 
 // Custom hook for event data management - now uses server-side filtering
-function useEventData(profile: AppProfile | null, initialFilters: any) {
+function useEventData(profile: AppProfile | null, initialFilters: Partial<Record<string, unknown>>) {
     const {
         filteredEvents: enrichedEvents,
         isLoading,
@@ -118,7 +238,7 @@ function useEventData(profile: AppProfile | null, initialFilters: any) {
         counts
     } = useUnifiedServerFiltering(
         profile,
-        initialFilters,
+        initialFilters as Partial<UnifiedFilterOptions>,
         { surface: 'calendar', autoLoadAllPages: true }
     );
 
@@ -212,7 +332,7 @@ interface CalendarClientViewProps {
     initialEvents: (Event | MultiDayEvent)[];
     initialCategories: EventType[];
     profile: AppProfile | null;
-    initialFilters?: any;
+    initialFilters?: Partial<Record<string, unknown>>;
 }
 
 export default function CalendarClientView({
@@ -225,11 +345,47 @@ export default function CalendarClientView({
     const searchParams = useSearchParams();
     const router = useRouter();
     const isMobile = useIsMobile();
+    const defaultRegionalLocation = useMemo(
+        () => getDefaultRegionalLocation(profile?.preferences ?? null, profile?.timezone ?? null),
+        [profile?.preferences, profile?.timezone]
+    );
 
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
     const eventData = useEventData(profile, initialFilters);
+    const activeLocationCount = eventData.filters.locations.length;
+    const updateEventFilter = eventData.updateFilter;
     const { countsByEventId } = useNetworkEventCounts(eventData.enrichedEvents.map((event) => event.id));
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const hasSeededRegionFilter = window.sessionStorage.getItem(DEFAULT_REGION_FILTER_SESSION_KEY) === '1';
+        if (hasSeededRegionFilter) {
+            return;
+        }
+
+        if (searchParams.get('locations')) {
+            window.sessionStorage.setItem(DEFAULT_REGION_FILTER_SESSION_KEY, '1');
+            return;
+        }
+
+        if (activeLocationCount > 0) {
+            window.sessionStorage.setItem(DEFAULT_REGION_FILTER_SESSION_KEY, '1');
+            return;
+        }
+
+        if (!defaultRegionalLocation) {
+            return;
+        }
+
+        window.sessionStorage.setItem(DEFAULT_REGION_FILTER_SESSION_KEY, '1');
+        startTransition(() => {
+            updateEventFilter('locations', [defaultRegionalLocation]);
+        });
+    }, [activeLocationCount, defaultRegionalLocation, searchParams, updateEventFilter]);
 
     const enrichedEventsWithNetwork = useMemo(() => {
         if (Object.keys(countsByEventId).length === 0) {
@@ -261,6 +417,10 @@ export default function CalendarClientView({
             };
         });
     }, [eventData.enrichedEvents, countsByEventId]);
+    const calendarLocationOptions = useMemo(
+        () => deriveCalendarLocationOptions(enrichedEventsWithNetwork),
+        [enrichedEventsWithNetwork]
+    );
 
     const { dayEvents, weekEvents } = useViewEvents(enrichedEventsWithNetwork, searchParams);
 
@@ -452,10 +612,12 @@ export default function CalendarClientView({
                                                         format: eventData.filters.format,
                                                         cost: eventData.filters.cost,
                                                         categories: eventData.filters.categories,
-                                                        tags: eventData.filters.tags
+                                                        tags: eventData.filters.tags,
+                                                        locations: eventData.filters.locations
                                                     }}
                                                     onUpdateFilter={eventData.updateFilter}
                                                     categories={initialCategories}
+                                                    locationOptions={calendarLocationOptions}
                                                     events={enrichedEventsWithNetwork}
                                                     counts={eventData.counts || {}}
                                                     mobileMode={true}
