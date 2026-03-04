@@ -1,10 +1,8 @@
 'use client';
 
 import { FC, useMemo, useState, useCallback, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTER HOOKS
 import { MaterialIcon } from '@/components/ui/Icon';
-import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { formatDateForURL } from '@/utils/dateUtils';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
@@ -54,29 +52,11 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     const monthYearLabel = useMemo(() => {
         return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }, [currentDate]);
-
-    const dateContextLabel = useMemo(() => {
-        if (view === 'week') {
-            // Show the focused date for context in week view
-            return currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }
-        if (view === 'day') {
-            return currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        }
-        // Month view: still show the date for context, compact
-        return currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }, [currentDate, view]);
-
-    const isToday = useMemo(() => {
-        const today = new Date();
-        return currentDate.toDateString() === today.toDateString();
-    }, [currentDate]);
-
-    const todayButtonLabel = useMemo(() => {
-        if (isToday) return 'Today';
-        const shortDate = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        return `Today (${shortDate})`;
-    }, [isToday, currentDate]);
+    const hasAppliedFilters = activeFilterCount > 0;
+    const isFilterButtonActive = isFilterPanelOpen || hasAppliedFilters;
+    const filterButtonLabel = activeFilterCount > 0
+        ? `Filters, ${activeFilterCount} active`
+        : 'Filters';
 
     // Go to date quick picker
     // Quick date picker state
@@ -199,36 +179,24 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
             <div className="flex items-center gap-4">
                 {/* Filter Toggle */}
                 <button
-                    type="button"
                     onClick={onToggleFilters}
-                    className={`group relative flex items-center justify-center rounded-[10px] border px-2.5 py-2 backdrop-blur-sm transition-all duration-200 ${isFilterPanelOpen || activeFilterCount > 0
-                        ? 'border-white/10 bg-[#171a22] text-[#f5f7fb] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(0,0,0,0.32)]'
-                        : 'border-white/8 bg-[#12141a]/88 text-[#97a0b3] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_8px_18px_rgba(0,0,0,0.22)] hover:border-white/12 hover:bg-[#171a22] hover:text-[#eef2ff]'
+                    className={`group relative flex h-9 min-w-9 items-center justify-center rounded-lg border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/20 ${hasAppliedFilters
+                        ? 'border-accent-primary/25 bg-accent-primary/[0.08] text-accent-primary'
+                        : isFilterButtonActive
+                            ? 'border-border-default bg-background-secondary text-foreground-primary'
+                            : 'border-border-subtle/70 bg-background-secondary/60 text-foreground-tertiary hover:border-border-default hover:bg-background-tertiary hover:text-foreground-primary'
                         }`}
-                    aria-label="Toggle filters"
-                    aria-pressed={isFilterPanelOpen}
-                    title="Filters"
+                    aria-label={filterButtonLabel}
+                    title={filterButtonLabel}
                 >
-                    <div className="relative flex items-center justify-center">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 18 18"
-                            fill="none"
-                            aria-hidden="true"
-                        >
-                            <path d="M3 4.5H15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                            <path d="M5.25 9H12.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                            <path d="M7.5 13.5H10.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    <div className="flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"></path>
                         </svg>
-                        {activeFilterCount > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center pointer-events-none">
-                                <span className="absolute h-4 w-4 rounded-full bg-accent-primary/28" />
-                                <span className="absolute h-2.5 w-2.5 rounded-full border border-black/10 bg-accent-primary shadow-[0_0_0_1px_rgba(255,255,255,0.22)]" />
-                            </span>
-                        )}
                     </div>
+                    {hasAppliedFilters && (
+                        <span className="pointer-events-none absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-accent-primary/90" aria-hidden="true"></span>
+                    )}
                 </button>
 
                 <div className="h-4 w-[1px] bg-border-subtle mx-1"></div>

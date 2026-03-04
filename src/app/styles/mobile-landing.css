@@ -5,6 +5,7 @@
 /* ============================================== */
 
 .mobile-landing-container {
+  --mobile-page-gutter: 18px;
   min-height: 100vh;
   background: var(--background-main);
   color: var(--foreground-primary);
@@ -49,7 +50,7 @@ html.dark .mobile-landing-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
+  padding: 1rem var(--mobile-page-gutter);
   height: 60px;
   width: 100%;
   position: relative;
@@ -120,7 +121,7 @@ html.dark .mobile-nav-menu {
 }
 
 .mobile-nav-content {
-  padding: 2rem 1.5rem;
+  padding: 2rem var(--mobile-page-gutter);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -306,21 +307,22 @@ html.light .hero-grid-pattern {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: var(--space-8) var(--space-6);
-  padding-top: max(var(--space-12), 10vh);
+  padding: var(--space-8) var(--mobile-page-gutter);
   padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
   gap: var(--space-4);
 }
 
 /* Text Block - Left Aligned */
 .hero-text-block {
-  --hero-copy-align-offset: var(--space-4);
+  --hero-copy-align-offset: 0px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   text-align: left;
   max-width: 85%;
   padding-top: var(--space-4);
+  margin-top: -8vh; /* Push text higher */
+  margin-bottom: 4vh; /* Give card more breathing room */
   box-sizing: border-box;
   animation: heroFadeInUp 0.6s ease-out;
 }
@@ -490,7 +492,7 @@ html.light .hero-subtext {
   justify-content: flex-end;
   padding-right: 0;
   margin-right: -24px;
-  margin-top: max(var(--space-20), 12vh);
+  margin-top: max(var(--space-12), 10vh);
   /* Extra space from text block */
   /* Extend beyond container edge */
   animation: heroCardFloat 0.8s ease-out 0.3s both;
@@ -757,7 +759,7 @@ html.light .hero-event-card-badge {
   right: 0;
   bottom: 0;
   z-index: 1000;
-  padding: var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--mobile-page-gutter);
   padding-bottom: max(var(--space-8), calc(env(safe-area-inset-bottom) + var(--space-3)));
   pointer-events: none;
   background: linear-gradient(180deg,
@@ -1454,7 +1456,7 @@ html.light .subtitle-secondary {
 /* ============================================== */
 
 .mobile-features {
-  padding: var(--space-8) var(--space-6) var(--space-4) var(--space-6);
+  padding: var(--space-8) var(--mobile-page-gutter) var(--space-4);
   background: var(--background-main);
   overflow: visible;
   min-height: auto;
@@ -1616,7 +1618,7 @@ html.dark .mobile-features {
 /* ============================================== */
 
 .mobile-chaos-to-order {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--mobile-page-gutter);
   margin-top: -24px;
   background: var(--background-main);
   position: relative;
@@ -2523,13 +2525,13 @@ html.dark .mobile-chaos-to-order {
 /* ============================================== */
 
 .mobile-use-cases {
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) var(--mobile-page-gutter);
   background: var(--background-main);
   position: relative;
 }
 
 .mobile-use-cases {
-  padding: clamp(2.5rem, 6vw, 3.5rem) clamp(1.25rem, 4vw, 1.5rem);
+  padding: clamp(2.5rem, 6vw, 3.5rem) var(--mobile-page-gutter);
 }
 
 /* Dark mode background - match landing page */
@@ -2953,13 +2955,13 @@ html.light .mobile-use-case-popover-graphic {
 /* ============================================== */
 
 .mobile-faq {
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) var(--mobile-page-gutter);
   background: var(--background-main);
   position: relative;
 }
 
 .mobile-faq {
-  padding: clamp(2.5rem, 6vw, 3.5rem) clamp(1.25rem, 4vw, 1.5rem);
+  padding: clamp(2.5rem, 6vw, 3.5rem) var(--mobile-page-gutter);
 }
 /* Dark mode background - match landing page */
 .dark .mobile-faq,
@@ -3433,13 +3435,13 @@ html.dark .mobile-footer {
 
 @media (max-width: 480px) {
   .hero-content-wrapper {
-    padding: var(--space-8) var(--space-6) var(--space-6);
+    padding: var(--space-8) var(--mobile-page-gutter) var(--space-6);
     padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
     gap: var(--space-4);
   }
 
   .hero-text-block {
-    --hero-copy-align-offset: var(--space-4);
+    --hero-copy-align-offset: 0px;
     max-width: 100%;
     gap: var(--space-4);
     padding-top: var(--space-2);
@@ -3477,7 +3479,7 @@ html.dark .mobile-footer {
   }
 
   .hero-sticky-cta-bar {
-    padding: var(--space-3) var(--space-6);
+    padding: var(--space-3) var(--mobile-page-gutter);
     padding-bottom: max(var(--space-6), calc(env(safe-area-inset-bottom) + var(--space-3)));
   }
 
@@ -3520,7 +3522,7 @@ html.dark .mobile-footer {
 /* Ultra-compact phones ~320–340px width */
 @media (max-width: 340px) {
   .hero-content-wrapper {
-    padding: var(--space-6) var(--space-6) var(--space-6);
+    padding: var(--space-6) var(--mobile-page-gutter);
     gap: var(--space-4);
   }
 
@@ -3641,7 +3643,7 @@ html.dark .mobile-footer {
 
 @media (max-height: 700px) {
   .hero-content-wrapper {
-    padding: var(--space-6) var(--space-6);
+    padding: var(--space-6) var(--mobile-page-gutter);
     padding-bottom: calc(var(--space-12) + env(safe-area-inset-bottom));
     gap: var(--space-4);
   }
@@ -3676,7 +3678,7 @@ html.dark .mobile-footer {
   }
 
   .hero-sticky-cta-bar {
-    padding: var(--space-2) var(--space-6);
+    padding: var(--space-2) var(--mobile-page-gutter);
     padding-bottom: max(var(--space-6), calc(env(safe-area-inset-bottom) + var(--space-2)));
   }
 

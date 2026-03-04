@@ -223,7 +223,7 @@
 }
 
 .container {
-    padding: 0 20px;
+    padding: 0 var(--mobile-page-gutter, 16px);
 }
 
 .header {
@@ -1647,5 +1647,4 @@
     opacity: 0.3;
     pointer-events: none;
 }
-
 

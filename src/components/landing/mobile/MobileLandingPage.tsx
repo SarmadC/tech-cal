@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useAuth } from '@/contexts/AuthContext';
 import MobileHeroSection from './MobileHeroSection';
 import MobileChaosToOrderSection from './MobileChaosToOrderSection';
 import MobileFeatureShowcaseSection from './MobileFeatureShowcaseSection';
@@ -21,10 +22,12 @@ export interface MobileLandingPageProps {
 
 const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' }) => {
     const { isMobile, userAgent } = useDeviceDetection();
+    const { user } = useAuth();
 
     // Enhanced mobile detection for specific devices
     const isIOSMobile = userAgent.isIOS && isMobile;
     const isAndroidMobile = userAgent.isAndroid && isMobile;
+    const exploreHref = user ? '/discover' : '/events';
 
     const navItems = [
         {
@@ -83,7 +86,7 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
             </main>
 
             <div className="hero-sticky-cta-bar">
-                <Link href="/events" className="hero-cta-button">
+                <Link href={exploreHref} className="hero-cta-button">
                     <span className="hero-cta-balance-spacer" aria-hidden="true" />
                     <span className="hero-cta-text">Explore Events</span>
                     <span className="hero-cta-arrow-chip" aria-hidden="true">
