@@ -6,3 +6,6 @@ export { FeaturesSection } from './FeaturesSection';
 export { SocialVirtualSection } from './SocialVirtualSection';
 export { AgendaSection } from './AgendaSection';
 export { SpeakersSection } from './SpeakersSection';
+export { UrlsMediaSection } from './UrlsMediaSection';
+export { VenueSection } from './VenueSection';
+export { OrganizerSection } from './OrganizerSection';

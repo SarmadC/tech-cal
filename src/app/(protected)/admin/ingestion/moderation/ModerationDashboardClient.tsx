@@ -373,7 +373,7 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
     );
 
     const handleEditAndApprove = useCallback(
-        async (item: QueueItem, eventData: Record<string, string>) => {
+        async (item: QueueItem, eventData: Record<string, unknown>) => {
             if (!item.event_id) {
                 showError('Cannot edit: no linked event found.');
                 return;

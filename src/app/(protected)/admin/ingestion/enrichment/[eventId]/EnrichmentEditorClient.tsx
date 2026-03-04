@@ -8,11 +8,9 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
-import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -28,6 +26,9 @@ import {
     SocialVirtualSection,
     AgendaSection,
     SpeakersSection,
+    UrlsMediaSection,
+    VenueSection,
+    OrganizerSection,
 } from '@/components/admin/enrichment/sections';
 
 // Import types from shared types file
@@ -109,6 +110,7 @@ export default function EnrichmentEditorClient({
         event_type_id: event.event_type?.id || null,
         venue_id: event.venue?.id || null,
         series_id: event.series?.id || null,
+        organizer_id: event.organizer?.id || null,
         tagIds: (event.event_tag_relations ?? []).map((relation) => relation.tag_id),
         audienceIds: (event.event_target_audiences ?? []).map((relation) => relation.audience_id),
         prerequisiteIds: (event.event_prerequisites ?? []).map((relation) => relation.prerequisite_id),
@@ -135,6 +137,8 @@ export default function EnrichmentEditorClient({
         website_url: event.organizer?.website_url || '',
         social_media: (event.organizer?.social_media as Record<string, unknown>) || null,
     });
+    const [isCreatingOrganizer, setIsCreatingOrganizer] = useState(!event.organizer?.id);
+    const [createdOrganizerId, setCreatedOrganizerId] = useState<string | null>(null);
 
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const expandedDescriptionRef = useRef<HTMLTextAreaElement | null>(null);
@@ -184,15 +188,10 @@ export default function EnrichmentEditorClient({
         Array.isArray(event.speaker_lineup) ? (event.speaker_lineup as Speaker[]) : []
     );
 
-    // Logo upload state
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [logoUploading, setLogoUploading] = useState(false);
-    const [logoExtractorOpen, setLogoExtractorOpen] = useState(false);
+    // Logo state (needed for OrganizerSection)
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(
         getLogoUrlFromInput(event.organizer?.logo_url || null, event.organizer?.name) || null
     );
-
-    const [eventImageExtractorOpen, setEventImageExtractorOpen] = useState(false);
 
     const handleAddAgendaItem = useCallback(() => {
         setAgendaItems([...agendaItems, {
@@ -328,255 +327,6 @@ export default function EnrichmentEditorClient({
         }
     }, [speakers, event.id]);
 
-    const handleUploadLogo = useCallback(async () => {
-        if (!logoFile || !event.organizer) {
-            setError('Please select a logo file');
-            return;
-        }
-
-        setLogoUploading(true);
-        setError(null);
-        setSuccess(false);
-
-        try {
-            const formData = new FormData();
-            formData.append('organizerId', event.organizer.id);
-            formData.append('file', logoFile);
-
-            const response = await fetch('/api/admin/ingestion/enrichment/logo', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to upload logo');
-            }
-
-            setSuccess(true);
-            setLogoFile(null);
-            // Update the current logo URL display
-            if (data.logoUrl) {
-                console.log('Setting logo URL:', data.logoUrl);
-                // Add cache-busting to force image refresh
-                const cleanUrl = data.logoUrl.split('?')[0];
-                const urlWithCache = `${cleanUrl}?t=${Date.now()}`;
-                setCurrentLogoUrl(urlWithCache);
-            } else {
-                console.warn('No logoUrl in response:', data);
-            }
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            setError(errorMessage);
-            Sentry.captureException(err);
-        } finally {
-            setLogoUploading(false);
-        }
-    }, [logoFile, event.organizer]);
-
-    const handleLogoFromUrl = useCallback(async (imageUrl: string) => {
-        if (!event.organizer) {
-            setError('No organizer to attach logo to');
-            return;
-        }
-
-        setLogoUploading(true);
-        setError(null);
-        setSuccess(false);
-
-        try {
-            // Fetch the image through server-side proxy to bypass CSP
-            const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl }),
-            });
-
-            const fetchData = await fetchResponse.json();
-
-            if (!fetchResponse.ok) {
-                throw new Error(fetchData.error || 'Failed to fetch image from URL');
-            }
-
-            // Validate fetch response data
-            if (!fetchData.imageData || !fetchData.contentType || !fetchData.filename) {
-                throw new Error('Invalid response from image fetch: missing required fields');
-            }
-
-            // Convert base64 back to blob
-            let binaryString: string;
-            try {
-                binaryString = atob(fetchData.imageData);
-            } catch {
-                throw new Error('Failed to decode base64 image data');
-            }
-
-            if (binaryString.length === 0) {
-                throw new Error('Decoded image data is empty');
-            }
-
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const blob = new Blob([bytes], { type: fetchData.contentType });
-
-            // Validate blob size
-            if (blob.size === 0) {
-                throw new Error('Blob size is 0 bytes');
-            }
-
-            // Create File object with proper properties
-            const file = new File([blob], fetchData.filename, {
-                type: fetchData.contentType,
-                lastModified: Date.now(),
-            });
-
-            // Validate file object
-            if (file.size === 0) {
-                throw new Error('File size is 0 bytes after creation');
-            }
-
-            if (!file.type || !file.type.startsWith('image/')) {
-                console.warn('File type may be invalid:', file.type);
-            }
-
-            console.log('Created file for upload:', {
-                name: file.name,
-                size: file.size,
-                type: file.type,
-            });
-
-            // Upload to Supabase
-            const formData = new FormData();
-            formData.append('organizerId', event.organizer.id);
-            formData.append('file', file);
-
-            const uploadResponse = await fetch('/api/admin/ingestion/enrichment/logo', {
-                method: 'POST',
-                body: formData,
-            });
-
-            let data;
-            try {
-                data = await uploadResponse.json();
-            } catch (parseError) {
-                console.error('Failed to parse upload response:', parseError);
-                throw new Error(`Failed to upload logo: Invalid response from server (${uploadResponse.status})`);
-            }
-
-            if (!uploadResponse.ok) {
-                const errorMessage = data?.error || `Failed to upload logo: HTTP ${uploadResponse.status}`;
-                console.error('Logo upload failed:', {
-                    status: uploadResponse.status,
-                    error: errorMessage,
-                    data,
-                });
-                throw new Error(errorMessage);
-            }
-
-            setSuccess(true);
-            if (data.logoUrl) {
-                console.log('Setting logo URL:', data.logoUrl);
-                // Add cache-busting to force image refresh
-                const cleanUrl = data.logoUrl.split('?')[0];
-                const urlWithCache = `${cleanUrl}?t=${Date.now()}`;
-                setCurrentLogoUrl(urlWithCache);
-            } else {
-                console.warn('No logoUrl in response:', data);
-            }
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            setError(errorMessage);
-            Sentry.captureException(err);
-        } finally {
-            setLogoUploading(false);
-        }
-    }, [event.organizer]);
-
-    const handleEventImageFromUrl = useCallback(async (imageUrl: string) => {
-        setLoading(true);
-        setError(null);
-        setSuccess(false);
-
-        try {
-            // Fetch the image through server-side proxy to bypass CSP
-            const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl }),
-            });
-
-            const fetchData = await fetchResponse.json();
-
-            if (!fetchResponse.ok) {
-                throw new Error(fetchData.error || 'Failed to fetch image from URL');
-            }
-
-            // Validate fetch response data
-            if (!fetchData.imageData || !fetchData.contentType || !fetchData.filename) {
-                throw new Error('Invalid response from image fetch: missing required fields');
-            }
-
-            // Convert base64 back to blob
-            let binaryString: string;
-            try {
-                binaryString = atob(fetchData.imageData);
-            } catch {
-                throw new Error('Failed to decode base64 image data');
-            }
-
-            if (binaryString.length === 0) {
-                throw new Error('Decoded image data is empty');
-            }
-
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const blob = new Blob([bytes], { type: fetchData.contentType });
-
-            // Create File object
-            const file = new File([blob], fetchData.filename, {
-                type: fetchData.contentType,
-                lastModified: Date.now(),
-            });
-
-            // Upload to Supabase
-            const formData = new FormData();
-            formData.append('eventId', event.id);
-            formData.append('file', file);
-
-            const uploadResponse = await fetch('/api/admin/ingestion/enrichment/image', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await uploadResponse.json();
-
-            if (!uploadResponse.ok) {
-                throw new Error(data.error || 'Failed to upload image');
-            }
-
-            if (data.imageUrl) {
-                setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
-                setSuccess(true);
-                setTimeout(() => setSuccess(false), 3000);
-            }
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            setError(errorMessage);
-            Sentry.captureException(err);
-        } finally {
-            setLoading(false);
-        }
-    }, [event.id]);
-
     const handleSaveCoreFields = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -629,6 +379,39 @@ export default function EnrichmentEditorClient({
                 };
             }
 
+            // If creating a new organizer, create it first
+            if (isCreatingOrganizer && organizerData.name.trim()) {
+                const orgResponse = await fetch('/api/admin/ingestion/enrichment/organizer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: organizerData.name.trim(),
+                        description: organizerData.description?.trim() || null,
+                        website_url: organizerData.website_url?.trim() || null,
+                    }),
+                });
+
+                const orgData = await orgResponse.json();
+
+                if (!orgResponse.ok) {
+                    throw new Error(orgData.error || 'Failed to create organizer');
+                }
+
+                if (!orgData.organizerId) {
+                    throw new Error('Organizer creation succeeded but no organizer ID returned');
+                }
+
+                finalRelationships = {
+                    ...finalRelationships,
+                    organizer_id: orgData.organizerId,
+                };
+                setCreatedOrganizerId(orgData.organizerId);
+                setIsCreatingOrganizer(false);
+            }
+
+            // Determine the organizer ID for updating organizer data
+            const activeOrganizerId = createdOrganizerId || event.organizer?.id || finalRelationships.organizer_id;
+
             // Save event fields and relationships
             const response = await fetch('/api/admin/ingestion/enrichment/event', {
                 method: 'PUT',
@@ -638,9 +421,9 @@ export default function EnrichmentEditorClient({
                     coreFields,
                     relationships: finalRelationships,
                     // Include organizer data if organizer exists
-                    ...(event.organizer?.id && {
+                    ...(activeOrganizerId && !isCreatingOrganizer && {
                         organizerData: {
-                            organizerId: event.organizer.id,
+                            organizerId: activeOrganizerId,
                             name: organizerData.name,
                             description: organizerData.description,
                             website_url: organizerData.website_url,
@@ -667,7 +450,7 @@ export default function EnrichmentEditorClient({
         } finally {
             setLoading(false);
         }
-    }, [coreFields, relationships, event.id, event.organizer?.id, organizerData, isCreatingVenue, venueData, showSuccess, showError]);
+    }, [coreFields, relationships, event.id, event.organizer?.id, organizerData, isCreatingVenue, venueData, isCreatingOrganizer, createdOrganizerId, showSuccess, showError]);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -829,86 +612,14 @@ export default function EnrichmentEditorClient({
                 </div>
 
                 {/* URLs & Media Section */}
-                <div id="urls" className="scroll-mt-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-foreground-primary">URLs & Media</h3>
-                    </div>
-                    <div className="grid gap-4">
-                        <div className="grid gap-2">
-                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Source URL</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={coreFields.source_url}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, source_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Registration URL</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={coreFields.registration_url}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, registration_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Livestream URL</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={coreFields.livestream_url}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, livestream_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Agenda URL</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={coreFields.agenda_url}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, agenda_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                            />
-                        </div>
-                        <div className="grid gap-2 pt-4">
-                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Image</label>
-                            <div className="flex items-start gap-4">
-                                {coreFields.event_image_url && (
-                                    <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-default bg-background-tertiary">
-                                        <Image
-                                            src={coreFields.event_image_url}
-                                            alt="Event"
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                )}
-                                <div className="flex-1">
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setEventImageExtractorOpen(true)}
-                                            className="text-xs"
-                                        >
-                                            <MaterialIcon name="image" size={16} className="mr-2" />
-                                            Update Image
-                                        </Button>
-                                    </div>
-                                    <p className="mt-2 text-xs text-foreground-muted">
-                                        Recommended: 1200x630px or larger. JPG, PNG, WebP.
-                                    </p>
-                                    <p className="mt-2 text-xs text-foreground-muted">
-                                        Recommended: 1200x630px or larger. JPG, PNG, WebP.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div id="urls" className="scroll-mt-6">
+                    <UrlsMediaSection
+                        eventId={event.id}
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                        onSuccess={() => { setSuccess(true); setTimeout(() => setSuccess(false), 3000); }}
+                        onError={(msg) => setError(msg)}
+                    />
                 </div>
 
                 {/* Features Section */}
@@ -953,213 +664,34 @@ export default function EnrichmentEditorClient({
                 </div>
 
                 {/* Venue Section */}
-                <div id="venue" className="scroll-mt-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-foreground-primary">Venue</h3>
-                    </div>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="flex items-center space-x-2 mb-4 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={isCreatingVenue}
-                                    onChange={(e) => setIsCreatingVenue(e.target.checked)}
-                                    className="rounded border-default bg-background-tertiary text-accent-primary focus:ring-0"
-                                />
-                                <span className="text-sm text-foreground-tertiary">Create New Venue</span>
-                            </label>
-                            {!isCreatingVenue && (
-                                <select
-                                    value={relationships.venue_id || ''}
-                                    onChange={(e) => setRelationships(prev => ({ ...prev, venue_id: e.target.value || null }))}
-                                    className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
-                                >
-                                    <option value="" className="bg-background-main">Select Existing Venue</option>
-                                    {lookupData.venues.map(venue => (
-                                        <option key={venue.id} value={venue.id} className="bg-background-main">
-                                            {venue.name} {venue.city ? `(${venue.city})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-                        {isCreatingVenue && (
-                            <div className="grid gap-4">
-                                <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Venue Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Venue Name"
-                                        value={venueData.name}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, name: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                        required
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Address</label>
-                                    <textarea
-                                        placeholder="Full Address"
-                                        value={venueData.address}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, address: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
-                                        rows={2}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">City</label>
-                                        <input
-                                            type="text"
-                                            placeholder="City"
-                                            value={venueData.city}
-                                            onChange={(e) => setVenueData(prev => ({ ...prev, city: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">State/Province</label>
-                                        <input
-                                            type="text"
-                                            placeholder="State"
-                                            value={venueData.state_province}
-                                            onChange={(e) => setVenueData(prev => ({ ...prev, state_province: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Country</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Country"
-                                        value={venueData.country}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, country: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                <div id="venue" className="scroll-mt-6">
+                    <VenueSection
+                        venueData={venueData}
+                        setVenueData={setVenueData}
+                        relationships={relationships}
+                        setRelationships={setRelationships}
+                        lookupData={lookupData}
+                        isCreatingVenue={isCreatingVenue}
+                        setIsCreatingVenue={setIsCreatingVenue}
+                    />
                 </div>
 
                 {/* Organizer Section */}
-                <div id="organizer" className="scroll-mt-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-foreground-primary">Organizer</h3>
-                    </div>
-                    {event.organizer ? (
-                        <div className="space-y-6">
-                            <div className="flex items-start gap-6">
-                                <div className="space-y-3">
-                                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-default bg-background-tertiary">
-                                        {currentLogoUrl ? (
-                                            <Image
-                                                src={currentLogoUrl}
-                                                alt={event.organizer.name}
-                                                fill
-                                                className="object-contain p-2"
-                                            />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center text-foreground-muted">
-                                                <MaterialIcon name="building" size={32} />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setLogoExtractorOpen(true)}
-                                        className="w-full text-xs"
-                                    >
-                                        Update Logo
-                                    </Button>
-                                </div>
-                                <div className="flex-1 space-y-4">
-                                    <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Name</label>
-                                        <input
-                                            type="text"
-                                            value={organizerData.name}
-                                            onChange={(e) => setOrganizerData(prev => ({ ...prev, name: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Website</label>
-                                        <input
-                                            type="url"
-                                            value={organizerData.website_url}
-                                            onChange={(e) => setOrganizerData(prev => ({ ...prev, website_url: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Description</label>
-                                <textarea
-                                    value={organizerData.description}
-                                    onChange={(e) => setOrganizerData(prev => ({ ...prev, description: e.target.value }))}
-                                    className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
-                                    rows={3}
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-4 rounded border border-default bg-background-tertiary text-center text-foreground-tertiary">
-                            No organizer associated with this event.
-                        </div>
-                    )}
+                <div id="organizer" className="scroll-mt-6">
+                    <OrganizerSection
+                        organizer={event.organizer}
+                        organizerData={organizerData}
+                        setOrganizerData={setOrganizerData}
+                        currentLogoUrl={currentLogoUrl}
+                        setCurrentLogoUrl={setCurrentLogoUrl}
+                        sourceUrl={event.organizer?.website_url || ''}
+                        onSuccess={() => { setSuccess(true); setTimeout(() => setSuccess(false), 3000); }}
+                        onError={(msg) => setError(msg)}
+                        isCreatingOrganizer={isCreatingOrganizer}
+                        setIsCreatingOrganizer={setIsCreatingOrganizer}
+                    />
                 </div>
             </div>
-
-            {/* Image Extractor Modal */}
-            <ImageExtractorModal
-                isOpen={logoExtractorOpen}
-                onClose={() => setLogoExtractorOpen(false)}
-                onSelect={handleLogoFromUrl}
-                onFileSelected={(file) => {
-                    setLogoFile(file);
-                    handleUploadLogo();
-                }}
-                initialUrl={event.organizer?.website_url || ''}
-                title="Update Logo"
-                description="Upload a file or extract from website"
-                contextName={event.organizer?.name || ''}
-            />
-
-            <ImageExtractorModal
-                isOpen={eventImageExtractorOpen}
-                onClose={() => setEventImageExtractorOpen(false)}
-                onSelect={handleEventImageFromUrl}
-                onFileSelected={async (file) => {
-                    const formData = new FormData();
-                    formData.append('eventId', event.id);
-                    formData.append('file', file);
-                    try {
-                        const response = await fetch('/api/admin/ingestion/enrichment/image', {
-                            method: 'POST',
-                            body: formData,
-                        });
-                        const data = await response.json();
-                        if (response.ok && data.imageUrl) {
-                            setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
-                            setSuccess(true);
-                            setTimeout(() => setSuccess(false), 3000);
-                        } else {
-                            setError(data.error || 'Failed to upload image');
-                        }
-                    } catch {
-                        setError('Failed to upload image');
-                    }
-                    setEventImageExtractorOpen(false);
-                }}
-                initialUrl={coreFields.source_url || coreFields.registration_url || ''}
-                title="Update Event Image"
-                description="Upload a file or extract from website"
-                contextName={event.title}
-            />
 
             {/* Description Editor Modal */}
             {

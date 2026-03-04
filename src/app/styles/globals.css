@@ -350,21 +350,21 @@ textarea:not([class*="fc-"]):focus {
   /* automatically adapts */
 
   /* Calendar Month View - Light Mode */
-  --calendar-month-grid-line: var(--border-strong);
-  --calendar-month-grid-line-soft: var(--border-default);
-  --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main), var(--accent-primary) 4%);
-  --calendar-month-cell-hover-ring: color-mix(in srgb, var(--accent-primary) 40%, var(--background-main));
+  --calendar-month-grid-line: #e5e7eb;
+  --calendar-month-grid-line-soft: #e5e7eb;
+  --calendar-month-cell-hover-bg: color-mix(in srgb, var(--background-main) 95%, var(--calendar-selection-blue));
+  --calendar-month-cell-hover-ring: color-mix(in srgb, var(--calendar-selection-blue) 22%, var(--background-main));
   --calendar-month-other-bg: color-mix(in srgb, var(--background-main) 92%, var(--foreground-primary));
   --calendar-month-other-text: var(--foreground-tertiary);
   --calendar-month-other-opacity: 0.6;
-  --calendar-month-weekend-bg: color-mix(in srgb, var(--background-secondary) 92%, var(--foreground-primary));
-  --calendar-month-weekend-hover-bg: color-mix(in srgb, var(--background-secondary) 88%, var(--foreground-primary));
+  --calendar-month-weekend-bg: transparent;
+  --calendar-month-weekend-hover-bg: color-mix(in srgb, var(--background-main) 96%, var(--calendar-selection-blue));
   --calendar-month-weekend-text: var(--foreground-tertiary);
-  --calendar-month-today-bg: color-mix(in srgb, var(--brand-primary) 12%, var(--background-main));
-  --calendar-month-today-border: color-mix(in srgb, var(--brand-primary) 38%, var(--background-main));
-  --calendar-month-today-ring: color-mix(in srgb, var(--brand-primary) 62%, var(--background-main));
-  --calendar-month-today-number-bg: color-mix(in srgb, var(--brand-primary) 22%, var(--background-main));
-  --calendar-month-today-number-text: var(--foreground-primary);
+  --calendar-month-today-bg: color-mix(in srgb, var(--background-main) 95%, var(--calendar-selection-blue));
+  --calendar-month-today-border: color-mix(in srgb, var(--background-main) 82%, var(--calendar-selection-blue));
+  --calendar-month-today-ring: color-mix(in srgb, var(--background-main) 68%, var(--calendar-selection-blue));
+  --calendar-month-today-number-bg: var(--calendar-selection-blue);
+  --calendar-month-today-number-text: var(--calendar-selection-text);
   --calendar-month-expanded-bg: color-mix(in srgb, var(--background-elevated) 94%, var(--foreground-primary));
   --calendar-month-expanded-border: color-mix(in srgb, var(--border-strong) 82%, var(--foreground-primary));
   --calendar-month-expanded-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
@@ -378,9 +378,9 @@ textarea:not([class*="fc-"]):focus {
   --calendar-month-accent-mix-base: var(--background-main);
   --calendar-month-accent-strength: 26%;
   --calendar-month-accent-hover-strength: 36%;
-  --calendar-month-more-bg: var(--background-tertiary);
-  --calendar-month-more-border: var(--border-strong);
-  --calendar-month-more-text: var(--foreground-primary);
+  --calendar-month-more-bg: transparent;
+  --calendar-month-more-border: transparent;
+  --calendar-month-more-text: var(--calendar-selection-blue);
   --calendar-month-event-text: #1e293b;
   --calendar-month-event-meta-text: #334155;
   --calendar-month-event-border-contrast: #0f172a;

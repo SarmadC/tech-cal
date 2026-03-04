@@ -95,7 +95,7 @@ const formatInlineMeta = (_event: InlineEvent) => {
 interface MonthInlineEventRowProps {
     event: InlineEvent;
     onSelect: (event: InlineEvent) => void;
-    onHover: (event: InlineEvent, e: React.MouseEvent<HTMLButtonElement>) => void;
+    onHover: (event: InlineEvent, e: React.MouseEvent) => void;
     onLeave: () => void;
 }
 
@@ -105,48 +105,33 @@ const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
     onHover,
     onLeave
 }) => {
-    const accent = getEventAccentColor(event);
-    const meta = formatInlineMeta(event);
-
-    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
+    const handleClick = () => {
         onLeave();
         onSelect(event);
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onLeave();
-            onSelect(event);
-        }
-    };
-
     return (
-        <button
-            type="button"
-            className="month-inline-event"
-            style={{ ['--event-accent-color' as string]: accent }}
+        <MonthEventCard
+            event={event}
             onClick={handleClick}
-            onKeyDown={handleKeyDown}
-            onMouseEnter={(e) => onHover(event, e)}
-            onMouseLeave={onLeave}
-        >
-            <span
-                className="month-inline-event-accent"
-                style={{ backgroundColor: accent }}
-                aria-hidden="true"
-            />
-
-            <span className="month-inline-event-content">
-                <span className="month-inline-event-title" title={event.title}>
-                    {event.title}
-                </span>
-                {meta && <span className="month-inline-event-meta">{meta}</span>}
-            </span>
-        </button>
+            onHover={(e) => onHover(event, e)}
+            onLeave={onLeave}
+            className="month-inline-event-card"
+        />
     );
 };
+
+const MonthOverflowDots: React.FC<{ events: InlineEvent[] }> = ({ events }) => (
+    <span className="month-grid-more-dots" aria-hidden="true">
+        {events.map((event, index) => (
+            <span
+                key={`${event.id}-${index}`}
+                className="month-grid-more-dot"
+                style={{ backgroundColor: getEventAccentColor(event) }}
+            />
+        ))}
+    </span>
+);
 
 const makeEventBaseKey = (event: Event | MultiDayEvent) => {
     if (event.id) return event.id;
@@ -162,6 +147,52 @@ const makePerDayInstanceKey = (event: Event | MultiDayEventInstance, dateKey: st
     }
     const baseId = event.id ?? `${event.title ?? 'untitled'}-${event.startTime}`;
     return `${baseId}::${dateKey}`;
+};
+
+const makeCellEventKey = (event: Event | MultiDayEventInstance, dateKey: string) => {
+    if ('isInstance' in event && event.isInstance) {
+        const originId = event.originalEventId ?? event.id ?? 'unknown';
+        return `${originId}::${dateKey}`;
+    }
+    const baseId = event.id ?? `${event.title ?? 'untitled'}-${event.startTime}`;
+    return `${baseId}::${dateKey}`;
+};
+
+const getOverflowIndicatorEvents = (events: InlineEvent[]) => {
+    const indicatorEvents: InlineEvent[] = [];
+    const seenEventKeys = new Set<string>();
+
+    events.forEach((event) => {
+        if ('isInstance' in event && event.isInstance) {
+            const baseId = event.originalEventId ?? event.id ?? 'unknown';
+            const isMultiDayContinuation =
+                !!event.dayInfo &&
+                event.dayInfo.totalDays > 1 &&
+                !event.dayInfo.isFirstDay;
+
+            if (isMultiDayContinuation) {
+                return;
+            }
+
+            if (seenEventKeys.has(baseId)) {
+                return;
+            }
+
+            seenEventKeys.add(baseId);
+            indicatorEvents.push(event);
+            return;
+        }
+
+        const baseId = event.id ?? `${event.title ?? 'untitled'}-${event.startTime}`;
+        if (seenEventKeys.has(baseId)) {
+            return;
+        }
+
+        seenEventKeys.add(baseId);
+        indicatorEvents.push(event);
+    });
+
+    return indicatorEvents;
 };
 
 export const groupEventsByDate = (processedEvents: (Event | MultiDayEventInstance)[]) => {
@@ -314,6 +345,10 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                         week.ribbonHeight +
                                         (week.ribbonHeight > 0 ? 12 : 8);
                                     const isExpanded = !!expandedDays[dayData.dateKey];
+                                    const overflowIndicatorEvents = getOverflowIndicatorEvents(dayData.overflowEvents);
+                                    const showOverflowControl = isExpanded
+                                        ? dayData.overflowEvents.length > 0
+                                        : overflowIndicatorEvents.length > 0;
                                     const visibleEvents = isExpanded
                                         ? [...dayData.inlineEvents, ...dayData.overflowEvents]
                                         : dayData.inlineEvents;
@@ -342,7 +377,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     </div>
                                                 ))}
 
-                                                {dayData.overflowEvents.length > 0 && (
+                                                {showOverflowControl && (
                                                     <button
                                                         type="button"
                                                         className="month-grid-more-button"
@@ -356,9 +391,18 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                             day: 'numeric'
                                                         })}`}
                                                     >
-                                                        {isExpanded
-                                                            ? 'Show less'
-                                                            : `View ${dayData.overflowEvents.length} more`}
+                                                        {isExpanded ? (
+                                                            <span className="month-grid-more-collapse-label">
+                                                                Show less
+                                                            </span>
+                                                        ) : (
+                                                            <MonthOverflowDots events={overflowIndicatorEvents} />
+                                                        )}
+                                                        <span className="sr-only">
+                                                            {isExpanded
+                                                                ? `Collapse ${dayData.overflowEvents.length} extra events`
+                                                                : `Show ${overflowIndicatorEvents.length} extra events`}
+                                                        </span>
                                                     </button>
                                                 )}
                                             </div>
@@ -1127,144 +1171,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             const ribbonHeight =
                 rowsUsed > 0 ? rowsUsed * RIBBON_HEIGHT + (rowsUsed - 1) * RIBBON_GAP : 0;
 
-            const daysData: DayData[] = weekDays.map((day, dayIndexInWeek) => {
-                const dateKey = day.toISOString().split('T')[0];
-                const allEvents = processedEventsByDate.get(dateKey) ?? [];
-
-                // Collect all original event IDs that are being rendered as ribbon segments
-                const ribbonEventIds = new Set<string>();
-                segments.forEach(segment => {
-                    if ('originalEventId' in segment.cardEvent && segment.cardEvent.originalEventId) {
-                        ribbonEventIds.add(segment.cardEvent.originalEventId);
-                    }
-                });
-
-                // Exclude events with dayInfo (multi-day instances) and events already in ribbons
-                // Also exclude globally visible multi-day events (they must be in ribbons)
-                const inlineCandidates = allEvents.filter(
-                    (event) => {
-                        // Exclude multi-day day instances (have dayInfo property)
-                        if ('dayInfo' in event && event.dayInfo) {
-                            return false;
-                        }
-                        // Exclude events that are already rendered as ribbon segments
-                        // Check both the event's own ID and its originalEventId (if it's a segment instance)
-                        if (ribbonEventIds.has(event.id)) {
-                            return false;
-                        }
-                        if ('originalEventId' in event && event.originalEventId && ribbonEventIds.has(event.originalEventId)) {
-                            return false;
-                        }
-                        // Exclude globally visible multi-day events - they must be in ribbons
-                        if ('originalEventId' in event && event.originalEventId && globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                        if (globallyVisibleMultiDayEvents.has(event.id)) {
-                            return false;
-                        }
-                        return true;
-                    }
-                );
-
-                // Count ribbon segments that appear on this day
-                const ribbonSegmentsOnDay = segments.filter(segment =>
-                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
-                );
-                // Count unique ribbon rows (multiple segments on same row = 1 visual event)
-                const uniqueRibbonRows = new Set(ribbonSegmentsOnDay.map(s => s.row)).size;
-
-                // Calculate available inline slots based on ribbon count
-                const availableInlineSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
-
-                // Slice inline events to fit available slots
-                const inlineEventsBase = inlineCandidates.slice(0, availableInlineSlots);
-                const overflowEventsBase = inlineCandidates.slice(availableInlineSlots);
-
-                const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
-                // Filter out multi-day events that are already rendered in ribbons
-                // Also exclude globally visible multi-day events (cross-week unification)
-                const filteredMultiDayOverflow = multiDayOverflow.filter((event) => {
-                    // Exclude events that are already rendered as ribbon segments
-                    if ('originalEventId' in event && event.originalEventId) {
-                        if (ribbonEventIds.has(event.originalEventId) ||
-                            globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                    }
-                    // Also check the event's own ID in case it's the original event
-                    if (ribbonEventIds.has(event.id)) {
-                        return false;
-                    }
-                    return true;
-                });
-
-                // IMPORTANT: Multi-day events should NEVER be shown as inline events
-                // They should only appear as ribbons or in overflow popover
-                // Only single-day events can be inline
-                const inlineEvents = inlineEventsBase;
-
-                // If there are too many ribbons, hide the excess ones
-                let hiddenRibbonEvents: (Event | MultiDayEventInstance)[] = [];
-                if (uniqueRibbonRows > MAX_VISIBLE_EVENTS_PER_DAY) {
-                    // We have more ribbons than allowed, hide the excess
-                    // Note: Multi-day events are prioritized in the hiding logic below,
-                    // so they shouldn't appear here, but we filter them out as a safety measure
-                    const visibleRibbonRows = MAX_VISIBLE_EVENTS_PER_DAY;
-                    const hiddenRibbonSegments = ribbonSegmentsOnDay.slice(visibleRibbonRows);
-                    // Only add to overflow if this is the starting day of the event
-                    // (don't show the same event in overflow on multiple days it spans)
-                    const addedEventIds = new Set<string>();
-                    hiddenRibbonEvents = hiddenRibbonSegments
-                        .filter(seg => seg.startIndex === dayIndexInWeek)
-                        .filter(seg => {
-                            // Avoid adding the same event multiple times
-                            if (addedEventIds.has(seg.cardEvent.id)) {
-                                return false;
-                            }
-                            // Don't add multi-day events that are already in ribbons (they should be unified)
-                            // Also exclude globally visible multi-day events (cross-week unification)
-                            if ('originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
-                                if (ribbonEventIds.has(seg.cardEvent.originalEventId) ||
-                                    globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId)) {
-                                    return false;
-                                }
-                            }
-                            addedEventIds.add(seg.cardEvent.id);
-                            return true;
-                        })
-                        .map(seg => seg.cardEvent);
-                }
-
-                // Build overflow events, but EXCLUDE globally visible multi-day events
-                // These should NEVER appear in overflow - they must be in ribbons
-                const overflowEvents = [
-                    ...overflowEventsBase,
-                    ...filteredMultiDayOverflow, // Include all multi-day overflow events (not inline)
-                    ...hiddenRibbonEvents
-                ].filter(event => {
-                    // Filter out globally visible multi-day events
-                    if ('originalEventId' in event && event.originalEventId && typeof event.originalEventId === 'string') {
-                        if (globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                    }
-                    // Also check the event's own ID
-                    if (globallyVisibleMultiDayEvents.has(event.id)) {
-                        return false;
-                    }
-                    return true;
-                });
-
-                return {
-                    date: day,
-                    dateKey,
-                    inlineEvents,
-                    overflowEvents,
-                    isCurrentMonth: day.getMonth() === initialDate.getMonth(),
-                    isToday: day.toDateString() === new Date().toDateString()
-                };
-            });
-
             // Filter segments to exclude ones that are hidden due to per-day limits
             // First, identify all multi-day events by their originalEventId
             const multiDayEventIds = new Set<string>();
@@ -1411,6 +1317,97 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             });
 
             const visibleSegments = segments.filter(seg => !hiddenSegmentIds.has(seg.id));
+
+            const daysData: DayData[] = weekDays.map((day, dayIndexInWeek) => {
+                const dateKey = day.toISOString().split('T')[0];
+                const allEvents = processedEventsByDate.get(dateKey) ?? [];
+
+                // Only treat the final visible ribbon segments as "already shown" on the grid.
+                const ribbonEventIds = new Set<string>();
+                visibleSegments.forEach(segment => {
+                    if ('originalEventId' in segment.cardEvent && segment.cardEvent.originalEventId) {
+                        ribbonEventIds.add(segment.cardEvent.originalEventId);
+                    }
+                });
+
+                // Exclude events with dayInfo (multi-day instances) and events already in visible ribbons.
+                const inlineCandidates = allEvents.filter((event) => {
+                    if ('dayInfo' in event && event.dayInfo) {
+                        return false;
+                    }
+                    if (ribbonEventIds.has(event.id)) {
+                        return false;
+                    }
+                    if ('originalEventId' in event && event.originalEventId && ribbonEventIds.has(event.originalEventId)) {
+                        return false;
+                    }
+                    if ('originalEventId' in event && event.originalEventId && globallyVisibleMultiDayEvents.has(event.originalEventId)) {
+                        return false;
+                    }
+                    if (globallyVisibleMultiDayEvents.has(event.id)) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                const visibleRibbonSegmentsOnDay = visibleSegments.filter(segment =>
+                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
+                );
+                const uniqueRibbonRows = new Set(visibleRibbonSegmentsOnDay.map(s => s.row)).size;
+                const availableInlineSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
+
+                const inlineEvents = inlineCandidates.slice(0, availableInlineSlots);
+                const overflowEventsBase = inlineCandidates.slice(availableInlineSlots);
+                const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
+
+                const hiddenRibbonEvents = segments
+                    .filter(segment =>
+                        hiddenSegmentIds.has(segment.id) &&
+                        segment.startIndex === dayIndexInWeek
+                    )
+                    .sort((a, b) => a.row - b.row)
+                    .map(segment => segment.cardEvent);
+
+                const visibleDayEventKeys = new Set<string>();
+                inlineEvents.forEach((event) => {
+                    visibleDayEventKeys.add(makeCellEventKey(event, dateKey));
+                });
+                visibleRibbonSegmentsOnDay.forEach((segment) => {
+                    visibleDayEventKeys.add(makeCellEventKey(segment.cardEvent, dateKey));
+                });
+
+                const overflowEvents: (Event | MultiDayEventInstance)[] = [];
+                const overflowEventKeys = new Set<string>();
+
+                [...overflowEventsBase, ...multiDayOverflow, ...hiddenRibbonEvents].forEach((event) => {
+                    if ('originalEventId' in event && event.originalEventId && typeof event.originalEventId === 'string') {
+                        if (globallyVisibleMultiDayEvents.has(event.originalEventId) || ribbonEventIds.has(event.originalEventId)) {
+                            return;
+                        }
+                    }
+                    if (globallyVisibleMultiDayEvents.has(event.id) || ribbonEventIds.has(event.id)) {
+                        return;
+                    }
+
+                    const eventKey = makeCellEventKey(event, dateKey);
+
+                    if (visibleDayEventKeys.has(eventKey) || overflowEventKeys.has(eventKey)) {
+                        return;
+                    }
+
+                    overflowEventKeys.add(eventKey);
+                    overflowEvents.push(event);
+                });
+
+                return {
+                    date: day,
+                    dateKey,
+                    inlineEvents,
+                    overflowEvents,
+                    isCurrentMonth: day.getMonth() === initialDate.getMonth(),
+                    isToday: day.toDateString() === new Date().toDateString()
+                };
+            });
 
             weekDataList.push({
                 days: daysData,

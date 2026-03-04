@@ -1,12 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
-
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
+
+import {
+    BasicInfoSection,
+    ClassificationSection,
+    PricingSection,
+    TimingCapacitySection,
+    FeaturesSection,
+    SocialVirtualSection,
+    AgendaSection,
+    SpeakersSection,
+    UrlsMediaSection,
+    VenueSection,
+    OrganizerSection,
+} from '@/components/admin/enrichment/sections';
+import type { CoreFieldsState, RelationshipsState, LookupData, VenueData, OrganizerData, AgendaItemInput, Speaker } from '@/components/admin/enrichment/types';
 
 interface QueueItem {
     id: string;
@@ -53,15 +67,8 @@ interface ModerationPreviewPanelProps {
     onClose: () => void;
     onApprove: (item: QueueItem) => void;
     onReject: (item: QueueItem) => void;
-    onEditAndApprove: (item: QueueItem, eventData: Record<string, string>) => void;
+    onEditAndApprove: (item: QueueItem, eventData: Record<string, unknown>) => void;
     actionLoading: boolean;
-}
-
-interface EditFormState {
-    title: string;
-    description: string;
-    location: string;
-    start_time: string;
 }
 
 function scoreColor(score: number): string {
@@ -87,8 +94,6 @@ function reasonCodeColor(code: string): string {
 
 /**
  * Resolve Techmeme redirect URLs to canonical URLs for display.
- * e.g. techmeme.com/r2/blockworks.co_event_permissionless-RWjwjofT.htm?cal=1
- *   -> https://blockworks.co/event/permissionless
  */
 function cleanSourceUrl(rawUrl: string): string {
     if (!rawUrl.includes('techmeme.com/r2/')) return rawUrl;
@@ -97,7 +102,7 @@ function cleanSourceUrl(rawUrl: string): string {
     const match = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)_(.+?)\.htm$/);
     if (match) {
         const domain = match[1];
-        let pathSegments = match[2].replace(/-[a-zA-Z0-9]+$/, '');
+        const pathSegments = match[2].replace(/-[a-zA-Z0-9]+$/, '');
         if (!pathSegments) return `https://${domain}`;
         return `https://${domain}/${pathSegments.replace(/_/g, '/')}`;
     }
@@ -106,15 +111,66 @@ function cleanSourceUrl(rawUrl: string): string {
     return rawUrl;
 }
 
-function formatDatetimeLocal(isoString: string): string {
-    try {
-        const d = new Date(isoString);
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    } catch {
-        return '';
-    }
-}
+const DEFAULT_CORE_FIELDS: CoreFieldsState = {
+    description: '',
+    location: '',
+    timezone: '',
+    start_time: null,
+    end_time: null,
+    language: '',
+    source_url: '',
+    registration_url: '',
+    livestream_url: '',
+    event_image_url: '',
+    agenda_url: '',
+    price_min: null,
+    price_max: null,
+    currency: '',
+    pricing_type: null,
+    difficulty_level: null,
+    event_format: null,
+    status: '',
+    prerequisites: '',
+    target_audience: '',
+    certificate_offered: false,
+    recording_available: false,
+    accessibility_features: null,
+    social_media_hashtag: '',
+    virtual_platform: '',
+    capacity: null,
+    attendee_count: null,
+    registration_deadline: null,
+    is_multi_day: false,
+    daily_schedule: null,
+};
+
+const DEFAULT_RELATIONSHIPS: RelationshipsState = {
+    event_type_id: null,
+    venue_id: null,
+    series_id: null,
+    tagIds: [],
+    audienceIds: [],
+    prerequisiteIds: [],
+};
+
+const DEFAULT_VENUE_DATA: VenueData = {
+    name: '',
+    address: '',
+    city: '',
+    state_province: '',
+    country: '',
+    venue_type: '',
+    capacity: null,
+    latitude: null,
+    longitude: null,
+};
+
+const DEFAULT_ORGANIZER_DATA: OrganizerData = {
+    name: '',
+    description: '',
+    website_url: '',
+    social_media: null,
+};
 
 export default function ModerationPreviewPanel({
     item,
@@ -126,47 +182,37 @@ export default function ModerationPreviewPanel({
 }: ModerationPreviewPanelProps) {
     const [editMode, setEditMode] = useState(false);
     const [descExpanded, setDescExpanded] = useState(false);
-    const [editForm, setEditForm] = useState<EditFormState>({
-        title: '',
-        description: '',
-        location: '',
-        start_time: '',
-    });
 
-    // Initialize edit form from event data
+    // Edit state
+    const [editTitle, setEditTitle] = useState('');
+    const [coreFields, setCoreFields] = useState<CoreFieldsState>(DEFAULT_CORE_FIELDS);
+    const [relationships, setRelationships] = useState<RelationshipsState>(DEFAULT_RELATIONSHIPS);
+    const [lookupData, setLookupData] = useState<LookupData | null>(null);
+    const [lookupLoading, setLookupLoading] = useState(false);
+
+    // Venue state
+    const [venueData, setVenueData] = useState<VenueData>(DEFAULT_VENUE_DATA);
+    const [isCreatingVenue, setIsCreatingVenue] = useState(true);
+
+    // Organizer state
+    const [organizerData, setOrganizerData] = useState<OrganizerData>(DEFAULT_ORGANIZER_DATA);
+    const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
+
+    // Agenda & speakers state
+    const [agendaItems, setAgendaItems] = useState<AgendaItemInput[]>([]);
+    const [speakers, setSpeakers] = useState<Speaker[]>([]);
+    const [agendaSaving, setAgendaSaving] = useState(false);
+    const [speakersSaving, setSpeakersSaving] = useState(false);
+
+    // Description expanded modal
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const expandedDescriptionRef = useRef<HTMLTextAreaElement | null>(null);
+
     useEffect(() => {
-        const record = item.source_events?.raw_payload?.record;
-        setEditForm({
-            title: item.events?.title ?? record?.title ?? '',
-            description: item.events?.description ?? record?.description ?? '',
-            location: item.events?.location ?? record?.location ?? '',
-            start_time: formatDatetimeLocal(item.events?.start_time ?? record?.startTime ?? ''),
-        });
-    }, [item]);
-
-    // Close on Escape
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (editMode) {
-                    setEditMode(false);
-                } else {
-                    onClose();
-                }
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, editMode]);
-
-    const handleSaveAndApprove = useCallback(() => {
-        const eventData: Record<string, string> = {};
-        if (editForm.title) eventData.title = editForm.title;
-        if (editForm.description) eventData.description = editForm.description;
-        if (editForm.location) eventData.location = editForm.location;
-        if (editForm.start_time) eventData.start_time = new Date(editForm.start_time).toISOString();
-        onEditAndApprove(item, eventData);
-    }, [item, editForm, onEditAndApprove]);
+        if (isDescriptionExpanded) {
+            expandedDescriptionRef.current?.focus();
+        }
+    }, [isDescriptionExpanded]);
 
     const record = item.source_events?.raw_payload?.record;
     const eventTitle = item.events?.title ?? record?.title ?? 'Untitled Event';
@@ -177,6 +223,177 @@ export default function ModerationPreviewPanel({
     const sourceUrl = record?.sourceUrl ? cleanSourceUrl(record.sourceUrl) : undefined;
     const qualityComponents = item.events?.ingestion_provenance?.quality_components;
     const overallScore = item.ingestion_quality_score;
+
+    // Initialize edit state from event data
+    useEffect(() => {
+        setEditTitle(item.events?.title ?? record?.title ?? '');
+        setCoreFields({
+            ...DEFAULT_CORE_FIELDS,
+            description: item.events?.description ?? record?.description ?? '',
+            location: item.events?.location ?? record?.location ?? '',
+            start_time: item.events?.start_time ?? record?.startTime ?? null,
+            source_url: record?.sourceUrl ? cleanSourceUrl(record.sourceUrl) : '',
+        });
+        setRelationships(DEFAULT_RELATIONSHIPS);
+        setVenueData(DEFAULT_VENUE_DATA);
+        setIsCreatingVenue(true);
+        setOrganizerData({
+            ...DEFAULT_ORGANIZER_DATA,
+            name: item.events?.organizer?.name ?? record?.organizer ?? '',
+        });
+        setCurrentLogoUrl(null);
+        setAgendaItems([]);
+        setSpeakers([]);
+    }, [item]);
+
+    // Fetch lookup data when entering edit mode
+    useEffect(() => {
+        if (!editMode || lookupData) return;
+        setLookupLoading(true);
+        fetch('/api/admin/ingestion/enrichment/lookup-data', { credentials: 'include' })
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.success && json.data) {
+                    setLookupData(json.data);
+                } else {
+                    console.error('Lookup data response missing data:', json);
+                }
+            })
+            .catch((err) => console.error('Failed to fetch lookup data:', err))
+            .finally(() => setLookupLoading(false));
+    }, [editMode, lookupData]);
+
+    // Close on Escape
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (isDescriptionExpanded) {
+                    setIsDescriptionExpanded(false);
+                } else if (editMode) {
+                    setEditMode(false);
+                } else {
+                    onClose();
+                }
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose, editMode, isDescriptionExpanded]);
+
+    // Agenda handlers
+    const handleAddAgendaItem = useCallback(() => {
+        setAgendaItems(prev => [...prev, {
+            title: '',
+            startTime: '',
+            endTime: '',
+            type: 'other',
+            description: '',
+            location: '',
+        }]);
+    }, []);
+
+    const handleUpdateAgendaItem = useCallback((index: number, updates: Partial<AgendaItemInput>) => {
+        setAgendaItems(prev => prev.map((item, i) => i === index ? { ...item, ...updates } : item));
+    }, []);
+
+    const handleRemoveAgendaItem = useCallback((index: number) => {
+        setAgendaItems(prev => prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleSaveAgenda = useCallback(async () => {
+        if (!item.event_id) return;
+        setAgendaSaving(true);
+        try {
+            const response = await fetch('/api/admin/ingestion/enrichment/agenda', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId: item.event_id, agendaItems }),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                console.error('Failed to save agenda:', data.error);
+            }
+        } catch (err) {
+            console.error('Error saving agenda:', err);
+        } finally {
+            setAgendaSaving(false);
+        }
+    }, [item.event_id, agendaItems]);
+
+    // Speaker handlers
+    const handleAddSpeaker = useCallback(() => {
+        setSpeakers(prev => [...prev, { name: '', linkedinUrl: '', title: '', company: '', bio: '', photoUrl: '' }]);
+    }, []);
+
+    const handleUpdateSpeaker = useCallback((index: number, updates: Partial<Speaker>) => {
+        setSpeakers(prev => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
+    }, []);
+
+    const handleRemoveSpeaker = useCallback((index: number) => {
+        setSpeakers(prev => prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleSaveSpeakers = useCallback(async () => {
+        if (!item.event_id) return;
+        setSpeakersSaving(true);
+        try {
+            const response = await fetch('/api/admin/ingestion/enrichment/speakers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId: item.event_id, speakers }),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                console.error('Failed to save speakers:', data.error);
+            }
+        } catch (err) {
+            console.error('Error saving speakers:', err);
+        } finally {
+            setSpeakersSaving(false);
+        }
+    }, [item.event_id, speakers]);
+
+    const handleSaveAndApprove = useCallback(() => {
+        const eventData: Record<string, unknown> = {};
+        if (editTitle) eventData.title = editTitle;
+        if (coreFields.description) eventData.description = coreFields.description;
+        if (coreFields.location) eventData.location = coreFields.location;
+        if (coreFields.start_time) eventData.start_time = coreFields.start_time;
+        if (coreFields.end_time) eventData.end_time = coreFields.end_time;
+        if (coreFields.timezone) eventData.timezone = coreFields.timezone;
+        if (coreFields.event_format) eventData.event_format = coreFields.event_format;
+        if (coreFields.pricing_type) eventData.pricing_type = coreFields.pricing_type;
+        if (coreFields.price_min != null) eventData.price_min = coreFields.price_min;
+        if (coreFields.price_max != null) eventData.price_max = coreFields.price_max;
+        if (coreFields.currency) eventData.currency = coreFields.currency;
+        if (coreFields.difficulty_level) eventData.difficulty_level = coreFields.difficulty_level;
+        if (coreFields.capacity != null) eventData.capacity = coreFields.capacity;
+        if (coreFields.registration_deadline) eventData.registration_deadline = coreFields.registration_deadline;
+        if (coreFields.language) eventData.language = coreFields.language;
+        if (coreFields.status) eventData.status = coreFields.status;
+        if (coreFields.source_url) eventData.source_url = coreFields.source_url;
+        if (coreFields.registration_url) eventData.registration_url = coreFields.registration_url;
+        if (coreFields.livestream_url) eventData.livestream_url = coreFields.livestream_url;
+        if (coreFields.agenda_url) eventData.agenda_url = coreFields.agenda_url;
+        if (coreFields.event_image_url) eventData.event_image_url = coreFields.event_image_url;
+        if (coreFields.is_multi_day) eventData.is_multi_day = coreFields.is_multi_day;
+        if (coreFields.certificate_offered) eventData.certificate_offered = coreFields.certificate_offered;
+        if (coreFields.recording_available) eventData.recording_available = coreFields.recording_available;
+        if (coreFields.social_media_hashtag) eventData.social_media_hashtag = coreFields.social_media_hashtag;
+        if (coreFields.virtual_platform) eventData.virtual_platform = coreFields.virtual_platform;
+        if (coreFields.accessibility_features) eventData.accessibility_features = coreFields.accessibility_features;
+        if (coreFields.prerequisites) eventData.prerequisites = coreFields.prerequisites;
+        if (coreFields.target_audience) eventData.target_audience = coreFields.target_audience;
+        if (relationships.event_type_id) eventData.event_type_id = relationships.event_type_id;
+        if (relationships.venue_id) eventData.venue_id = relationships.venue_id;
+        if (relationships.series_id) eventData.series_id = relationships.series_id;
+        if (relationships.tagIds.length > 0) eventData.tagIds = relationships.tagIds;
+        if (relationships.audienceIds.length > 0) eventData.audienceIds = relationships.audienceIds;
+        if (relationships.prerequisiteIds.length > 0) eventData.prerequisiteIds = relationships.prerequisiteIds;
+        if (organizerData.name) eventData.organizerData = organizerData;
+        if (isCreatingVenue && venueData.name) eventData.venueData = venueData;
+        onEditAndApprove(item, eventData);
+    }, [item, editTitle, coreFields, relationships, organizerData, venueData, isCreatingVenue, onEditAndApprove]);
 
     const statusBadgeStyle: Record<string, string> = {
         pending: 'bg-amber-400/15 text-amber-200 border border-amber-500/30',
@@ -249,7 +466,7 @@ export default function ModerationPreviewPanel({
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className="text-[11px] text-foreground-muted">{label}</span>
                                             <span className={cn('text-sm font-semibold', score != null ? scoreColor(val) : 'text-foreground-muted')}>
-                                                {score != null ? val.toFixed(0) : '—'}
+                                                {score != null ? val.toFixed(0) : '\u2014'}
                                             </span>
                                         </div>
                                         <div className="h-1.5 w-full rounded-full bg-background-tertiary overflow-hidden">
@@ -284,44 +501,130 @@ export default function ModerationPreviewPanel({
                 {/* Event Details / Edit Mode */}
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                     {editMode ? (
-                        <div className="space-y-4">
+                        <div className="space-y-8">
                             <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">Edit Event</h3>
-                            <div>
-                                <label className="mb-1 block text-xs text-foreground-muted">Title</label>
-                                <input
-                                    type="text"
-                                    value={editForm.title}
-                                    onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                                    className="w-full rounded-md border border-default bg-background-tertiary px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-xs text-foreground-muted">Description</label>
-                                <textarea
-                                    value={editForm.description}
-                                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                                    rows={5}
-                                    className="w-full rounded-md border border-default bg-background-tertiary px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50 resize-y"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-xs text-foreground-muted">Location</label>
-                                <input
-                                    type="text"
-                                    value={editForm.location}
-                                    onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
-                                    className="w-full rounded-md border border-default bg-background-tertiary px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-xs text-foreground-muted">Start Time</label>
-                                <input
-                                    type="datetime-local"
-                                    value={editForm.start_time}
-                                    onChange={(e) => setEditForm((f) => ({ ...f, start_time: e.target.value }))}
-                                    className="w-full rounded-md border border-default bg-background-tertiary px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
-                                />
-                            </div>
+
+                            {lookupLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="flex items-center gap-3 text-foreground-muted">
+                                        <MaterialIcon name="refresh" size={18} className="animate-spin" />
+                                        <span className="text-sm">Loading editor...</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Title (not part of CoreFieldsState) */}
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Title</label>
+                                        <input
+                                            type="text"
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                            placeholder="Event title"
+                                        />
+                                    </div>
+
+                                    {/* Basic Information */}
+                                    <BasicInfoSection
+                                        coreFields={coreFields}
+                                        setCoreFields={setCoreFields}
+                                        onExpandDescription={() => setIsDescriptionExpanded(true)}
+                                    />
+
+                                    {/* Classification */}
+                                    {lookupData && (
+                                        <ClassificationSection
+                                            coreFields={coreFields}
+                                            setCoreFields={setCoreFields}
+                                            relationships={relationships}
+                                            setRelationships={setRelationships}
+                                            lookupData={lookupData}
+                                        />
+                                    )}
+
+                                    {/* Timing & Capacity */}
+                                    <TimingCapacitySection
+                                        coreFields={coreFields}
+                                        setCoreFields={setCoreFields}
+                                    />
+
+                                    {/* Pricing */}
+                                    <PricingSection
+                                        coreFields={coreFields}
+                                        setCoreFields={setCoreFields}
+                                    />
+
+                                    {/* URLs & Media */}
+                                    {item.event_id && (
+                                        <UrlsMediaSection
+                                            eventId={item.event_id}
+                                            coreFields={coreFields}
+                                            setCoreFields={setCoreFields}
+                                            onSuccess={() => {}}
+                                            onError={(msg) => console.error(msg)}
+                                        />
+                                    )}
+
+                                    {/* Features */}
+                                    <FeaturesSection
+                                        coreFields={coreFields}
+                                        setCoreFields={setCoreFields}
+                                    />
+
+                                    {/* Social & Virtual */}
+                                    <SocialVirtualSection
+                                        coreFields={coreFields}
+                                        setCoreFields={setCoreFields}
+                                    />
+
+                                    {/* Agenda */}
+                                    <AgendaSection
+                                        agendaItems={agendaItems}
+                                        availableSpeakers={speakers}
+                                        onAdd={handleAddAgendaItem}
+                                        onUpdate={handleUpdateAgendaItem}
+                                        onRemove={handleRemoveAgendaItem}
+                                        onSave={handleSaveAgenda}
+                                        loading={agendaSaving}
+                                    />
+
+                                    {/* Speakers */}
+                                    <SpeakersSection
+                                        speakers={speakers}
+                                        onAdd={handleAddSpeaker}
+                                        onUpdate={handleUpdateSpeaker}
+                                        onRemove={handleRemoveSpeaker}
+                                        onSave={handleSaveSpeakers}
+                                        loading={speakersSaving}
+                                    />
+
+                                    {/* Venue */}
+                                    {lookupData && (
+                                        <VenueSection
+                                            venueData={venueData}
+                                            setVenueData={setVenueData}
+                                            relationships={relationships}
+                                            setRelationships={setRelationships}
+                                            lookupData={lookupData}
+                                            isCreatingVenue={isCreatingVenue}
+                                            setIsCreatingVenue={setIsCreatingVenue}
+                                        />
+                                    )}
+
+                                    {/* Organizer */}
+                                    <OrganizerSection
+                                        organizer={item.events?.organizer as Parameters<typeof OrganizerSection>[0]['organizer']}
+                                        organizerData={organizerData}
+                                        setOrganizerData={setOrganizerData}
+                                        currentLogoUrl={currentLogoUrl}
+                                        setCurrentLogoUrl={setCurrentLogoUrl}
+                                        sourceUrl={organizerData.website_url || ''}
+                                        onSuccess={() => {}}
+                                        onError={(msg) => console.error(msg)}
+                                    />
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -350,7 +653,7 @@ export default function ModerationPreviewPanel({
                                 <div>
                                     <div className="mb-1 text-xs text-foreground-muted">Date & Time</div>
                                     <div className="text-sm text-foreground-secondary">
-                                        {format(new Date(startTime), 'EEEE, MMM d, yyyy · h:mm a')}
+                                        {format(new Date(startTime), 'EEEE, MMM d, yyyy \u00b7 h:mm a')}
                                     </div>
                                 </div>
                             )}
@@ -419,7 +722,7 @@ export default function ModerationPreviewPanel({
                                 <Button
                                     size="sm"
                                     onClick={handleSaveAndApprove}
-                                    disabled={actionLoading}
+                                    disabled={actionLoading || lookupLoading}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                 >
                                     <MaterialIcon name="check" size={14} className="mr-1" />
@@ -469,6 +772,56 @@ export default function ModerationPreviewPanel({
                     </div>
                 </div>
             </div>
+
+            {/* Description Editor Modal */}
+            {isDescriptionExpanded && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-background-main/80 backdrop-blur"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="description-editor-title"
+                >
+                    <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-default bg-background-main shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-default px-5 py-4">
+                            <h2 id="description-editor-title" className="text-base font-semibold text-foreground-primary">
+                                Edit Description
+                            </h2>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                                aria-label="Close description editor"
+                            >
+                                <MaterialIcon name="close" size={20} />
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden px-5 py-4">
+                            <textarea
+                                ref={expandedDescriptionRef}
+                                value={coreFields.description}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
+                                className="h-full w-full resize-none rounded-lg border border-default bg-background-secondary p-4 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-slate-500/40"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-default px-5 py-4">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

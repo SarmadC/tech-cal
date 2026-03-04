@@ -14,11 +14,14 @@ import { fetchWithSafeRedirects, validateUrlForServerFetch } from '@/lib/ssrfPro
 // Use Node.js runtime for better fetch support and external URL access
 export const runtime = 'nodejs';
 
+type ImageContext = 'logo' | 'event_image';
+
 interface ExtractedImage {
     src: string;
     alt?: string;
     width?: number;
     height?: number;
+    source?: string; // tracks where the image was found (e.g. 'og:image', 'json-ld', 'link-icon')
 }
 
 /**
@@ -82,14 +85,45 @@ function isLikelyLogo(url: string): boolean {
 }
 
 /**
- * Score an image based on likelihood of being a logo
+ * Check if URL path/alt contains event-banner-related keywords
  */
-function scoreImage(img: ExtractedImage): number {
+function isLikelyEventImage(url: string, alt?: string): boolean {
+    const lower = url.toLowerCase() + ' ' + (alt || '').toLowerCase();
+    const patterns = ['hero', 'banner', 'header', 'cover', 'featured', 'event-image', 'event_image', 'poster', 'thumbnail'];
+    return patterns.some((p) => lower.includes(p));
+}
+
+/**
+ * Score an image based on context (logo vs event_image)
+ */
+function scoreImage(img: ExtractedImage, context: ImageContext = 'logo'): number {
+    if (context === 'event_image') {
+        return scoreEventImage(img);
+    }
+    return scoreLogoImage(img);
+}
+
+function scoreLogoImage(img: ExtractedImage): number {
     let score = 0;
 
     // Prefer images with logo-related paths
     if (isLikelyLogo(img.src)) {
         score += 50;
+    }
+
+    // Link icons (apple-touch-icon, favicon) are strong logo signals
+    if (img.source === 'link-icon') {
+        score += 40;
+    }
+
+    // Favicon path
+    if (img.src.toLowerCase().includes('favicon')) {
+        score += 20;
+    }
+
+    // JSON-LD logo field
+    if (img.source === 'json-ld-logo') {
+        score += 60;
     }
 
     // Prefer SVG (vector logos)
@@ -106,14 +140,11 @@ function scoreImage(img: ExtractedImage): number {
     if (img.width && img.height) {
         const ratio = img.width / img.height;
         if (ratio >= 0.8 && ratio <= 1.2) {
-            // Square-ish
             score += 20;
         } else if (ratio > 1.2 && ratio <= 4) {
-            // Horizontal
             score += 15;
         }
 
-        // Prefer reasonable sizes (not tiny icons, not huge banners)
         const area = img.width * img.height;
         if (area >= 1000 && area <= 100000) {
             score += 10;
@@ -131,41 +162,120 @@ function scoreImage(img: ExtractedImage): number {
     return score;
 }
 
+function scoreEventImage(img: ExtractedImage): number {
+    let score = 0;
+
+    // og:image / twitter:image are the strongest event image signals
+    if (img.source === 'og:image' || img.source === 'twitter:image') {
+        score += 80;
+    }
+
+    // JSON-LD image / thumbnailUrl
+    if (img.source === 'json-ld-image' || img.source === 'json-ld-thumbnail') {
+        score += 70;
+    }
+
+    // Large dimensions suggest a banner/hero
+    if (img.width && img.width >= 600) {
+        score += 30;
+    }
+
+    // Banner aspect ratio (1.5:1 to 3:1)
+    if (img.width && img.height && img.height > 0) {
+        const ratio = img.width / img.height;
+        if (ratio >= 1.5 && ratio <= 3) {
+            score += 25;
+        }
+    }
+
+    // Header/hero/banner keywords in path or alt
+    if (isLikelyEventImage(img.src, img.alt)) {
+        score += 20;
+    }
+
+    // Deprioritize logo-related paths when looking for event images
+    if (isLikelyLogo(img.src)) {
+        score -= 20;
+    }
+
+    // Penalize tiny images
+    if (img.width && img.width < 200) {
+        score -= 30;
+    }
+    if (img.height && img.height < 200) {
+        score -= 30;
+    }
+
+    return score;
+}
+
 /**
- * Parse HTML and extract image elements
+ * Helper to add an image if not already present
+ */
+function addIfNew(images: ExtractedImage[], img: ExtractedImage): void {
+    if (!images.some((existing) => existing.src === img.src)) {
+        images.push(img);
+    }
+}
+
+/**
+ * Extract the highest-resolution URL from a srcset value
+ */
+function getHighestResSrcset(srcsetValue: string, baseUrl: string): string | null {
+    const parts = srcsetValue.split(',').map((p) => p.trim()).filter(Boolean);
+    let bestSrc: string | null = null;
+    let bestDescriptor = 0;
+
+    for (const part of parts) {
+        const tokens = part.split(/\s+/);
+        const src = tokens[0];
+        const descriptor = tokens[1] || '1x';
+        const numericValue = parseFloat(descriptor) || 1;
+        if (numericValue > bestDescriptor) {
+            bestDescriptor = numericValue;
+            bestSrc = src;
+        }
+    }
+
+    return bestSrc ? resolveUrl(bestSrc, baseUrl) : null;
+}
+
+/**
+ * Parse HTML and extract image elements from multiple sources
  */
 function extractImagesFromHtml(html: string, baseUrl: string): ExtractedImage[] {
     const images: ExtractedImage[] = [];
 
-    // Match <img> tags with various attribute formats
+    // 1. Standard <img> tags (src + lazy-load attributes)
     const imgRegex = /<img[^>]+>/gi;
-    const matches = html.match(imgRegex) || [];
+    const imgMatches = html.match(imgRegex) || [];
 
-    for (const imgTag of matches) {
-        // Extract src attribute
+    for (const imgTag of imgMatches) {
+        // Try src, then lazy-load fallbacks
         const srcMatch = imgTag.match(/src=["']([^"']+)["']/i);
-        if (!srcMatch) continue;
+        const dataSrcMatch = imgTag.match(/data-src=["']([^"']+)["']/i);
+        const dataLazySrcMatch = imgTag.match(/data-lazy-src=["']([^"']+)["']/i);
+        const dataOriginalMatch = imgTag.match(/data-original=["']([^"']+)["']/i);
 
-        const rawSrc = srcMatch[1];
+        const rawSrc = srcMatch?.[1] || dataSrcMatch?.[1] || dataLazySrcMatch?.[1] || dataOriginalMatch?.[1];
+        if (!rawSrc) continue;
+
         const resolvedSrc = resolveUrl(rawSrc, baseUrl);
         if (!resolvedSrc) continue;
 
-        // Extract alt attribute
         const altMatch = imgTag.match(/alt=["']([^"']*)["']/i);
         const alt = altMatch ? altMatch[1] : undefined;
 
-        // Extract width attribute
         const widthMatch = imgTag.match(/width=["']?(\d+)["']?/i);
         const width = widthMatch ? parseInt(widthMatch[1], 10) : undefined;
 
-        // Extract height attribute
         const heightMatch = imgTag.match(/height=["']?(\d+)["']?/i);
         const height = heightMatch ? parseInt(heightMatch[1], 10) : undefined;
 
-        images.push({ src: resolvedSrc, alt, width, height });
+        addIfNew(images, { src: resolvedSrc, alt, width, height });
     }
 
-    // Also extract from srcset attributes (for responsive images)
+    // 2. Srcset attributes (responsive images)
     const srcsetRegex = /srcset=["']([^"']+)["']/gi;
     let srcsetMatch;
     while ((srcsetMatch = srcsetRegex.exec(html)) !== null) {
@@ -174,28 +284,142 @@ function extractImagesFromHtml(html: string, baseUrl: string): ExtractedImage[] 
         for (const part of srcsetParts) {
             const src = part.trim().split(/\s+/)[0];
             const resolvedSrc = resolveUrl(src, baseUrl);
-            if (resolvedSrc && !images.some((img) => img.src === resolvedSrc)) {
-                images.push({ src: resolvedSrc });
+            if (resolvedSrc) {
+                addIfNew(images, { src: resolvedSrc });
             }
         }
     }
 
-    // Extract from og:image and other meta tags
-    const metaImageRegex = /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi;
-    let metaMatch;
-    while ((metaMatch = metaImageRegex.exec(html)) !== null) {
-        const resolvedSrc = resolveUrl(metaMatch[1], baseUrl);
-        if (resolvedSrc && !images.some((img) => img.src === resolvedSrc)) {
-            images.push({ src: resolvedSrc, alt: 'Open Graph Image' });
+    // 3. <picture><source> elements — pick highest-res from each
+    const pictureSourceRegex = /<picture[^>]*>[\s\S]*?<\/picture>/gi;
+    const pictureMatches = html.match(pictureSourceRegex) || [];
+    for (const pictureBlock of pictureMatches) {
+        const sourceRegex = /<source[^>]+srcset=["']([^"']+)["'][^>]*>/gi;
+        let sourceMatch;
+        while ((sourceMatch = sourceRegex.exec(pictureBlock)) !== null) {
+            const bestSrc = getHighestResSrcset(sourceMatch[1], baseUrl);
+            if (bestSrc) {
+                addIfNew(images, { src: bestSrc, source: 'picture-source' });
+            }
         }
     }
 
-    // Also check reverse order meta tags
-    const metaImageRegex2 = /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/gi;
-    while ((metaMatch = metaImageRegex2.exec(html)) !== null) {
-        const resolvedSrc = resolveUrl(metaMatch[1], baseUrl);
-        if (resolvedSrc && !images.some((img) => img.src === resolvedSrc)) {
-            images.push({ src: resolvedSrc, alt: 'Open Graph Image' });
+    // 4. og:image and twitter:image meta tags (both attribute orders)
+    const metaPatterns = [
+        /<meta[^>]+(?:property|name)=["'](og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi,
+        /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](og:image|twitter:image)["']/gi,
+    ];
+    for (const regex of metaPatterns) {
+        let metaMatch;
+        while ((metaMatch = regex.exec(html)) !== null) {
+            // In pattern 1: group 1 = property, group 2 = content
+            // In pattern 2: group 1 = content, group 2 = property
+            const isFirstPattern = metaMatch[1].startsWith('og:') || metaMatch[1].startsWith('twitter:');
+            const content = isFirstPattern ? metaMatch[2] : metaMatch[1];
+            const property = isFirstPattern ? metaMatch[1] : metaMatch[2];
+            const resolvedSrc = resolveUrl(content, baseUrl);
+            if (resolvedSrc) {
+                addIfNew(images, {
+                    src: resolvedSrc,
+                    alt: property === 'og:image' ? 'Open Graph Image' : 'Twitter Card Image',
+                    source: property as string,
+                });
+            }
+        }
+    }
+
+    // 5. <link rel="icon|apple-touch-icon|..."> tags
+    const linkIconRegex = /<link[^>]+rel=["'](?:icon|shortcut icon|apple-touch-icon|apple-touch-icon-precomposed)["'][^>]*>/gi;
+    const linkIconMatches = html.match(linkIconRegex) || [];
+    for (const linkTag of linkIconMatches) {
+        const hrefMatch = linkTag.match(/href=["']([^"']+)["']/i);
+        if (!hrefMatch) continue;
+        const resolvedSrc = resolveUrl(hrefMatch[1], baseUrl);
+        if (resolvedSrc) {
+            const sizesMatch = linkTag.match(/sizes=["'](\d+)x(\d+)["']/i);
+            addIfNew(images, {
+                src: resolvedSrc,
+                alt: 'Site Icon',
+                width: sizesMatch ? parseInt(sizesMatch[1], 10) : undefined,
+                height: sizesMatch ? parseInt(sizesMatch[2], 10) : undefined,
+                source: 'link-icon',
+            });
+        }
+    }
+    // Also match reverse attribute order (href before rel)
+    const linkIconRegex2 = /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:icon|shortcut icon|apple-touch-icon|apple-touch-icon-precomposed)["'][^>]*>/gi;
+    let linkMatch2;
+    while ((linkMatch2 = linkIconRegex2.exec(html)) !== null) {
+        const resolvedSrc = resolveUrl(linkMatch2[1], baseUrl);
+        if (resolvedSrc) {
+            addIfNew(images, { src: resolvedSrc, alt: 'Site Icon', source: 'link-icon' });
+        }
+    }
+
+    // 6. <meta name="msapplication-TileImage">
+    const tileRegex = /<meta[^>]+name=["']msapplication-TileImage["'][^>]+content=["']([^"']+)["']/gi;
+    let tileMatch;
+    while ((tileMatch = tileRegex.exec(html)) !== null) {
+        const resolvedSrc = resolveUrl(tileMatch[1], baseUrl);
+        if (resolvedSrc) {
+            addIfNew(images, { src: resolvedSrc, alt: 'Tile Image', source: 'link-icon' });
+        }
+    }
+
+    // 7. Inline style background-image: url(...)
+    const bgRegex = /background-image:\s*url\(["']?([^"')]+)["']?\)/gi;
+    let bgMatch;
+    while ((bgMatch = bgRegex.exec(html)) !== null) {
+        const resolvedSrc = resolveUrl(bgMatch[1], baseUrl);
+        if (resolvedSrc) {
+            addIfNew(images, { src: resolvedSrc, source: 'css-background' });
+        }
+    }
+
+    // 8. JSON-LD structured data
+    const jsonLdRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let jsonLdMatch;
+    while ((jsonLdMatch = jsonLdRegex.exec(html)) !== null) {
+        try {
+            const data = JSON.parse(jsonLdMatch[1]);
+            const items = Array.isArray(data) ? data : [data];
+            for (const item of items) {
+                // Extract logo
+                const logoVal = item.logo;
+                const logoUrl = typeof logoVal === 'string' ? logoVal : logoVal?.url;
+                if (logoUrl) {
+                    const resolved = resolveUrl(logoUrl, baseUrl);
+                    if (resolved) addIfNew(images, { src: resolved, alt: 'Organization Logo', source: 'json-ld-logo' });
+                }
+                // Extract image
+                const imgVal = item.image;
+                const imgUrls = Array.isArray(imgVal) ? imgVal : [imgVal];
+                for (const u of imgUrls) {
+                    const imgUrl = typeof u === 'string' ? u : u?.url;
+                    if (imgUrl) {
+                        const resolved = resolveUrl(imgUrl, baseUrl);
+                        if (resolved) addIfNew(images, { src: resolved, alt: 'Structured Data Image', source: 'json-ld-image' });
+                    }
+                }
+                // Extract thumbnailUrl
+                if (item.thumbnailUrl) {
+                    const resolved = resolveUrl(item.thumbnailUrl, baseUrl);
+                    if (resolved) addIfNew(images, { src: resolved, alt: 'Thumbnail', source: 'json-ld-thumbnail' });
+                }
+            }
+        } catch {
+            // Invalid JSON-LD, skip
+        }
+    }
+
+    // 9. Favicon fallback — if no link icons were found, try /favicon.ico
+    const hasLinkIcon = images.some((img) => img.source === 'link-icon');
+    if (!hasLinkIcon) {
+        try {
+            const faviconUrl = new URL('/favicon.ico', baseUrl).toString();
+            addIfNew(images, { src: faviconUrl, alt: 'Favicon', source: 'link-icon' });
+        } catch {
+            // Invalid base URL
         }
     }
 
@@ -220,7 +444,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { url } = body;
+        const { url, context: imageContext } = body as { url?: string; context?: ImageContext };
+        const resolvedContext: ImageContext = imageContext === 'event_image' ? 'event_image' : 'logo';
 
         if (!url || typeof url !== 'string') {
             return NextResponse.json({ error: 'Missing required field: url' }, { status: 400 });
@@ -415,16 +640,16 @@ export async function POST(request: NextRequest) {
         // Deduplicate by src
         const uniqueImages = Array.from(new Map(images.map((img) => [img.src, img])).values());
 
-        // Score and sort by likelihood of being a logo
+        // Score and sort by relevance to the requested context
         const scoredImages = uniqueImages.map((img) => ({
             ...img,
-            score: scoreImage(img),
+            score: scoreImage(img, resolvedContext),
         }));
 
         scoredImages.sort((a, b) => b.score - a.score);
 
-        // Return top results
-        const topImages = scoredImages.slice(0, 20).map(({ score: _score, ...img }) => img);
+        // Return top results (strip internal scoring/source metadata)
+        const topImages = scoredImages.slice(0, 20).map(({ score: _score, source: _source, ...img }) => img);
 
         return NextResponse.json({
             success: true,

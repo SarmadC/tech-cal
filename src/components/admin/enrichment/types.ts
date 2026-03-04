@@ -104,6 +104,7 @@ export interface RelationshipsState {
     event_type_id: string | null;
     venue_id: string | null;
     series_id: string | null;
+    organizer_id: string | null;
     tagIds: string[];
     audienceIds: string[];
     prerequisiteIds: string[];

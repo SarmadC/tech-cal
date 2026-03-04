@@ -70,6 +70,7 @@ export interface EventRelationshipsInput {
     event_type_id?: string | null;
     venue_id?: string | null;
     series_id?: string | null;
+    organizer_id?: string | null;
     tagIds?: string[];
     audienceIds?: string[];
     prerequisiteIds?: string[];
@@ -735,6 +736,9 @@ export class EventEnrichmentService {
                         newValue: relationships.series_id,
                     });
                 }
+            }
+            if (relationships.organizer_id !== undefined) {
+                updateData.organizer_id = relationships.organizer_id;
             }
 
             if (Object.keys(updateData).length > 0) {

@@ -29,6 +29,7 @@ interface ImageExtractorModalProps {
     title?: string;
     description?: string;
     contextName?: string;
+    context?: 'logo' | 'event_image';
 }
 
 export default function ImageExtractorModal({
@@ -40,6 +41,7 @@ export default function ImageExtractorModal({
     title = 'Extract Image from URL',
     description = 'Enter a website URL to extract image candidates',
     contextName,
+    context,
 }: ImageExtractorModalProps) {
     const [url, setUrl] = useState(initialUrl);
     const [loading, setLoading] = useState(false);
@@ -96,7 +98,7 @@ export default function ImageExtractorModal({
             const response = await fetch('/api/admin/ingestion/extract-images', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url.trim() }),
+                body: JSON.stringify({ url: url.trim(), ...(context && { context }) }),
             });
 
             const data = await response.json();
