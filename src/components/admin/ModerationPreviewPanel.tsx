@@ -85,6 +85,27 @@ function reasonCodeColor(code: string): string {
     return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
 }
 
+/**
+ * Resolve Techmeme redirect URLs to canonical URLs for display.
+ * e.g. techmeme.com/r2/blockworks.co_event_permissionless-RWjwjofT.htm?cal=1
+ *   -> https://blockworks.co/event/permissionless
+ */
+function cleanSourceUrl(rawUrl: string): string {
+    if (!rawUrl.includes('techmeme.com/r2/')) return rawUrl;
+
+    const urlWithoutQuery = rawUrl.split('?')[0];
+    const match = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)_(.+?)\.htm$/);
+    if (match) {
+        const domain = match[1];
+        let pathSegments = match[2].replace(/-[a-zA-Z0-9]+$/, '');
+        if (!pathSegments) return `https://${domain}`;
+        return `https://${domain}/${pathSegments.replace(/_/g, '/')}`;
+    }
+    const altMatch = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+?)(?:-[a-zA-Z0-9]+)?\.htm$/);
+    if (altMatch?.[1]) return `https://${altMatch[1]}`;
+    return rawUrl;
+}
+
 function formatDatetimeLocal(isoString: string): string {
     try {
         const d = new Date(isoString);
@@ -153,7 +174,7 @@ export default function ModerationPreviewPanel({
     const description = item.events?.description ?? record?.description ?? '';
     const location = item.events?.location ?? record?.location ?? '';
     const startTime = item.events?.start_time ?? record?.startTime ?? '';
-    const sourceUrl = record?.sourceUrl;
+    const sourceUrl = record?.sourceUrl ? cleanSourceUrl(record.sourceUrl) : undefined;
     const qualityComponents = item.events?.ingestion_provenance?.quality_components;
     const overallScore = item.ingestion_quality_score;
 
@@ -353,7 +374,7 @@ export default function ModerationPreviewPanel({
                                         className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline"
                                     >
                                         <MaterialIcon name="arrow-up-right" size={14} />
-                                        {new URL(sourceUrl).hostname}
+                                        {(() => { try { return new URL(sourceUrl).hostname; } catch { return sourceUrl; } })()}
                                     </a>
                                 </div>
                             )}

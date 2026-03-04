@@ -38,7 +38,8 @@ async function handler(request: NextRequest) {
     const service = new LLMEnrichmentService(supabase);
 
     const limitParam = request.nextUrl.searchParams.get('limit');
-    const limit = Number.isFinite(Number(limitParam)) ? Number(limitParam) : 10;
+    const parsedLimit = limitParam === null ? NaN : Number(limitParam);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
 
     const result = await service.processBatch(limit);
 
