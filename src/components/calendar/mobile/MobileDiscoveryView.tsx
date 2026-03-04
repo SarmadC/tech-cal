@@ -5,7 +5,7 @@ import { Event, EventType, AppProfile, CareerImpactScore } from '@/types';
 import DiscoveryCard from './DiscoveryCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { FilterCounts } from '@/utils/filterCountUtils';
-import { MagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react';
+import { MagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import ActiveFilterRail from '@/components/discovery/ActiveFilterRail';
 import RecommendationExplainDrawer from '@/components/discovery/RecommendationExplainDrawer';
@@ -78,42 +78,7 @@ function parseDateInputValue(value: string, endOfDay = false): Date | null {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-const BUDGET_OPTIONS: Array<{ value: UnifiedFilterOptions['budget']; label: string }> = [
-    { value: 'all', label: 'Any budget' },
-    { value: 'free-only', label: 'Free only' },
-    { value: 'low', label: 'Low' },
-    { value: 'moderate', label: 'Moderate' },
-    { value: 'high', label: 'High' },
-    { value: 'unlimited', label: 'Unlimited' },
-];
-
-const DIFFICULTY_OPTIONS: Array<{ value: UnifiedFilterOptions['difficulty']; label: string }> = [
-    { value: 'all', label: 'Any level' },
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
-];
-
-const AVAILABILITY_OPTIONS: Array<{ value: UnifiedFilterOptions['availability']; label: string }> = [
-    { value: 'all', label: 'Any availability' },
-    { value: 'available', label: 'Available' },
-    { value: 'no-conflicts', label: 'No conflicts' },
-];
-
-const DURATION_OPTIONS: Array<{ value: UnifiedFilterOptions['duration']; label: string }> = [
-    { value: 'all', label: 'Any duration' },
-    { value: 'short', label: 'Short' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'long', label: 'Long' },
-    { value: 'multi-day', label: 'Multi-day' },
-];
-
-const POPULARITY_OPTIONS: Array<{ value: UnifiedFilterOptions['popularity']; label: string }> = [
-    { value: 'all', label: 'Any popularity' },
-    { value: 'trending', label: 'Trending' },
-    { value: 'high-attendance', label: 'High attendance' },
-    { value: 'niche', label: 'Niche' },
-];
+const MOBILE_PAGE_GUTTER = 'px-4';
 
 const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     events,
@@ -123,13 +88,13 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     filters,
     onUpdateFilter,
     onSearch,
-    totalCount,
+    totalCount: _totalCount,
     onResetFilters,
     activeFilterCount,
     countsFromServer,
     onNearMeClick,
-    isDetectingLocation,
-    isSearching
+    isDetectingLocation: _isDetectingLocation,
+    isSearching: _isSearching
 }) => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [feedbackHint, setFeedbackHint] = useState<string | null>(null);
@@ -491,10 +456,10 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
             <UnifiedMobileNavbar
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={false}
-                className="sticky top-0 z-40 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)]"
+                className="sticky top-0 z-40 bg-[var(--background-main)]/95 backdrop-blur-md"
             />
 
-            <div className="sticky top-[56px] z-30 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)] px-4 pt-3 pb-3 space-y-3">
+            <div className={cn('sticky top-[56px] z-30 bg-[var(--background-main)]/95 backdrop-blur-md pt-3 pb-3 space-y-4', MOBILE_PAGE_GUTTER)}>
                 <div className="flex items-center gap-3">
                     <div className="relative flex-1 group">
                         <MagnifyingGlass
@@ -514,50 +479,36 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                     onSearch();
                                 }
                             }}
-                            className="w-full bg-transparent border border-[var(--border-default)] rounded-xl py-2.5 pl-10 pr-10 text-[15px] text-[var(--foreground-primary)] placeholder:text-[var(--foreground-tertiary)] focus:outline-none focus:border-[var(--border-strong)] transition-all h-[44px]"
+                            className="w-full bg-[var(--background-elevated)]/50 rounded-xl py-2.5 pl-10 pr-4 text-[15px] text-[var(--foreground-primary)] placeholder:text-[var(--foreground-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--border-strong)] transition-all h-[44px]"
                         />
-
-                        <button
-                            type="button"
-                            onClick={() => setIsFilterOpen(true)}
-                            className={cn(
-                                'absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors',
-                                activeFilterCount > 0
-                                    ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
-                                    : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]'
-                            )}
-                            aria-label="Open filters"
-                        >
-                            <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
-                        </button>
                     </div>
 
                     <button
                         type="button"
-                        onClick={() => setShortlistMode((prev) => !prev)}
+                        onClick={() => setIsFilterOpen(true)}
+                        aria-label="Open filters"
                         className={cn(
-                            'h-[44px] px-3 rounded-xl border text-xs inline-flex items-center gap-1.5 transition-colors',
-                            shortlistMode
-                                ? 'border-violet-400/40 bg-violet-500/20 text-violet-200'
-                                : 'border-[var(--border-default)] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)]'
+                            'h-[44px] w-[44px] rounded-xl inline-flex items-center justify-center transition-colors',
+                            activeFilterCount > 0
+                                ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                                : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]'
                         )}
                     >
-                        <Star size={14} weight={shortlistMode ? 'fill' : 'regular'} />
-                        {shortlistMode ? 'Shortlist' : 'Compare'}
+                        <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
                     </button>
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 pl-0 [scrollbar-width:thin]">
                     {DISCOVERY_RANKING_OPTIONS.map((option) => (
                         <button
                             key={option.id}
                             type="button"
                             onClick={() => applyRankingMode(option.id)}
                             className={cn(
-                                'px-3 py-1.5 rounded-full border text-xs whitespace-nowrap transition-colors',
+                                'h-8 px-3 text-xs whitespace-nowrap inline-flex items-center transition-colors',
                                 rankingMode === option.id
-                                    ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/20 text-[var(--foreground-primary)]'
-                                    : 'border-[var(--border-default)] text-[var(--foreground-secondary)]'
+                                    ? 'border-b-2 border-[var(--border-strong)] text-[var(--foreground-primary)]'
+                                    : 'border-b-0 text-[#999999] hover:text-[var(--foreground-primary)]'
                             )}
                         >
                             {option.label}
@@ -568,15 +519,9 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                 <ActiveFilterRail
                     chips={filterRailChips}
                     onClearAll={resetFiltersTracked}
-                    className="top-[120px]"
+                    className={cn('top-[120px]', MOBILE_PAGE_GUTTER)}
                 />
 
-                <div className="flex items-center justify-between text-[11px] text-[var(--foreground-tertiary)]">
-                    <span>Showing {eventsForFeed.length} of {totalCount} events</span>
-                    {(isSearching || isDetectingLocation) && (
-                        <span>{isDetectingLocation ? 'Detecting location...' : 'Refreshing results...'}</span>
-                    )}
-                </div>
             </div>
 
             {isFilterOpen && (
@@ -594,7 +539,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                         tabIndex={-1}
                         className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300"
                     >
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                        <div className={cn('flex items-center justify-between py-4 border-b border-border', MOBILE_PAGE_GUTTER)}>
                             <h2 id="mobile-discovery-filters-title" className="text-xl font-semibold text-foreground">Filters</h2>
                             <button
                                 type="button"
@@ -608,7 +553,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-4">
+                        <div className={cn('flex-1 overflow-y-auto py-4', MOBILE_PAGE_GUTTER)}>
                             <DiscoverySidebar
                                 filters={{
                                     format: filters.format,
@@ -684,75 +629,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-budget" className="text-xs font-medium text-muted-foreground">Budget</label>
-                                        <select
-                                            id="mobile-discovery-budget"
-                                            value={filters.budget}
-                                            onChange={(e) => updateFilterTracked('budget', e.target.value as UnifiedFilterOptions['budget'])}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        >
-                                            {BUDGET_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-difficulty" className="text-xs font-medium text-muted-foreground">Difficulty</label>
-                                        <select
-                                            id="mobile-discovery-difficulty"
-                                            value={filters.difficulty}
-                                            onChange={(e) => updateFilterTracked('difficulty', e.target.value as UnifiedFilterOptions['difficulty'])}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        >
-                                            {DIFFICULTY_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-availability" className="text-xs font-medium text-muted-foreground">Availability</label>
-                                        <select
-                                            id="mobile-discovery-availability"
-                                            value={filters.availability}
-                                            onChange={(e) => updateFilterTracked('availability', e.target.value as UnifiedFilterOptions['availability'])}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        >
-                                            {AVAILABILITY_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-duration" className="text-xs font-medium text-muted-foreground">Duration</label>
-                                        <select
-                                            id="mobile-discovery-duration"
-                                            value={filters.duration}
-                                            onChange={(e) => updateFilterTracked('duration', e.target.value as UnifiedFilterOptions['duration'])}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        >
-                                            {DURATION_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label htmlFor="mobile-discovery-popularity" className="text-xs font-medium text-muted-foreground">Popularity</label>
-                                    <select
-                                        id="mobile-discovery-popularity"
-                                        value={filters.popularity}
-                                        onChange={(e) => updateFilterTracked('popularity', e.target.value as UnifiedFilterOptions['popularity'])}
-                                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                    >
-                                        {POPULARITY_OPTIONS.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
                                 <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
                                     <label className="flex items-center justify-between gap-3 text-sm text-foreground">
                                         <span>Recommended only</span>
@@ -796,7 +672,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setIsFilterOpen(false)}
-                                className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg transition-colors"
+                                className="flex-1 py-3 rounded-xl bg-black text-white font-bold hover:bg-black/90 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg transition-colors"
                             >
                                 Show Results
                             </button>
@@ -805,7 +681,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                 </div>
             )}
 
-            <div className="px-4 py-4 space-y-4">
+            <div className={cn('py-4 space-y-4', MOBILE_PAGE_GUTTER)}>
                 {eventsForFeed.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-16 h-16 rounded-full bg-[var(--background-elevated)] flex items-center justify-center mb-4">

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, DotsThree, Star, UserCheck } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Exclude, UserCheck } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
@@ -188,11 +188,11 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                                     e.stopPropagation();
                                     onShortlistToggle?.(event);
                                 }}
-                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300 bg-violet-500/10' : 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/20'}`}
+                                className={`p-1.5 rounded-md transition-all duration-200 ${isInShortlist ? 'text-violet-300' : 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/20'}`}
                                 aria-pressed={isInShortlist}
                                 aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                             >
-                                <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                                <Exclude size={16} weight={isInShortlist ? 'fill' : 'regular'} />
                             </button>
                         )}
 

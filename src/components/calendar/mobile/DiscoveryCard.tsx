@@ -6,7 +6,7 @@ import {
     MapPin,
     BookmarkSimple,
     Calendar,
-    Star,
+    Exclude,
     DotsThree,
     UserCheck,
 } from '@phosphor-icons/react';
@@ -291,13 +291,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                 className={cn(
                                     'p-2 rounded-md transition-colors',
                                     isInShortlist
-                                        ? 'text-violet-300 bg-violet-500/15'
+                                        ? 'text-violet-300'
                                         : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]'
                                 )}
                                 aria-pressed={isInShortlist}
                                 aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                             >
-                                <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                                <Exclude size={16} weight={isInShortlist ? 'fill' : 'regular'} />
                             </button>
 
                             <button
@@ -309,7 +309,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                 className={cn(
                                     'p-2 rounded-md transition-colors',
                                     isAttending
-                                        ? 'text-emerald-300 bg-emerald-500/15'
+                                        ? 'text-emerald-300'
                                         : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]',
                                     isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''
                                 )}

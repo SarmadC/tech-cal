@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
-import { MapPin, BookmarkSimple, DotsThree, Star, UserCheck } from '@phosphor-icons/react';
+import { MapPin, BookmarkSimple, DotsThree, Exclude, UserCheck } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
@@ -249,11 +249,11 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                                 e.stopPropagation();
                                 onShortlistToggle?.(event);
                             }}
-                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-500 bg-violet-500/10 dark:text-violet-300 dark:bg-violet-500/15' : 'text-muted-foreground/75 hover:text-foreground hover:bg-accent/20'}`}
+                            className={`p-1.5 rounded-md shrink-0 transition-all duration-200 ${isInShortlist ? 'text-violet-500 dark:text-violet-300' : 'text-muted-foreground/75 hover:text-foreground hover:bg-accent/20'}`}
                             aria-pressed={isInShortlist}
                             aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
                         >
-                            <Star size={16} weight={isInShortlist ? 'fill' : 'regular'} />
+                            <Exclude size={16} weight={isInShortlist ? 'fill' : 'regular'} />
                         </button>
 
                         <button
@@ -364,7 +364,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                         e.stopPropagation();
                         onAttendanceToggle?.(event);
                     }}
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isAttending ? 'text-emerald-500 bg-emerald-500/10 dark:text-emerald-400 dark:bg-emerald-400/10' : 'text-muted-foreground/60 bg-background/40'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isAttending ? 'text-emerald-500 dark:text-emerald-400 bg-background/40' : 'text-muted-foreground/60 bg-background/40'} ${isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                     aria-pressed={isAttending}
                     aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
                     disabled={isAttendanceUpdating}
@@ -378,7 +378,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                         e.stopPropagation();
                         onBookmark?.(event);
                     }}
-                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isBookmarked ? 'text-amber-500 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-400/10' : 'text-muted-foreground/60 bg-background/40'}`}
+                    className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 ${isBookmarked ? 'text-amber-500 dark:text-amber-400 bg-background/40' : 'text-muted-foreground/60 bg-background/40'}`}
                 >
                     <BookmarkSimple size={18} weight={isBookmarked ? 'fill' : 'regular'} />
                 </button>

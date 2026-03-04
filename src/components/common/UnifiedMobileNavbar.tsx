@@ -72,7 +72,7 @@ export default function UnifiedMobileNavbar({
 
     const navbarContent = (
         <div className={cn("pointer-events-auto", !fixed && className)}>
-            <div className="relative z-50 mx-auto flex w-full max-w-[calc(100vw-3rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden">
+            <div className="relative z-50 mx-auto flex w-full flex-col items-center justify-between bg-transparent px-4 py-2 lg:hidden">
                 <div className="flex w-full flex-row items-center justify-between">
                     {/* Logo */}
                     {showLogo && (
