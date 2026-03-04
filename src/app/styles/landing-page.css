@@ -83,6 +83,9 @@ html.light .landing-container .hero {
 @media (max-width: 768px) {
     .landing-container .hero {
         min-height: 100svh;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding-top: 20vh;
     }
 }
 
