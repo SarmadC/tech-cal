@@ -148,6 +148,7 @@ const DEFAULT_RELATIONSHIPS: RelationshipsState = {
     event_type_id: null,
     venue_id: null,
     series_id: null,
+    organizer_id: null,
     tagIds: [],
     audienceIds: [],
     prerequisiteIds: [],
@@ -197,6 +198,7 @@ export default function ModerationPreviewPanel({
     // Organizer state
     const [organizerData, setOrganizerData] = useState<OrganizerData>(DEFAULT_ORGANIZER_DATA);
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
+    const [isCreatingOrganizer, setIsCreatingOrganizer] = useState(false);
 
     // Agenda & speakers state
     const [agendaItems, setAgendaItems] = useState<AgendaItemInput[]>([]);
@@ -622,6 +624,8 @@ export default function ModerationPreviewPanel({
                                         sourceUrl={organizerData.website_url || ''}
                                         onSuccess={() => {}}
                                         onError={(msg) => console.error(msg)}
+                                        isCreatingOrganizer={isCreatingOrganizer}
+                                        setIsCreatingOrganizer={setIsCreatingOrganizer}
                                     />
                                 </>
                             )}
