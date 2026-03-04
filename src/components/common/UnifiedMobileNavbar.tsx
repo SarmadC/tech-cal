@@ -72,11 +72,11 @@ export default function UnifiedMobileNavbar({
 
     const navbarContent = (
         <div className={cn("pointer-events-auto", !fixed && className)}>
-            <div className="relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden">
+            <div className="relative z-50 mx-auto flex w-full max-w-[calc(100vw-3rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden">
                 <div className="flex w-full flex-row items-center justify-between">
                     {/* Logo */}
                     {showLogo && (
-                        <a href="#" onClick={(e) => { e.preventDefault(); router.push('/'); }} className="navbar-logo relative z-20 flex items-center gap-2 px-3 py-1.5 text-sm font-medium no-underline rounded-full transition-colors m-0">
+                        <a href="#" onClick={(e) => { e.preventDefault(); router.push('/'); }} className="navbar-logo relative z-20 flex min-h-11 items-center gap-2 px-3 py-1.5 text-sm font-medium no-underline rounded-full transition-colors m-0">
                             <svg width="24" height="24" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" className="object-contain">
                                 <rect width="120" height="120" fill="#000000"></rect>
                                 <polygon points="60,60 52,56 28,68 36,72" fill="#FFFFFF" opacity="0.3"></polygon>
@@ -108,13 +108,13 @@ export default function UnifiedMobileNavbar({
                         {showThemeToggle && mounted && (
                             <button
                                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className="navbar-theme-toggle w-9 h-9 p-0 rounded-full transition-all flex items-center justify-center bg-transparent border-none cursor-pointer m-0 text-black dark:text-white"
+                                className="navbar-theme-toggle w-11 h-11 p-0 rounded-full transition-all flex items-center justify-center bg-transparent border-none cursor-pointer m-0 text-black dark:text-white"
                                 aria-label="Switch theme"
                             >
                                 {theme === 'dark' ? (
-                                    <Sun size={20} weight="fill" />
+                                    <Sun size={19} weight="thin" />
                                 ) : (
-                                    <Moon size={20} weight="fill" />
+                                    <Moon size={19} weight="thin" />
                                 )}
                                 <span className="sr-only">Toggle theme</span>
                             </button>
@@ -123,12 +123,12 @@ export default function UnifiedMobileNavbar({
                         {/* Hamburger Menu Toggle */}
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="text-black dark:text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            className="text-black dark:text-white w-11 h-11 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                         >
                             {isMobileMenuOpen ? (
-                                <X size={20} weight="regular" />
+                                <X size={20} weight="thin" />
                             ) : (
-                                <List size={20} weight="regular" />
+                                <List size={20} weight="thin" />
                             )}
                         </button>
                     </div>

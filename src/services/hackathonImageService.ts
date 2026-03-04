@@ -8,7 +8,7 @@ export class HackathonImageService {
         supabaseClient: SupabaseClient
     ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
         try {
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
             if (!validTypes.includes(file.type)) {
                 return { success: false, error: `Invalid file type. Allowed: ${validTypes.join(', ')}` };
             }

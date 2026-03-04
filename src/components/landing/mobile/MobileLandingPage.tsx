@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import MobileHeroSection from './MobileHeroSection';
 import MobileChaosToOrderSection from './MobileChaosToOrderSection';
@@ -80,6 +81,30 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
                 <MobileUseCasesSection />
                 <MobileFAQSection />
             </main>
+
+            <div className="hero-sticky-cta-bar">
+                <Link href="/events" className="hero-cta-button">
+                    <span className="hero-cta-balance-spacer" aria-hidden="true" />
+                    <span className="hero-cta-text">Explore Events</span>
+                    <span className="hero-cta-arrow-chip" aria-hidden="true">
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 14 14"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </Link>
+            </div>
 
             <MobileFooter />
         </div>

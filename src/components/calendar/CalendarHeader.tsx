@@ -199,20 +199,34 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
             <div className="flex items-center gap-4">
                 {/* Filter Toggle */}
                 <button
+                    type="button"
                     onClick={onToggleFilters}
-                    className={`flex items-center justify-center p-1.5 rounded-md transition-all duration-200 ${isFilterPanelOpen || activeFilterCount > 0
-                        ? 'text-foreground-primary bg-background-tertiary'
-                        : 'text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary'
+                    className={`group relative flex items-center justify-center rounded-[10px] border px-2.5 py-2 backdrop-blur-sm transition-all duration-200 ${isFilterPanelOpen || activeFilterCount > 0
+                        ? 'border-white/10 bg-[#171a22] text-[#f5f7fb] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(0,0,0,0.32)]'
+                        : 'border-white/8 bg-[#12141a]/88 text-[#97a0b3] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_8px_18px_rgba(0,0,0,0.22)] hover:border-white/12 hover:bg-[#171a22] hover:text-[#eef2ff]'
                         }`}
                     aria-label="Toggle filters"
+                    aria-pressed={isFilterPanelOpen}
                     title="Filters"
                 >
-                    <div className="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"></path>
+                    <div className="relative flex items-center justify-center">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 18 18"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path d="M3 4.5H15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            <path d="M5.25 9H12.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            <path d="M7.5 13.5H10.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                         </svg>
                         {activeFilterCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 items-center justify-center bg-accent-primary rounded-full ring-2 ring-background-primary"></span>
+                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center pointer-events-none">
+                                <span className="absolute h-4 w-4 rounded-full bg-accent-primary/28" />
+                                <span className="absolute h-2.5 w-2.5 rounded-full border border-black/10 bg-accent-primary shadow-[0_0_0_1px_rgba(255,255,255,0.22)]" />
+                            </span>
                         )}
                     </div>
                 </button>

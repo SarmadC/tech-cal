@@ -12,14 +12,14 @@ import { getLogoSourcesForClient } from '@/utils/logoUtils';
 export default function HeroEventCard() {
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-    // Sample event data - Google I/O 2025
+    // Featured event data for the decorative hero preview.
     const event = {
-        company: 'Google',
-        title: 'Google I/O 2025',
-        date: 'May 14, 2025',
-        time: '10:00 AM',
-        location: 'Mountain View, CA',
-        type: 'Developer Conference',
+        company: 'NVIDIA',
+        title: 'NVIDIA GTC 2026',
+        date: 'Mar 16-19',
+        time: 'Keynote Mar 16',
+        location: 'San Jose, CA',
+        type: 'AI Conference',
     };
 
     const logoSources = useMemo(

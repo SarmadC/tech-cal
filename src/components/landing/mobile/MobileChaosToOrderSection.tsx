@@ -10,28 +10,26 @@ export interface MobileChaosToOrderSectionProps {
 
 type Vec2 = { x: number; y: number };
 
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const SNAP_EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 const VERTICAL_OFFSET = 3; // Offset to move cards slightly lower in calendar slots
 const CHIP_SIZE = 28; // Fixed chip size for logo-only design
+const LOGO_SIZE = 18;
+const FLOAT_RANGE = 4;
+const FLOAT_ENTRY_MS = 960;
+const FLOAT_LAYOUT = [
+  { x: 0.12, y: 0.2, rotate: -8 },
+  { x: 0.76, y: 0.34, rotate: 7 },
+  { x: 0.2, y: 0.56, rotate: -5 },
+  { x: 0.72, y: 0.7, rotate: 9 },
+  { x: 0.4, y: 0.14, rotate: -6 },
+] as const;
 
 type Measurement = {
   railY: number;
   tile: number;
   centers: Record<number, Vec2>;
+  floating: Array<Vec2 & { rotate: number }>;
   spawn: Vec2[];
-};
-
-const COMPANY_SLUG: Record<string, string> = {
-  meta: 'meta',
-  google: 'google',
-  apple: 'apple',
-  microsoft: 'microsoft',
-  github: 'github',
-  nvidia: 'nvidia',
-  openai: 'openai',
-  vercel: 'vercel',
-  amazon: 'amazon',
-  docker: 'docker'
 };
 
 const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ className = '' }) => {
@@ -64,11 +62,12 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     [eventData]
   );
 
-  // Calendar metadata for alignment (May 2024)
-  const YEAR = 2024;
+  // Calendar metadata for alignment (May 2025)
+  const YEAR = 2025;
   const MONTH_INDEX = 4; // May (0-based)
   const firstDayOffset = new Date(YEAR, MONTH_INDEX, 1).getDay();
   const daysInMonth = new Date(YEAR, MONTH_INDEX + 1, 0).getDate();
+  const totalWeeks = Math.ceil((firstDayOffset + daysInMonth) / 7);
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -93,22 +92,11 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     return initial;
   });
 
-  useEffect(() => {
-    const updated: Record<string, string> = {};
-    eventData.forEach((e) => {
-      const sources = logoSourcesMap[e.company];
-      if (sources && sources.length > 0) {
-        updated[e.company] = sources[0];
-      }
-    });
-    setActiveLogoSources(updated);
-  }, [eventData, logoSourcesMap]);
-
   const handleLogoError = useCallback((company: string) => {
     const sources = logoSourcesMap[company];
     if (!sources) return;
 
-    const currentSrc = activeLogoSources[company];
+    const currentSrc = activeLogoSources[company] ?? sources[0];
     const currentIndex = currentSrc ? sources.indexOf(currentSrc) : -1;
     const nextSrc = currentIndex >= 0 && currentIndex < sources.length - 1
       ? sources[currentIndex + 1]
@@ -169,7 +157,19 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
       y: containerRect.height + tile + 40,
     }));
 
-    return { railY, centers, tile, spawn };
+    const floatWidth = containerRect.width - pad * 2 - tile;
+    const floatTop = railY + tile * 0.5;
+    const floatHeight = Math.max(tile * 4, containerRect.height - floatTop - tile * 1.75);
+    const floating = eventData.map((_, i) => {
+      const layout = FLOAT_LAYOUT[i % FLOAT_LAYOUT.length];
+      return {
+        x: pad + layout.x * floatWidth,
+        y: floatTop + layout.y * floatHeight,
+        rotate: layout.rotate,
+      };
+    });
+
+    return { railY, centers, tile, floating, spawn };
   }, [eventData]);
 
   const measure = useCallback(
@@ -199,7 +199,8 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           card.style.willChange = 'auto';
         });
         finalizedRef.current = true;
-        containerRef.current?.classList.add('finalized');
+        containerRef.current?.classList.remove('is-floating', 'is-locking');
+        containerRef.current?.classList.add('is-locked', 'finalized');
       });
     },
     [eventDays]
@@ -212,48 +213,61 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     if (!measurement) return;
     startedRef.current = true;
 
-    const { centers, tile, spawn } = measurement;
+    const { centers, floating, spawn } = measurement;
 
     if (prefersReducedMotionRef.current) {
       placeCardsInstantly(measurement);
       return;
     }
 
-    const animations: Animation[] = [];
-    const totalDelay = 40; // Faster stagger for mobile
+    containerRef.current?.classList.remove('is-locking', 'is-locked', 'finalized');
+    containerRef.current?.classList.add('is-floating');
+
+    const entryAnimations: Animation[] = [];
+    const totalDelay = 50;
+    const lockStart = Math.round(FLOAT_ENTRY_MS * 0.62);
 
     cardRefs.current.forEach((card, i) => {
       if (!card) return;
       const day = eventDays[i];
       const center = centers[day];
       if (!center) return;
-
       const spawnT = `translate3d(${spawn[i].x - CHIP_SIZE / 2}px, ${spawn[i].y - CHIP_SIZE / 2}px, 0)`;
+      const floatPoint = floating[i];
+      const floatT = `translate3d(${floatPoint.x - CHIP_SIZE / 2}px, ${floatPoint.y - CHIP_SIZE / 2}px, 0) rotate(${floatPoint.rotate}deg)`;
+      const floatUpT = `${floatT} translate3d(0, -${FLOAT_RANGE}px, 0)`;
+      const floatDownT = `${floatT} translate3d(0, ${FLOAT_RANGE}px, 0)`;
       const finalT = `translate3d(${center.x - CHIP_SIZE / 2}px, ${center.y - CHIP_SIZE / 2 + VERTICAL_OFFSET}px, 0)`;
 
       // Force GPU layer creation
       card.style.opacity = '1';
       card.style.willChange = 'transform';
-      card.style.transform = 'translateZ(0)';
+      card.style.transform = spawnT;
 
-      // Simplified 2-keyframe animation for better performance
       const a = card.animate(
         [
-          { transform: spawnT, opacity: 0.9 },
-          { transform: finalT, opacity: 1 },
+          { transform: spawnT, opacity: 0 },
+          { transform: floatT, opacity: 1, offset: 0.38 },
+          { transform: floatUpT, opacity: 1, offset: 0.52 },
+          { transform: floatDownT, opacity: 1, offset: 0.68 },
+          { transform: finalT, opacity: 1, offset: 1 },
         ],
         {
-          duration: 700, // Reduced from 1200ms for snappier mobile performance
-          easing: EASE,
+          duration: FLOAT_ENTRY_MS,
+          easing: SNAP_EASE,
           delay: i * totalDelay,
           fill: 'forwards',
         }
       );
-      animations.push(a);
+      entryAnimations.push(a);
     });
 
-    // Finalize after animations settle
-    Promise.all(animations.map((a) => a.finished.catch(() => undefined))).then(() => {
+    window.setTimeout(() => {
+      containerRef.current?.classList.remove('is-floating');
+      containerRef.current?.classList.add('is-locking');
+    }, lockStart);
+
+    Promise.all(entryAnimations.map((a) => a.finished.catch(() => undefined))).then(() => {
       requestAnimationFrame(() => {
         const latestMeasurement = measure(true) ?? measurement;
         cardRefs.current.forEach((card) => card?.getAnimations().forEach((an) => an.cancel()));
@@ -371,21 +385,6 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
             {/* Month Header with Navigation */}
             <div className="calendar-month-header">
               <span className="calendar-month-label">May 2025</span>
-              <div className="calendar-nav-buttons">
-                <button className="calendar-nav-btn" aria-label="Previous month">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <button className="calendar-nav-btn calendar-today-btn" aria-label="Today">
-                  Today
-                </button>
-                <button className="calendar-nav-btn" aria-label="Next month">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
             </div>
             {/* Weekday Headers */}
             <div className="calendar-header">
@@ -393,24 +392,27 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
                 <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
               </div>
             </div>
-            <div ref={gridRef} className="calendar-dates">
+            <div
+              ref={gridRef}
+              className="calendar-dates"
+              style={{ gridTemplateRows: `repeat(${totalWeeks}, 1fr)` }}
+            >
               {/* Optional staging rail purely for reference/visual continuity */}
               <div className="staging-rail" />
-              {Array.from({ length: 42 }, (_, i) => {
-                const day = i - firstDayOffset + 1;
-                const hasEvent = eventData.some((e) => Number(e.date.split(' ')[1]) === day);
-                const isPastMonth = day <= 0;
-                const isNextMonth = day > daysInMonth;
-                const isWeekend = i % 7 === 0 || i % 7 === 6;
+              {Array.from({ length: daysInMonth }, (_, index) => {
+                const day = index + 1;
+                const hasEvent = eventDays.includes(day);
+                const weekdayIndex = (firstDayOffset + index) % 7;
+                const isWeekend = weekdayIndex === 0 || weekdayIndex === 6;
 
                 return (
                   <div
-                    key={i}
-                    className={`calendar-date ${hasEvent ? 'has-event' : ''} ${isPastMonth || isNextMonth ? 'other-month' : ''} ${isWeekend ? 'weekend' : ''}`}
-                    data-day={day > 0 && day <= daysInMonth ? day : undefined}
+                    key={day}
+                    className={`calendar-date in-month ${hasEvent ? 'has-event' : ''} ${isWeekend ? 'weekend' : ''}`}
+                    data-day={day}
+                    style={day === 1 ? { gridColumnStart: firstDayOffset + 1 } : undefined}
                   >
-                    {/* Only show date number if no event (chip will replace it) */}
-                    {day > 0 && day <= daysInMonth && !hasEvent && (
+                    {!hasEvent && (
                       <span className="date-number">{day}</span>
                     )}
                   </div>
@@ -420,39 +422,43 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           </div>
 
           <div className="mobile-event-cards">
-            {eventData.map((e, i) => (
-              <div
-                key={i}
-                ref={(el) => { cardRefs.current[i] = el; }}
-                className="mobile-event-card logo-chip"
-                role="button"
-                aria-label={`${e.company} — ${e.title} on ${e.date}`}
-                onClick={() => setSelectedIndex(i)}
-                style={{
-                  opacity: 0,
-                  '--company-color': e.color
-                } as React.CSSProperties}
-              >
-                <div className="chip-logo">
-                  {activeLogoSources[e.company] ? (
-                    <Image
-                      src={activeLogoSources[e.company]}
+            {eventData.map((e, i) => {
+              const currentLogoSrc = activeLogoSources[e.company] ?? logoSourcesMap[e.company]?.[0];
+
+              return (
+                <div
+                  key={i}
+                  ref={(el) => { cardRefs.current[i] = el; }}
+                  className="mobile-event-card logo-chip"
+                  role="button"
+                  aria-label={`${e.company} — ${e.title} on ${e.date}`}
+                  onClick={() => setSelectedIndex(i)}
+                  style={{
+                    opacity: 0,
+                    '--company-color': e.color
+                  } as React.CSSProperties}
+                >
+                  <div className="chip-logo">
+                    {currentLogoSrc ? (
+                      <Image
+                      src={currentLogoSrc}
                       alt=""
-                      width={20}
-                      height={20}
+                      width={LOGO_SIZE}
+                      height={LOGO_SIZE}
                       loading="lazy"
-                      sizes="24px"
-                      style={{ objectFit: 'contain' }}
-                      onError={() => handleLogoError(e.company)}
-                    />
-                  ) : (
-                    <span className="logo-fallback">
-                      {e.company.charAt(0)}
-                    </span>
-                  )}
+                      sizes="20px"
+                        style={{ objectFit: 'contain' }}
+                        onError={() => handleLogoError(e.company)}
+                      />
+                    ) : (
+                      <span className="logo-fallback">
+                        {e.company.charAt(0)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

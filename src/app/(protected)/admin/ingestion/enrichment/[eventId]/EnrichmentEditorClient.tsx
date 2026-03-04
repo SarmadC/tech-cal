@@ -140,6 +140,12 @@ export default function EnrichmentEditorClient({
     const [isCreatingOrganizer, setIsCreatingOrganizer] = useState(!event.organizer?.id);
     const [createdOrganizerId, setCreatedOrganizerId] = useState<string | null>(null);
 
+    const handleOrganizerCreated = useCallback((organizerId: string) => {
+        setIsCreatingOrganizer(false);
+        setCreatedOrganizerId(organizerId);
+        setRelationships(prev => ({ ...prev, organizer_id: organizerId }));
+    }, []);
+
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const expandedDescriptionRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -684,11 +690,13 @@ export default function EnrichmentEditorClient({
                         setOrganizerData={setOrganizerData}
                         currentLogoUrl={currentLogoUrl}
                         setCurrentLogoUrl={setCurrentLogoUrl}
-                        sourceUrl={event.organizer?.website_url || ''}
+                        sourceUrl={organizerData.website_url || event.organizer?.website_url || ''}
                         onSuccess={() => { setSuccess(true); setTimeout(() => setSuccess(false), 3000); }}
                         onError={(msg) => setError(msg)}
                         isCreatingOrganizer={isCreatingOrganizer}
                         setIsCreatingOrganizer={setIsCreatingOrganizer}
+                        createdOrganizerId={createdOrganizerId}
+                        onOrganizerCreated={handleOrganizerCreated}
                     />
                 </div>
             </div>

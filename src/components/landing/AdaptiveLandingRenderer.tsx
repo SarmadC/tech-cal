@@ -18,14 +18,16 @@ export interface AdaptiveLandingProps {
 }
 
 const AdaptiveLandingRenderer: React.FC<AdaptiveLandingProps> = ({ className = '' }) => {
-    const { isMobile, isTablet, isTouchDevice } = useDeviceDetection();
+    const { isReady, isMobile, isTablet, isTouchDevice } = useDeviceDetection();
 
     // Determine if we should use mobile components
     // Use viewport size as primary factor, touch as secondary
-    const useMobileVersion = isMobile || (isTablet && isTouchDevice) || (isMobile && !isTouchDevice);
+    const useMobileVersion = isMobile || (isTablet && isTouchDevice);
 
-    // Debug logging (leave for troubleshooting; remove later if noisy)
-    console.log('Device Detection:', { isMobile, isTablet, isTouchDevice, useMobileVersion });
+    // Avoid rendering the wrong layout during hydration.
+    if (!isReady) {
+        return <div className="h-screen w-full bg-background animate-pulse" aria-hidden="true" />;
+    }
 
     if (useMobileVersion) {
         return <MobileLandingPage className={className} />;

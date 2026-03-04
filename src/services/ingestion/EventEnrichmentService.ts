@@ -341,7 +341,7 @@ export class EventEnrichmentService {
     ): Promise<{ success: boolean; logoUrl?: string; fileName?: string; error?: string }> {
         try {
             // Validate file type
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
             if (!validTypes.includes(file.type)) {
                 return {
                     success: false,

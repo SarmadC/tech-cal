@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import HeroEventCard from './HeroEventCard';
 
 export interface MobileHeroSectionProps {
@@ -49,29 +48,6 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
                 </div>
             </div>
 
-            {/* Sticky bottom CTA bar */}
-            <div className="hero-sticky-cta-bar">
-                <Link href="/events" className="hero-cta-button">
-                    <span className="hero-cta-text">Discover Events</span>
-                    <span className="hero-cta-arrow-chip" aria-hidden="true">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 14 14"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </span>
-                </Link>
-            </div>
         </section>
     );
 };

@@ -143,11 +143,11 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     };
 
     const spanInfo =
-        'isInstance' in event && event.isInstance && event.dayInfo && event.dayInfo.totalDays > 1
+        'isInstance' in event && event.isInstance && event.dayInfo
             ? {
                 isFirst: event.dayInfo.isFirstDay,
                 isLast: event.dayInfo.isLastDay,
-                isSingle: event.dayInfo.isFirstDay && event.dayInfo.isLastDay
+                isSingle: event.dayInfo.totalDays === 1 || (event.dayInfo.isFirstDay && event.dayInfo.isLastDay)
             }
             : null;
 
@@ -163,7 +163,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     }
 
     const isMultiDayInstance =
-        spanInfo !== null ||
+        (spanInfo !== null && !spanInfo.isSingle) ||
         (isParentMultiDayEvent(event) && event.isMultiDay && !!event.endTime);
 
     const summaryLabelParts = [

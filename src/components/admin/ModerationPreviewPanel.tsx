@@ -626,6 +626,8 @@ export default function ModerationPreviewPanel({
                                         onError={(msg) => console.error(msg)}
                                         isCreatingOrganizer={isCreatingOrganizer}
                                         setIsCreatingOrganizer={setIsCreatingOrganizer}
+                                        createdOrganizerId={null}
+                                        onOrganizerCreated={() => {}}
                                     />
                                 </>
                             )}

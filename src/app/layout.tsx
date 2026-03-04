@@ -42,6 +42,7 @@ import { SITE_URL } from '@/config/site';
 const inter = Inter({
     subsets: ["latin"],
     display: "swap",
+    variable: "--font-inter",
 });
 const dmSans = DM_Sans({
     subsets: ["latin"],
@@ -130,7 +131,7 @@ export default function RootLayout({
                 <WebsiteJsonLd />
                 <link rel="alternate" type="application/rss+xml" title="Kure-Cal Blog RSS Feed" href="/blog/feed.xml" />
             </head>
-            <body className={`${inter.className} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`}>
+            <body className={`${inter.className} ${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`}>
                 <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded-md focus:text-sm focus:font-medium">
                     Skip to main content
                 </a>

@@ -34,6 +34,7 @@ interface DayData {
     overflowEvents: (Event | MultiDayEventInstance)[];
     isCurrentMonth: boolean;
     isToday: boolean;
+    ribbonsHeightOnDay: number;
 }
 
 interface WeekData {
@@ -97,18 +98,30 @@ interface MonthInlineEventRowProps {
     onSelect: (event: InlineEvent) => void;
     onHover: (event: InlineEvent, e: React.MouseEvent) => void;
     onLeave: () => void;
+    style?: React.CSSProperties;
+    compact?: boolean;
 }
 
 const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
     event,
     onSelect,
     onHover,
-    onLeave
+    onLeave,
+    style,
+    compact = false
 }) => {
     const handleClick = () => {
         onLeave();
         onSelect(event);
     };
+
+    const classNames = ['month-inline-event-card'];
+    if (compact) {
+        classNames.push('month-event-card--quiet');
+    }
+    if (!('isInstance' in event && event.isInstance)) {
+        classNames.push('month-event-card--span-single');
+    }
 
     return (
         <MonthEventCard
@@ -116,7 +129,8 @@ const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
             onClick={handleClick}
             onHover={(e) => onHover(event, e)}
             onLeave={onLeave}
-            className="month-inline-event-card"
+            className={classNames.join(' ')}
+            style={style}
         />
     );
 };
@@ -268,12 +282,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         });
     }, []);
 
-    // Memoize the card style to prevent new object creation on every render
-    const cardStyle = useMemo(() => ({
-        height: 'auto',
-        minHeight: '24px',
-        fontSize: '0.75rem'
-    }), []);
 
     React.useEffect(() => {
         setExpandedDays({});
@@ -330,7 +338,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     onHover={(e) => handleEventHover(segment.cardEvent, e)}
                                                     onLeave={noop}
                                                     className="month-event-card--quiet"
-                                                    style={cardStyle}
                                                 />
                                             </div>
                                         ))}
@@ -342,16 +349,13 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                 {week.days.map((dayData) => {
                                     const eventOffset =
                                         RIBBON_TOP_OFFSET +
-                                        week.ribbonHeight +
-                                        (week.ribbonHeight > 0 ? 12 : 8);
+                                        dayData.ribbonsHeightOnDay +
+                                        (dayData.ribbonsHeightOnDay > 0 ? 12 : 8);
                                     const isExpanded = !!expandedDays[dayData.dateKey];
                                     const overflowIndicatorEvents = getOverflowIndicatorEvents(dayData.overflowEvents);
                                     const showOverflowControl = isExpanded
                                         ? dayData.overflowEvents.length > 0
                                         : overflowIndicatorEvents.length > 0;
-                                    const visibleEvents = isExpanded
-                                        ? [...dayData.inlineEvents, ...dayData.overflowEvents]
-                                        : dayData.inlineEvents;
 
                                     return (
                                         <div
@@ -366,13 +370,26 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                 className="month-grid-day-events"
                                                 style={{ marginTop: eventOffset }}
                                             >
-                                                {visibleEvents.map((event, eventIndex) => (
+                                                {dayData.inlineEvents.map((event, eventIndex) => (
                                                     <div key={`${event.id}-${eventIndex}`} className="month-grid-event">
                                                         <MonthInlineEventRow
                                                             event={event}
                                                             onSelect={handleEventClick}
                                                             onHover={handleEventHover}
                                                             onLeave={noop}
+                                                            compact={false}
+                                                        />
+                                                    </div>
+                                                ))}
+
+                                                {isExpanded && dayData.overflowEvents.map((event, eventIndex) => (
+                                                    <div key={`${event.id}-overflow-${eventIndex}`} className="month-grid-event">
+                                                        <MonthInlineEventRow
+                                                            event={event}
+                                                            onSelect={handleEventClick}
+                                                            onHover={handleEventHover}
+                                                            onLeave={noop}
+                                                            compact
                                                         />
                                                     </div>
                                                 ))}
@@ -1353,6 +1370,14 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 const visibleRibbonSegmentsOnDay = visibleSegments.filter(segment =>
                     segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
                 );
+
+                let maxRibbonRow = -1;
+                visibleRibbonSegmentsOnDay.forEach(s => {
+                    if (s.row > maxRibbonRow) maxRibbonRow = s.row;
+                });
+                const rowsUsedOnDay = maxRibbonRow + 1;
+                const ribbonsHeightOnDay = rowsUsedOnDay > 0 ? rowsUsedOnDay * RIBBON_HEIGHT + (rowsUsedOnDay - 1) * RIBBON_GAP : 0;
+
                 const uniqueRibbonRows = new Set(visibleRibbonSegmentsOnDay.map(s => s.row)).size;
                 const availableInlineSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
 
@@ -1405,7 +1430,8 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     inlineEvents,
                     overflowEvents,
                     isCurrentMonth: day.getMonth() === initialDate.getMonth(),
-                    isToday: day.toDateString() === new Date().toDateString()
+                    isToday: day.toDateString() === new Date().toDateString(),
+                    ribbonsHeightOnDay
                 };
             });
 

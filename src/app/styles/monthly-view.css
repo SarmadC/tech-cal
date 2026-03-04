@@ -355,6 +355,7 @@
 .month-event-card {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 4px;
   width: 100%;
   padding: 4px 8px;
@@ -368,6 +369,13 @@
   font-weight: 600;
   min-height: 26px;
   height: 26px;
+  text-align: left;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.month-event-card * {
+  text-transform: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -437,10 +445,12 @@
 
 .month-event-card-label {
   flex: 1;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.1;
   color: var(--calendar-month-event-text, #1e293b);
+  letter-spacing: 0 !important;
+  text-transform: none !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -531,21 +541,19 @@
   height: 100%;
 }
 
-.month-week-ribbon .month-event-card--quiet {
-  min-height: 22px;
-  padding: 3px 8px !important;
+.month-event-card--quiet {
+  height: auto;
+  min-height: 24px;
+  font-size: 0.75rem;
+  padding: 2px 8px !important;
   box-shadow: none;
 }
 
-.month-week-ribbon .month-event-card--quiet:hover,
-.month-week-ribbon .month-event-card--quiet:focus-visible {
+.month-event-card--quiet:hover,
+.month-event-card--quiet:focus-visible {
   box-shadow: none;
 }
 
-.month-week-ribbon .month-event-card--quiet .month-event-card-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-}
 
 .month-event-card-logo {
   width: 20px;
@@ -580,50 +588,11 @@
   letter-spacing: 0.015em !important;
 }
 
-/* Clean Month Event Card - Reference Design */
-.tech-calendar-month-view .event-card {
-  padding: 12px !important;
-  border-radius: 8px !important;
-  width: 100% !important;
-  position: relative !important;
-  display: block !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  margin: 0 !important;
-  min-height: 56px !important;
-  height: auto !important;
-  flex: 1 !important;
-}
-
-/* Month grid day - ensure it allows events to fill space */
-.tech-calendar-month-view .month-grid-day {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-  width: 100% !important;
-}
-
-/* Month grid day events container - fill full available space */
+/* Month grid day events container - allow gap for stacking */
 .tech-calendar-month-view .month-grid-day-events {
-  height: 100% !important;
-  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  flex: 1 !important;
-}
-
-/* Month grid event container - allow larger cards */
-.tech-calendar-month-view .month-grid-event {
-  height: auto !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  flex: 0 0 auto !important;
+  gap: 4px;
 }
 
 /* Clean event card styling - no more aggressive overrides */
@@ -1313,19 +1282,4 @@
    INLINE EVENT ROWS
    ========================================================================== */
 
-.month-inline-event-card {
-  min-height: 22px;
-  height: auto;
-  padding: 3px 8px;
-  box-shadow: none;
-}
-
-.month-inline-event-card:hover,
-.month-inline-event-card:focus-visible {
-  box-shadow: none;
-}
-
-.month-inline-event-card .month-event-card-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-}
+/* Inline event styles consolidated into .month-event-card--quiet */
