@@ -27,6 +27,7 @@ const DEFAULT_VALUES: Record<QuickEditSection, Partial<CareerProfile>> = {
     timeframe: 'immediate'
   },
   learning: {
+    targetPath: '',
     learningStyle: [],
     availableTime: 'moderate',
     budget: 'moderate'

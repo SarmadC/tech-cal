@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     const [eventTypesResult, upcomingEventsResult, trackedEventsResult] = await Promise.allSettled([
         EventTypeService.getEventTypes(supabase),
         EventService.getEvents({ startDate: new Date() }, supabase, 1, 100),
-        UserEventService.getLightweightTrackedEvents(user!.id, supabase)
+        UserEventService.getTrackedEvents(user!.id, supabase)
     ]);
 
     // Extract data or use empty arrays as fallbacks

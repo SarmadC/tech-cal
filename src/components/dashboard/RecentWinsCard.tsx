@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { TrendUp, ArrowRight, CaretRight, Circle, Star, CheckCircle, Lock, ClockCounterClockwise } from '@phosphor-icons/react';
+import { ArrowRight, CaretRight, Circle, Star, CheckCircle, Lock, ClockCounterClockwise } from '@phosphor-icons/react';
 import { format, subDays, isAfter } from 'date-fns';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useEventFeedback } from '@/hooks/useEventFeedback';
@@ -12,6 +12,7 @@ import { getImpactBucketLabel } from '@/config/recommendationThresholds';
 import { FREE_TIER_LIMITS } from '@/types/subscription';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/types';
 import dynamic from 'next/dynamic';
 
@@ -31,6 +32,7 @@ interface RecentWinsCardProps {
     upcomingEvents: Event[];
     careerProfile: CareerProfile | null;
     eventTypes?: EventType[];
+    presentation?: 'default' | 'mobile-dashboard';
 }
 
 export function RecentWinsCard({
@@ -38,7 +40,9 @@ export function RecentWinsCard({
     upcomingEvents,
     careerProfile,
     eventTypes = [],
+    presentation = 'default',
 }: RecentWinsCardProps) {
+    const isMobileDashboard = presentation === 'mobile-dashboard';
     const { user } = useAuth();
     const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
@@ -115,13 +119,17 @@ export function RecentWinsCard({
     }, [isModalOpen, handleModalClose]);
 
     return (
-        <DashboardCard title="" className="w-full h-fit flex flex-col">
+        <DashboardCard title="" className="w-full h-fit flex flex-col" presentation={presentation}>
             {/* Header */}
             <DashboardSectionHeader
                 title="Performance"
                 subtitle="Recent Activity"
+                presentation={presentation}
                 action={(
-                    <button className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1 group">
+                    <button className={cn(
+                        "text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1 group",
+                        isMobileDashboard && "text-[0.72rem] text-[var(--mobile-dashboard-text-secondary)] hover:text-[var(--mobile-dashboard-text-primary)]"
+                    )}>
                         History <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                 )}
@@ -157,10 +165,10 @@ export function RecentWinsCard({
                                             </h4>
                                             <div className="text-xs text-zinc-500 mt-1.5 flex flex-wrap gap-1">
                                                 <span>{format(new Date(win.attendedDate), 'MMM d, yyyy')}</span>
-                                                {win.rsvpToAttendDelta !== undefined && (
+                                                {win.bookmarkedLeadDays !== undefined && (
                                                     <>
                                                         <span className="text-zinc-700">•</span>
-                                                        <span>RSVP&apos;d {win.rsvpToAttendDelta} days before</span>
+                                                        <span>Saved {win.bookmarkedLeadDays} days before</span>
                                                     </>
                                                 )}
                                             </div>
@@ -171,10 +179,10 @@ export function RecentWinsCard({
                                             {/* Feedback status / Rate button */}
                                             <button
                                                 onClick={(e) => handleFeedbackClick(win.event, e)}
-                                                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors border ${feedbackEventIds.has(win.event.id)
+                                                className={cn(`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors border ${feedbackEventIds.has(win.event.id)
                                                     ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10'
                                                     : 'text-amber-400 border-amber-500/20 hover:bg-amber-500/10'
-                                                    }`}
+                                                    }`, isMobileDashboard && 'rounded-full px-2.5 py-1')}
                                             >
                                                 {feedbackEventIds.has(win.event.id) ? (
                                                     <>
@@ -190,13 +198,7 @@ export function RecentWinsCard({
                                             </button>
 
                                             {/* Impact badge */}
-                                            <div className={`
-                                                flex-shrink-0 px-2 py-0.5 rounded text-[10px] tracking-wide font-medium border
-                                                ${bucket.label === 'High Impact' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : ''}
-                                                ${bucket.label === 'Medium Impact' ? 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400' : ''}
-                                                ${bucket.label === 'Low Impact' ? 'border-zinc-700 bg-zinc-800/50 text-zinc-400' : ''}
-                                                ${bucket.label !== 'High Impact' && bucket.label !== 'Medium Impact' ? 'border-zinc-700 bg-zinc-800/50 text-zinc-400' : ''}
-                                            `}>
+                                            <div className={`flex-shrink-0 px-2 py-0.5 rounded text-[10px] tracking-wide font-medium border ${bucket.borderColor} ${bucket.bgColor} ${bucket.color}`}>
                                                 {bucket.label}
                                             </div>
                                         </div>
@@ -218,7 +220,10 @@ export function RecentWinsCard({
                                                     {win.matchedSkills.length > 0 && (
                                                         <div className="flex flex-wrap gap-1">
                                                             {win.matchedSkills.map(s => (
-                                                                <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                                                <span key={s} className={cn(
+                                                                    "text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400",
+                                                                    isMobileDashboard && "mobile-dashboard-pill"
+                                                                )}>
                                                                     {s}
                                                                 </span>
                                                             ))}
@@ -242,7 +247,10 @@ export function RecentWinsCard({
 
                             <button
                                 onClick={() => setShowUpgradeModal(true)}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors mt-2"
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors mt-2",
+                                    isMobileDashboard && "mobile-dashboard-pill mobile-dashboard-pillWarning w-full justify-start rounded-2xl bg-transparent"
+                                )}
                             >
                                 <ClockCounterClockwise className="w-4 h-4" weight="fill" />
                                 <span className="text-xs font-medium">
@@ -254,11 +262,11 @@ export function RecentWinsCard({
                     )}
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 min-h-[100px]">
-                    <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-2">
+                <div className={cn("flex-1 flex flex-col items-center justify-center text-center opacity-40 min-h-[100px]", isMobileDashboard && "opacity-100 text-[var(--mobile-dashboard-text-secondary)]")}>
+                    <div className={cn("w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-2", isMobileDashboard && "mobile-dashboard-emptyIcon w-12 h-12 mb-3 bg-transparent")}>
                         <Circle className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                     </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">No recent activity</p>
+                    <p className={cn("text-xs text-zinc-500 dark:text-zinc-400", isMobileDashboard && "text-[0.8rem] text-[var(--mobile-dashboard-text-secondary)]")}>No recent activity</p>
                 </div>
             )}
 

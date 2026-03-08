@@ -12,6 +12,7 @@ import {
     CareerGoal,
     CareerTimeframe,
     LearningStyle,
+    LEARNING_PATH_TRACKS,
     NetworkingGoal,
     CareerOptionalSectionStatus,
     INTEREST_AREAS
@@ -613,6 +614,25 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     const renderStep4 = () => (
         <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
             <SectionHeader title="Learning Preferences" />
+            <motion.div variants={staggerItem} className="space-y-3">
+                <label className="text-sm font-medium text-foreground">Target path</label>
+                <div className="relative group">
+                    <select
+                        className="w-full appearance-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors hover:border-border/80 focus:border-foreground/20"
+                        value={data.step4_preferences?.targetPath || ''}
+                        onChange={(e) => updateData('step4_preferences', {
+                            ...data.step4_preferences,
+                            targetPath: e.target.value || undefined,
+                        })}
+                    >
+                        <option value="">Let the app infer a path</option>
+                        {LEARNING_PATH_TRACKS.map((track) => (
+                            <option key={track} value={track}>{track}</option>
+                        ))}
+                    </select>
+                    <CaretDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none group-hover:text-foreground transition-colors" />
+                </div>
+            </motion.div>
             <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                     { value: 'hands-on', label: 'Hands-on Workshops', desc: 'Build things in real-time' },

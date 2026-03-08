@@ -5,6 +5,7 @@ import { LLMEnrichmentService } from '@/services/ingestion/LLMEnrichmentService'
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
+const DEFAULT_CRON_BATCH_LIMIT = 25;
 
 async function validateCron(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
@@ -39,7 +40,9 @@ async function handler(request: NextRequest) {
 
     const limitParam = request.nextUrl.searchParams.get('limit');
     const parsedLimit = limitParam === null ? NaN : Number(limitParam);
-    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+    const envLimit = Number(process.env.ENRICHMENT_CRON_BATCH_LIMIT);
+    const fallbackLimit = Number.isFinite(envLimit) && envLimit > 0 ? envLimit : DEFAULT_CRON_BATCH_LIMIT;
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : fallbackLimit;
 
     const result = await service.processBatch(limit);
 

@@ -5,7 +5,7 @@ import { Star, ThumbsUp, ThumbsDown, Users, Lightbulb, X, Check, Spinner } from 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
-import { EventFeedbackService, type EventFeedback } from '@/services/eventFeedbackService';
+import { EventFeedbackService } from '@/services/eventFeedbackService';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import type { Event } from '@/types';
 
@@ -54,6 +54,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
     });
 
     // Populate form with existing feedback
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (existingFeedback) {
             setRating(existingFeedback.actualValueRating || 0);
@@ -64,6 +65,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             setCareerBenefit(existingFeedback.careerBenefit || '');
         }
     }, [existingFeedback]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     // Submit mutation
     const submitMutation = useMutation({
@@ -133,7 +135,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
     if (isFetchingFeedback) {
         return (
             <div className="flex items-center justify-center py-8">
-                <Spinner className="w-6 h-6 text-indigo-400 animate-spin" />
+                <Spinner className="w-6 h-6 text-indigo-500 dark:text-indigo-400 animate-spin" />
             </div>
         );
     }
@@ -143,10 +145,10 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground-primary">
                         {existingFeedback ? 'Edit Your Feedback' : 'Rate This Event'}
                     </h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-foreground-tertiary mt-0.5">
                         Help us improve recommendations
                     </p>
                 </div>
@@ -154,7 +156,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="p-1.5 rounded-md hover:bg-background-tertiary text-foreground-tertiary hover:text-foreground-secondary transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -163,7 +165,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
 
             {/* Star Rating */}
             <div className="space-y-2">
-                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">
                     How valuable was this event?
                 </label>
                 <div className="flex items-center gap-1">
@@ -180,14 +182,14 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                                 className={`w-7 h-7 transition-colors ${
                                     star <= (hoverRating || rating)
                                         ? 'text-amber-400'
-                                        : 'text-zinc-700'
+                                        : 'text-foreground-muted'
                                 }`}
                                 weight={star <= (hoverRating || rating) ? 'fill' : 'regular'}
                             />
                         </button>
                     ))}
                     {rating > 0 && (
-                        <span className="ml-2 text-sm text-zinc-400">
+                        <span className="ml-2 text-sm text-foreground-secondary">
                             {rating === 1 ? 'Poor' : rating === 2 ? 'Fair' : rating === 3 ? 'Good' : rating === 4 ? 'Great' : 'Excellent'}
                         </span>
                     )}
@@ -196,7 +198,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
 
             {/* Would Recommend */}
             <div className="space-y-2">
-                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">
                     Would you recommend this event?
                 </label>
                 <div className="flex gap-3">
@@ -206,7 +208,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md border transition-colors ${
                             wouldRecommend === true
                                 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                                : 'bg-zinc-900/50 border-white/5 text-zinc-400 hover:border-white/10'
+                                : 'bg-background-secondary border-border-subtle text-foreground-secondary hover:border-border-default hover:bg-background-tertiary/80'
                         }`}
                     >
                         <ThumbsUp className="w-4 h-4" weight={wouldRecommend === true ? 'fill' : 'regular'} />
@@ -218,7 +220,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md border transition-colors ${
                             wouldRecommend === false
                                 ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                                : 'bg-zinc-900/50 border-white/5 text-zinc-400 hover:border-white/10'
+                                : 'bg-background-secondary border-border-subtle text-foreground-secondary hover:border-border-default hover:bg-background-tertiary/80'
                         }`}
                     >
                         <ThumbsDown className="w-4 h-4" weight={wouldRecommend === false ? 'fill' : 'regular'} />
@@ -229,7 +231,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
 
             {/* Connections Made */}
             <div className="space-y-2">
-                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide flex items-center gap-1.5">
+                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" />
                     Valuable connections made
                 </label>
@@ -248,14 +250,14 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         setConnectionsMade(sanitized);
                     }}
                     placeholder="0"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-white/5 rounded-md text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                    className="w-full px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"
                 />
             </div>
 
             {/* Skills Gained */}
             {!compact && (
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide flex items-center gap-1.5">
                         <Lightbulb className="w-3.5 h-3.5" />
                         Skills developed or learned
                     </label>
@@ -268,7 +270,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                                 className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
                                     skillsGained.includes(skill)
                                         ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400'
-                                        : 'bg-zinc-900/50 border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10'
+                                        : 'bg-background-secondary border-border-subtle text-foreground-tertiary hover:text-foreground-secondary hover:border-border-default'
                                 }`}
                             >
                                 {skill}
@@ -282,13 +284,13 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                             onChange={(e) => setCustomSkill(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
                             placeholder="Add custom skill..."
-                            className="flex-1 px-3 py-2 bg-zinc-900/50 border border-white/5 rounded-md text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                            className="flex-1 px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"
                         />
                         <button
                             type="button"
                             onClick={handleAddSkill}
                             disabled={!customSkill.trim()}
-                            className="px-3 py-2 bg-zinc-800 text-zinc-300 rounded-md text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-2 bg-background-tertiary text-foreground-secondary rounded-md text-sm hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Add
                         </button>
@@ -304,7 +306,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                                     <button
                                         type="button"
                                         onClick={() => handleRemoveSkill(skill)}
-                                        className="hover:text-white"
+                                        className="hover:text-indigo-200 dark:hover:text-white"
                                     >
                                         <X className="w-3 h-3" />
                                     </button>
@@ -318,7 +320,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             {/* Additional Comments */}
             {!compact && (
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">
                         Additional thoughts (optional)
                     </label>
                     <textarea
@@ -326,7 +328,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         onChange={(e) => setFeedbackText(e.target.value)}
                         placeholder="Share any thoughts about this event..."
                         rows={3}
-                        className="w-full px-3 py-2 bg-zinc-900/50 border border-white/5 rounded-md text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 resize-none"
+                        className="w-full px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50 resize-none"
                     />
                 </div>
             )}
@@ -334,7 +336,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             {/* Career Benefit */}
             {!compact && (
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">
                         Career benefit or takeaway
                     </label>
                     <textarea
@@ -342,7 +344,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         onChange={(e) => setCareerBenefit(e.target.value)}
                         placeholder="How did this event move your career forward?"
                         rows={2}
-                        className="w-full px-3 py-2 bg-zinc-900/50 border border-white/5 rounded-md text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 resize-none"
+                        className="w-full px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50 resize-none"
                     />
                 </div>
             )}
@@ -353,7 +355,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-2.5 px-4 bg-zinc-800 text-zinc-300 rounded-md text-sm font-medium hover:bg-zinc-700 transition-colors"
+                        className="flex-1 py-2.5 px-4 bg-background-tertiary text-foreground-secondary rounded-md text-sm font-medium hover:bg-background-secondary transition-colors"
                     >
                         Cancel
                     </button>

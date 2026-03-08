@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { CareerProfile, LearningStyle, AvailableTime, BudgetRange } from '@/types/career';
+import {
+    CareerProfile,
+    LearningStyle,
+    AvailableTime,
+    BudgetRange,
+    LEARNING_PATH_TRACKS,
+    type LearningPathTrack,
+} from '@/types/career';
 import {
     LEARNING_STYLE_OPTIONS,
     AVAILABLE_TIME_OPTIONS,
@@ -19,14 +26,17 @@ export interface LearningPreferencesEditorProps {
 const LearningPreferencesEditor: React.FC<LearningPreferencesEditorProps> = React.memo(({ profile, onUpdate }) => {
     // Memoized form data to prevent unnecessary re-renders
     const formData = useMemo(() => ({
+        targetPath: profile.targetPath || '',
         learningStyle: profile.learningStyle || [],
         availableTime: profile.availableTime || 'moderate',
         budget: profile.budget || 'moderate'
     }), [profile]);
 
     // Select change handler for available time and budget
-    const handleSelectChange = (field: 'availableTime' | 'budget', value: string) => {
-        if (field === 'availableTime') {
+    const handleSelectChange = (field: 'targetPath' | 'availableTime' | 'budget', value: string) => {
+        if (field === 'targetPath') {
+            onUpdate({ targetPath: value as LearningPathTrack });
+        } else if (field === 'availableTime') {
             const typedValue = value as AvailableTime;
             onUpdate({ availableTime: typedValue });
         } else {
@@ -37,6 +47,18 @@ const LearningPreferencesEditor: React.FC<LearningPreferencesEditorProps> = Reac
 
     return (
         <div className="space-y-6">
+            <LinearFormField label="Learning Path">
+                <LinearSelect
+                    value={formData.targetPath}
+                    onChange={(e) => handleSelectChange('targetPath', e.target.value)}
+                >
+                    <option value="">Let the app infer a path</option>
+                    {LEARNING_PATH_TRACKS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </LinearSelect>
+            </LinearFormField>
+
             {/* Learning Styles */}
             <LinearCheckboxGroup
                 label="Learning Styles"

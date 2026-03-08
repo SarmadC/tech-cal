@@ -90,8 +90,6 @@ export function FocusHeroCard({
 
     return (
         <div className="mb-8">
-            {/* Header */}
-            <DashboardSectionHeader title="Your Focus" />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
                 {/* Top Recommended Event - Main Card */}
@@ -130,7 +128,7 @@ export function FocusHeroCard({
                                     {/* High Impact Badge - Inline */}
                                     {(() => {
                                         const bucket = getImpactBucketLabel(metrics.topRecommendedEvent.score);
-                                        if (bucket.label === 'High') {
+                                        if (bucket.label === 'High Impact') {
                                             return (
                                                 <div className="px-2 py-0.5 rounded-md border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] font-medium tracking-wide">
                                                     High Impact
@@ -266,17 +264,23 @@ export function FocusHeroCard({
                                     disabled={pastCommitments === 0}
                                     className={`p-4 w-full flex-1 flex flex-col items-start justify-center transition-all group text-left ${pastCommitments > 0 ? 'hover:bg-zinc-50 dark:hover:bg-white/[0.02] cursor-pointer' : ''}`}
                                 >
-                                    <div className="flex items-baseline gap-2 mb-1">
+                                                    <div className="flex items-baseline gap-2 mb-1">
                                         <span className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight leading-none">
-                                            {attendanceRate}%
+                                            {pastCommitments >= 5 ? `${attendanceRate}%` : pastCommitments > 0 ? `${attendedCount}/${pastCommitments}` : '—'}
                                         </span>
                                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Attendance Rate</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 min-h-[16px]">
                                         {pastCommitments > 0 ? (
-                                            <span className="text-xs text-zinc-500 font-medium group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors">
-                                                {attendedCount} of {pastCommitments} past events attended
-                                            </span>
+                                            pastCommitments >= 5 ? (
+                                                <span className="text-xs text-zinc-500 font-medium group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors">
+                                                    {attendedCount} of {pastCommitments} past events attended
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-zinc-500 font-medium">
+                                                    {attendedCount} of {pastCommitments} attended
+                                                </span>
+                                            )
                                         ) : (
                                             <span className="text-xs text-zinc-400/80 dark:text-zinc-500/80">No past commitments</span>
                                         )}
@@ -305,7 +309,7 @@ export function FocusHeroCard({
                                                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Attendance History</h3>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <div className="text-sm text-zinc-500">
-                                                            <span className="font-medium text-zinc-900 dark:text-white">{attendanceRate}%</span> reliability score
+                                                            <span className="font-medium text-zinc-900 dark:text-white">{attendanceRate}%</span> attendance score
                                                         </div>
                                                     </div>
                                                 </div>
@@ -323,32 +327,32 @@ export function FocusHeroCard({
                                                 {missedCount > 0 && (
                                                     <div className="space-y-3">
                                                         <div className="flex items-center justify-between">
-                                                            <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-1.5">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                                                Missed ({missedCount})
+                                                            <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                                Needs Confirmation ({missedCount})
                                                             </h4>
-                                                            <span className="text-[10px] text-zinc-400">Past events not attended</span>
+                                                            <span className="text-[10px] text-zinc-400">Past events still marked attending</span>
                                                         </div>
                                                         <div className="space-y-2">
                                                             {missedEvents.map(record => (
                                                                 <div
                                                                     key={record.trackingId}
-                                                                    className="flex items-start gap-3 p-3 rounded-lg bg-red-50/50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/10 group hover:border-red-200 dark:hover:border-red-500/20 transition-colors cursor-pointer"
+                                                                    className="flex items-start gap-3 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 group hover:border-amber-200 dark:hover:border-amber-500/20 transition-colors cursor-pointer"
                                                                     onClick={() => {
                                                                         setIsAttendanceDetailsOpen(false);
                                                                         handleEventClick(record.event);
                                                                     }}
                                                                 >
                                                                     <div className="flex-1 min-w-0">
-                                                                        <h5 className="text-sm font-medium text-zinc-900 dark:text-zinc-200 truncate pr-2 group-hover:text-red-900 dark:group-hover:text-red-100 transition-colors">
+                                                                        <h5 className="text-sm font-medium text-zinc-900 dark:text-zinc-200 truncate pr-2 group-hover:text-amber-900 dark:group-hover:text-amber-100 transition-colors">
                                                                             {record.event.title}
                                                                         </h5>
                                                                         <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
                                                                             <span>{format(new Date(record.event.startTime), 'MMM d, yyyy')}</span>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="px-2 py-1 rounded text-[10px] font-medium bg-white dark:bg-black border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400">
-                                                                        No show
+                                                                    <div className="px-2 py-1 rounded text-[10px] font-medium bg-white dark:bg-black border border-amber-100 dark:border-amber-900/30 text-amber-600 dark:text-amber-400">
+                                                                        Unconfirmed
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -396,7 +400,7 @@ export function FocusHeroCard({
                                             {/* Footer */}
                                             <div className="p-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02]">
                                                 <p className="text-[10px] text-zinc-400 text-center">
-                                                    Attendance rate helps prioritize your access to exclusive events.
+                                                    Based on events marked attended versus past events still marked attending.
                                                 </p>
                                             </div>
                                         </div>
@@ -407,21 +411,21 @@ export function FocusHeroCard({
                         );
                     })()}
 
-                    {/* Row 2: Impact Score */}
+                    {/* Row 2: Events (30d) */}
                     <div className="p-4 w-full flex-1 flex flex-col items-start justify-center">
                         <div className="flex items-baseline gap-2 mb-1">
                             <span className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight leading-none">
-                                {metrics.lastImpactScore && metrics.lastImpactScore.score > 0 ? Math.round(metrics.lastImpactScore.score) : '0'}
+                                {metrics.avgImpactEventCount > 0 ? metrics.avgImpactEventCount : '—'}
                             </span>
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Impact Score</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Events (30d)</span>
                         </div>
                         <div className="flex items-center gap-1.5 min-h-[16px]">
-                            {metrics.lastImpactScore && metrics.lastImpactScore.score > 0 ? (
-                                <span className={`text-xs font-medium ${metrics.lastImpactScore.score >= 80 ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-500'}`}>
-                                    {metrics.lastImpactScore.score >= 80 ? 'High Impact' : 'Keep going'}
+                            {metrics.avgImpactEventCount > 0 ? (
+                                <span className="text-xs text-zinc-500">
+                                    {metrics.avgImpactEventCount === 1 ? 'event attended' : 'events attended'}
                                 </span>
                             ) : (
-                                <span className="text-xs text-zinc-400/80 dark:text-zinc-500/80">Attend 1st event to unlock</span>
+                                <span className="text-xs text-zinc-400/80 dark:text-zinc-500/80">No events this month</span>
                             )}
                         </div>
                     </div>
@@ -443,7 +447,7 @@ export function FocusHeroCard({
                                 {careerProfile && careerProfile.skillsToLearn.length > 0 && (
                                     <path
                                         className="text-indigo-500 dark:text-indigo-400 transition-all duration-1000 ease-out"
-                                        strokeDasharray={`${Math.min(Math.round((metrics.skillsCoveredThisMonth.uniqueSkills.length / careerProfile.skillsToLearn.length) * 100), 100)}, 100`}
+                                        strokeDasharray={`${Math.min(Math.round((metrics.allTimeSkillsCovered.count / careerProfile.skillsToLearn.length) * 100), 100)}, 100`}
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                         fill="none"
                                         stroke="currentColor"
@@ -458,9 +462,9 @@ export function FocusHeroCard({
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Skills Progress</span>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-xs text-zinc-900 dark:text-white font-medium">
-                                    {metrics.skillsCoveredThisMonth.uniqueSkills.length} of {careerProfile?.skillsToLearn.length || 0}
+                                    {metrics.allTimeSkillsCovered.count} of {careerProfile?.skillsToLearn.length || 0}
                                 </span>
-                                <span className="text-xs text-zinc-500">developed</span>
+                                <span className="text-xs text-zinc-500">covered</span>
                             </div>
                         </div>
                     </div>

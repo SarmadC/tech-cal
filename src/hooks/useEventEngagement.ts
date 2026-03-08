@@ -78,6 +78,23 @@ export function useEventEngagement() {
     return trackedEvents.filter(te => te.isBookmarked).length;
   }, [trackedEvents]);
 
+  const enforceBookmarkCapacity = async () => {
+    if (
+      !isPro &&
+      !isTrialing &&
+      Number.isFinite(bookmarkLimit) &&
+      bookmarkedCount >= bookmarkLimit
+    ) {
+      showError(`You've reached the free bookmark limit (${bookmarkLimit}). Upgrade to add more.`);
+      try {
+        await openUpgrade();
+      } catch (err) {
+        console.error('Failed to open upgrade checkout', err);
+      }
+      throw new Error('BOOKMARK_LIMIT_REACHED');
+    }
+  };
+
   const attendanceStatusMap = useMemo(() => {
     const map = new Map<string, EventStatus | null>();
     trackedEvents.forEach(te => {
@@ -127,20 +144,9 @@ export function useEventEngagement() {
 
     // Enforce free-tier bookmark limit before any writes
     if (
-      !currentIsBookmarked &&
-      !isPro &&
-      !isTrialing &&
-      Number.isFinite(bookmarkLimit) &&
-      bookmarkedCount >= bookmarkLimit
+      !currentIsBookmarked
     ) {
-      showError(`You've reached the free bookmark limit (${bookmarkLimit}). Upgrade to add more.`);
-      // Open checkout overlay to keep the flow intentional (no auto-trial)
-      try {
-        await openUpgrade();
-      } catch (err) {
-        console.error('Failed to open upgrade checkout', err);
-      }
-      throw new Error('BOOKMARK_LIMIT_REACHED');
+      await enforceBookmarkCapacity();
     }
     
     // Optimistic update
@@ -278,6 +284,10 @@ export function useEventEngagement() {
   ) => {
     if (!user?.id) throw new Error('User not authenticated');
     
+    if ((status === 'attending' || status === 'attended') && !isBookmarked(eventId)) {
+      await enforceBookmarkCapacity();
+    }
+
     const _previousStatus = getAttendanceStatus(eventId);
     
     // Optimistic update
@@ -365,6 +375,9 @@ export function useEventEngagement() {
     } catch (error) {
       // Rollback optimistic update
       await queryClient.invalidateQueries({ queryKey: ['trackedEvents', user.id] });
+      if (error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED') {
+        throw error;
+      }
       showError('Failed to update attendance status');
       throw error;
     }

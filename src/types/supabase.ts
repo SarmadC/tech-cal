@@ -560,6 +560,7 @@ export type Database = {
           skill_tags: Json
           skills_to_learn: string[]
           timeframe: Database["public"]["Enums"]["career_timeframe_enum"] | null
+          target_path: string | null
           updated_at: string
           user_id: string
         }
@@ -584,6 +585,7 @@ export type Database = {
           timeframe?:
             | Database["public"]["Enums"]["career_timeframe_enum"]
             | null
+          target_path?: string | null
           updated_at?: string
           user_id: string
         }
@@ -608,6 +610,7 @@ export type Database = {
           timeframe?:
             | Database["public"]["Enums"]["career_timeframe_enum"]
             | null
+          target_path?: string | null
           updated_at?: string
           user_id?: string
         }

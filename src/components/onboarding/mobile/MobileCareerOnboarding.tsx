@@ -12,6 +12,7 @@ import {
     CareerGoal,
     CareerTimeframe,
     LearningStyle,
+    LEARNING_PATH_TRACKS,
     NetworkingGoal,
     CareerOptionalSectionStatus,
     INTEREST_AREAS,
@@ -461,6 +462,28 @@ export const MobileCareerOnboarding: React.FC<MobileCareerOnboardingProps> = ({
     const renderStep4 = () => (
         <div className={styles.section}>
             {renderHeader("Learning Style", "How do you learn best?")}
+            <div className="mb-6 space-y-3">
+                <div className={styles.sectionHeader}>
+                    <h2 className="text-[15px] font-medium text-white">Target Path</h2>
+                    <p className="text-[13px] text-[#8A8F98]">Choose a direction instead of relying on inference.</p>
+                </div>
+                <div className="relative">
+                    <select
+                        value={data.step4_preferences?.targetPath || ''}
+                        onChange={(e) => updateData('step4_preferences', {
+                            ...data.step4_preferences,
+                            targetPath: e.target.value || undefined,
+                        })}
+                        className="w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[14px] text-white outline-none"
+                    >
+                        <option value="">Let the app infer a path</option>
+                        {LEARNING_PATH_TRACKS.map((track) => (
+                            <option key={track} value={track}>{track}</option>
+                        ))}
+                    </select>
+                    <CaretDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8A8F98]" size={16} />
+                </div>
+            </div>
             <div className={styles.listGroup}>
                 {[
                     { value: 'hands-on', label: 'Hands-on Workshops' },

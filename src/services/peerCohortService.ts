@@ -292,7 +292,7 @@ export class PeerCohortService {
 
   private static deriveObservedUserSignals(
     userEvents: TrackedEventRecord[]
-  ): { eventsPerMonth: number; avgImpactScore: number } | null {
+  ): { eventsPerMonth: number; avgImpactScore: number | null } | null {
     const attendedEvents = userEvents
       .filter(record => record.status === 'attended' && record.event)
       .map(record => record.event as Event);
@@ -312,9 +312,12 @@ export class PeerCohortService {
       : 12;
 
     const eventsPerMonth = attendedEvents.length / monthsObserved;
-    const avgImpactScore = attendedEvents.reduce((sum, event) => {
-      return sum + this.inferEventImpactScore(event);
-    }, 0) / attendedEvents.length;
+
+    // Only average over events that have a real score — skip fabricated zeros
+    const scoredEvents = attendedEvents.filter(e => this.inferEventImpactScore(e) > 0);
+    const avgImpactScore = scoredEvents.length > 0
+      ? scoredEvents.reduce((sum, e) => sum + this.inferEventImpactScore(e), 0) / scoredEvents.length
+      : null;
 
     return {
       eventsPerMonth,
@@ -423,15 +426,7 @@ export class PeerCohortService {
       return Math.max(0, Math.min(100, knownScore <= 1 ? knownScore * 100 : knownScore));
     }
 
-    let inferredScore = 55;
-    const title = event.title.toLowerCase();
-    if (title.includes('conference') || title.includes('summit')) inferredScore += 12;
-    if (title.includes('workshop') || title.includes('training')) inferredScore += 8;
-    if (title.includes('network') || title.includes('meetup')) inferredScore += 6;
-    if ((event.attendeeCount || 0) > 500) inferredScore += 8;
-    if ((event.speakerLineup?.length || 0) >= 3) inferredScore += 6;
-
-    return Math.max(40, Math.min(90, inferredScore));
+    return 0; // No real score — don't fabricate
   }
 
   private static getPreferredEventTypes(

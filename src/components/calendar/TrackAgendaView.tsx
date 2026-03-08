@@ -347,7 +347,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                     <p className={`text-sm ${textMuted}`}>Select at least one track to view the schedule.</p>
                     <button
                         onClick={selectAll}
-                        className="mt-3 text-sm text-blue-400 hover:text-blue-300 font-medium"
+                        className="mt-3 text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-500 dark:hover:text-indigo-200 font-medium"
                     >
                         Show All Tracks
                     </button>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
+import { resolveTechmemeUrl } from '@/utils/ingestion/sourceCleanup';
 
 import {
     BasicInfoSection,
@@ -96,19 +97,7 @@ function reasonCodeColor(code: string): string {
  * Resolve Techmeme redirect URLs to canonical URLs for display.
  */
 function cleanSourceUrl(rawUrl: string): string {
-    if (!rawUrl.includes('techmeme.com/r2/')) return rawUrl;
-
-    const urlWithoutQuery = rawUrl.split('?')[0];
-    const match = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)_(.+?)\.htm$/);
-    if (match) {
-        const domain = match[1];
-        const pathSegments = match[2].replace(/-[a-zA-Z0-9]+$/, '');
-        if (!pathSegments) return `https://${domain}`;
-        return `https://${domain}/${pathSegments.replace(/_/g, '/')}`;
-    }
-    const altMatch = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+?)(?:-[a-zA-Z0-9]+)?\.htm$/);
-    if (altMatch?.[1]) return `https://${altMatch[1]}`;
-    return rawUrl;
+    return resolveTechmemeUrl(rawUrl) ?? rawUrl;
 }
 
 const DEFAULT_CORE_FIELDS: CoreFieldsState = {

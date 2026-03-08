@@ -17,7 +17,7 @@ import { IngestionSourceService } from './IngestionSourceService';
 import { EventUpdateService } from './EventUpdateService';
 import type { EventSourceRecord } from '@/types/ingestion';
 import { RETRY_CONFIG } from '@/config/ingestionConstants';
-import { applyUrlCanonicalization } from './utils/urlCanonicalizer';
+import { applyIngestionRecordCleanup } from './utils/recordCleanup';
 import * as Sentry from '@sentry/nextjs';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { isDescriptionThin } from '@/utils/ingestion/DescriptionHeuristics';
@@ -352,7 +352,7 @@ export class NormalizationProcessor {
 
                             const record = rawPayload.record as EventSourceRecord;
 
-                            applyUrlCanonicalization(record);
+                            applyIngestionRecordCleanup(record);
 
                             if (record.description) {
                                 const sanitizedDescription = cleanEventDescription(record.description);
@@ -511,27 +511,15 @@ export class NormalizationProcessor {
                                 }
                             }
 
-                            // Find or create organizer - only if we have a valid organizer name
-                            // Don't create organizers with placeholder names like "Unknown"
-                            const organizerName = record.organizer?.trim();
-                            const hasValidOrganizer = organizerName && 
-                                organizerName !== '' && 
-                                organizerName !== 'Unknown' &&
-                                organizerName.toLowerCase() !== 'unknown organizer' &&
-                                organizerName.toLowerCase() !== 'tbd' &&
-                                organizerName.toLowerCase() !== 'tba';
-                            
-                            const organizerId = hasValidOrganizer
-                                ? await OrganizerEnrichmentService.findOrCreateOrganizer(
-                                    {
-                                        name: organizerName,
-                                        domain: record.organizerDomain,
-                                        websiteUrl: record.sourceUrl,
-                                        sourceUrl: record.sourceUrl, // For og:image extraction
-                                    },
-                                    supabaseClient
-                                )
-                                : null;
+                            const organizerId = await OrganizerEnrichmentService.findOrCreateOrganizer(
+                                {
+                                    name: record.organizer,
+                                    domain: record.organizerDomain,
+                                    websiteUrl: record.sourceUrl,
+                                    sourceUrl: record.sourceUrl,
+                                },
+                                supabaseClient
+                            );
 
                             // Calculate quality score before normalizing
                             const qualityScore = await QualityScoringService.calculateQualityScore(
@@ -662,4 +650,3 @@ export class NormalizationProcessor {
         }
     }
 }
-

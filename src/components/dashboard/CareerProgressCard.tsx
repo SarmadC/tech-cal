@@ -2,18 +2,20 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Target, TrendUp, Users, Lightning, ArrowRight, Fire, Warning, CheckCircle, Lock } from '@phosphor-icons/react';
+import { Target, TrendUp, Users, Lightning, ArrowRight, Fire, Warning, CheckCircle, Lock, Circle } from '@phosphor-icons/react';
 import { useDashboardMetrics, type GoalProgress } from '@/hooks/useDashboardMetrics';
 import { useSubscriptionContext } from '@/contexts';
 import { UpgradeModal } from '@/components/ui/UpgradeModal';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord, Event, CareerProfile } from '@/types';
 
 interface CareerProgressCardProps {
     trackedEvents: TrackedEventRecord[];
     upcomingEvents: Event[];
     careerProfile: CareerProfile | null;
+    presentation?: 'default' | 'mobile-dashboard';
 }
 
 const GOAL_CONFIG = {
@@ -43,9 +45,9 @@ const GOAL_CONFIG = {
     },
 } as const;
 
-// Calculate status based on progress and time through quarter
-function getGoalStatus(progress: number, eventCount: number): {
-    status: 'ahead' | 'on-track' | 'needs-attention' | 'not-started';
+// Calculate status based on progress and next-step readiness
+function getGoalStatus(progress: number, eventCount: number, upcomingMatchCount: number): {
+    status: 'ahead' | 'on-track' | 'needs-attention' | 'not-started' | 'ready-to-start';
     label: string;
     color: string;
     icon: typeof CheckCircle;
@@ -54,21 +56,24 @@ function getGoalStatus(progress: number, eventCount: number): {
         return { status: 'ahead', label: 'Complete', color: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle };
     }
     if (eventCount === 0) {
-        return { status: 'not-started', label: 'Not Started', color: 'text-zinc-500', icon: Target };
+        if (upcomingMatchCount > 0) {
+            return { status: 'ready-to-start', label: 'Ready to Start', color: 'text-indigo-600 dark:text-indigo-400', icon: TrendUp };
+        }
+        return { status: 'not-started', label: 'Not Started', color: 'text-zinc-400 dark:text-zinc-500', icon: Circle };
     }
     // Simplified: 50%+ progress = on track, <50% = needs attention
     if (progress >= 50) {
         return { status: 'on-track', label: 'On Track', color: 'text-emerald-600 dark:text-emerald-400', icon: Fire };
     }
     if (progress >= 25) {
-        return { status: 'on-track', label: 'In Progress', color: 'text-amber-600 dark:text-amber-400', icon: TrendUp };
+        return { status: 'on-track', label: 'In Progress', color: 'text-blue-600 dark:text-blue-400', icon: TrendUp };
     }
     return { status: 'needs-attention', label: 'Needs Attention', color: 'text-amber-600 dark:text-amber-400', icon: Warning };
 }
 
 // Calculate average impact quality for a goal
 function getAverageImpact(goalData: GoalProgress): number | null {
-    if (goalData.eventCount === 0) return null;
+    if (goalData.eventCount === 0 || goalData.impactTotal === 0) return null;
     return Math.round(goalData.impactTotal / goalData.eventCount);
 }
 
@@ -91,7 +96,9 @@ export function CareerProgressCard({
     trackedEvents,
     upcomingEvents,
     careerProfile,
+    presentation = 'default',
 }: CareerProgressCardProps) {
+    const isMobileDashboard = presentation === 'mobile-dashboard';
     const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
     const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
@@ -107,14 +114,15 @@ export function CareerProgressCard({
 
     if (!careerProfile || metrics.goalProgress.length === 0) {
         return (
-            <DashboardCard title="" className="w-full h-full min-h-[200px] flex flex-col">
+            <DashboardCard title="" className="w-full h-full min-h-[200px] flex flex-col" presentation={presentation}>
                 <DashboardSectionHeader
                     icon={Target}
-                    title="Goals & Impact"
+                    title="Goal Progress"
                     subtitle="Track your development progress"
+                    presentation={presentation}
                 />
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4">
+                    <div className={cn("w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4", isMobileDashboard && "mobile-dashboard-emptyIcon bg-transparent")}>
                         <Target className="w-6 h-6 text-zinc-400 dark:text-zinc-600" weight="light" />
                     </div>
                     <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
@@ -138,6 +146,9 @@ export function CareerProgressCard({
     // Calculate overall status
     const goalsWithProgress = metrics.goalProgress.filter(g => g.eventCount > 0);
     const totalGoalEvents = metrics.goalProgress.reduce((sum, g) => sum + g.eventCount, 0);
+    const totalGoalTarget = metrics.goalProgress.reduce((sum, g) => sum + g.targetEventCount, 0);
+    const goalsReadyToStart = metrics.goalProgress.filter(g => g.eventCount === 0 && g.upcomingMatchCount > 0).length;
+    const shouldPreferCountCopy = totalGoalEvents < 3;
 
     // Free tier: Show simplified progress overview
     if (!hasPremiumAccess) {
@@ -147,14 +158,21 @@ export function CareerProgressCard({
 
         return (
             <>
-                <DashboardCard title="" className="w-full flex flex-col">
+                <DashboardCard title="" className="w-full flex flex-col" presentation={presentation}>
                     <DashboardSectionHeader
                         icon={Target}
-                        title="Goals & Impact"
-                        subtitle={`${totalGoalEvents} events matched to goals`}
+                        title="Goal Progress"
+                        subtitle={shouldPreferCountCopy
+                            ? `${totalGoalEvents} attended matches so far`
+                            : `${totalGoalEvents} events matched to your goals`}
+                        presentation={presentation}
                         action={(
-                            <span className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
-                                {overallProgress}% Overall
+                            <span className={cn("px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium", isMobileDashboard && "mobile-dashboard-pill")}>
+                                {totalGoalEvents > 0
+                                    ? (shouldPreferCountCopy ? `${totalGoalEvents} matched` : `${overallProgress}% Overall`)
+                                    : goalsReadyToStart > 0
+                                        ? `${goalsReadyToStart} ready`
+                                        : `${metrics.goalProgress.length} tracked`}
                             </span>
                         )}
                     />
@@ -168,13 +186,19 @@ export function CareerProgressCard({
                             />
                         </div>
                         <p className="text-xs text-zinc-500 mt-2">
-                            {metrics.goalProgress.length} career goal{metrics.goalProgress.length !== 1 ? 's' : ''} tracked
+                            {totalGoalEvents === 0
+                                ? goalsReadyToStart > 0
+                                    ? `${goalsReadyToStart} goal${goalsReadyToStart === 1 ? '' : 's'} have a strong next match`
+                                    : `${metrics.goalProgress.length} career goal${metrics.goalProgress.length !== 1 ? 's' : ''} tracked`
+                                : shouldPreferCountCopy
+                                    ? `${Math.max(totalGoalTarget - totalGoalEvents, 0)} more matched events to build momentum`
+                                    : `${metrics.goalProgress.length} career goal${metrics.goalProgress.length !== 1 ? 's' : ''} tracked`}
                         </p>
                     </div>
 
                     {/* Blurred goals grid preview */}
                     <div className="relative">
-                        <div className="absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 dark:bg-zinc-900/40 rounded-lg flex flex-col items-center justify-center p-6">
+                        <div className={cn("absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 dark:bg-zinc-900/40 rounded-lg flex flex-col items-center justify-center p-6", isMobileDashboard && "mobile-dashboard-panelStrong")}>
                             <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" weight="fill" />
                             <span className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
                                 Unlock Goal Analysis
@@ -193,7 +217,7 @@ export function CareerProgressCard({
                         {/* Blurred placeholder content */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-30 select-none pointer-events-none">
                             {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40">
+                                <div key={i} className={cn("p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40", isMobileDashboard && "mobile-dashboard-panel")}>
                                     <div className="flex justify-between items-center mb-3">
                                         <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
                                         <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-700 rounded" />
@@ -226,21 +250,31 @@ export function CareerProgressCard({
 
     // Pro tier: Full goals view
     return (
-        <DashboardCard title="" className="w-full flex flex-col">
+        <DashboardCard title="" className="w-full flex flex-col" presentation={presentation}>
             {/* Header */}
             <DashboardSectionHeader
                 icon={Target}
-                title="Goals & Impact"
-                subtitle="Track your development progress"
+                title="Goal Progress"
+                subtitle="Move your goals forward"
+                presentation={presentation}
                 action={(
                     <div className="flex flex-col items-end gap-1">
-                        {/* Unified filled pill badge */}
-                        <div className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
-                            {totalGoalEvents} {totalGoalEvents === 1 ? 'Event' : 'Events'} Matched
-                        </div>
+                        {totalGoalEvents > 0 ? (
+                            <div className={cn("px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium", isMobileDashboard && "mobile-dashboard-pill")}>
+                                {totalGoalEvents} {totalGoalEvents === 1 ? 'Event' : 'Events'} Matched
+                            </div>
+                        ) : goalsReadyToStart > 0 ? (
+                            <div className={cn("px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 text-xs font-medium", isMobileDashboard && "mobile-dashboard-pill mobile-dashboard-pillInfo")}>
+                                {goalsReadyToStart} Ready to Start
+                            </div>
+                        ) : (
+                            <div className={cn("px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-white/[0.08] text-zinc-500 dark:text-zinc-400 text-xs font-medium", isMobileDashboard && "mobile-dashboard-pill")}>
+                                {metrics.goalProgress.length} Goal{metrics.goalProgress.length !== 1 ? 's' : ''} Tracked
+                            </div>
+                        )}
                         {/* Show note if events attended but none matched any goals */}
                         {totalAttended > 0 && totalGoalEvents === 0 && (
-                            <span className="text-[10px] text-zinc-600 italic">
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-500 italic">
                                 {totalAttended} attended, none matched goals
                             </span>
                         )}
@@ -262,9 +296,11 @@ export function CareerProgressCard({
                     const segments = 8;
                     const progress = Math.min(100, Math.max(0, goalData.progress));
                     const filledSegments = Math.round((progress / 100) * segments);
+                    const isZeroState = goalData.eventCount === 0;
+                    const hasRecommendedStart = goalData.upcomingMatchCount > 0;
 
                     // Status calculation
-                    const status = getGoalStatus(progress, goalData.eventCount);
+                    const status = getGoalStatus(progress, goalData.eventCount, goalData.upcomingMatchCount);
                     const StatusIcon = status.icon;
 
                     // Quality metrics
@@ -274,7 +310,10 @@ export function CareerProgressCard({
                     return (
                         <div
                             key={goalData.goal}
-                            className="flex flex-col p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5"
+                            className={cn(
+                                "flex flex-col p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5",
+                                isMobileDashboard && "mobile-dashboard-panel"
+                            )}
                         >
                             {/* Top Row: Icon/Title + Status Badge */}
                             <div className="flex justify-between items-center mb-3">
@@ -282,7 +321,7 @@ export function CareerProgressCard({
                                     <Icon className="w-4 h-4 text-zinc-400 dark:text-zinc-500" weight="regular" />
                                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{config.label}</span>
                                 </div>
-                                <div className={`flex items-center gap-1 text-[10px] font-medium ${status.color}`}>
+                                <div className={cn(`flex items-center gap-1 text-[10px] font-medium ${status.color}`, isMobileDashboard && "tracking-[0.08em] uppercase")}>
                                     <StatusIcon className="w-3 h-3" weight="fill" />
                                     <span>{status.label}</span>
                                 </div>
@@ -290,13 +329,26 @@ export function CareerProgressCard({
 
                             {/* Big Metric + Quality Score */}
                             <div className="flex items-baseline gap-3 mb-3">
-                                <span className="text-3xl font-semibold text-zinc-900 dark:text-white tracking-tight">
-                                    {Math.round(goalData.progress)}%
-                                </span>
-                                {avgImpact !== null && (
-                                    <span className="text-sm text-zinc-500">
-                                        <span className="text-zinc-700 dark:text-zinc-400">{avgImpact}</span> avg impact
-                                    </span>
+                                {isZeroState ? (
+                                    <>
+                                        <span className="text-3xl font-semibold text-zinc-900 dark:text-white tracking-tight">
+                                            {hasRecommendedStart ? goalData.upcomingMatchCount : 0}
+                                        </span>
+                                        <span className="text-sm text-zinc-500">
+                                            {hasRecommendedStart ? 'recommended next' : 'attended matches'}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-3xl font-semibold text-zinc-900 dark:text-white tracking-tight">
+                                            {Math.round(goalData.progress)}%
+                                        </span>
+                                        {avgImpact !== null && (
+                                            <span className="text-sm text-zinc-500">
+                                                <span className="text-zinc-700 dark:text-zinc-400">{avgImpact}</span> avg impact
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -307,7 +359,7 @@ export function CareerProgressCard({
                                         key={i}
                                         className={`flex-1 rounded-[1px] transition-all duration-300 ${i < filledSegments
                                             ? `${config.color} shadow-[0_0_8px_rgba(255,255,255,0.15)]`
-                                            : 'bg-zinc-200 dark:bg-zinc-700'
+                                            : isMobileDashboard ? 'bg-[var(--mobile-dashboard-panel-bg-strong)]' : 'bg-zinc-200 dark:bg-zinc-700'
                                             }`}
                                     />
                                 ))}
@@ -316,10 +368,16 @@ export function CareerProgressCard({
                             {/* Bottom: Event count + Suggested Action */}
                             <div className="flex flex-col gap-1">
                                 <div className="flex justify-between items-center text-[10px] text-zinc-500 font-medium tracking-wide">
-                                    <span>{goalData.eventCount} of {goalData.targetEventCount} events</span>
+                                    <span>
+                                        {isZeroState
+                                            ? hasRecommendedStart
+                                                ? `${goalData.upcomingMatchCount} strong upcoming ${goalData.upcomingMatchCount === 1 ? 'match' : 'matches'}`
+                                                : `Target ${goalData.targetEventCount} events`
+                                            : `${goalData.eventCount} of ${goalData.targetEventCount} events`}
+                                    </span>
                                 </div>
                                 {suggestedAction && (
-                                    <p className="text-[10px] text-zinc-600 truncate" title={suggestedAction}>
+                                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate" title={suggestedAction}>
                                         {suggestedAction}
                                     </p>
                                 )}
@@ -331,10 +389,10 @@ export function CareerProgressCard({
 
             {/* Footer: CTA if no progress yet */}
             {goalsWithProgress.length === 0 && (
-                <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-white/5">
+                <div className={cn("mt-6 pt-4 border-t border-zinc-100 dark:border-white/5", isMobileDashboard && "mobile-dashboard-divider")}>
                     <Link
                         href="/events"
-                        className="flex items-center justify-center gap-2 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                        className={cn("flex items-center justify-center gap-2 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors", isMobileDashboard && "text-[var(--mobile-dashboard-info-text)] hover:text-[var(--mobile-dashboard-text-primary)]")}
                     >
                         Find events that match your goals
                         <ArrowRight className="w-3.5 h-3.5" weight="bold" />

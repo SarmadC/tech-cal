@@ -8,6 +8,13 @@ import { Event } from '@/types';
 import * as UserEventService from '@/services/userEventService';
 import { createMockUser, render } from '@/utils/test-utils';
 
+const subscriptionMocks = vi.hoisted(() => ({
+    isPro: false,
+    isTrialing: false,
+    bookmarkLimit: 10,
+    openUpgrade: vi.fn(),
+}));
+
 // --- MOCKING THE SERVICE LAYER ---
 vi.mock('@/services/userEventService');
 vi.mock('@/contexts/SnackbarContext', () => ({
@@ -30,17 +37,17 @@ vi.mock('@/contexts', async (importOriginal) => {
             subscription: null,
             isLoading: false,
             error: null,
-            isPro: false,
-            isTrialing: false,
+            isPro: subscriptionMocks.isPro,
+            isTrialing: subscriptionMocks.isTrialing,
             isFree: true,
             trialDaysLeft: null,
             canAccessFeature: () => true,
-            bookmarkLimit: 10,
+            bookmarkLimit: subscriptionMocks.bookmarkLimit,
             historyDays: 30,
             maxRecommendations: 5,
             refreshSubscription: vi.fn(),
             startTrial: vi.fn(),
-            openUpgrade: vi.fn()
+            openUpgrade: subscriptionMocks.openUpgrade
         }),
         useCanAccessFeature: () => true,
         useTrialDaysLeft: () => null,
@@ -74,6 +81,9 @@ describe('EventTracking Component', () => {
     // This runs before each test, ensuring our mocks are clean for every scenario
     beforeEach(() => {
         vi.clearAllMocks(); // Resets call counts for our mock functions
+        subscriptionMocks.isPro = false;
+        subscriptionMocks.isTrialing = false;
+        subscriptionMocks.bookmarkLimit = 10;
         // Mock fetch to resolve successfully
         (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
             ok: true,
@@ -139,6 +149,36 @@ describe('EventTracking Component', () => {
             undefined,
             expect.anything() // supabase client
         );
+    });
+
+    it('blocks attendance RSVP when auto-bookmark would exceed the free-tier limit', async () => {
+        subscriptionMocks.bookmarkLimit = 1;
+
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([{
+                trackingId: 'track-occupied',
+                userId: mockUser.id,
+                eventId: 'event-other',
+                isBookmarked: true,
+                bookmarkedAt: new Date().toISOString(),
+                status: null,
+                notes: null,
+                trackedAt: new Date().toISOString(),
+                event: null
+            }]);
+
+        const setAttendanceStatusSpy = vi.spyOn(UserEventService.UserEventService, 'setAttendanceStatus')
+            .mockResolvedValue({ previousStatus: null, newStatus: 'attending', autoBookmarked: true });
+
+        render(<EventTracking event={mockEvent} />, { mockUser });
+
+        await screen.findByText(/not attending/i, {}, { timeout: 5000 });
+
+        const attendanceButton = screen.getByRole('button', { name: /attending/i });
+        await user.click(attendanceButton);
+
+        expect(setAttendanceStatusSpy).not.toHaveBeenCalled();
+        expect(subscriptionMocks.openUpgrade).toHaveBeenCalledTimes(1);
     });
 
     it('should show the current status if the event is already tracked', async () => {

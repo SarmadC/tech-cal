@@ -3,6 +3,7 @@ import {
   CareerOnboardingData, 
   TeamBuildingPreferences, 
   SkillTag,
+  LearningPathTrack,
   SeniorityLevel,
   CompanySize,
   CareerGoal,
@@ -35,11 +36,17 @@ interface CareerProfileRow {
   skill_tags: Json;
   career_goals: string[];
   timeframe: string | null;
+  target_path: string | null;
   learning_style: string[];
   available_time: string | null;
   budget: string | null;
   networking_goals: string[];
   preferred_event_types: string[];
+}
+
+interface CareerProfilePreferencesShape {
+  careerProfile?: Partial<CareerProfile>;
+  [key: string]: unknown;
 }
 
 export class CareerProfileService {
@@ -70,6 +77,7 @@ export class CareerProfileService {
       skillTags,
       careerGoals: Array.isArray(row.career_goals) ? (row.career_goals as CareerGoal[]) : [],
       timeframe,
+      targetPath: row.target_path ?? undefined,
       learningStyle: Array.isArray(row.learning_style) ? (row.learning_style as LearningStyle[]) : [],
       availableTime,
       budget,
@@ -93,12 +101,61 @@ export class CareerProfileService {
       skill_tags: (careerProfile.skillTags ?? []) as unknown as Json,
       career_goals: careerProfile.careerGoals ?? [],
       timeframe: (careerProfile.timeframe ?? 'short-term') as 'immediate' | 'short-term' | 'medium-term' | 'long-term',
+      target_path: careerProfile.targetPath || null,
       learning_style: careerProfile.learningStyle ?? [],
       available_time: (careerProfile.availableTime ?? 'moderate') as 'very-limited' | 'limited' | 'moderate' | 'flexible' | 'dedicated',
       budget: (careerProfile.budget ?? 'moderate') as 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited',
       networking_goals: careerProfile.networkingGoals ?? [],
       preferred_event_types: careerProfile.preferredEventTypes ?? []
     };
+  }
+
+  private static mergePreferenceBackedFields(
+    careerProfile: CareerProfile,
+    preferences: Json | null | undefined,
+  ): CareerProfile {
+    const typedPreferences = (preferences ?? {}) as CareerProfilePreferencesShape;
+    const preferenceProfile = typedPreferences.careerProfile;
+
+    if (!preferenceProfile) {
+      return careerProfile;
+    }
+
+    return {
+      ...careerProfile,
+      targetPath: careerProfile.targetPath ?? (preferenceProfile.targetPath as LearningPathTrack | string | undefined),
+    };
+  }
+
+  private static async syncCareerProfilePreferences(
+    userId: string,
+    careerProfile: CareerProfile,
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    const { data: currentProfile, error: fetchError } = await supabaseClient
+      .from('profiles')
+      .select('preferences')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentPreferences = (currentProfile?.preferences as Record<string, unknown>) || {};
+    const updatedPreferences = {
+      ...currentPreferences,
+      careerProfile,
+      careerProfileUpdatedAt: new Date().toISOString()
+    };
+
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ 
+        preferences: updatedPreferences as unknown as Json,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
   }
 
   /**
@@ -156,7 +213,14 @@ export class CareerProfileService {
         throw error;
       }
 
-      return this.transformRowToCareerProfile(data as CareerProfileRow);
+      const careerProfile = this.transformRowToCareerProfile(data as CareerProfileRow);
+      const { data: profileRow } = await supabaseClient
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      return this.mergePreferenceBackedFields(careerProfile, profileRow?.preferences);
     } catch (error) {
       console.error('Error fetching career profile:', error);
       Sentry.captureException(error, { extra: { function: 'getCareerProfile', userId } });
@@ -339,6 +403,8 @@ export class CareerProfileService {
         console.log('[CareerProfileService] Upsert successful:', { data });
       }
 
+      await this.syncCareerProfilePreferences(userId, careerProfile, supabaseClient);
+
       // Invalidate career impact cache for this profile
       CareerImpactService.invalidateProfileCache(careerProfile).catch(error => {
         console.warn('Failed to invalidate career impact cache after profile update:', error);
@@ -474,33 +540,7 @@ export class CareerProfileService {
     supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {
-      // Get current preferences
-      const { data: currentProfile, error: fetchError } = await supabaseClient
-        .from('profiles')
-        .select('preferences')
-        .eq('id', userId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Merge career profile with existing preferences
-      const currentPreferences = (currentProfile?.preferences as Record<string, unknown>) || {};
-      const updatedPreferences = {
-        ...currentPreferences,
-        careerProfile,
-        careerProfileUpdatedAt: new Date().toISOString()
-      };
-
-      // Update preferences in database
-      const { error: updateError } = await supabaseClient
-        .from('profiles')
-        .update({ 
-          preferences: updatedPreferences as unknown as Json,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
+      await this.syncCareerProfilePreferences(userId, careerProfile, supabaseClient);
 
       // Invalidate career impact cache for this profile
       CareerImpactService.invalidateProfileCache(careerProfile).catch(error => {
@@ -539,6 +579,7 @@ export class CareerProfileService {
       careerGoals: data.step3_goals.careerGoals,
       timeframe: data.step3_goals.timeframe,
       
+      targetPath: data.step4_preferences.targetPath,
       learningStyle: data.step4_preferences.learningStyle,
       availableTime: data.step4_preferences.availableTime,
       budget: data.step4_preferences.budget,

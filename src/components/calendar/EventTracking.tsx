@@ -110,15 +110,19 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     const attendanceState = getAttendanceState();
 
     const handleAttendanceToggle = async () => {
-        if (attendanceState.nextAction === null) {
-            // Remove attendance status (set to null)
-            await handleSetAttendance(null);
-        } else if (attendanceState.nextAction === 'attending') {
-            // Set to attending
-            await handleSetAttendance('attending');
-        } else if (attendanceState.nextAction === 'attended') {
-            // Set to attended
-            await handleSetAttendance('attended');
+        try {
+            if (attendanceState.nextAction === null) {
+                // Remove attendance status (set to null)
+                await handleSetAttendance(null);
+            } else if (attendanceState.nextAction === 'attending') {
+                // Set to attending
+                await handleSetAttendance('attending');
+            } else if (attendanceState.nextAction === 'attended') {
+                // Set to attended
+                await handleSetAttendance('attended');
+            }
+        } catch {
+            // Errors are already surfaced by the engagement hook.
         }
     };
 

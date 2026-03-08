@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { HackathonService } from '@/services/hackathonService';
-import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
+import { UserEventService } from '@/services/userEventService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
@@ -24,8 +24,16 @@ export function useDashboardData({
   const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
   
-  // Get tracked events using the existing hook with initial data
-  const { data: trackedEvents, isLoading: trackedEventsLoading, error: trackedEventsError } = useLightweightTrackedEvents(initialTrackedEvents);
+  // Load full tracked event details so dashboard analytics can score attended events accurately.
+  const { data: trackedEvents, isLoading: trackedEventsLoading, error: trackedEventsError } = useQuery({
+    queryKey: ['dashboardTrackedEvents', user?.id],
+    queryFn: () => UserEventService.getTrackedEvents(user!.id, supabase!),
+    enabled: !!user?.id && !!supabase && isReady,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: 2 * 60 * 1000,
+    initialData: initialTrackedEvents,
+  });
   
   // Get event types with server data as initial data
   const { data: eventTypes, isLoading: eventTypesLoading, error: eventTypesError } = useQuery({

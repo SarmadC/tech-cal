@@ -13,6 +13,7 @@ import * as Sentry from '@sentry/nextjs';
 import { env } from '@/utils/env';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/ExtractNormalization';
+import { normalizeLocationValue } from '@/utils/ingestion/sourceCleanup';
 import { EventRepository } from './repositories/EventRepository';
 import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
 import { TagNormalizationService } from '@/services/tagNormalizationService';
@@ -90,7 +91,7 @@ export class EventNormalizer {
             const location = this.normalizeLocation(record.location);
 
             // Parse and normalize timezone to IANA format
-            const timezone = this.extractTimezone(record.timezone, record.location, record.startTime);
+            const timezone = this.extractTimezone(record.timezone, location, record.startTime);
 
             // Prepare event insert
             type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -396,20 +397,7 @@ export class EventNormalizer {
      * Normalize location string
      */
     private static normalizeLocation(location: string): string {
-        if (!location) return 'Online';
-
-        const normalized = location.trim();
-
-        // Common variations
-        if (normalized.toLowerCase() === 'tbd' || normalized.toLowerCase() === 'tba') {
-            return 'TBD';
-        }
-
-        if (normalized.toLowerCase() === 'online' || normalized.toLowerCase() === 'virtual') {
-            return 'Online';
-        }
-
-        return normalized;
+        return normalizeLocationValue(location);
     }
 
     /**
@@ -623,7 +611,7 @@ export class EventNormalizer {
             .toLowerCase()
             .trim()
             .replace(/\s+/g, '-')     // Replace spaces with -
-            .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-            .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+            .replace(/[^\w-]+/g, '')  // Remove all non-word chars
+            .replace(/--+/g, '-');    // Replace multiple - with single -
     }
 }

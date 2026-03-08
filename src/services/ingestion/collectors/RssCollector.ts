@@ -205,7 +205,7 @@ export class RssCollector extends BaseCollector {
         const location = this.extractLocation(item);
 
         // Extract organizer (often in author or categories)
-        const organizer = item.author || item.creator || item.dc?.creator || 'Unknown';
+        const organizer = item.author || item.creator || item.dc?.creator || undefined;
 
         // Extract URLs
         const sourceUrl = item.link || this.config.sourceUrl;
@@ -406,4 +406,3 @@ export class RssCollector extends BaseCollector {
         return stable;
     }
 }
-

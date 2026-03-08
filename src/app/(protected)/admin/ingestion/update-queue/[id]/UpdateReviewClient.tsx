@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { formatRelationLabels } from '@/services/ingestion/utils/enrichmentQueue';
 
 interface QueueField {
     id: string;
@@ -388,7 +389,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [fields, focusedFieldIndex, shortcutsOpen, handleApproveAll, handleRejectAll]);
+    }, [fields, focusedFieldIndex, shortcutsOpen, handleApproveAll, handleRejectAll]); // eslint-disable-line react-hooks/exhaustive-deps -- keyboard handler intentionally uses the latest render state snapshot
 
     // Scroll focused field into view
     useEffect(() => {
@@ -424,6 +425,10 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         if (value === null || value === undefined) return '(empty)';
         if (typeof value === 'string') return value;
         if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        const relationLabels = formatRelationLabels(value);
+        if (relationLabels) {
+            return relationLabels.length > 0 ? relationLabels.join(', ') : '(empty array)';
+        }
         if (Array.isArray(value)) {
             const hasObjects = value.some((item) => typeof item === 'object');
             if (hasObjects) {
@@ -936,4 +941,3 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         </div>
     );
 }
-

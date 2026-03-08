@@ -44,13 +44,10 @@ export async function POST(request: NextRequest) {
         }
 
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
-        const enrichmentService = new LLMEnrichmentService(serviceClient);
-
-        // Allow provider/model override for forward-compatibility
-        if (provider || model) {
-            process.env.LLM_ENRICHMENT_PROVIDER = provider ?? process.env.LLM_ENRICHMENT_PROVIDER;
-            process.env.LLM_ENRICHMENT_MODEL = model ?? process.env.LLM_ENRICHMENT_MODEL;
-        }
+        const enrichmentService = new LLMEnrichmentService(serviceClient, {
+            provider,
+            model,
+        });
 
         if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
             return NextResponse.json(
@@ -84,4 +81,3 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
-

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
     Calendar,
     ArrowRight,
@@ -14,6 +15,11 @@ import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionH
 import { cn } from '@/lib/utils';
 import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/types';
 
+const EventDetailSidebar = dynamic(
+    () => import('@/components/calendar/EventDetailSidebar'),
+    { ssr: false }
+);
+
 interface PipelineColumnProps {
     trackedEvents: TrackedEventRecord[];
     upcomingEvents: Event[];
@@ -25,7 +31,10 @@ export function PipelineColumn({
     trackedEvents,
     upcomingEvents,
     careerProfile,
+    eventTypes = [],
 }: PipelineColumnProps) {
+    const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
+
     const metrics = useDashboardMetrics({
         trackedEvents,
         upcomingEvents,
@@ -61,9 +70,10 @@ export function PipelineColumn({
                             const isFar = daysUntil > 30;
 
                             return (
-                                <Link
+                                <button
                                     key={event.id}
-                                    href={`/calendar?event=${event.id}`}
+                                    type="button"
+                                    onClick={() => setSelectedEvent(event)}
                                     className="group flex items-start gap-4 px-3 py-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
                                 >
                                     {/* Left Column: Date Block */}
@@ -101,7 +111,7 @@ export function PipelineColumn({
                                             {daysUntil === 0 ? 'Today' : `${daysUntil}d`}
                                         </div>
                                     </div>
-                                </Link>
+                                </button>
                             );
                         })}
 
@@ -122,6 +132,12 @@ export function PipelineColumn({
                     </div>
                 )}
             </div>
+
+            <EventDetailSidebar
+                event={selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+                categories={eventTypes}
+            />
         </DashboardCard>
     );
 }

@@ -27,6 +27,16 @@ export const NavigationUtils = {
     if (view) params.set('view', view);
     return `/calendar${params.toString() ? `?${params.toString()}` : ''}`;
   },
+
+  /**
+   * Navigate to calendar with a prefilled search term.
+   */
+  goToCalendarSearch: (searchTerm: string, view: string = 'month') => {
+    const params = new URLSearchParams();
+    params.set('searchTerm', searchTerm);
+    params.set('view', view);
+    return `/calendar?${params.toString()}`;
+  },
   
   /**
    * Navigate to dashboard settings

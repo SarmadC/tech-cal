@@ -18,10 +18,21 @@ import { getExtractionProvider } from './providers/ProviderFactory';
 import { GeminiExtractionProvider } from './providers/GeminiExtractionProvider';
 import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
+import {
+    buildReviewQueueSignature,
+    selectPendingInferenceCandidates,
+    selectPendingScrapeCandidates,
+    type QueueFieldSnapshot,
+    type RelationReviewValue,
+} from './utils/enrichmentQueue';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
 const MAX_RETRIES = 3;
 const CONCURRENT_LIMIT = 5; // Limit concurrent LLM API calls
+const DEFAULT_BATCH_LIMIT = 25;
+const CANDIDATE_FETCH_MULTIPLIER = 5;
+const MIN_CANDIDATE_FETCH = 100;
+const OPEN_REVIEW_QUEUE_STATUSES = ['pending', 'partially_approved'] as const;
 
 type EventRow = {
     id: string;
@@ -41,6 +52,7 @@ type EventRow = {
     start_time?: string | null;
     end_time?: string | null;
     difficulty_level?: string | null;
+    created_at?: string | null;
 };
 
 type EventRowWithRelations = EventRow & {
@@ -61,6 +73,19 @@ type TagChange = {
     newTagNames: string[];
     added: string[];
     removed: string[];
+    reviewOldValue: RelationReviewValue;
+    reviewNewValue: RelationReviewValue;
+};
+
+type ReviewQueueRow = {
+    id: string;
+    status: string;
+    created_at?: string | null;
+};
+
+type ReviewQueueField = QueueFieldSnapshot & {
+    id: string;
+    field_status: string;
 };
 
 const ALLOWED_TAGS_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -79,13 +104,29 @@ export interface EnrichmentBatchResult {
     results: EnrichmentJobResult[];
 }
 
+interface LLMEnrichmentServiceOptions {
+    scraper?: PlaywrightScraper;
+    provider?: string;
+    model?: string;
+}
+
 export class LLMEnrichmentService {
+    private readonly scraper: PlaywrightScraper;
+
+    private readonly providerOverride?: string;
+
+    private readonly modelOverride?: string;
+
     constructor(
         private readonly supabaseClient: SupabaseClientType,
-        private readonly scraper = new PlaywrightScraper(),
-    ) {}
+        options: LLMEnrichmentServiceOptions = {},
+    ) {
+        this.scraper = options.scraper ?? new PlaywrightScraper();
+        this.providerOverride = options.provider;
+        this.modelOverride = options.model;
+    }
 
-    async processBatch(limit = 10): Promise<EnrichmentBatchResult> {
+    async processBatch(limit = DEFAULT_BATCH_LIMIT): Promise<EnrichmentBatchResult> {
         await this.resetStuckProcessing();
         const events = await this.fetchPendingEvents(limit);
 
@@ -135,10 +176,11 @@ export class LLMEnrichmentService {
 
             const contentHash = this.hashContent(content);
             const allowedTags = await this.loadAllowedTags();
-            const provider = getExtractionProvider();
+            const provider = getExtractionProvider(this.providerOverride, this.modelOverride);
             const providerResult = await provider.extract({
                 content,
                 context: { sourceUrl, eventId, contentHash },
+                model: this.modelOverride,
                 allowedTags: allowedTags.map(t => t.name),
             });
 
@@ -154,6 +196,7 @@ export class LLMEnrichmentService {
     }
 
     private async fetchPendingEvents(limit: number): Promise<EventRow[]> {
+        const candidateLimit = Math.max(limit * CANDIDATE_FETCH_MULTIPLIER, MIN_CANDIDATE_FETCH);
         const { data, error } = await this.supabaseClient
             .from('events')
             .select(
@@ -171,18 +214,20 @@ export class LLMEnrichmentService {
                     'currency',
                     'pricing_type',
                     'speaker_lineup',
+                    'start_time',
+                    'created_at',
                 ].join(','),
             )
             .in(this.statusColumn(), ['pending', 'failed'])
             .order('created_at', { ascending: true })
-            .limit(limit);
+            .limit(candidateLimit);
 
         if (error) {
             Sentry.captureException(error, { extra: { function: 'fetchPendingEvents', limit } });
             return [];
         }
 
-        return (data ?? []) as unknown as EventRow[];
+        return selectPendingScrapeCandidates((data ?? []) as unknown as EventRow[], limit);
     }
 
     private async fetchEvent(eventId: string): Promise<EventRow | null> {
@@ -276,6 +321,7 @@ export class LLMEnrichmentService {
             content_hash: contentHash,
             tokens_used: providerResult.tokensUsed,
             last_error: undefined,
+            next_retry_after: undefined,
         };
 
         await this.supabaseClient
@@ -286,18 +332,21 @@ export class LLMEnrichmentService {
             })
             .eq('id', eventId);
 
-        const tagChange = await this.persistTags(eventId, providerResult.data.tags, allowedTags);
+        const diffs = this.buildFieldDiffs(event, providerResult.data);
+        const tagChange = await this.diffTags(eventId, providerResult.data.tags, allowedTags);
         if (tagChange) {
-            metadata.applied_tags = tagChange.newTagNames;
-            await this.supabaseClient
-                .from('events')
-                .update({
-                    [this.metadataColumn()]: metadata as unknown as Json,
-                })
-                .eq('id', eventId);
+            diffs.push({
+                fieldName: 'tags',
+                oldValue: tagChange.reviewOldValue,
+                newValue: tagChange.reviewNewValue,
+                hasChanged: true,
+            });
         }
 
-        await this.queueForReview(eventId, event, providerResult.data, tagChange);
+        await this.queueForReview(eventId, diffs, {
+            contentHash,
+            previousContentHash: previousMetadata.content_hash,
+        });
     }
 
     private async markFailed(eventId: string, event: EventRow, reason: string): Promise<void> {
@@ -431,7 +480,7 @@ export class LLMEnrichmentService {
         return true;
     }
 
-    private async persistTags(
+    private async diffTags(
         eventId: string,
         tags: string[] | undefined,
         allowedTags: AllowedTag[],
@@ -462,32 +511,22 @@ export class LLMEnrichmentService {
             .eq('event_id', eventId);
 
         if (existingError) {
-            Sentry.captureException(existingError, { extra: { function: 'persistTags_existing', eventId } });
+            Sentry.captureException(existingError, { extra: { function: 'diffTags_existing', eventId } });
         }
 
         const oldTagIds = new Set<string>((existing || []).map(r => r.tag_id as string));
 
-        const rows = Array.from(newTagIds).map(tagId => ({
-            event_id: eventId,
-            tag_id: tagId,
-        }));
-
-        const { error } = await this.supabaseClient
-            .from('event_tag_relations')
-            .upsert(rows, { onConflict: 'event_id,tag_id' });
-
-        if (error) {
-            Sentry.captureException(error, { extra: { function: 'persistTags', eventId, tagCount: rows.length } });
-            return null;
-        }
-
         const idToName = new Map<string, string>();
         allowedTags.forEach(tag => idToName.set(tag.id, tag.name));
 
-        const oldIdsArr = Array.from(oldTagIds);
-        const newIdsArr = Array.from(newTagIds);
+        const oldIdsArr = Array.from(oldTagIds).sort();
+        const newIdsArr = Array.from(newTagIds).sort();
         const addedIds = newIdsArr.filter(id => !oldTagIds.has(id));
         const removedIds = oldIdsArr.filter(id => !newTagIds.has(id));
+
+        if (addedIds.length === 0 && removedIds.length === 0) {
+            return null;
+        }
 
         return {
             oldTagIds: oldIdsArr,
@@ -496,28 +535,224 @@ export class LLMEnrichmentService {
             newTagNames: newIdsArr.map(id => idToName.get(id) || id),
             added: addedIds.map(id => idToName.get(id) || id),
             removed: removedIds.map(id => idToName.get(id) || id),
+            reviewOldValue: {
+                ids: oldIdsArr,
+                labels: oldIdsArr.map(id => idToName.get(id) || id),
+            },
+            reviewNewValue: {
+                ids: newIdsArr,
+                labels: newIdsArr.map(id => idToName.get(id) || id),
+            },
         };
     }
 
     private async queueForReview(
         eventId: string,
-        event: EventRow,
-        data: ExtractedEventData,
-        tagChange?: TagChange | null
+        diffs: FieldDiff[],
+        options: { contentHash?: string; previousContentHash?: string } = {},
     ): Promise<void> {
-        const diffs = this.buildFieldDiffs(event, data);
-        if (tagChange && (tagChange.added?.length || tagChange.removed?.length)) {
-            diffs.push({
-                fieldName: 'tags',
-                oldValue: tagChange.oldTagNames,
-                newValue: tagChange.newTagNames,
-                hasChanged: true,
-            });
-        }
         if (diffs.length === 0) {
             return;
         }
 
+        const queueSignature = buildReviewQueueSignature(diffs);
+        const recentQueues = await this.fetchRecentReviewQueues(eventId);
+        const openQueue = recentQueues.find((queue) =>
+            OPEN_REVIEW_QUEUE_STATUSES.includes(queue.status as typeof OPEN_REVIEW_QUEUE_STATUSES[number])
+        );
+
+        if (openQueue) {
+            const openFields = await this.fetchReviewQueueFields(openQueue.id);
+            const openSignature = buildReviewQueueSignature(
+                openFields.filter((field) => field.field_status === 'pending')
+            );
+
+            if (openSignature === queueSignature) {
+                return;
+            }
+
+            await this.syncOpenReviewQueue(openQueue, openFields, diffs);
+            return;
+        }
+
+        const latestResolvedQueue = recentQueues.find((queue) =>
+            !OPEN_REVIEW_QUEUE_STATUSES.includes(queue.status as typeof OPEN_REVIEW_QUEUE_STATUSES[number])
+        );
+
+        if (
+            latestResolvedQueue
+            && options.contentHash
+            && options.previousContentHash
+            && options.contentHash === options.previousContentHash
+        ) {
+            const previousFields = await this.fetchReviewQueueFields(latestResolvedQueue.id);
+            const previousSignature = buildReviewQueueSignature(previousFields);
+            if (previousSignature === queueSignature) {
+                return;
+            }
+        }
+
+        await this.createReviewQueue(eventId, diffs);
+    }
+
+    private async fetchRecentReviewQueues(eventId: string): Promise<ReviewQueueRow[]> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = this.supabaseClient as any;
+
+        const { data, error } = await tableClient
+            .from('event_update_queue')
+            .select('id, status, created_at')
+            .eq('event_id', eventId)
+            .eq('requires_review_reason', 'llm_enrichment')
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) {
+            throw new Error(`Failed to fetch review queue entries: ${error.message}`);
+        }
+
+        return (data ?? []) as ReviewQueueRow[];
+    }
+
+    private async fetchReviewQueueFields(queueId: string): Promise<ReviewQueueField[]> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = this.supabaseClient as any;
+
+        const { data, error } = await tableClient
+            .from('event_update_queue_fields')
+            .select('id, field_name, old_value, new_value, confidence, field_status')
+            .eq('queue_id', queueId);
+
+        if (error) {
+            throw new Error(`Failed to fetch review queue fields: ${error.message}`);
+        }
+
+        return (data ?? []) as ReviewQueueField[];
+    }
+
+    private async syncOpenReviewQueue(
+        queue: ReviewQueueRow,
+        existingFields: ReviewQueueField[],
+        diffs: FieldDiff[],
+    ): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = this.supabaseClient as any;
+
+        const pendingFields = existingFields.filter((field) => field.field_status === 'pending');
+        const pendingByField = new Map(pendingFields.map((field) => [field.field_name, field]));
+        const reviewedFieldNames = new Set(
+            existingFields
+                .filter((field) => field.field_status !== 'pending')
+                .map((field) => field.field_name)
+        );
+
+        const updatePromises: Promise<unknown>[] = [];
+        const deletePromises: Promise<unknown>[] = [];
+        const fieldsToInsert: Array<{
+            queue_id: string;
+            field_name: string;
+            old_value: unknown;
+            new_value: unknown;
+            field_status: 'pending';
+            confidence: number | null;
+        }> = [];
+
+        for (const diff of diffs) {
+            const existingPendingField = pendingByField.get(diff.fieldName);
+            if (existingPendingField) {
+                const existingSignature = buildReviewQueueSignature([
+                    {
+                        field_name: existingPendingField.field_name,
+                        old_value: existingPendingField.old_value,
+                        new_value: existingPendingField.new_value,
+                        confidence: existingPendingField.confidence ?? null,
+                    },
+                ]);
+                const nextSignature = buildReviewQueueSignature([
+                    {
+                        fieldName: diff.fieldName,
+                        oldValue: diff.oldValue,
+                        newValue: diff.newValue,
+                        confidence: diff.confidence ?? undefined,
+                    },
+                ]);
+
+                if (existingSignature !== nextSignature) {
+                    updatePromises.push(
+                        tableClient
+                            .from('event_update_queue_fields')
+                            .update({
+                                old_value: diff.oldValue ?? null,
+                                new_value: diff.newValue ?? null,
+                                confidence: diff.confidence ?? null,
+                            })
+                            .eq('id', existingPendingField.id)
+                    );
+                }
+
+                pendingByField.delete(diff.fieldName);
+                continue;
+            }
+
+            if (reviewedFieldNames.has(diff.fieldName)) {
+                continue;
+            }
+
+            fieldsToInsert.push({
+                queue_id: queue.id,
+                field_name: diff.fieldName,
+                old_value: diff.oldValue ?? null,
+                new_value: diff.newValue ?? null,
+                field_status: 'pending',
+                confidence: diff.confidence ?? null,
+            });
+        }
+
+        for (const staleField of pendingByField.values()) {
+            deletePromises.push(
+                tableClient
+                    .from('event_update_queue_fields')
+                    .delete()
+                    .eq('id', staleField.id)
+            );
+        }
+
+        if (fieldsToInsert.length > 0) {
+            updatePromises.push(
+                tableClient
+                    .from('event_update_queue_fields')
+                    .insert(fieldsToInsert)
+            );
+        }
+
+        const results = await Promise.all([...updatePromises, ...deletePromises]);
+        const failedResult = results.find((result) => result && typeof result === 'object' && 'error' in result && result.error);
+        if (failedResult && typeof failedResult === 'object' && 'error' in failedResult) {
+            const errorMessage = failedResult.error instanceof Error
+                ? failedResult.error.message
+                : typeof failedResult.error === 'object' && failedResult.error && 'message' in failedResult.error
+                    ? String(failedResult.error.message)
+                    : 'Unknown error';
+            throw new Error(`Failed to update review queue fields: ${errorMessage}`);
+        }
+
+        if (queue.status !== 'pending' && fieldsToInsert.length > 0) {
+            const { error } = await tableClient
+                .from('event_update_queue')
+                .update({
+                    status: 'partially_approved',
+                    reviewed_by: null,
+                    reviewed_at: null,
+                })
+                .eq('id', queue.id);
+
+            if (error) {
+                throw new Error(`Failed to refresh review queue status: ${error.message}`);
+            }
+        }
+    }
+
+    private async createReviewQueue(eventId: string, diffs: FieldDiff[]): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tableClient = this.supabaseClient as any;
 
@@ -540,8 +775,8 @@ export class LLMEnrichmentService {
         const fieldRows = diffs.map((field) => ({
             queue_id: queueEntry.id,
             field_name: field.fieldName,
-            old_value: field.oldValue,
-            new_value: field.newValue,
+            old_value: field.oldValue ?? null,
+            new_value: field.newValue ?? null,
             field_status: 'pending',
             confidence: field.confidence ?? null,
         }));
@@ -555,7 +790,11 @@ export class LLMEnrichmentService {
         }
     }
 
-    private buildFieldDiffs(event: EventRow, data: ExtractedEventData): FieldDiff[] {
+    private buildFieldDiffs(
+        event: EventRow,
+        data: ExtractedEventData,
+        options: { difficultyLevel?: string | null } = {},
+    ): FieldDiff[] {
         const diffs: FieldDiff[] = [];
 
         const pushDiff = (
@@ -596,6 +835,9 @@ export class LLMEnrichmentService {
         }
         if (data.agenda) {
             pushDiff('agenda', null, this.toAgendaItems(data.agenda));
+        }
+        if (options.difficultyLevel) {
+            pushDiff('difficulty_level', event.difficulty_level, options.difficultyLevel);
         }
 
         return diffs;
@@ -642,7 +884,7 @@ export class LLMEnrichmentService {
      * Process batch of events using inference mode (no scraping)
      * Targets events missing description or tags
      */
-    async processInferenceBatch(limit = 20): Promise<EnrichmentBatchResult> {
+    async processInferenceBatch(limit = DEFAULT_BATCH_LIMIT): Promise<EnrichmentBatchResult> {
         const events = await this.fetchEventsForInference(limit);
 
         // Process events in parallel with concurrency limit
@@ -716,6 +958,7 @@ export class LLMEnrichmentService {
      * Fetch events that need inference (missing description or tags)
      */
     private async fetchEventsForInference(limit: number): Promise<EventRowWithRelations[]> {
+        const candidateLimit = Math.max(limit * CANDIDATE_FETCH_MULTIPLIER, MIN_CANDIDATE_FETCH);
         // First, get events with basic info
         const { data, error } = await this.supabaseClient
             .from('events')
@@ -730,14 +973,15 @@ export class LLMEnrichmentService {
                 start_time,
                 end_time,
                 difficulty_level,
+                created_at,
                 event_type:event_type_id (name),
                 organizer:organizer_id (name)
             `)
             .eq('status', 'confirmed')
             .or('description.is.null,description.eq.')
             .not('title', 'is', null)
-            .order('created_at', { ascending: false })
-            .limit(limit);
+            .order('created_at', { ascending: true })
+            .limit(candidateLimit);
 
         if (error) {
             Sentry.captureException(error, { extra: { function: 'fetchEventsForInference', limit } });
@@ -757,11 +1001,13 @@ export class LLMEnrichmentService {
         const eventsWithTags = new Set((tagRelations ?? []).map(r => r.event_id));
 
         // Return events missing description OR missing tags
-        return ((data ?? []) as unknown as EventRowWithRelations[]).filter(event => {
+        const filteredEvents = ((data ?? []) as unknown as EventRowWithRelations[]).filter(event => {
             const hasDescription = event.description && event.description.trim().length > 0;
             const hasTags = eventsWithTags.has(event.id);
             return !hasDescription || !hasTags;
         });
+
+        return selectPendingInferenceCandidates(filteredEvents, limit);
     }
 
     /**
@@ -800,7 +1046,7 @@ export class LLMEnrichmentService {
      */
     private getInferenceProvider(): GeminiExtractionProvider {
         const apiKey = env('GOOGLE_GENERATIVE_AI_API_KEY');
-        const model = env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
+        const model = this.modelOverride || env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
         return new GeminiExtractionProvider({ apiKey, model });
     }
 
@@ -815,67 +1061,62 @@ export class LLMEnrichmentService {
         allowedTags: AllowedTag[] = [],
     ): Promise<void> {
         const now = new Date().toISOString();
-        const inferredDescription = inferenceResult.data.description ?? undefined;
         const inferredTags = Array.isArray(inferenceResult.data.tags)
             ? inferenceResult.data.tags
                 .filter(tag => typeof tag === 'string')
                 .map(tag => tag.trim())
                 .filter(tag => tag.length > 0)
             : undefined;
+        const extractedData: ExtractedEventData = {
+            description: inferenceResult.data.description ?? undefined,
+            tags: inferredTags,
+        };
+        const contentHash = this.hashContent(JSON.stringify({
+            title: event.title,
+            eventType: event.event_type?.name ?? null,
+            organizer: event.organizer?.name ?? null,
+            location: event.location ?? null,
+            startTime: event.start_time ?? null,
+            extractedData,
+            difficultyLevel: inferenceResult.data.difficultyLevel ?? null,
+        }));
         const metadata: EnrichmentMetadata = {
             ...previousMetadata,
             enrichment_source: 'llm',
             llm_model: inferenceResult.model,
-            enriched_data: {
-                description: inferredDescription,
-                tags: inferredTags,
-            },
+            enriched_data: extractedData,
             completed_at: now,
             retry_count: previousMetadata.retry_count,
+            content_hash: contentHash,
             tokens_used: inferenceResult.tokensUsed,
             last_error: undefined,
+            next_retry_after: undefined,
         };
-
-        // Build update payload
-        const updatePayload: Record<string, unknown> = {
-            [this.statusColumn()]: 'enriched',
-            [this.metadataColumn()]: metadata as unknown as Json,
-        };
-
-        // Update description if generated and event doesn't have one
-        if (inferredDescription && (!event.description || event.description.trim().length === 0)) {
-            updatePayload.description = inferredDescription;
-        }
-
-        // Update difficulty level if inferred and event doesn't have one
-        if (inferenceResult.data.difficultyLevel && !event.difficulty_level) {
-            updatePayload.difficulty_level = inferenceResult.data.difficultyLevel;
-        }
 
         await this.supabaseClient
             .from('events')
-            .update(updatePayload)
+            .update({
+                [this.statusColumn()]: 'enriched',
+                [this.metadataColumn()]: metadata as unknown as Json,
+            })
             .eq('id', eventId);
 
-        // Persist tags
-        const tagChange = await this.persistTags(eventId, inferredTags, allowedTags);
+        const diffs = this.buildFieldDiffs(event, extractedData, {
+            difficultyLevel: inferenceResult.data.difficultyLevel ?? undefined,
+        });
+        const tagChange = await this.diffTags(eventId, inferredTags, allowedTags);
         if (tagChange) {
-            metadata.applied_tags = tagChange.newTagNames;
-            await this.supabaseClient
-                .from('events')
-                .update({
-                    [this.metadataColumn()]: metadata as unknown as Json,
-                })
-                .eq('id', eventId);
+            diffs.push({
+                fieldName: 'tags',
+                oldValue: tagChange.reviewOldValue,
+                newValue: tagChange.reviewNewValue,
+                hasChanged: true,
+            });
         }
 
-        // Queue for review (optional - inference results may not need review)
-        // Convert inference data to ExtractedEventData format for review queue
-        const extractedData: ExtractedEventData = {
-            description: inferredDescription,
-            tags: inferredTags,
-        };
-        await this.queueForReview(eventId, event, extractedData, tagChange);
+        await this.queueForReview(eventId, diffs, {
+            contentHash,
+            previousContentHash: previousMetadata.content_hash,
+        });
     }
 }
-

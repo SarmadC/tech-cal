@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { SlidersHorizontal } from '@phosphor-icons/react';
+import { SlidersHorizontal, LockKey } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
+import Link from 'next/link';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -358,6 +359,9 @@ export default function EventListView({ initialCategories, profile, locationOpti
     const rangeStart = hasResults ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
     const rangeEnd = hasResults ? Math.min(rangeStart + rows.length - 1, totalCount) : 0;
 
+    const activeQueryError = error; // Error from hook
+    const isUnauthorized = activeQueryError?.includes('401') || error?.includes('401');
+
     const tableSortKey = useMemo(() => {
         switch (filters.sortBy) {
             case 'title':
@@ -548,6 +552,21 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         <div className="flex items-center justify-center py-12">
                                             <Loading />
                                         </div>
+                                    ) : isUnauthorized ? (
+                                        <div className="py-16 px-4 text-center flex flex-col items-center justify-center h-full">
+                                            <div className="w-12 h-12 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4 text-zinc-400 dark:text-zinc-500">
+                                                <LockKey size={24} weight="duotone" />
+                                            </div>
+                                            <h3 className="text-xl font-semibold text-foreground-primary mb-2">Sign in to view events</h3>
+                                            <p className="text-sm text-foreground-secondary mb-6 max-w-[280px]">
+                                                Join our community to discover, track, and organize upcoming tech events.
+                                            </p>
+                                            <Link href="/login" className="w-full sm:w-auto">
+                                                <Button className="w-full sm:w-auto px-8 font-medium">
+                                                    Sign In
+                                                </Button>
+                                            </Link>
+                                        </div>
                                     ) : rows.length === 0 ? (
                                         <div className="py-12 text-center">
                                             <h3 className="text-lg font-semibold text-foreground-primary mb-2">No events found</h3>
@@ -606,8 +625,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         </div>
                                     )}
 
-                                    {error && (
-                                        <p className="text-xs text-destructive text-center">
+                                    {error && !isUnauthorized && (
+                                        <p className="text-xs text-destructive text-center mt-4">
                                             Failed to load events.{' '}
                                             <button className="underline" onClick={() => refetch()}>Try again</button>
                                         </p>
@@ -698,17 +717,33 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                 page={pagination.page}
                                                 onPageChange={handlePageChange}
                                                 total={totalCount}
-                                                emptyState={(
-                                                    <div className="py-20 text-center">
-                                                        <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">No events found</h3>
-                                                        <p className="text-xs text-zinc-500 mb-4">
-                                                            Try adjusting your filters.
-                                                        </p>
-                                                        <button onClick={() => resetFilters()} className="text-xs font-medium text-accent-primary hover:underline">
-                                                            Clear filters
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                emptyState={
+                                                    isUnauthorized ? (
+                                                        <div className="py-24 text-center flex flex-col items-center justify-center">
+                                                            <div className="w-12 h-12 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4 text-zinc-400 dark:text-zinc-500">
+                                                                <LockKey size={24} weight="duotone" />
+                                                            </div>
+                                                            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">Sign in to view events</h3>
+                                                            <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
+                                                                Join our community to discover, track, and organize upcoming tech events.
+                                                            </p>
+                                                            <Link href="/login">
+                                                                <Button className="px-8 font-medium">
+                                                                    Sign In
+                                                                </Button>
+                                                            </Link>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="py-20 text-center">
+                                                            <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">No events found</h3>
+                                                            <p className="text-xs text-zinc-500 mb-4">
+                                                                Try adjusting your filters.
+                                                            </p>
+                                                            <button onClick={() => resetFilters()} className="text-xs font-medium text-accent-primary hover:underline">
+                                                                Clear filters
+                                                            </button>
+                                                        </div>
+                                                    )}
                                             />
                                         </AdminToolbarProvider>
 

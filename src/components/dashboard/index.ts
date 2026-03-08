@@ -15,7 +15,6 @@ export { QuickStatsCard } from './QuickStatsCard';
 export { EventDistributionCard } from './EventDistributionCard';
 
 // New refactored components
-export { CareerAnalyticsSection } from './CareerAnalyticsSection';
 export { DashboardHeader } from './DashboardHeader';
 export { DashboardStatsGrid } from './DashboardStatsGrid';
 export { DashboardEventsSection } from './DashboardEventsSection';

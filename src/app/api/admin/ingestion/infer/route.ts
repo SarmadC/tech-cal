@@ -37,9 +37,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const { eventIds, limit = 20 } = (await request.json()) as {
+        const { eventIds, limit = 20, provider, model } = (await request.json()) as {
             eventIds?: string[];
             limit?: number;
+            provider?: string;
+            model?: string;
         };
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -53,7 +55,10 @@ export async function POST(request: NextRequest) {
         }
 
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
-        const enrichmentService = new LLMEnrichmentService(serviceClient);
+        const enrichmentService = new LLMEnrichmentService(serviceClient, {
+            provider,
+            model,
+        });
 
         // If specific eventIds provided, process them in parallel with concurrency limit
         if (eventIds && Array.isArray(eventIds) && eventIds.length > 0) {
@@ -166,7 +171,6 @@ export async function GET() {
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
-
 
 
 

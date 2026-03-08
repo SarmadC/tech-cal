@@ -162,6 +162,7 @@ const buildOnboardingInitialData = (profile?: CareerProfile | null): Partial<Car
             timeframe: profile.timeframe || 'immediate'
         },
         step4_preferences: {
+            targetPath: profile.targetPath || '',
             learningStyle: profile.learningStyle || [],
             availableTime: profile.availableTime || 'moderate',
             budget: profile.budget || 'moderate'
@@ -463,6 +464,12 @@ export default function CareerProfileManager({
                 title="Learning & Networking"
                 description="Your preferred learning styles and event formats."
             >
+                <SettingRow
+                    label="Learning Path"
+                    value={currentCareerProfile.targetPath}
+                    isEmpty={!currentCareerProfile.targetPath}
+                    onClick={() => handleQuickEdit('learning')}
+                />
                 <SettingRow
                     label="Learning Style"
                     value={<ChipsList items={currentCareerProfile.learningStyle?.map(s => formatLearningStyle(s)) || []} />}

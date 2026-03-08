@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import type { EventSourceRecord } from '@/types/ingestion';
+import { resolveTechmemeUrl } from '@/utils/ingestion/sourceCleanup';
 
 const TRACKING_PARAM_PREFIXES = [
     'utm_',
@@ -163,49 +164,6 @@ export function createHash(value: string): string {
     return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-/**
- * Resolve Techmeme redirect URLs (techmeme.com/r2/...) to canonical URLs.
- *
- * Pattern: techmeme.com/r2/domain_path_segments-base64Hash.htm?cal=1
- * Steps: strip query + .htm, split domain from path at first _, remove trailing -hash, replace _ with /
- * Example: techmeme.com/r2/blockworks.co_event_permissionless-RWjwjofT.htm?cal=1
- *       -> https://blockworks.co/event/permissionless
- */
-export function resolveTechmemeUrl(rawUrl: string): string | null {
-    if (!rawUrl || !rawUrl.includes('techmeme.com/r2/')) {
-        return null;
-    }
-
-    // Strip query params
-    const urlWithoutQuery = rawUrl.split('?')[0];
-
-    // Match: techmeme.com/r2/{slug}.htm
-    const match = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)_(.+?)\.htm$/);
-    if (match) {
-        const domain = match[1];
-        let pathSegments = match[2];
-
-        // Remove trailing base64 hash suffix (e.g. -RWjwjofT)
-        pathSegments = pathSegments.replace(/-[a-zA-Z0-9]+$/, '');
-
-        if (!pathSegments) {
-            return `https://${domain}`;
-        }
-
-        // Replace underscores with slashes
-        const path = pathSegments.replace(/_/g, '/');
-        return `https://${domain}/${path}`;
-    }
-
-    // Domain-only pattern: techmeme.com/r2/domain-hash.htm
-    const altMatch = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+?)(?:-[a-zA-Z0-9]+)?\.htm$/);
-    if (altMatch?.[1]) {
-        return `https://${altMatch[1]}`;
-    }
-
-    return null;
-}
-
 export function applyUrlCanonicalization(record: EventSourceRecord): void {
     if (!record.provenance) {
         return;
@@ -219,8 +177,16 @@ export function applyUrlCanonicalization(record: EventSourceRecord): void {
         }
     }
 
+    if (record.registrationUrl?.includes('techmeme.com/r2/')) {
+        const resolved = resolveTechmemeUrl(record.registrationUrl);
+        if (resolved) {
+            record.registrationUrl = resolved;
+        }
+    }
+
     const normalizedSource = record.sourceUrl ? normalizeUrlForCaching(record.sourceUrl) : null;
     if (normalizedSource) {
+        record.sourceUrl = normalizedSource.normalizedUrl;
         record.normalizedSourceUrl = normalizedSource.normalizedUrl;
         record.normalizedSourceUrlHash = normalizedSource.hash;
         record.sourceDomain = normalizedSource.normalizedHost;
@@ -234,6 +200,7 @@ export function applyUrlCanonicalization(record: EventSourceRecord): void {
         ? normalizeUrlForCaching(record.registrationUrl)
         : null;
     if (normalizedRegistration) {
+        record.registrationUrl = normalizedRegistration.normalizedUrl;
         record.normalizedRegistrationUrl = normalizedRegistration.normalizedUrl;
         record.normalizedRegistrationUrlHash = normalizedRegistration.hash;
 
@@ -245,6 +212,5 @@ export function applyUrlCanonicalization(record: EventSourceRecord): void {
         record.sourceDomain = normalizedSource.normalizedHost;
     }
 }
-
 
 

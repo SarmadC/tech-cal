@@ -16,6 +16,7 @@ import { HtmlCollector } from './collectors/HtmlCollector';
 import type { BaseCollector } from './collectors/BaseCollector';
 import { FILTERING_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
+import { applyIngestionRecordCleanup } from './utils/recordCleanup';
 
 // Supported collector types - only these can be processed
 const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API', 'HTML'] as const;
@@ -122,6 +123,9 @@ export class IngestionOrchestrator {
                 
                 for (const { record, rawItem } of result.records) {
                     try {
+                        const stagedRecord = structuredClone(record);
+                        applyIngestionRecordCleanup(stagedRecord);
+
                         // Use provenance hash directly (already calculated from stable fields by collector)
                         // This ensures consistency and avoids recalculation issues
                         const checksum = record.provenance.raw_hash;
@@ -133,8 +137,8 @@ export class IngestionOrchestrator {
                                 source_id: sourceId,
                                 fetch_job_id: jobId,
                                 raw_payload: {
-                                    record,
-                                    provenance: record.provenance,
+                                    record: stagedRecord,
+                                    provenance: stagedRecord.provenance,
                                     rawItem, // Store raw item for reprocessing if needed
                                 } as unknown as Database['public']['Tables']['source_events']['Insert']['raw_payload'],
                                 checksum,
@@ -373,4 +377,3 @@ export class IngestionOrchestrator {
         }
     }
 }
-

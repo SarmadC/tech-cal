@@ -13,6 +13,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
+import { extractRelationIds } from '@/services/ingestion/utils/enrichmentQueue';
 
 const coerceAgendaItems = (value: unknown): AgendaItemInput[] => {
     if (!Array.isArray(value)) return [];
@@ -265,14 +266,14 @@ export async function POST(
 
                 if (relationshipFields.includes(field.field_name)) {
                     // Handle relationship fields
-                    const newValue = field.new_value;
-                    if (Array.isArray(newValue)) {
+                    const relationIds = extractRelationIds(field.new_value);
+                    if (relationIds) {
                         if (field.field_name === 'tags') {
-                            relationshipUpdates.tagIds = newValue as string[];
+                            relationshipUpdates.tagIds = relationIds;
                         } else if (field.field_name === 'audiences') {
-                            relationshipUpdates.audienceIds = newValue as string[];
+                            relationshipUpdates.audienceIds = relationIds;
                         } else if (field.field_name === 'prerequisites') {
-                            relationshipUpdates.prerequisiteIds = newValue as string[];
+                            relationshipUpdates.prerequisiteIds = relationIds;
                         }
                     }
                 } else {
@@ -433,14 +434,14 @@ export async function POST(
 
                 if (relationshipFields.includes(field.field_name)) {
                     // Handle relationship fields
-                    const newValue = field.new_value;
-                    if (Array.isArray(newValue)) {
+                    const relationIds = extractRelationIds(field.new_value);
+                    if (relationIds) {
                         if (field.field_name === 'tags') {
-                            relationshipUpdates.tagIds = newValue as string[];
+                            relationshipUpdates.tagIds = relationIds;
                         } else if (field.field_name === 'audiences') {
-                            relationshipUpdates.audienceIds = newValue as string[];
+                            relationshipUpdates.audienceIds = relationIds;
                         } else if (field.field_name === 'prerequisites') {
-                            relationshipUpdates.prerequisiteIds = newValue as string[];
+                            relationshipUpdates.prerequisiteIds = relationIds;
                         }
                     }
                 } else {
@@ -592,4 +593,3 @@ export async function POST(
         );
     }
 }
-

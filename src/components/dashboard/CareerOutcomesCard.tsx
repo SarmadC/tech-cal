@@ -3,12 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, CheckCircle, Lock, Sparkle } from '@phosphor-icons/react';
+import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, Lock, Sparkle } from '@phosphor-icons/react';
 import { useEventFeedback, type FeedbackAggregates } from '@/hooks/useEventFeedback';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
 import { useSubscriptionContext } from '@/contexts';
 import { UpgradeModal } from '@/components/ui/UpgradeModal';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord, Event } from '@/types';
 import dynamic from 'next/dynamic';
 
@@ -21,18 +22,25 @@ interface CareerOutcomesCardProps {
     trackedEvents: TrackedEventRecord[];
     userId: string | undefined;
     className?: string;
+    presentation?: 'default' | 'mobile-dashboard';
 }
 
 // Thresholds for progressive disclosure
-const EARLY_THRESHOLD = 3; // events to show "early state"
 const MATURE_THRESHOLD = 5; // events with feedback to show full insights
 
-export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: CareerOutcomesCardProps) {
+export function CareerOutcomesCard({
+    trackedEvents,
+    userId,
+    className = '',
+    presentation = 'default',
+}: CareerOutcomesCardProps) {
+    const isMobileDashboard = presentation === 'mobile-dashboard';
     const { data: feedbackData, isLoading } = useEventFeedback(userId);
     const [feedbackEvent, setFeedbackEvent] = React.useState<Event | null>(null);
     const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
     const { isPro, isTrialing, startTrial, openUpgrade, hasUsedTrial } = useSubscriptionContext();
     const hasPremiumAccess = isPro || isTrialing;
+    const rootCardClass = cn('flex flex-col', !isMobileDashboard && 'p-5', className);
 
     const handleRateClick = (event: Event) => {
         setFeedbackEvent(event);
@@ -56,12 +64,10 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
     // Determine state
     const hasNoActivity = attendedCount === 0 && upcomingCount === 0;
     const isEarlyState = !hasNoActivity && feedbackCount < MATURE_THRESHOLD;
-    const isMatureState = feedbackCount >= MATURE_THRESHOLD;
-
     // Loading state
     if (isLoading) {
         return (
-            <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
+            <DashboardCard title="" className={rootCardClass} presentation={presentation}>
                 <div className="animate-pulse">
                     <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded mb-4" />
                     <div className="h-8 w-32 bg-zinc-200 dark:bg-zinc-800 rounded mb-6" />
@@ -77,9 +83,9 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
     // Empty state - no activity at all
     if (hasNoActivity) {
         return (
-            <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
+            <DashboardCard title="" className={rootCardClass} presentation={presentation}>
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4">
+                    <div className={cn("w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4", isMobileDashboard && "mobile-dashboard-emptyIcon bg-transparent")}>
                         <Rocket className="w-6 h-6 text-zinc-400 dark:text-zinc-600" weight="light" />
                     </div>
                     <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
@@ -112,24 +118,24 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
     // Early state - some activity but not enough feedback
     if (isEarlyState) {
         const nextEventToRate = unratedEvents[0]?.event;
+        const ratingsRemaining = Math.max(MATURE_THRESHOLD - feedbackCount, 0);
 
         return (
-            <DashboardCard title="" className={`w-full flex flex-col ${className}`}>
-                {/* Header */}
+            <DashboardCard title="" className={cn('w-full flex flex-col', className)} presentation={presentation}>
                 <DashboardSectionHeader
-                    icon={Lock}
-                    title="Unlock Your Personal Insights"
-                    subtitle={`Rate ${MATURE_THRESHOLD} events to reveal skills & impact`}
+                    icon={ChartLineUp}
+                    title={nextEventToRate ? 'Rate Your Latest Event' : 'Keep Rating Events'}
+                    subtitle={`${ratingsRemaining} more rating${ratingsRemaining === 1 ? '' : 's'} to unlock deeper outcome insights`}
+                    presentation={presentation}
                     action={(
-                        <div className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
-                            {feedbackCount}/{MATURE_THRESHOLD}
+                        <div className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">
+                            {feedbackCount}/{MATURE_THRESHOLD} <span className="text-zinc-400 dark:text-zinc-500 font-medium">rated</span>
                         </div>
                     )}
                 />
 
-                <div className="flex flex-col h-full px-5 pb-5">
-                    {/* Segmented Progress Bar - Moved below title */}
-                    <div className="flex gap-0.5 mb-2 mt-1">
+                <div className={cn("flex flex-col h-full", !isMobileDashboard && "px-5 pb-5", isMobileDashboard && "pt-1")}>
+                    <div className="flex gap-1 mb-4 mt-1 opacity-90">
                         {Array.from({ length: MATURE_THRESHOLD }).map((_, headingIndex) => {
                             const isCompleted = headingIndex < feedbackCount;
                             const isActive = headingIndex === feedbackCount;
@@ -137,78 +143,64 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                             return (
                                 <div
                                     key={headingIndex}
-                                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${isCompleted
-                                        ? 'bg-indigo-500'
+                                    className={`h-[2px] rounded-full transition-all duration-300 ${isCompleted
+                                        ? 'flex-1 bg-zinc-800 dark:bg-zinc-200'
                                         : isActive
-                                            ? 'bg-zinc-200 dark:bg-zinc-700'
-                                            : 'bg-zinc-100 dark:bg-zinc-800'
+                                            ? 'w-6 bg-indigo-500 dark:bg-indigo-400'
+                                            : 'flex-1 bg-zinc-200 dark:bg-white/10'
                                         }`}
                                 />
                             );
                         })}
                     </div>
 
-                    {/* Locked Content Preview (The Tease) - Expanded */}
-                    <div className="relative flex-1 rounded-lg overflow-hidden border border-zinc-200/50 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02] mt-4 min-h-[160px]">
-                        {/* Blur Filter Overlay */}
-                        <div className="absolute inset-0 z-10 backdrop-blur-[4px] bg-white/60 dark:bg-zinc-900/60 flex flex-col items-center justify-center p-4 text-center">
+                    <div className="flex flex-col gap-6">
+                        {nextEventToRate ? (
+                            <div className="flex flex-col gap-2.5">
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 mb-0.5">
+                                        Next rating task
+                                    </p>
+                                    <h4 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white leading-tight">
+                                        {nextEventToRate.title}
+                                    </h4>
+                                    <p className="text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                        Rate this event to unlock accurate skills and impact insights.
+                                    </p>
+                                </div>
 
-                            {/* Primary Action Button - Dead Center */}
-                            {nextEventToRate && (
                                 <button
                                     onClick={() => handleRateClick(nextEventToRate)}
-                                    className="h-8 pl-3 pr-4 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow-lg flex items-center gap-2 group"
+                                    className={cn(
+                                        "inline-flex h-9 w-max items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 mt-1.5 text-[13px] font-medium text-white transition-opacity hover:opacity-80 dark:bg-white dark:text-zinc-950",
+                                        isMobileDashboard && "bg-[var(--mono-text-primary)] text-[var(--mono-text-inverse)] dark:bg-[var(--mono-text-primary)] dark:text-[var(--mono-text-inverse)]"
+                                    )}
                                 >
-                                    <div className="w-5 h-5 rounded-full bg-white/20 dark:bg-black/10 flex items-center justify-center">
-                                        <Lock className="w-3 h-3 text-white dark:text-zinc-900" weight="fill" />
-                                    </div>
-                                    <span className="text-xs font-medium">Unlock with {nextEventToRate.title}</span>
-                                    <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 ml-1" weight="bold" />
+                                    <span>Rate event</span>
                                 </button>
-                            )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-1">
+                                <h4 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white leading-tight">
+                                    You&apos;ve rated all your events.
+                                </h4>
+                                <p className="text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                    Attend one more event to unlock insights.
+                                </p>
+                            </div>
+                        )}
 
-                            {!nextEventToRate && (
-                                <div className="flex flex-col items-center">
-                                    <div className="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center mb-3 shadow-sm border border-zinc-200 dark:border-white/10">
-                                        <Lock className="w-4 h-4 text-amber-500 dark:text-amber-400" weight="fill" />
-                                    </div>
-                                    <span className="text-[10px] font-semibold text-zinc-900 dark:text-white uppercase tracking-wide">
-                                        Unlock Insights
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Dummy Blurred Content - Full width/height */}
-                        <div className="p-4 grid grid-cols-2 gap-4 opacity-30 select-none grayscale h-full">
-                            {/* Dummy Rating */}
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-1.5">
-                                    <Star className="w-3 h-3 text-zinc-400" weight="fill" />
-                                    <div className="h-2 w-12 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                                </div>
-                                <div className="h-6 w-16 bg-zinc-200 dark:bg-zinc-600 rounded" />
+                        <div className="flex items-center gap-6 pt-1 mt-auto">
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-500 font-semibold">Unrated</p>
+                                <p className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">{unratedEvents.length}</p>
                             </div>
-                            {/* Dummy Skills */}
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-1.5">
-                                    <Lightbulb className="w-3 h-3 text-zinc-400" weight="fill" />
-                                    <div className="h-2 w-8 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                                </div>
-                                <div className="h-6 w-8 bg-zinc-200 dark:bg-zinc-600 rounded" />
-                            </div>
-                            {/* Dummy Impact */}
-                            <div className="col-span-2 pt-2 border-t border-zinc-200 dark:border-white/10">
-                                <div className="flex justify-between items-center">
-                                    <div className="h-2 w-24 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                                    <div className="h-2 w-16 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                                </div>
-                                <div className="mt-2 h-2 w-32 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                            </div>
-                            {/* Extra filler content to fill space */}
-                            <div className="col-span-2 space-y-2 mt-2">
-                                <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full" />
-                                <div className="h-2 w-2/3 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                            <div className="h-[14px] w-px bg-zinc-200 dark:bg-white/10" />
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-500 font-semibold">Latest Signal</p>
+                                <p className="text-sm font-medium tracking-tight text-zinc-900 dark:text-zinc-300 leading-none">
+                                    {feedbackCount > 0 ? `${feedbackCount} rating${feedbackCount === 1 ? '' : 's'} captured` : 'None yet'}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -231,15 +223,16 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
 
         return (
             <>
-                <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
+                <DashboardCard title="" className={rootCardClass} presentation={presentation}>
                     <DashboardSectionHeader
                         icon={ChartLineUp}
                         title="Career Impact"
                         subtitle={`${feedbackCount} events with feedback`}
+                        presentation={presentation}
                     />
 
                     {/* Teaser insight (the one free nugget) */}
-                    <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
+                    <div className={cn("mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30", isMobileDashboard && "mobile-dashboard-panel")}>
                         <div className="flex items-center gap-2 mb-1">
                             <Sparkle className="w-4 h-4 text-indigo-500 dark:text-indigo-400" weight="fill" />
                             <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">Your Insight</span>
@@ -307,12 +300,19 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
 
     // Pro tier: Full insights
     return (
-        <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
+        <DashboardCard title="" className={rootCardClass} presentation={presentation}>
+            <DashboardSectionHeader
+                icon={ChartLineUp}
+                title="Career Impact"
+                subtitle={`${feedbackCount} events with feedback`}
+                presentation={presentation}
+            />
+
             {/* Main metrics grid */}
             <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Average Rating */}
                 {aggregates && aggregates.averageRating !== null && (
-                    <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
+                    <div className={cn("p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5", isMobileDashboard && "mobile-dashboard-panel")}>
                         <div className="flex items-center gap-1.5 mb-2">
                             <Star className="w-3.5 h-3.5 text-amber-400" weight="fill" />
                             <span className="text-[10px] text-zinc-500 tracking-wide">Avg Rating</span>
@@ -325,7 +325,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                 )}
 
                 {/* Skills Gained */}
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
+                <div className={cn("p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5", isMobileDashboard && "mobile-dashboard-panel")}>
                     <div className="flex items-center gap-1.5 mb-2">
                         <Lightbulb className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" weight="fill" />
                         <span className="text-[10px] text-zinc-500 tracking-wide">Skills</span>
@@ -336,7 +336,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                 </div>
 
                 {/* Connections */}
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
+                <div className={cn("p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5", isMobileDashboard && "mobile-dashboard-panel")}>
                     <div className="flex items-center gap-1.5 mb-2">
                         <Users className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" weight="fill" />
                         <span className="text-[10px] text-zinc-500 tracking-wide">Connections</span>
@@ -348,7 +348,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
 
                 {/* Prediction Accuracy */}
                 {aggregates && aggregates.predictionAccuracy !== null && (
-                    <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
+                    <div className={cn("p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5", isMobileDashboard && "mobile-dashboard-panel")}>
                         <div className="flex items-center gap-1.5 mb-2">
                             <ChartLineUp className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" weight="fill" />
                             <span className="text-[10px] text-zinc-500 tracking-wide">Accuracy</span>
@@ -362,7 +362,7 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
 
             {/* Recommendation rate footer */}
             {aggregates && aggregates.recommendationRate !== null && (
-                <div className="pt-3 border-t border-zinc-100 dark:border-white/5">
+                <div className={cn("pt-3 border-t border-zinc-100 dark:border-white/5", isMobileDashboard && "mobile-dashboard-divider")}>
                     <div className="flex items-center justify-between text-xs">
                         <span className="text-zinc-500">Would recommend events</span>
                         <span className="text-emerald-400 font-medium">

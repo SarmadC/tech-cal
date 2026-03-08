@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
@@ -9,17 +8,21 @@ import { ChartLine, Trophy, Lightbulb, TrendUp, CheckCircle } from '@phosphor-ic
 import { calculateEventAlignment } from '@/utils/uiScoringAdapter';
 import { doesEventMatchGoal } from '@/utils/eventGoalAlignment';
 import { getCanonicalSkillMeta } from '@/utils/skillTaxonomy';
+import { DashboardCard } from '@/components/dashboard/DashboardCard';
+import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import { cn } from '@/lib/utils';
 import type { CareerGoal, CareerProfile, Event, TrackedEventRecord } from '@/types';
 
 interface CareerImpactInsightsCardProps {
   careerProfile: CareerProfile;
   trackedEvents: TrackedEventRecord[];
+  presentation?: 'default' | 'mobile-dashboard';
 }
 
 interface SkillProgress {
   skill: string;
   eventsAttended: number;
-  progressLevel: 'beginner' | 'learning' | 'proficient';
+  progressLevel: 'exploring' | 'building' | 'regular';
   nextMilestone: string;
 }
 
@@ -53,8 +56,10 @@ function isNetworkingEvent(event: Event): boolean {
 
 export function CareerImpactInsightsCard({
   careerProfile,
-  trackedEvents
+  trackedEvents,
+  presentation = 'default',
 }: CareerImpactInsightsCardProps) {
+  const isMobileDashboard = presentation === 'mobile-dashboard';
   const theme = useTimelineTheme();
 
   // Compute attended event alignments once and reuse for metrics/insights.
@@ -109,12 +114,12 @@ export function CareerImpactInsightsCard({
       .map(({ label, count }): SkillProgress => ({
         skill: label,
         eventsAttended: count,
-        progressLevel: count >= 5 ? 'proficient' : count >= 2 ? 'learning' : 'beginner',
+        progressLevel: count >= 5 ? 'regular' : count >= 2 ? 'building' : 'exploring',
         nextMilestone: count >= 5
-          ? 'Maintain with advanced events'
+          ? 'Keep it up with advanced events'
           : count >= 2
-          ? `${Math.max(1, 5 - count)} more event${5 - count === 1 ? '' : 's'} to reach proficient`
-          : 'Attend 1 relevant event to start momentum'
+          ? `${Math.max(1, 5 - count)} more event${5 - count === 1 ? '' : 's'} to become a regular`
+          : 'Attend 1 relevant event to start building'
       }))
       .sort((a, b) => b.eventsAttended - a.eventsAttended)
       .slice(0, 5);
@@ -165,50 +170,74 @@ export function CareerImpactInsightsCard({
       icon: React.ComponentType<{ className?: string }>;
       message: string;
     }> = [];
+    const strongestGoal = Array.from(
+      attendedAlignments.reduce((goalMap, alignment) => {
+        alignment.matchedGoals.forEach(goal => {
+          goalMap.set(goal, (goalMap.get(goal) ?? 0) + 1);
+        });
+        return goalMap;
+      }, new Map<CareerGoal, number>())
+    ).sort((a, b) => b[1] - a[1])[0];
+    const mostAlignedEvent = attendedAlignments
+      .slice()
+      .sort(
+        (a, b) =>
+          (b.normalizedMatchedSkills.length + b.matchedGoals.length) -
+          (a.normalizedMatchedSkills.length + a.matchedGoals.length)
+      )[0];
 
-    // Skill development insights
+    if (
+      mostAlignedEvent &&
+      (mostAlignedEvent.normalizedMatchedSkills.length > 0 || mostAlignedEvent.matchedGoals.length > 0)
+    ) {
+      const topSkill = mostAlignedEvent.normalizedMatchedSkills[0];
+      const topGoal = mostAlignedEvent.matchedGoals[0];
+      insightsList.push({
+        type: 'success',
+        icon: Trophy,
+        message: `"${mostAlignedEvent.event.title}" reinforced ${topSkill ?? 'your current focus'}${topGoal ? ` for your ${topGoal.replace(/-/g, ' ')} goal` : ''}.`
+      });
+    }
+
     if (skillAnalysis.length > 0 && skillAnalysis[0].eventsAttended > 0) {
       const topSkill = skillAnalysis[0];
       insightsList.push({
         type: 'success',
         icon: Trophy,
-        message: `Great progress on ${topSkill.skill}! ${topSkill.eventsAttended} events attended.`
+        message: `${topSkill.skill} is showing up consistently across ${topSkill.eventsAttended} attended event${topSkill.eventsAttended === 1 ? '' : 's'}.`
       });
     }
 
-    // Goal alignment insights
-    if (impactMetrics.goalAlignedPercentage >= 50) {
+    if (strongestGoal) {
       insightsList.push({
-        type: 'success',
-        icon: CheckCircle,
-        message: `${impactMetrics.goalAlignedPercentage}% of your events align with career goals.`
+        type: strongestGoal[1] >= 2 ? 'success' : 'info',
+        icon: strongestGoal[1] >= 2 ? CheckCircle : Lightbulb,
+        message: `${strongestGoal[0].replace(/-/g, ' ')} is your strongest attended goal theme with ${strongestGoal[1]} aligned event${strongestGoal[1] === 1 ? '' : 's'}.`
       });
-    } else if (impactMetrics.totalEvents > 0) {
+    } else if (impactMetrics.totalEvents > 0 && careerProfile.careerGoals.length > 0) {
       insightsList.push({
         type: 'info',
         icon: Lightbulb,
-        message: 'Consider attending more events aligned with your career goals.'
+        message: `Only ${impactMetrics.goalAlignedCount} of ${impactMetrics.totalEvents} attended events mapped to your goals. Add more ${careerProfile.careerGoals[0].replace(/-/g, ' ')} events next.`
       });
     }
 
-    // Networking insights
     if (careerProfile.networkingGoals.length > 0) {
-      if (impactMetrics.networkingPercentage >= 30) {
+      if (impactMetrics.networkingCount > 0) {
         insightsList.push({
-          type: 'success',
+          type: impactMetrics.networkingCount >= 2 ? 'success' : 'info',
           icon: TrendUp,
-          message: `Building your network well with ${impactMetrics.networkingCount} networking events.`
+          message: `${impactMetrics.networkingCount} attended event${impactMetrics.networkingCount === 1 ? '' : 's'} created clear networking exposure.`
         });
       } else {
         insightsList.push({
           type: 'info',
           icon: Lightbulb,
-          message: 'Add more networking events to expand your professional circle.'
+          message: 'You have not attended a networking-heavy event yet. Add one to broaden your professional circle.'
         });
       }
     }
 
-    // Skills to learn insights
     const unstartedSkills = skillAnalysis
       .filter(skill => skill.eventsAttended === 0)
       .map(skill => skill.skill);
@@ -221,44 +250,39 @@ export function CareerImpactInsightsCard({
     }
 
     return insightsList.slice(0, 4); // Top 4 insights
-  }, [skillAnalysis, impactMetrics, careerProfile]);
+  }, [attendedAlignments, skillAnalysis, impactMetrics, careerProfile]);
 
   const attendedEventsCount = trackedEvents.filter(e => e.status === 'attended').length;
 
   if (attendedEventsCount === 0) {
     return (
-      <Card className={`border ${theme.borderCard}`}>
-        <CardHeader>
-          <CardTitle className={`text-lg ${theme.textPrimary}`}>Career Impact Insights</CardTitle>
-          <CardDescription className={theme.textSecondary}>
-            Attend events to see your career progress
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-8">
+      <DashboardCard className={`border ${theme.borderCard}`} title="" presentation={presentation}>
+        <DashboardSectionHeader
+          title="Career Impact Insights"
+          subtitle="Attend events to see your career progress"
+          icon={ChartLine}
+          presentation={presentation}
+        />
+        <div className="text-center py-8">
           <ChartLine className={`w-12 h-12 ${theme.textMuted} mx-auto mb-3`} />
           <p className={`text-sm ${theme.textPrimary} mb-2`}>No events attended yet</p>
           <p className={`text-xs ${theme.textMuted}`}>
             Mark events as &quot;attended&quot; to track your career impact
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </DashboardCard>
     );
   }
 
   return (
-    <Card className={`border ${theme.borderCard}`}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className={`text-lg ${theme.textPrimary}`}>Career Impact Insights</CardTitle>
-            <CardDescription className={theme.textSecondary}>
-              How events contribute to your career goals
-            </CardDescription>
-          </div>
-          <ChartLine className={`w-5 h-5 ${theme.textMuted}`} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <DashboardCard className={`border ${theme.borderCard}`} title="" presentation={presentation}>
+      <DashboardSectionHeader
+        title="Career Impact Insights"
+        subtitle="How events contribute to your career goals"
+        icon={ChartLine}
+        presentation={presentation}
+      />
+      <div className="space-y-6">
         {/* Impact Metrics */}
         <div className="space-y-4">
           <h4 className={`text-sm font-semibold ${theme.textPrimary}`}>Event Alignment</h4>
@@ -316,7 +340,7 @@ export function CareerImpactInsightsCard({
               {skillAnalysis.map(skill => (
                 <div
                   key={skill.skill}
-                  className={`p-3 rounded-lg border ${theme.borderCard}`}
+                  className={cn(`p-3 rounded-lg border ${theme.borderCard}`, isMobileDashboard && 'mobile-dashboard-panel')}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -360,7 +384,10 @@ export function CareerImpactInsightsCard({
                 return (
                   <div
                     key={idx}
-                    className={`flex items-start gap-3 p-3 rounded-lg ${bgColor}`}
+                    className={cn(
+                      `flex items-start gap-3 p-3 rounded-lg ${bgColor}`,
+                      isMobileDashboard && 'border border-[var(--mobile-dashboard-panel-border)]'
+                    )}
                   >
                     <Icon className={`w-4 h-4 ${iconColor} mt-0.5 flex-shrink-0`} />
                     <p className={`text-xs ${theme.textPrimary}`}>{insight.message}</p>
@@ -370,7 +397,7 @@ export function CareerImpactInsightsCard({
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </DashboardCard>
   );
 }

@@ -2,6 +2,253 @@
    MOBILE DESIGN SYSTEM - CONSISTENT STYLING
    ============================================== */
 
+:root {
+  --mobile-dashboard-page-padding: 1rem;
+  --mobile-dashboard-section-gap: 1rem;
+  --mobile-dashboard-card-padding: 1rem;
+  --mobile-dashboard-card-radius: 1.25rem;
+  --mobile-dashboard-card-border: var(--mono-border-default);
+  --mobile-dashboard-card-border-strong: var(--mono-border-strong);
+  --mobile-dashboard-card-bg: color-mix(in srgb, var(--mono-bg-surface) 88%, var(--mono-bg-elevated));
+  --mobile-dashboard-card-bg-hover: color-mix(in srgb, var(--mono-bg-hover) 88%, var(--mono-bg-elevated));
+  --mobile-dashboard-card-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --mobile-dashboard-panel-bg: color-mix(in srgb, var(--mono-bg-elevated) 76%, var(--mono-bg-surface));
+  --mobile-dashboard-panel-bg-strong: color-mix(in srgb, var(--mono-bg-hover) 84%, var(--mono-bg-elevated));
+  --mobile-dashboard-panel-border: var(--mono-border-subtle);
+  --mobile-dashboard-divider: var(--mono-border-subtle);
+  --mobile-dashboard-title-size: 1rem;
+  --mobile-dashboard-subtitle-size: 0.72rem;
+  --mobile-dashboard-eyebrow-size: 0.68rem;
+  --mobile-dashboard-metric-size: 2.125rem;
+  --mobile-dashboard-text-primary: var(--mono-text-primary);
+  --mobile-dashboard-text-secondary: var(--mono-text-secondary);
+  --mobile-dashboard-text-tertiary: var(--mono-text-tertiary);
+  --mobile-dashboard-pill-bg: color-mix(in srgb, var(--mono-bg-hover) 88%, transparent);
+  --mobile-dashboard-pill-border: var(--mono-border-default);
+  --mobile-dashboard-pill-text: var(--mono-text-secondary);
+  --mobile-dashboard-info-bg: rgba(59, 130, 246, 0.12);
+  --mobile-dashboard-info-border: rgba(59, 130, 246, 0.24);
+  --mobile-dashboard-info-text: #60a5fa;
+  --mobile-dashboard-success-bg: rgba(16, 185, 129, 0.14);
+  --mobile-dashboard-success-border: rgba(16, 185, 129, 0.28);
+  --mobile-dashboard-success-text: #34d399;
+  --mobile-dashboard-warning-bg: rgba(245, 158, 11, 0.14);
+  --mobile-dashboard-warning-border: rgba(245, 158, 11, 0.26);
+  --mobile-dashboard-warning-text: #fbbf24;
+}
+
+.light {
+  --mobile-dashboard-card-bg: color-mix(in srgb, #ffffff 86%, var(--mono-bg-surface));
+  --mobile-dashboard-card-bg-hover: color-mix(in srgb, #ffffff 92%, var(--mono-bg-hover));
+  --mobile-dashboard-card-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --mobile-dashboard-panel-bg: color-mix(in srgb, #ffffff 76%, var(--mono-bg-surface));
+  --mobile-dashboard-panel-bg-strong: color-mix(in srgb, #ffffff 92%, var(--mono-bg-hover));
+  --mobile-dashboard-info-text: #2563eb;
+  --mobile-dashboard-success-text: #059669;
+  --mobile-dashboard-warning-text: #d97706;
+}
+
+.mobile-dashboard-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--mono-bg-elevated) 44%, transparent), transparent 44%),
+    linear-gradient(180deg, var(--mono-bg-main) 0%, color-mix(in srgb, var(--mono-bg-main) 84%, var(--mono-bg-surface)) 100%);
+  color: var(--mobile-dashboard-text-primary);
+  font-family: var(--font-sans);
+}
+
+.mobile-dashboard-stack {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-dashboard-section-gap);
+  padding: var(--mobile-dashboard-page-padding);
+}
+
+.mobile-dashboard-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--mobile-dashboard-card-border);
+  border-radius: var(--mobile-dashboard-card-radius);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mobile-dashboard-card-bg) 92%, transparent), var(--mobile-dashboard-card-bg));
+  color: var(--mobile-dashboard-text-primary);
+  padding: var(--mobile-dashboard-card-padding);
+  box-shadow: var(--mobile-dashboard-card-shadow);
+  font-family: var(--font-sans);
+}
+
+.mobile-dashboard-cardInteractive {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.mobile-dashboard-cardInteractive:hover,
+.mobile-dashboard-cardInteractive:focus-visible {
+  border-color: var(--mobile-dashboard-card-border-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mobile-dashboard-card-bg-hover) 92%, transparent), var(--mobile-dashboard-card-bg-hover));
+}
+
+.mobile-dashboard-sectionHeader {
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mobile-dashboard-sectionHeading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mobile-dashboard-sectionTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mobile-dashboard-sectionIcon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--mobile-dashboard-text-secondary);
+}
+
+.mobile-dashboard-sectionTitle {
+  margin: 0;
+  font-size: var(--mobile-dashboard-title-size);
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--mobile-dashboard-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.mobile-dashboard-sectionSubtitle {
+  margin: 0;
+  font-size: var(--mobile-dashboard-subtitle-size);
+  line-height: 1.45;
+  color: var(--mobile-dashboard-text-secondary);
+}
+
+.mobile-dashboard-sectionAction {
+  flex-shrink: 0;
+}
+
+.mobile-dashboard-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid var(--mobile-dashboard-pill-border);
+  background: var(--mobile-dashboard-pill-bg);
+  padding: 0.32rem 0.6rem;
+  font-size: 0.68rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--mobile-dashboard-pill-text);
+}
+
+.mobile-dashboard-pillInfo {
+  border-color: var(--mobile-dashboard-info-border);
+  background: var(--mobile-dashboard-info-bg);
+  color: var(--mobile-dashboard-info-text);
+}
+
+.mobile-dashboard-pillSuccess {
+  border-color: var(--mobile-dashboard-success-border);
+  background: var(--mobile-dashboard-success-bg);
+  color: var(--mobile-dashboard-success-text);
+}
+
+.mobile-dashboard-pillWarning {
+  border-color: var(--mobile-dashboard-warning-border);
+  background: var(--mobile-dashboard-warning-bg);
+  color: var(--mobile-dashboard-warning-text);
+}
+
+.mobile-dashboard-panel {
+  border-radius: 1rem;
+  border: 1px solid var(--mobile-dashboard-panel-border);
+  background: var(--mobile-dashboard-panel-bg);
+}
+
+.mobile-dashboard-panelStrong {
+  background: var(--mobile-dashboard-panel-bg-strong);
+}
+
+.mobile-dashboard-panelInteractive {
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.mobile-dashboard-panelInteractive:hover,
+.mobile-dashboard-panelInteractive:focus-visible {
+  background: var(--mobile-dashboard-panel-bg-strong);
+  border-color: var(--mobile-dashboard-card-border);
+}
+
+.mobile-dashboard-divider {
+  border-top: 1px solid var(--mobile-dashboard-divider);
+}
+
+.mobile-dashboard-emptyState {
+  display: flex;
+  min-height: 7rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--mobile-dashboard-text-secondary);
+}
+
+.mobile-dashboard-emptyIcon {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--mobile-dashboard-panel-border);
+  background: var(--mobile-dashboard-panel-bg-strong);
+  color: var(--mobile-dashboard-text-secondary);
+}
+
+.mobile-dashboard-skeletonCard {
+  height: 8.5rem;
+}
+
+.dashboard-card-mobile {
+  border-radius: var(--mobile-dashboard-card-radius);
+  border: 1px solid var(--mobile-dashboard-card-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mobile-dashboard-card-bg) 92%, transparent), var(--mobile-dashboard-card-bg));
+  color: var(--mobile-dashboard-text-primary);
+  box-shadow: var(--mobile-dashboard-card-shadow);
+  font-family: var(--font-sans);
+}
+
+.dashboard-card-mobile-header {
+  padding: var(--mobile-dashboard-card-padding) var(--mobile-dashboard-card-padding) 0;
+}
+
+.dashboard-card-mobile-content {
+  padding: 0 var(--mobile-dashboard-card-padding) var(--mobile-dashboard-card-padding);
+}
+
+.dashboard-card-mobile-title {
+  color: var(--mobile-dashboard-text-primary);
+  font-size: var(--mobile-dashboard-title-size);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-card-mobile-description {
+  color: var(--mobile-dashboard-text-secondary);
+  font-size: var(--mobile-dashboard-subtitle-size);
+  line-height: 1.45;
+}
+
 /* ==============================================
    1. MOBILE TYPOGRAPHY SCALE
    ============================================== */

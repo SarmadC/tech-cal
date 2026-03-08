@@ -1,48 +1,97 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEventFeedback } from '@/hooks/useEventFeedback';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { PeerCohortService } from '@/services/peerCohortService';
+import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
+import { calculateEventAlignment } from '@/utils/uiScoringAdapter';
 import type { Event, TrackedEventRecord } from '@/types';
 
+interface TrendDatum {
+  name: string;
+  value: number;
+}
+
+interface ScoredPipelineEvent {
+  eventId: string;
+  title: string;
+  score: number;
+}
+
 interface CareerMetrics {
-  careerImpactScore: {
+  attendance: {
+    last30dCount: number;
+    previous30dCount: number;
+    deltaAbs: number;
+    deltaPct: number | null;
+    isLowSample: boolean;
+    trendData: TrendDatum[];
+  };
+  pipeline: {
+    trackedUpcomingCount: number;
+    scoredUpcomingCount: number;
+    avgScore: number;
+    highFitCount: number;
+    highFitRatio: number;
+    topEvents: ScoredPipelineEvent[];
+  };
+  funnel90d: {
+    savedOnly: number;
+    rsvped: number;
+    attended: number;
+  };
+  feedback: {
+    feedbackCount: number;
+    averageRating: number | null;
+    recommendationRate: number | null;
+    unratedAttendedCount: number;
+    nextEventToRate: Event | null;
+  };
+  pipelineFit: {
     value: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercentage: number;
-    roleWeighted: boolean;
+    highFitCount: number;
+    totalCount: number;
   };
   learningStreak: {
     months: number;
     isActive: boolean;
     lastActivity: string | null;
   };
-  peerComparison: {
-    percentile: number;
-    comparison: 'above' | 'below' | 'average';
-    sampleSize: number;
-    confidence: 'high' | 'medium' | 'low';
-    recommendation: string;
+  outcomeSignals: {
+    averageRating: number | null;
+    feedbackCount: number;
+    recommendationRate: number | null;
+    totalConnectionsMade: number;
+    uniqueSkillsCount: number;
   };
 }
 
-function isValidPeerComparisonSnapshot(
-  value: unknown
-): value is CareerMetrics['peerComparison'] {
-  if (!value || typeof value !== 'object') return false;
-  const snapshot = value as Record<string, unknown>;
-  return (
-    typeof snapshot.percentile === 'number' &&
-    (snapshot.comparison === 'above' || snapshot.comparison === 'below' || snapshot.comparison === 'average') &&
-    typeof snapshot.sampleSize === 'number' &&
-    (snapshot.confidence === 'high' || snapshot.confidence === 'medium' || snapshot.confidence === 'low') &&
-    typeof snapshot.recommendation === 'string'
-  );
+function getKnownEventScore(event: Event): number {
+  const scoredEvent = event as Event & {
+    careerImpactLite?: { overall?: number };
+    careerImpact?: { overall?: number };
+  };
+  const knownScore = scoredEvent.careerImpactLite?.overall ?? scoredEvent.careerImpact?.overall;
+
+  if (typeof knownScore !== 'number' || !Number.isFinite(knownScore) || knownScore <= 0) {
+    return 0;
+  }
+
+  return knownScore <= 1 ? knownScore * 100 : knownScore;
+}
+
+function getEventOccurrenceDate(event: Event): Date {
+  return new Date(event.endTime || event.startTime);
+}
+
+function isTrackedUpcoming(record: TrackedEventRecord, now: Date): record is TrackedEventRecord & { event: Event } {
+  if (!record.event) return false;
+  if (record.status === 'attended' || record.status === 'cancelled') return false;
+  if (!record.isBookmarked && record.status !== 'attending') return false;
+  return new Date(record.event.startTime) > now;
 }
 
 /**
- * Enhanced hook for career-focused dashboard metrics
- * Consolidates career impact, learning streak, and peer comparison
+ * Dashboard summary metrics focused on pipeline quality and logged outcomes.
  */
 export function useCareerMetrics(
   _allEvents: Event[] = [],
@@ -53,226 +102,225 @@ export function useCareerMetrics(
     () => CareerProfileService.getCareerProfileFromPreferences(profile),
     [profile]
   );
-  const profileFingerprint = useMemo(() => {
-    if (!careerProfile) return null;
-
-    return [
-      careerProfile.currentRole,
-      careerProfile.seniority,
-      careerProfile.industry,
-      [...careerProfile.careerGoals].sort().join(','),
-      [...careerProfile.networkingGoals].sort().join(','),
-      [...careerProfile.skillsToLearn].sort().join(',')
-    ].join('|');
-  }, [careerProfile]);
-
-  const { data: serverPeerComparison } = useQuery<CareerMetrics['peerComparison'] | null>({
-    queryKey: ['careerPeerComparison', profile?.id, profileFingerprint],
-    queryFn: async () => {
-      const response = await fetch('/api/dashboard/peer-comparison');
-      if (!response.ok) return null;
-
-      const payload = await response.json() as {
-        success?: boolean;
-        data?: {
-          peerComparison?: unknown;
-        };
-      };
-      const peerComparison = payload?.data?.peerComparison;
-      return payload?.success && isValidPeerComparisonSnapshot(peerComparison)
-        ? peerComparison
-        : null;
-    },
-    enabled: Boolean(profile?.id && profileFingerprint),
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 1
-  });
+  const { data: feedbackData } = useEventFeedback(profile?.id);
 
   return useMemo(() => {
-    try {
-      if (!careerProfile || !profile) {
-        return getEmptyMetrics();
-      }
+    const now = new Date();
+    const attendedEvents = trackedEvents.filter(
+      (record): record is TrackedEventRecord & { event: Event } =>
+        record.status === 'attended' &&
+        !!record.event &&
+        getEventOccurrenceDate(record.event) < now
+    );
 
-      // 1. Career Impact Score (role-weighted calculation)
-      const recentEvents = getRecentEvents(trackedEvents, 90);
-      const roleWeightedScore = PeerCohortService.calculateRoleWeightedScore(recentEvents, careerProfile.currentRole);
-      const simpleScore = calculateSimpleEventScore(recentEvents);
-      const avgImpactScore = roleWeightedScore > 0 ? roleWeightedScore : simpleScore;
-      const impactTrend = calculateImpactTrendSync(recentEvents);
+    const trackedUpcoming = trackedEvents.filter(record => isTrackedUpcoming(record, now));
+    const scoredPipelineEvents = trackedUpcoming
+      .map(record => {
+        const knownScore = getKnownEventScore(record.event);
+        if (knownScore > 0) return knownScore;
+        if (!careerProfile) return 0;
 
-      // 2. Learning Streak
-      const learningStreak = calculateLearningStreak(trackedEvents);
+        try {
+          return calculateEventAlignment(record.event, careerProfile).alignmentScore;
+        } catch {
+          return 0;
+        }
+      })
+      .map((score, index) => ({
+        event: trackedUpcoming[index].event,
+        score,
+      }))
+      .filter((item): item is { event: Event; score: number } => item.score > 0);
 
-      // 3. Enhanced Peer Comparison (server-aggregated, fallback to local modeled baseline)
-      const localPeerComparison = PeerCohortService.calculatePeerComparison(careerProfile, trackedEvents);
-      const peerComparison = serverPeerComparison ?? localPeerComparison;
+    const pipelineScoreValues = scoredPipelineEvents.map(item => item.score);
+    const highFitCount = pipelineScoreValues.filter(score => score >= RECOMMENDATION_THRESHOLDS.RECOMMENDED).length;
+
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const current30dStart = new Date(startOfToday);
+    current30dStart.setDate(current30dStart.getDate() - 29);
+
+    const current30dEnd = new Date(startOfToday);
+    current30dEnd.setDate(current30dEnd.getDate() + 1);
+
+    const previous30dStart = new Date(current30dStart);
+    previous30dStart.setDate(previous30dStart.getDate() - 30);
+
+    const trendData = Array.from({ length: 4 }).map((_, index) => {
+      const bucketStart = new Date(startOfToday);
+      bucketStart.setDate(bucketStart.getDate() - (27 - index * 7));
+
+      const bucketEnd = new Date(bucketStart);
+      bucketEnd.setDate(bucketEnd.getDate() + 7);
+
+      const value = attendedEvents.filter(record => {
+        const occurredAt = getEventOccurrenceDate(record.event);
+        return occurredAt >= bucketStart && occurredAt < bucketEnd;
+      }).length;
 
       return {
-        careerImpactScore: {
-          value: Math.round(avgImpactScore * 100) / 100,
-          trend: impactTrend.direction,
-          trendPercentage: impactTrend.percentage,
-          roleWeighted: roleWeightedScore > 0
-        },
-        learningStreak,
-        peerComparison
+        name: `W${index + 1}`,
+        value,
       };
-    } catch (error) {
-      console.warn('Error calculating career metrics:', error);
-      return getEmptyMetrics();
-    }
-  }, [trackedEvents, profile, careerProfile, serverPeerComparison]);
+    });
+
+    const last30dCount = attendedEvents.filter(record => {
+      const occurredAt = getEventOccurrenceDate(record.event);
+      return occurredAt >= current30dStart && occurredAt < current30dEnd;
+    }).length;
+
+    const previous30dCount = attendedEvents.filter(record => {
+      const occurredAt = getEventOccurrenceDate(record.event);
+      return occurredAt >= previous30dStart && occurredAt < current30dStart;
+    }).length;
+
+    const deltaAbs = last30dCount - previous30dCount;
+    const isLowSample = previous30dCount < 3;
+    const deltaPct = previous30dCount > 0
+      ? Math.round((deltaAbs / previous30dCount) * 100)
+      : last30dCount > 0
+        ? 100
+        : 0;
+
+    const ninetyDaysAgo = new Date(now);
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const funnel90d = trackedEvents.reduce(
+      (acc, record) => {
+        if (record.status === 'cancelled') return acc;
+
+        if (record.status === null && record.isBookmarked) {
+          const savedAt = new Date(record.bookmarkedAt || record.trackedAt);
+          if (savedAt >= ninetyDaysAgo) {
+            acc.savedOnly += 1;
+          }
+          return acc;
+        }
+
+        if (record.status === 'attending') {
+          const rsvpAt = new Date(record.trackedAt);
+          if (rsvpAt >= ninetyDaysAgo) {
+            acc.rsvped += 1;
+          }
+          return acc;
+        }
+
+        if (record.status === 'attended' && record.event) {
+          const attendedAt = getEventOccurrenceDate(record.event);
+          if (attendedAt >= ninetyDaysAgo && attendedAt < now) {
+            acc.attended += 1;
+          }
+        }
+
+        return acc;
+      },
+      { savedOnly: 0, rsvped: 0, attended: 0 }
+    );
+
+    const aggregates = feedbackData?.aggregates;
+    const feedback = feedbackData?.feedback ?? [];
+    const feedbackEventIds = new Set(feedback.map(item => item.eventId));
+    const unratedAttended = [...attendedEvents]
+      .filter(record => !feedbackEventIds.has(record.event.id))
+      .sort((a, b) => getEventOccurrenceDate(b.event).getTime() - getEventOccurrenceDate(a.event).getTime());
+
+    return {
+      attendance: {
+        last30dCount,
+        previous30dCount,
+        deltaAbs,
+        deltaPct: isLowSample ? null : deltaPct,
+        isLowSample,
+        trendData,
+      },
+      pipeline: {
+        trackedUpcomingCount: trackedUpcoming.length,
+        scoredUpcomingCount: pipelineScoreValues.length,
+        avgScore: pipelineScoreValues.length > 0
+          ? Math.round(pipelineScoreValues.reduce((sum, score) => sum + score, 0) / pipelineScoreValues.length)
+          : 0,
+        highFitCount,
+        highFitRatio: trackedUpcoming.length > 0
+          ? Math.round((highFitCount / trackedUpcoming.length) * 100)
+          : 0,
+        topEvents: scoredPipelineEvents
+          .slice()
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map(item => ({
+            eventId: item.event.id,
+            title: item.event.title,
+            score: item.score,
+          })),
+      },
+      funnel90d,
+      feedback: {
+        feedbackCount: aggregates?.totalFeedbackCount ?? 0,
+        averageRating: aggregates?.averageRating ?? null,
+        recommendationRate: aggregates?.recommendationRate ?? null,
+        unratedAttendedCount: unratedAttended.length,
+        nextEventToRate: unratedAttended[0]?.event ?? null,
+      },
+      pipelineFit: {
+        value: pipelineScoreValues.length > 0
+          ? Math.round(pipelineScoreValues.reduce((sum, score) => sum + score, 0) / pipelineScoreValues.length)
+          : 0,
+        highFitCount,
+        totalCount: trackedUpcoming.length,
+      },
+      learningStreak: calculateLearningStreak(trackedEvents),
+      outcomeSignals: {
+        averageRating: aggregates?.averageRating ?? null,
+        feedbackCount: aggregates?.totalFeedbackCount ?? 0,
+        recommendationRate: aggregates?.recommendationRate ?? null,
+        totalConnectionsMade: aggregates?.totalConnectionsMade ?? 0,
+        uniqueSkillsCount: aggregates?.uniqueSkills.length ?? 0,
+      },
+    };
+  }, [trackedEvents, careerProfile, feedbackData]);
 }
 
-/**
- * Get recent events from tracked events
- */
-function getRecentEvents(trackedEvents: TrackedEventRecord[], days: number): Event[] {
-  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-  return trackedEvents
-    .filter(te => te.event && new Date(te.event.startTime) >= cutoffDate)
-    .map(te => te.event!)
-    .filter(Boolean);
-}
-
-/**
- * Calculate learning streak - consecutive months with skill-building events
- */
 function calculateLearningStreak(trackedEvents: TrackedEventRecord[]): CareerMetrics['learningStreak'] {
-  const skillKeywords = ['workshop', 'training', 'bootcamp', 'course', 'tutorial', 'learning'];
-
-  // Group events by month
-  const eventsByMonth = new Map<string, TrackedEventRecord[]>();
-
+  const attendedMonths = new Set<string>();
   trackedEvents.forEach(te => {
-    if (!te.event) return;
-
-    const eventDate = new Date(te.event.startTime);
-    const monthKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}`;
-
-    if (!eventsByMonth.has(monthKey)) {
-      eventsByMonth.set(monthKey, []);
-    }
-    eventsByMonth.get(monthKey)!.push(te);
+    if (!te.event || te.status !== 'attended') return;
+    const occurredAt = getEventOccurrenceDate(te.event);
+    attendedMonths.add(`${occurredAt.getFullYear()}-${occurredAt.getMonth()}`);
   });
 
-  // Calculate consecutive months with learning events
-  const sortedMonths = Array.from(eventsByMonth.keys()).sort().reverse();
+  if (attendedMonths.size === 0) return { months: 0, isActive: false, lastActivity: null };
+
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
   let streak = 0;
   let lastActivity: string | null = null;
 
-  for (const monthKey of sortedMonths) {
-    const monthEvents = eventsByMonth.get(monthKey)!;
-    const hasLearningEvents = monthEvents.some(te =>
-      te.event && skillKeywords.some(keyword =>
-        te.event!.title.toLowerCase().includes(keyword) ||
-        te.event!.description.toLowerCase().includes(keyword)
-      )
-    );
-
-    if (hasLearningEvents) {
-      streak++;
-      if (!lastActivity) {
-        lastActivity = monthKey;
-      }
-    } else if (streak > 0) {
-      break; // Streak broken
+  const currentKey = `${year}-${month}`;
+  if (!attendedMonths.has(currentKey)) {
+    if (month === 0) {
+      year -= 1;
+      month = 11;
+    } else {
+      month -= 1;
     }
   }
 
-  const currentMonth = `${new Date().getFullYear()}-${new Date().getMonth()}`;
-  const isActive = lastActivity === currentMonth;
+  for (let i = 0; i < 36; i++) {
+    const key = `${year}-${month}`;
+    if (!attendedMonths.has(key)) break;
 
-  return {
-    months: streak,
-    isActive,
-    lastActivity
-  };
-}
+    streak += 1;
+    if (!lastActivity) lastActivity = key;
 
-/**
- * Calculate impact trend over time (synchronous version)
- */
-function calculateImpactTrendSync(events: Event[]): { direction: 'up' | 'down' | 'stable'; percentage: number } {
-  if (events.length < 4) {
-    return { direction: 'stable', percentage: 0 };
+    if (month === 0) {
+      year -= 1;
+      month = 11;
+    } else {
+      month -= 1;
+    }
   }
 
-  try {
-    // Split events into two halves
-    const sortedEvents = events.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    const halfPoint = Math.floor(sortedEvents.length / 2);
-
-    const earlierEvents = sortedEvents.slice(0, halfPoint);
-    const laterEvents = sortedEvents.slice(halfPoint);
-
-    // Get average impact scores for each period
-    const earlierAvg = calculateSimpleEventScore(earlierEvents);
-    const laterAvg = calculateSimpleEventScore(laterEvents);
-
-    if (earlierAvg === 0) {
-      return { direction: 'stable', percentage: 0 };
-    }
-
-    const percentage = Math.round(((laterAvg - earlierAvg) / earlierAvg) * 100);
-    const direction = percentage > 5 ? 'up' : percentage < -5 ? 'down' : 'stable';
-
-    return { direction, percentage: Math.abs(percentage) };
-  } catch (error) {
-    console.warn('Failed to calculate impact trend:', error);
-    return { direction: 'stable', percentage: 0 };
-  }
-}
-
-/**
- * Simple event scoring based on event characteristics
- */
-function calculateSimpleEventScore(events: Event[]): number {
-  if (events.length === 0) return 0;
-
-  const scores = events.map(event => {
-    let score = 50; // Base score
-
-    // Premium event indicators
-    if (event.title.toLowerCase().includes('conference')) score += 20;
-    if (event.title.toLowerCase().includes('summit')) score += 15;
-    if (event.title.toLowerCase().includes('workshop')) score += 10;
-
-    // Quality indicators
-    if (event.speakerLineup && event.speakerLineup.length > 0) score += 10;
-    if (event.priceRange && !event.priceRange.includes('free')) score += 5;
-
-    return Math.min(score, 100);
-  });
-
-  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
-}
-
-/**
- * Empty metrics fallback
- */
-function getEmptyMetrics(): CareerMetrics {
-  return {
-    careerImpactScore: {
-      value: 0,
-      trend: 'stable',
-      trendPercentage: 0,
-      roleWeighted: false
-    },
-    learningStreak: {
-      months: 0,
-      isActive: false,
-      lastActivity: null
-    },
-    peerComparison: {
-      percentile: 50,
-      comparison: 'average',
-      sampleSize: 0,
-      confidence: 'low',
-      recommendation: 'Complete your career profile to enable peer comparison'
-    }
-  };
+  return { months: streak, isActive: attendedMonths.has(currentKey), lastActivity };
 }

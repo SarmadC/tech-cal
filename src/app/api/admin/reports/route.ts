@@ -293,7 +293,7 @@ async function generateEnrichmentCoverage(supabase: any, startDate: Date, endDat
 
     // Calculate enrichment coverage
     const enrichedCount = eventList.filter((e: { enrichment_status?: string }) => 
-        e.enrichment_status === 'completed' || e.enrichment_status === 'success'
+        e.enrichment_status === 'enriched'
     ).length;
 
     const coverageRate = totalEvents > 0 

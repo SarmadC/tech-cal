@@ -18,11 +18,10 @@ export interface AdaptiveLandingProps {
 }
 
 const AdaptiveLandingRenderer: React.FC<AdaptiveLandingProps> = ({ className = '' }) => {
-    const { isReady, isMobile, isTablet, isTouchDevice } = useDeviceDetection();
+    const { isReady, isMobile } = useDeviceDetection();
 
-    // Determine if we should use mobile components
-    // Use viewport size as primary factor, touch as secondary
-    const useMobileVersion = isMobile || (isTablet && isTouchDevice);
+    // Use viewport width only so "Request Desktop Site" works correctly
+    const useMobileVersion = isMobile;
 
     // Avoid rendering the wrong layout during hydration.
     if (!isReady) {

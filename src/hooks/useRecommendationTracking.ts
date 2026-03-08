@@ -16,7 +16,7 @@ export interface UserInteraction {
   userId: string;
   eventId?: string;
   interactionType: 'view' | 'click' | 'bookmark' | 'save' | 'share' | 'attend' | 'hover' | 'dismiss';
-  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins';
+  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins' | 'learning_path';
   position?: number;
   algorithmVersion: string;
   durationMs?: number;
@@ -27,7 +27,7 @@ export interface RecommendationBatch {
   userId: string;
   sessionId: string;
   algorithmVersion: string;
-  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins';
+  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins' | 'learning_path';
   recommendations: Array<{
     eventId: string;
     score: number;

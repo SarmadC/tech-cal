@@ -527,23 +527,28 @@ div.event-detail-glass-sidebar {
 
     /* Nested glass panel fix for Firefox */
     .timeline-detail-glass-panel {
-        background: rgba(24, 24, 27, 0.95) !important;
-        /* zinc-900 almost opaque */
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
         backdrop-filter: none !important;
+    }
+
+    .dark .timeline-detail-glass-panel {
+        background: rgba(24, 24, 27, 0.95) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 }
 
 /* Timeline Detail Panel Glass Style */
 .timeline-detail-glass-panel {
-    background: rgba(24, 24, 27, 0.95);
-    /* zinc-900/95 - nearly opaque to match cards */
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
 
-.light .timeline-detail-glass-panel {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+.dark .timeline-detail-glass-panel {
+    background: rgba(24, 24, 27, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dark .event-detail-glass-modal {

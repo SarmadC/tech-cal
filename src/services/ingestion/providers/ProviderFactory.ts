@@ -4,7 +4,7 @@ import { GeminiExtractionProvider } from './GeminiExtractionProvider';
 
 type ProviderName = 'gemini';
 
-const providerCache: Partial<Record<ProviderName, ExtractionProvider>> = {};
+const providerCache = new Map<string, ExtractionProvider>();
 
 const getProviderName = (override?: string): ProviderName => {
     const provider = (override || env('LLM_ENRICHMENT_PROVIDER', 'gemini')).toLowerCase();
@@ -17,15 +17,19 @@ export const getExtractionProvider = (
     modelOverride?: string
 ): ExtractionProvider => {
     const providerName = getProviderName(providerOverride);
-    if (providerCache[providerName]) {
-        return providerCache[providerName] as ExtractionProvider;
+    const modelName = modelOverride || env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
+    const cacheKey = `${providerName}:${modelName}`;
+
+    const cachedProvider = providerCache.get(cacheKey);
+    if (cachedProvider) {
+        return cachedProvider;
     }
 
     let provider: ExtractionProvider;
     switch (providerName) {
         case 'gemini':
             provider = new GeminiExtractionProvider({
-                model: modelOverride || env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash'),
+                model: modelName,
                 apiKey: env('GOOGLE_GENERATIVE_AI_API_KEY'),
             });
             break;
@@ -33,7 +37,6 @@ export const getExtractionProvider = (
             throw new Error(`Unsupported enrichment provider: ${providerName}`);
     }
 
-    providerCache[providerName] = provider;
+    providerCache.set(cacheKey, provider);
     return provider;
 };
-

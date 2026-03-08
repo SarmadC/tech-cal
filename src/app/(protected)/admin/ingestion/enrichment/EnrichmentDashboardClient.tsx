@@ -63,6 +63,18 @@ interface EnrichmentEvent {
     enrichment_status: string;
     enrichment_metadata: EnrichmentMetadata | null;
     updated_at: string | null;
+    review_status?: string | null;
+}
+
+interface EnrichmentDashboardMetrics {
+    futurePending: number;
+    pastPending: number;
+    unscheduledPending: number;
+    reviewPending: number;
+    duplicateReviewEntries: number;
+    latestEnrichedAt: string | null;
+    oldestPendingCreatedAt: string | null;
+    oldestPendingAgeDays: number | null;
 }
 
 interface EnrichmentDashboardClientProps {
@@ -94,6 +106,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         eventIds: [],
     });
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+    const [dashboardMetrics, setDashboardMetrics] = useState<EnrichmentDashboardMetrics | null>(null);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const streamAbortControllerRef = useRef<AbortController | null>(null);
     const streamReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
@@ -184,7 +197,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     }, [setToolbarContent]);
 
     useEffect(() => {
-        const totalCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+        const totalCount = statusCounts.all ?? Object.values(statusCounts).reduce((a, b) => a + b, 0);
         setQuickFilters([
             { id: 'all', label: 'All', badge: totalCount > 0 ? totalCount : undefined, active: statusFilter === 'all', onToggle: () => setStatusFilter('all') },
             { id: 'pending', label: 'Pending', badge: statusCounts.pending || undefined, active: statusFilter === 'pending', onToggle: () => setStatusFilter('pending') },
@@ -207,7 +220,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     // Fetch status counts for filter badges
     const fetchStatusCounts = useCallback(async () => {
         try {
-            const statuses = ['pending', 'processing', 'enriched', 'failed'];
+            const statuses = ['all', 'pending', 'processing', 'enriched', 'failed'];
             const counts: Record<string, number> = {};
 
             await Promise.all(
@@ -227,18 +240,17 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     }, []);
 
     const refresh = useCallback(
-        async (overrideStatus?: string) => {
+        async () => {
             setLoading(true);
             try {
-                const status = overrideStatus ?? statusFilter;
-                const response = await fetch(`/api/admin/ingestion/enrichment-status?status=${status}&limit=100`);
+                const response = await fetch('/api/admin/ingestion/enrichment-status?status=all&limit=100');
                 if (!response.ok) {
                     throw new Error('Failed to fetch enrichment status');
                 }
                 const data = await response.json();
                 setEvents(data.events || []);
-                // Also refresh counts
-                fetchStatusCounts();
+                setDashboardMetrics(data.metrics ?? null);
+                await fetchStatusCounts();
             } catch (error) {
                 console.error(error);
                 showError('Failed to refresh enrichment status');
@@ -246,13 +258,13 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 setLoading(false);
             }
         },
-        [fetchStatusCounts, showError, statusFilter]
+        [fetchStatusCounts, showError]
     );
 
-    // Initial fetch of status counts
+    // Initial fetch of status counts and dashboard metrics
     useEffect(() => {
-        fetchStatusCounts();
-    }, [fetchStatusCounts]);
+        void refresh();
+    }, [refresh]);
 
     // Get event title map for progress display
     const eventTitleMap = useMemo(() => {
@@ -542,6 +554,11 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                     <div className={cn("h-1.5 w-1.5 rounded-full", color)} />
                                     <span className="text-[11px] capitalize text-foreground-tertiary">{event.enrichment_status}</span>
                                 </div>
+                                {event.review_status && (
+                                    <span className="text-[10px] text-foreground-muted">
+                                        Review: {event.review_status.replace('_', ' ')}
+                                    </span>
+                                )}
                                 {event.enrichment_metadata?.last_error && (
                                     <span className="text-rose-400 text-[10px] leading-snug line-clamp-1">
                                         {event.enrichment_metadata.last_error}
@@ -644,6 +661,36 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
     return (
         <div className="space-y-4">
+            {dashboardMetrics && (
+                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                    {[
+                        { label: 'Future Pending', value: dashboardMetrics.futurePending },
+                        { label: 'Past Pending', value: dashboardMetrics.pastPending },
+                        { label: 'Review Pending', value: dashboardMetrics.reviewPending },
+                        { label: 'Duplicate Reviews', value: dashboardMetrics.duplicateReviewEntries },
+                        {
+                            label: 'Latest Enriched',
+                            value: dashboardMetrics.latestEnrichedAt
+                                ? formatDistanceToNow(new Date(dashboardMetrics.latestEnrichedAt), { addSuffix: true })
+                                : '—',
+                        },
+                        {
+                            label: 'Oldest Pending',
+                            value: dashboardMetrics.oldestPendingAgeDays !== null
+                                ? `${dashboardMetrics.oldestPendingAgeDays}d`
+                                : '—',
+                        },
+                    ].map((metric) => (
+                        <div key={metric.label} className="rounded-lg border border-default bg-background-main p-3">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                                {metric.label}
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-foreground-primary">{metric.value}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Progress Bar */}
             {bulkProgress && (
                 <div className="rounded-lg border border-default bg-background-main p-3 mb-4">
@@ -731,10 +778,10 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             </div>
                             <div className="h-4 w-px bg-accent-primary-light mx-1" />
                             <div className="flex items-center gap-1">
-                                {['all', 'pending', 'enriched', 'failed'].map((status) => (
+                                {(['all', 'pending', 'processing', 'enriched', 'failed'] as const).map((status) => (
                                     <button
                                         key={status}
-                                        onClick={() => setStatusFilter(status as any)}
+                                        onClick={() => setStatusFilter(status)}
                                         className={cn(
                                             "px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
                                             statusFilter === status

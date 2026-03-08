@@ -2,8 +2,7 @@
 
 import { FC, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { XIcon, ArrowSquareOutIcon, Bookmark, Star, ChatText } from '@phosphor-icons/react';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
+import { XIcon, ArrowSquareOutIcon, Bookmark } from '@phosphor-icons/react';
 import '@/app/styles/event-card.css';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
@@ -11,6 +10,7 @@ import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
+import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import { getSpeakerAvatarUrls } from '@/utils/timelineUtils';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
@@ -29,7 +29,6 @@ interface EventDetailPanelProps {
 }
 
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories, variant = 'sidebar' }) => {
-    const theme = useTimelineTheme();
     const category = categories.find(c => c.id === event.eventTypeId);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [isLoading, setIsLoading] = useState(true);
@@ -266,6 +265,13 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                 <EventInfo event={displayEvent} category={category} />
 
+                <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
+                    <div className="text-[11px] font-medium text-foreground-tertiary uppercase tracking-[0.05em] mb-4">
+                        Action
+                    </div>
+                    <EventTracking event={displayEvent} />
+                </div>
+
                 {/* Adaptive Timeline Section */}
                 {/* Show loading skeleton while fetching, then timeline or track view if agenda exists */}
                 <div className="mt-6 pt-6 border-t border-gray-300 dark:border-white/10">
@@ -276,7 +282,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                     type="button"
                                     onClick={() => setAgendaView('timeline')}
                                     className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${agendaView === 'timeline'
-                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 shadow-sm'
                                         : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                                         }`}
                                     aria-pressed={agendaView === 'timeline'}
@@ -287,7 +293,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                     type="button"
                                     onClick={() => setAgendaView('tracks')}
                                     className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${agendaView === 'tracks'
-                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 shadow-sm'
                                         : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                                         }`}
                                     aria-pressed={agendaView === 'tracks'}
@@ -300,13 +306,13 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     {isLoading ? (
                         <div className="space-y-4 animate-pulse">
                             <div className="flex items-center gap-2">
-                                <div className="h-4 w-32 bg-white/10 dark:bg-black/10 rounded backdrop-blur-sm"></div>
-                                <div className="h-3 w-48 bg-white/5 dark:bg-black/5 rounded backdrop-blur-sm"></div>
+                                <div className="h-4 w-32 bg-zinc-200/80 dark:bg-zinc-700/60 rounded"></div>
+                                <div className="h-3 w-48 bg-zinc-200/60 dark:bg-zinc-800/60 rounded"></div>
                             </div>
                             <div className="space-y-3">
-                                <div className="h-20 bg-white/10 dark:bg-black/10 rounded backdrop-blur-sm"></div>
-                                <div className="h-20 bg-white/8 dark:bg-black/8 rounded backdrop-blur-sm"></div>
-                                <div className="h-20 bg-white/5 dark:bg-black/5 rounded backdrop-blur-sm"></div>
+                                <div className="h-20 bg-zinc-200/70 dark:bg-zinc-800/60 rounded"></div>
+                                <div className="h-20 bg-zinc-200/60 dark:bg-zinc-800/50 rounded"></div>
+                                <div className="h-20 bg-zinc-200/50 dark:bg-zinc-800/40 rounded"></div>
                             </div>
                         </div>
                     ) : displayEvent.agenda && displayEvent.agenda.length > 0 ? (
@@ -320,8 +326,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                 {/* Speakers Section */}
                 {displayEvent.speakerLineup && displayEvent.speakerLineup.length > 0 && (
-                    <div className="pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
-                        <h3 className="text-sm font-semibold text-zinc-300 mb-4">
+                    <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
+                        <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300 mb-4">
                             Speakers
                         </h3>
                         <div className="space-y-4">
@@ -330,7 +336,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                                 return (
                                     <div key={speaker.id} className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-white/10 overflow-hidden shrink-0">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
                                                 src={avatarSrc}
@@ -344,11 +350,11 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                             />
                                         </div>
                                         <div>
-                                            <div className="font-medium text-zinc-200">
+                                            <div className="font-medium text-zinc-900 dark:text-zinc-200">
                                                 {speaker.name}
                                             </div>
                                             {(speaker.title || speaker.company) && (
-                                                <div className="text-xs text-zinc-500" title={`${speaker.title || ''}${speaker.title && speaker.company ? ' at ' : ''}${speaker.company || ''}`}>
+                                                <div className="text-xs text-zinc-600 dark:text-zinc-500" title={`${speaker.title || ''}${speaker.title && speaker.company ? ' at ' : ''}${speaker.company || ''}`}>
                                                     {speaker.title || speaker.company}
                                                 </div>
                                             )}
@@ -362,8 +368,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                 {/* Feedback for attended events (attendance managed from dashboard) */}
                 {user && getAttendanceStatus(displayEvent.id) === 'attended' && (
-                    <div className="mt-8 pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
-                        <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em] mb-4">
+                    <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-white/10">
+                        <div className="text-[11px] font-medium text-foreground-tertiary uppercase tracking-[0.05em] mb-4">
                             Your Feedback
                         </div>
                         <EventFeedbackForm event={displayEvent} compact />

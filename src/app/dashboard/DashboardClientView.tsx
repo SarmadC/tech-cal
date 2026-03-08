@@ -9,13 +9,11 @@ import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState'
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { CareerOutcomesCard } from '@/components/dashboard/CareerOutcomesCard';
 import { FocusHeroCard } from '@/components/dashboard/FocusHeroCard';
-import { CareerProgressCard } from '@/components/dashboard/CareerProgressCard';
 import { LearningProgressCard } from '@/components/dashboard/LearningProgressCard';
 import { PipelineColumn } from '@/components/dashboard/PipelineColumn';
 import { RecentWinsCard } from '@/components/dashboard/RecentWinsCard';
 import { OverviewPanel } from '@/components/dashboard/OverviewPanel';
 import { CareerImpactInsightsCard } from '@/components/dashboard/CareerImpactInsightsCard';
-import { CareerAnalyticsSection } from '@/components/dashboard/CareerAnalyticsSection';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { usePastEventAttendancePrompt } from '@/hooks/usePastEventAttendancePrompt';
@@ -28,10 +26,8 @@ const PastEventAttendancePrompt = dynamic(
 );
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
-import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
-import MobileBottomNav from '@/components/common/MobileBottomNav';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
+import MobileDashboardView from '@/app/dashboard/MobileDashboardView';
 
 interface DashboardClientViewProps {
     initialEventTypes: EventType[];
@@ -72,6 +68,10 @@ export default function DashboardClientView({
 
     // Wait for data to be ready
     if (!isReady || isLoading) {
+        if (isMobile) {
+            return <MobileDashboardView state="loading" />;
+        }
+
         return (
             <SidebarProvider>
                 <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
@@ -94,6 +94,10 @@ export default function DashboardClientView({
     // Handle critical errors
     const hasCriticalErrors = errors.trackedEvents || errors.eventTypes || errors.upcomingEvents;
     if (hasCriticalErrors) {
+        if (isMobile) {
+            return <MobileDashboardView state="error" />;
+        }
+
         return (
             <SidebarProvider>
                 <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
@@ -113,18 +117,30 @@ export default function DashboardClientView({
     }
 
 
+    if (isMobile) {
+        return (
+            <MobileDashboardView
+                state="ready"
+                profile={profile}
+                hasCompletedOnboarding={hasCompletedOnboarding}
+                careerProfile={careerProfile}
+                trackedEvents={trackedEvents}
+                allUpcomingEvents={allUpcomingEvents}
+                initialEventTypes={initialEventTypes}
+                attendancePrompt={hasPendingPrompts ? (
+                    <PastEventAttendancePrompt
+                        pendingEvents={pendingEvents}
+                        onAttended={markAttended}
+                        onNotAttended={markNotAttended}
+                        onSnooze={snoozeEvent}
+                    />
+                ) : null}
+            />
+        );
+    }
+
     return (
         <SidebarProvider>
-            {/* Mobile Bottom Navigation - Only visible on mobile */}
-            {isMobile && <MobileBottomNav />}
-            {/* Conditional Navigation - UnifiedMobileNavbar on mobile, Navbar on desktop */}
-            {isMobile ? (
-                <UnifiedMobileNavbar
-                    navItems={APP_MOBILE_NAV_ITEMS}
-                    fixed={false}
-                    className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40"
-                />
-            ) : null}
             <div className="flex h-screen bg-background">
                 <h1 className="sr-only">Dashboard</h1>
                 <AppSidebar />
@@ -136,14 +152,12 @@ export default function DashboardClientView({
                                 {/* Subtle noise texture or grid could go here, keeping it clean for now */}
                                 <div className="absolute inset-0 bg-black/[0.02] dark:bg-white/[0.02] pointer-events-none" />
 
-                                <div className={`relative max-w-[1600px] mx-auto px-6 space-y-6 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
+                                <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
                                     {/* Breadcrumbs - Hidden on mobile */}
-                                    {!isMobile && (
-                                        <Breadcrumbs
-                                            base={[{ label: 'Home', href: '/' }]}
-                                            trail={[{ label: 'Dashboard' }]}
-                                        />
-                                    )}
+                                    <Breadcrumbs
+                                        base={[{ label: 'Home', href: '/' }]}
+                                        trail={[{ label: 'Dashboard' }]}
+                                    />
                                     {/* Dashboard Header */}
                                     <SectionErrorBoundary name="DashboardHeader">
                                         <DashboardHeader profile={profile} />
@@ -182,17 +196,6 @@ export default function DashboardClientView({
                                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                         {/* Left Column (60%) - Progress & Analytics */}
                                         <div className="space-y-6 xl:col-span-7">
-                                            {/* Career Progress Card */}
-                                            {careerProfile && hasCompletedOnboarding && (
-                                                <SectionErrorBoundary name="CareerProgressCard">
-                                                    <CareerProgressCard
-                                                        trackedEvents={trackedEvents}
-                                                        upcomingEvents={allUpcomingEvents}
-                                                        careerProfile={careerProfile}
-                                                    />
-                                                </SectionErrorBoundary>
-                                            )}
-
                                             {/* Learning Progress Card */}
                                             {careerProfile && hasCompletedOnboarding && (
                                                 <SectionErrorBoundary name="LearningProgressCard">
@@ -250,16 +253,6 @@ export default function DashboardClientView({
                                         </div>
                                     </div>
 
-                                    {/* Progressive Analytics + Recommendations */}
-                                    {profile && hasCompletedOnboarding && (
-                                        <SectionErrorBoundary name="CareerAnalyticsSection">
-                                            <CareerAnalyticsSection
-                                                userProfile={profile}
-                                                trackedEvents={trackedEvents}
-                                                events={allUpcomingEvents}
-                                            />
-                                        </SectionErrorBoundary>
-                                    )}
                                 </div>
                             </div>
                         </PageErrorBoundary>

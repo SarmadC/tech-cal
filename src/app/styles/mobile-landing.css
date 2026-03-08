@@ -237,7 +237,7 @@ html.dark .mobile-nav-menu {
 
 .mobile-hero-immersion {
   position: relative;
-  min-height: calc(100dvh - 80px);
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding: 0;

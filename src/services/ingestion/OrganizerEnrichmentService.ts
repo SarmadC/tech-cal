@@ -9,10 +9,16 @@ import type { SupabaseClientType } from '@/types';
 import { TIMEOUT_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 import { getLogoSources } from '@/utils/logoUtils';
+import {
+    extractCanonicalDomain,
+    humanizeOrganizerNameFromDomain,
+    isPlaceholderOrganizerName,
+    normalizeHostname,
+} from '@/utils/ingestion/sourceCleanup';
 import { OgImageExtractorService } from './OgImageExtractorService';
 
 export interface OrganizerInput {
-    name: string;
+    name?: string;
     domain?: string;
     websiteUrl?: string;
     sourceUrl?: string; // Event source URL for og:image extraction
@@ -28,21 +34,19 @@ export class OrganizerEnrichmentService {
         supabaseClient: SupabaseClientType
     ): Promise<string | null> {
         try {
-            // Don't create organizers with placeholder or empty names
-            const normalizedName = input.name?.trim();
-            if (!normalizedName || 
-                normalizedName === '' || 
-                normalizedName === 'Unknown' || 
-                normalizedName.toLowerCase() === 'unknown organizer' ||
-                normalizedName.toLowerCase() === 'tbd' ||
-                normalizedName.toLowerCase() === 'tba') {
-                return null;
-            }
-
             // Extract domain from website URL if not provided
-            let domain = input.domain;
+            let domain = input.domain ? normalizeHostname(input.domain) : undefined;
             if (!domain && input.websiteUrl) {
                 domain = this.extractDomain(input.websiteUrl);
+            }
+
+            const normalizedName = input.name?.trim();
+            const organizerName = isPlaceholderOrganizerName(normalizedName)
+                ? (domain ? humanizeOrganizerNameFromDomain(domain) : undefined)
+                : normalizedName;
+
+            if (!organizerName && !domain) {
+                return null;
             }
 
             // Try to find existing organizer by domain (most reliable)
@@ -73,12 +77,12 @@ export class OrganizerEnrichmentService {
             }
 
             // Try to find by name (fuzzy match)
-            if (normalizedName) {
+            if (organizerName) {
                 // Exact match first
                 const { data: exactMatch } = await supabaseClient
                     .from('organizers')
                     .select('id')
-                    .eq('name', normalizedName)
+                    .eq('name', organizerName)
                     .single();
 
                 if (exactMatch) {
@@ -87,7 +91,7 @@ export class OrganizerEnrichmentService {
 
                 // Fuzzy match on name using pg_trgm
                 // Note: This requires the GIN index we created in the migration
-                const namePattern = `%${normalizedName}%`;
+                const namePattern = `%${organizerName}%`;
                 const { data: nameFuzzy } = await supabaseClient
                     .from('organizers')
                     .select('id, name')
@@ -100,15 +104,20 @@ export class OrganizerEnrichmentService {
                 }
             }
 
+            if (!organizerName) {
+                return null;
+            }
+
             // Create new organizer - try og:image first, then domain services
-            const logoUrl = await this.fetchLogo(input.sourceUrl, domain);
+            const canonicalWebsiteUrl = input.websiteUrl || (domain ? `https://${domain}` : null);
+            const logoUrl = await this.fetchLogo(input.sourceUrl || canonicalWebsiteUrl || undefined, domain);
 
             const { data: newOrganizer, error: createError } = await supabaseClient
                 .from('organizers')
                 .insert({
-                    name: normalizedName,
+                    name: organizerName,
                     domain: domain || null,
-                    website_url: input.websiteUrl || null,
+                    website_url: canonicalWebsiteUrl,
                     logo_url: logoUrl,
                     auto_discovered: true,
                 })
@@ -134,13 +143,7 @@ export class OrganizerEnrichmentService {
      * Extract domain from URL
      */
     private static extractDomain(url: string): string | undefined {
-        try {
-            const urlObj = new URL(url);
-            const domain = urlObj.hostname.replace('www.', '');
-            return domain;
-        } catch {
-            return undefined;
-        }
+        return extractCanonicalDomain(url);
     }
 
     /**
@@ -199,5 +202,4 @@ export class OrganizerEnrichmentService {
         return null;
     }
 }
-
 

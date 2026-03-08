@@ -60,6 +60,10 @@ function getCareerImpact(
   return null;
 }
 
+function getEventOccurrenceDate(event: Event): Date {
+  return new Date(event.endTime || event.startTime);
+}
+
 /**
  * Goal progress data for Career Progress Card
  */
@@ -69,6 +73,8 @@ export interface GoalProgress {
   impactTotal: number; // Sum of impact scores for events matching this goal
   progress: number; // 0-100 based on event count toward target
   targetEventCount: number; // Target from goal config
+  upcomingMatchCount: number; // Recommended upcoming events matching this goal
+  nextRecommendedEventTitle?: string;
   matchedEvents: Array<{ // Which events matched this goal
     id: string;
     title: string;
@@ -129,20 +135,28 @@ interface DashboardMetrics {
     computed: boolean;
     eventTitle?: string;
   } | null;
-  
+  avgImpactEventCount: number;
+
   // Career Progress metrics
   goalProgress: GoalProgress[];
-  hasComponentsData: boolean; // true if careerImpact.components is available
-  
+
   // Learning Progress metrics
   skillsCoveredThisMonth: {
     uniqueSkills: string[];
     canonicalMatches: number; // Count using taxonomy
-    needsVerification: string[]; // Skills that couldn't be matched via taxonomy
+  };
+  allTimeSkillsCovered: {
+    count: number;
+    skills: string[];
   };
   
   // Helper function to get matched skills for an event (checks cache)
   getEventMatchedSkills: (event: Event) => string[];
+  getEventAlignment: (event: Event) => {
+    score: number;
+    computed: boolean;
+    reason?: string;
+  };
   
   // Pipeline metrics
   topRecommendedEvents: Array<{
@@ -164,7 +178,7 @@ interface DashboardMetrics {
     attendedDate: string;
     matchedSkills: string[];
     matchedGoals: string[];
-    rsvpToAttendDelta?: number; // Days between RSVP and attendance
+    bookmarkedLeadDays?: number; // Days between first save and the event
   }>;
 }
 
@@ -309,29 +323,29 @@ export function useDashboardMetrics({
       .filter(te => {
         if (te.status !== 'attended' || !te.event) return false;
         // Only include if event end date (or start date if no end) has passed
-        const eventEndDate = new Date(te.event.endTime || te.event.startTime);
+        const eventEndDate = getEventOccurrenceDate(te.event);
         return eventEndDate < now;
       })
-      .sort((a, b) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime());
+      .sort((a, b) => getEventOccurrenceDate(b.event!).getTime() - getEventOccurrenceDate(a.event!).getTime());
   }, [trackedEvents]);
   
-  // Calculate skills covered this month (extracted to top-level useMemo)
+  // Calculate skills covered this month (current calendar month)
   // NOTE: This must come AFTER attendedEvents is computed
   const skillsCoveredThisMonth = useMemo(() => {
     const uniqueSkills = new Set<string>();
     const canonicalMatches = new Set<string>();
     const needsVerification = new Set<string>();
     
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const recentEvents = attendedEvents.filter(te => {
-      const eventDate = new Date(te.trackedAt);
-      return eventDate >= thirtyDaysAgo;
+    const monthEvents = attendedEvents.filter(te => {
+      const eventDate = getEventOccurrenceDate(te.event!);
+      return eventDate >= monthStart;
     });
     
     if (careerProfile && careerProfile.skillsToLearn.length > 0) {
-      recentEvents.forEach(te => {
+      monthEvents.forEach(te => {
         if (!te.event) return;
         
         const matchedSkills = getEventMatchedSkills(te.event);
@@ -366,10 +380,30 @@ export function useDashboardMetrics({
     return {
       uniqueSkills: Array.from(uniqueSkills),
       canonicalMatches: canonicalMatches.size,
-      needsVerification: Array.from(needsVerification),
     };
   }, [attendedEvents, careerProfile, getEventMatchedSkills]);
   
+  // All-time skills coverage (cumulative, not rolling window)
+  const allTimeSkillsCovered = useMemo(() => {
+    if (!careerProfile || careerProfile.skillsToLearn.length === 0) {
+      return { count: 0, skills: [] as string[] };
+    }
+    const covered = new Set<string>();
+    attendedEvents.forEach(te => {
+      if (!te.event) return;
+      getEventMatchedSkills(te.event).forEach(skill => {
+        const canonical = getCanonicalSkillMeta(skill);
+        const name = canonical?.name ?? skill;
+        const matchesTarget = careerProfile.skillsToLearn.some(t => {
+          const tc = getCanonicalSkillMeta(t);
+          return (tc?.name ?? t).toLowerCase() === name.toLowerCase();
+        });
+        if (matchesTarget) covered.add(name);
+      });
+    });
+    return { count: covered.size, skills: Array.from(covered) };
+  }, [attendedEvents, careerProfile, getEventMatchedSkills]);
+
   // Compute metrics
   const metrics = useMemo(() => {
     // 1. Top recommended event (highest score from upcoming events)
@@ -413,6 +447,14 @@ export function useDashboardMetrics({
           eventTitle: lastAttended.event.title,
         }
       : null;
+
+    // 4b. 30-day average impact score
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+    const recentAttended = attendedEvents.filter(te =>
+      te.event && getEventOccurrenceDate(te.event) >= last30Days
+    );
+    const avgImpactEventCount = recentAttended.length;
     
     // 5. Goal progress (for Career Progress Card)
     const goalProgress: GoalProgress[] = [];
@@ -422,6 +464,7 @@ export function useDashboardMetrics({
         const goalEvents = attendedEvents.filter(te => 
           te.event && doesEventMatchGoal(te.event, goal)
         );
+        const matchingUpcoming = scoredUpcoming.filter(item => doesEventMatchGoal(item.event, goal));
         
         let impactTotal = 0;
         goalEvents.forEach(te => {
@@ -449,13 +492,15 @@ export function useDashboardMetrics({
           impactTotal: Math.round(impactTotal),
           progress,
           targetEventCount: target,
+          upcomingMatchCount: matchingUpcoming.length,
+          nextRecommendedEventTitle: matchingUpcoming[0]?.event.title,
           matchedEvents,
           suggestedAction: buildSuggestedGoalAction({
             goal,
             progress,
             eventCount: goalEvents.length,
             targetEventCount: target,
-            nextRecommendedEventTitle: scoredUpcoming.find(item => doesEventMatchGoal(item.event, goal))?.event.title,
+            nextRecommendedEventTitle: matchingUpcoming[0]?.event.title,
           }),
         });
       });
@@ -481,8 +526,8 @@ export function useDashboardMetrics({
       topRecommendedEvent,
       upcomingCommitments,
       lastImpactScore,
+      avgImpactEventCount,
       goalProgress,
-      hasComponentsData,
       // Top recommended events for Pipeline (up to 3)
       topRecommendedEvents: scoredUpcoming
         .slice(0, 3)
@@ -510,10 +555,11 @@ export function useDashboardMetrics({
           });
         }
         
-        // Calculate RSVP to attend delta
-        const eventDate = new Date(event.startTime);
-        const trackingDate = new Date(te.trackedAt);
-        const rsvpToAttendDelta = differenceInDays(eventDate, trackingDate);
+        const eventDate = getEventOccurrenceDate(event);
+        const bookmarkedDate = te.bookmarkedAt ? new Date(te.bookmarkedAt) : null;
+        const bookmarkedLeadDays = bookmarkedDate
+          ? differenceInDays(eventDate, bookmarkedDate)
+          : undefined;
         
         return {
           event,
@@ -522,15 +568,19 @@ export function useDashboardMetrics({
           attendedDate: event.startTime,
           matchedSkills,
           matchedGoals,
-          rsvpToAttendDelta: rsvpToAttendDelta >= 0 ? rsvpToAttendDelta : undefined,
+          bookmarkedLeadDays: bookmarkedLeadDays !== undefined && bookmarkedLeadDays >= 0
+            ? bookmarkedLeadDays
+            : undefined,
         };
       }),
     };
-  }, [trackedEvents, upcomingEvents, careerProfile, hasComponentsData, getEventMatchedSkills, getOrComputeAlignment, attendedEvents, scoredUpcoming]);
-  
+  }, [trackedEvents, upcomingEvents, careerProfile, getEventMatchedSkills, getOrComputeAlignment, attendedEvents, scoredUpcoming, hasComponentsData]);
+
   return {
     ...metrics,
     skillsCoveredThisMonth,
+    allTimeSkillsCovered,
+    getEventAlignment: getOrComputeAlignment,
     getEventMatchedSkills, // Expose helper for components that need it
   };
 }

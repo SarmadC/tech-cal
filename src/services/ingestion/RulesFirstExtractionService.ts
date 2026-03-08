@@ -1,5 +1,6 @@
 import { extractCoreFieldsFromHtml, type HtmlCoreExtractionResult } from './html';
-import { applyUrlCanonicalization, createHash, normalizeUrlForCaching } from './utils/urlCanonicalizer';
+import { createHash, normalizeUrlForCaching } from './utils/urlCanonicalizer';
+import { applyIngestionRecordCleanup } from './utils/recordCleanup';
 import { PageCacheService, type CachedExtractionPayload } from './PageCacheService';
 import type { ScrapedEventData } from '@/types/ingestion';
 import type { EventSourceRecord } from '@/types/ingestion';
@@ -318,7 +319,7 @@ export class RulesFirstExtractionService {
         if (extraction.sourceDomain) {
             record.sourceDomain = extraction.sourceDomain;
         }
-        applyUrlCanonicalization(record);
+        applyIngestionRecordCleanup(record);
     }
 
     private static async enrichWithAgenda(
@@ -392,4 +393,3 @@ export class RulesFirstExtractionService {
         }
     }
 }
-

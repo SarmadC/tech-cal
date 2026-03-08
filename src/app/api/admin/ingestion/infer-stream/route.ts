@@ -62,8 +62,10 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const { eventIds } = (await request.json()) as {
+        const { eventIds, provider, model } = (await request.json()) as {
             eventIds: string[];
+            provider?: string;
+            model?: string;
         };
 
         if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
@@ -84,7 +86,10 @@ export async function POST(request: NextRequest) {
         }
 
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
-        const enrichmentService = new LLMEnrichmentService(serviceClient);
+        const enrichmentService = new LLMEnrichmentService(serviceClient, {
+            provider,
+            model,
+        });
 
         // Fetch event titles for better progress display
         const { data: events } = await serviceClient

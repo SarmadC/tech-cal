@@ -321,6 +321,18 @@ export const INTEREST_AREAS = [
   'Testing & QA'
 ] as const;
 
+export const LEARNING_PATH_TRACKS = [
+  'Data Engineering',
+  'Machine Learning',
+  'Backend Engineering',
+  'Frontend Engineering',
+  'DevOps & Platform',
+  'Product Engineering',
+  'Leadership & Strategy'
+] as const;
+
+export type LearningPathTrack = typeof LEARNING_PATH_TRACKS[number];
+
 // Role-specific event scoring weights
 export const ROLE_EVENT_WEIGHTS = {
   [ROLE_CATEGORIES.ENGINEERING]: {
@@ -447,6 +459,7 @@ export interface CareerProfile {
   // Career Goals
   careerGoals: CareerGoal[];
   timeframe: CareerTimeframe;
+  targetPath?: LearningPathTrack | string;
   
   // Learning Preferences
   learningStyle: LearningStyle[];
@@ -896,6 +909,7 @@ export interface CareerOnboardingData {
     timeframe: CareerTimeframe;
   };
   step4_preferences: {
+    targetPath?: LearningPathTrack | string;
     learningStyle: LearningStyle[];
     availableTime: AvailableTime;
     budget: BudgetRange;
