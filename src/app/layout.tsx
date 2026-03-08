@@ -40,6 +40,7 @@ import { Suspense } from "react";
 import { SITE_URL } from '@/config/site';
 import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
+export const dynamic = 'force-dynamic';
 
 const inter = Inter({
     subsets: ["latin"],

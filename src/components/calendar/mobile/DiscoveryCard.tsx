@@ -286,24 +286,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onShortlistToggle?.(event);
-                                }}
-                                className={cn(
-                                    'p-2 rounded-md transition-colors',
-                                    isInShortlist
-                                        ? 'text-violet-300'
-                                        : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]'
-                                )}
-                                aria-pressed={isInShortlist}
-                                aria-label={isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'}
-                            >
-                                <Exclude size={16} weight={isInShortlist ? 'fill' : 'regular'} />
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
                                     void handleAttendanceToggle();
                                 }}
                                 className={cn(

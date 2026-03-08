@@ -1,4 +1,4 @@
-export const CSP_NONCE_HEADER = 'x-csp-nonce';
+export const CSP_NONCE_HEADER = 'x-nonce';
 
 type CspStage = 'compat' | 'balanced' | 'strict';
 
@@ -41,6 +41,7 @@ export function buildCsp({ frameAncestors, nonce }: CspOptions): string {
     const scriptSrc = [
         "'self'",
         `'nonce-${nonce}'`,
+        "'strict-dynamic'",
         allowUnsafeInline ? "'unsafe-inline'" : null,
         allowUnsafeEval ? "'unsafe-eval'" : null,
         'https://cdnjs.cloudflare.com',

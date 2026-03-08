@@ -18,18 +18,18 @@ const AGENDA_SESSIONS: Array<{
     track: AgendaTrack;
     starred: boolean;
 }> = [
-    { id: 's1', time: '09:00', title: 'The Future of AI Computing', type: 'Keynote', room: 'Hall A', speakers: 'Jensen Huang +2', track: 'AI', starred: false },
-    { id: 's2', time: '10:30', title: 'Scaling ML Infrastructure', type: 'Workshop', room: 'Room 102', speakers: 'Maya Chen', track: 'AI', starred: true },
-    { id: 's3', time: '11:30', title: 'Building with CUDA 13', type: 'Workshop', room: 'Room 204', speakers: 'Sarah Chen', track: 'Product', starred: false },
-    { id: 's5', time: '13:00', title: 'AI Safety & Policy', type: 'Panel', room: 'Main Stage', speakers: 'Mike Johnson +4', track: 'Infrastructure', starred: true },
-    { id: 's4', time: '14:00', title: 'Product Roadmap 2025', type: 'Panel', room: 'Main Stage', speakers: 'Lisa Park +3', track: 'Product', starred: false },
-    { id: 's6', time: '15:30', title: 'Networking Break', type: 'Networking', room: 'Lobby', speakers: '', track: 'Infrastructure', starred: false },
-];
+        { id: 's1', time: '09:00', title: 'The Future of AI Computing', type: 'Keynote', room: 'Hall A', speakers: 'Jensen Huang +2', track: 'AI', starred: false },
+        { id: 's2', time: '10:30', title: 'Scaling ML Infrastructure', type: 'Workshop', room: 'Room 102', speakers: 'Maya Chen', track: 'AI', starred: true },
+        { id: 's3', time: '11:30', title: 'Building with CUDA 13', type: 'Workshop', room: 'Room 204', speakers: 'Sarah Chen', track: 'Product', starred: false },
+        { id: 's5', time: '13:00', title: 'AI Safety & Policy', type: 'Panel', room: 'Main Stage', speakers: 'Mike Johnson +4', track: 'Infrastructure', starred: true },
+        { id: 's4', time: '14:00', title: 'Product Roadmap 2025', type: 'Panel', room: 'Main Stage', speakers: 'Lisa Park +3', track: 'Product', starred: false },
+        { id: 's6', time: '15:30', title: 'Networking Break', type: 'Networking', room: 'Lobby', speakers: '', track: 'Infrastructure', starred: false },
+    ];
 
 const TRACK_FILTERS: Array<{ value: AgendaTrack; label: string }> = [
     { value: 'AI', label: 'AI' },
     { value: 'Product', label: 'Product' },
-    { value: 'Infrastructure', label: 'Infrastructure' },
+    { value: 'Infrastructure', label: 'Infra' },
 ];
 
 function parseTimeToMinutes(time: string) {

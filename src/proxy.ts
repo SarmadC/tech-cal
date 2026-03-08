@@ -52,19 +52,30 @@ function createCspNonce() {
 
 function applySecurityHeaders(response: NextResponse, pathname: string, nonce: string) {
   const isEmbedRoute = pathMatchesPrefix(pathname, '/embed')
+  const csp = buildCsp({
+    frameAncestors: isEmbedRoute ? '*' : "'none'",
+    nonce,
+  })
+
   response.headers.set(
     'Content-Security-Policy',
-    buildCsp({
-      frameAncestors: isEmbedRoute ? '*' : "'none'",
-      nonce,
-    })
+    csp
   )
+  response.headers.set(CSP_NONCE_HEADER, nonce)
 }
 
 export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers)
   const nonce = createCspNonce()
+  const pathname = request.nextUrl.pathname
+  const isEmbedRoute = pathMatchesPrefix(pathname, '/embed')
+  const csp = buildCsp({
+    frameAncestors: isEmbedRoute ? '*' : "'none'",
+    nonce,
+  })
+
   requestHeaders.set(CSP_NONCE_HEADER, nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
 
   let response = NextResponse.next({
     request: {
@@ -107,9 +118,6 @@ export async function proxy(request: NextRequest) {
   // Refresh session if expired - this is important for keeping the session alive
   // Using getUser() instead of getSession() for security (validates with Supabase server)
   const { data: { user } } = await supabase.auth.getUser()
-
-  const pathname = request.nextUrl.pathname
-
   // If user is not authenticated and trying to access protected route
   if (!user && isProtectedRoute(pathname) && !isCrawlablePublicRoute(pathname)) {
     const redirectPath = `${pathname}${request.nextUrl.search}`
