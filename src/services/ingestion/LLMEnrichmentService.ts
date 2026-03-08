@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
+import { JSDOM, VirtualConsole } from 'jsdom';
 import * as Sentry from '@sentry/nextjs';
 import pLimit from 'p-limit';
 import type { SupabaseClientType, Json } from '@/types';
@@ -15,7 +15,7 @@ import {
 } from '@/types/enrichment';
 import { PlaywrightScraper } from './PlaywrightScraper';
 import { getExtractionProvider } from './providers/ProviderFactory';
-import { GeminiExtractionProvider } from './providers/GeminiExtractionProvider';
+import { DEFAULT_GEMINI_MODEL, GeminiExtractionProvider } from './providers/GeminiExtractionProvider';
 import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
 import {
@@ -33,6 +33,7 @@ const DEFAULT_BATCH_LIMIT = 25;
 const CANDIDATE_FETCH_MULTIPLIER = 5;
 const MIN_CANDIDATE_FETCH = 100;
 const OPEN_REVIEW_QUEUE_STATUSES = ['pending', 'partially_approved'] as const;
+const BROKEN_STYLESHEET_ERROR = 'Could not parse CSS stylesheet';
 
 type EventRow = {
     id: string;
@@ -409,12 +410,58 @@ export class LLMEnrichmentService {
     }
 
     private extractReadableContent(html: string): string {
-        const dom = new JSDOM(html);
-        const reader = new Readability(dom.window.document);
-        const article = reader.parse();
-        const text = (article?.textContent || dom.window.document.body?.textContent || '').trim();
-        const sanitized = this.stripPii(text).replace(/\s+/g, ' ').trim();
-        return this.truncate(sanitized, CONTENT_LIMIT);
+        const sanitizedHtml = this.stripNonContentMarkup(html);
+
+        try {
+            const virtualConsole = new VirtualConsole();
+            virtualConsole.on('jsdomError', (error: Error) => {
+                if (error.message.includes(BROKEN_STYLESHEET_ERROR)) {
+                    return;
+                }
+                console.warn('[LLMEnrichmentService] JSDOM parse warning:', error.message);
+            });
+
+            const dom = new JSDOM(sanitizedHtml, { virtualConsole });
+            const reader = new Readability(dom.window.document);
+            const article = reader.parse();
+            const text = (article?.textContent || dom.window.document.body?.textContent || '').trim();
+            const sanitized = this.stripPii(text).replace(/\s+/g, ' ').trim();
+            return this.truncate(sanitized, CONTENT_LIMIT);
+        } catch (error) {
+            const fallbackText = this.extractTextFallback(sanitizedHtml);
+            if (!fallbackText) {
+                Sentry.captureException(error, { extra: { function: 'extractReadableContent' } });
+                return '';
+            }
+
+            return this.truncate(
+                this.stripPii(fallbackText).replace(/\s+/g, ' ').trim(),
+                CONTENT_LIMIT
+            );
+        }
+    }
+
+    private stripNonContentMarkup(html: string): string {
+        return html
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+            .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ' ')
+            .replace(/<canvas\b[^>]*>[\s\S]*?<\/canvas>/gi, ' ')
+            .replace(/<link\b[^>]*rel=["']?stylesheet["']?[^>]*>/gi, ' ');
+    }
+
+    private extractTextFallback(html: string): string {
+        return html
+            .replace(/<!--[\s\S]*?-->/g, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&#39;/gi, "'")
+            .replace(/&quot;/gi, '"')
+            .trim();
     }
 
     private stripPii(text: string): string {
@@ -1046,7 +1093,7 @@ export class LLMEnrichmentService {
      */
     private getInferenceProvider(): GeminiExtractionProvider {
         const apiKey = env('GOOGLE_GENERATIVE_AI_API_KEY');
-        const model = this.modelOverride || env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
+        const model = this.modelOverride || env('LLM_ENRICHMENT_MODEL', DEFAULT_GEMINI_MODEL);
         return new GeminiExtractionProvider({ apiKey, model });
     }
 

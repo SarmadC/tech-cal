@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
@@ -11,6 +12,7 @@ import {
     findCategoryBySlug,
 } from '@/utils/categorySlugUtils';
 import { SITE_URL } from '@/config/site';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -150,6 +152,7 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
     const { slug } = await params;
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
     const data = await getCategoryData(slug);
 
     if (!data) notFound();
@@ -177,6 +180,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return (
         <>
             <BreadcrumbJsonLd
+                nonce={nonce}
                 items={[
                     { name: 'Home', url: SITE_URL },
                     { name: 'Events', url: `${SITE_URL}/events` },
@@ -184,6 +188,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 ]}
             />
             <ItemListJsonLd
+                nonce={nonce}
                 items={events.map((e) => ({
                     title: e.title,
                     startDate: e.start_time,

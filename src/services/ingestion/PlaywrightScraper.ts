@@ -6,6 +6,12 @@ const DEFAULT_USER_AGENTS = [
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
 ];
 
+type ScraperMode = 'auto' | 'playwright' | 'fetch';
+const MISSING_BROWSER_ERROR_PATTERNS = [
+    "Executable doesn't exist",
+    'Please run the following command to download new browsers',
+] as const;
+
 export interface ScrapeOptions {
     timeoutMs?: number;
     waitUntil?: 'load' | 'domcontentloaded' | 'networkidle';
@@ -24,12 +30,17 @@ export interface ScrapeResult {
 }
 
 export class PlaywrightScraper {
+    private static browserUnavailable = false;
+    private static warnedUnavailable = false;
     private readonly maxConcurrency: number;
+    private readonly mode: ScraperMode;
     private activeCount = 0;
     private readonly queue: Array<() => void> = [];
 
     constructor(maxConcurrency: number = Number(process.env.LLM_ENRICHMENT_PLAYWRIGHT_CONCURRENCY || '2')) {
         this.maxConcurrency = Math.max(1, maxConcurrency);
+        const configuredMode = (process.env.LLM_ENRICHMENT_SCRAPER_MODE || 'auto').trim().toLowerCase();
+        this.mode = configuredMode === 'fetch' || configuredMode === 'playwright' ? configuredMode : 'auto';
     }
 
     async scrapeUrl(url: string, options: ScrapeOptions = {}): Promise<ScrapeResult> {
@@ -45,6 +56,11 @@ export class PlaywrightScraper {
         let context: BrowserContext | null = null;
 
         try {
+            if (this.shouldUseFetchOnly()) {
+                const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
+                return { ...fallback, usedPlaywright: false };
+            }
+
             browser = await chromium.launch({ headless: true });
             context = await browser.newContext({ userAgent });
 
@@ -75,10 +91,26 @@ export class PlaywrightScraper {
                 usedPlaywright: true,
             };
         } catch (error) {
+            if (this.isMissingBrowserError(error)) {
+                PlaywrightScraper.browserUnavailable = true;
+                if (!PlaywrightScraper.warnedUnavailable) {
+                    PlaywrightScraper.warnedUnavailable = true;
+                    console.warn(
+                        '[PlaywrightScraper] Playwright browser is unavailable in this runtime. Falling back to fetch for all subsequent scrapes.'
+                    );
+                }
+            }
             if (!useFetchFallback) {
                 throw error;
             }
-            console.warn('Playwright scrape failed for', url, 'falling back to fetch:', error instanceof Error ? error.message : 'Unknown error');
+            if (!this.isMissingBrowserError(error) || this.mode === 'playwright') {
+                console.warn(
+                    'Playwright scrape failed for',
+                    url,
+                    'falling back to fetch:',
+                    error instanceof Error ? error.message : 'Unknown error'
+                );
+            }
             const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
             return { ...fallback, usedPlaywright: false };
         } finally {
@@ -114,6 +146,15 @@ export class PlaywrightScraper {
         return DEFAULT_USER_AGENTS[index];
     }
 
+    private shouldUseFetchOnly(): boolean {
+        return this.mode === 'fetch' || (this.mode === 'auto' && PlaywrightScraper.browserUnavailable);
+    }
+
+    private isMissingBrowserError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : '';
+        return MISSING_BROWSER_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
+    }
+
     private async acquireSlot(): Promise<() => void> {
         if (this.activeCount >= this.maxConcurrency) {
             await new Promise<void>((resolve) => this.queue.push(resolve));
@@ -126,4 +167,3 @@ export class PlaywrightScraper {
         };
     }
 }
-

@@ -17,7 +17,7 @@ interface GeminiProviderOptions {
     model?: string;
 }
 
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 const RESPONSE_SCHEMA = {
     type: SchemaType.OBJECT,
@@ -147,7 +147,7 @@ export class GeminiExtractionProvider implements ExtractionProvider {
         if (!options.apiKey) {
             throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is required for Gemini provider');
         }
-        this.model = options.model || DEFAULT_MODEL;
+        this.model = options.model || DEFAULT_GEMINI_MODEL;
         this.client = new GoogleGenerativeAI(options.apiKey);
     }
 
@@ -386,4 +386,3 @@ ${contextParts.join('\n')}
 Generate metadata for this event:`;
     }
 }
-

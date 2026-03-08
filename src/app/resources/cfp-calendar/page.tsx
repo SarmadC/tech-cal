@@ -1,9 +1,11 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { BreadcrumbJsonLd, ItemListJsonLd } from '@/components/seo';
 import { formatDate } from '@/utils/dateUtils';
 import { SITE_URL } from '@/config/site';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 export const revalidate = 3600;
 
@@ -46,6 +48,7 @@ interface CfpEvent {
 }
 
 export default async function CfpCalendarPage() {
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
     const supabase = await createClient();
     const now = new Date().toISOString();
 
@@ -67,6 +70,7 @@ export default async function CfpCalendarPage() {
     return (
         <>
             <BreadcrumbJsonLd
+                nonce={nonce}
                 items={[
                     { name: 'Home', url: SITE_URL },
                     { name: 'Resources', url: `${SITE_URL}/resources/tech-events-calendar-2026` },
@@ -74,6 +78,7 @@ export default async function CfpCalendarPage() {
                 ]}
             />
             <ItemListJsonLd
+                nonce={nonce}
                 items={cfpEvents.map((e) => ({
                     title: e.title,
                     startDate: e.start_time,

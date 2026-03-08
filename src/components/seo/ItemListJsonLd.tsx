@@ -16,13 +16,14 @@ interface ItemListEvent {
 
 interface ItemListJsonLdProps {
     items: ItemListEvent[];
+    nonce: string;
 }
 
 /**
  * Renders an ItemList JSON-LD schema with Event items.
  * Used on listing pages (categories, cities, resources) for rich search results.
  */
-export function ItemListJsonLd({ items }: ItemListJsonLdProps) {
+export function ItemListJsonLd({ items, nonce }: ItemListJsonLdProps) {
     if (items.length === 0) return null;
 
     const data = {
@@ -66,6 +67,7 @@ export function ItemListJsonLd({ items }: ItemListJsonLdProps) {
     return (
         <script
             type="application/ld+json"
+            nonce={nonce}
             dangerouslySetInnerHTML={{ __html: safeJson }} // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
         />
     );

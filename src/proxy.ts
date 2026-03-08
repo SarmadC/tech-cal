@@ -2,6 +2,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
+import { buildCsp, CSP_NONCE_HEADER } from '@/lib/security/csp'
 
 // Routes that require authentication
 const PROTECTED_ROUTES = [
@@ -44,10 +45,30 @@ export function isCrawlablePublicRoute(pathname: string): boolean {
   return CRAWLABLE_PUBLIC_PREFIXES.some(route => pathMatchesPrefix(pathname, route))
 }
 
+function createCspNonce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  return btoa(String.fromCharCode(...bytes))
+}
+
+function applySecurityHeaders(response: NextResponse, pathname: string, nonce: string) {
+  const isEmbedRoute = pathMatchesPrefix(pathname, '/embed')
+  response.headers.set(
+    'Content-Security-Policy',
+    buildCsp({
+      frameAncestors: isEmbedRoute ? '*' : "'none'",
+      nonce,
+    })
+  )
+}
+
 export async function proxy(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers)
+  const nonce = createCspNonce()
+  requestHeaders.set(CSP_NONCE_HEADER, nonce)
+
   let response = NextResponse.next({
     request: {
-      headers: request.headers,
+      headers: requestHeaders,
     },
   })
 
@@ -65,7 +86,7 @@ export async function proxy(request: NextRequest) {
           // Set cookie on the response for the browser
           response = NextResponse.next({
             request: {
-              headers: request.headers,
+              headers: requestHeaders,
             },
           })
           response.cookies.set({ name, value, ...options })
@@ -74,7 +95,7 @@ export async function proxy(request: NextRequest) {
           request.cookies.set({ name, value: '', ...options })
           response = NextResponse.next({
             request: {
-              headers: request.headers,
+              headers: requestHeaders,
             },
           })
           response.cookies.set({ name, value: '', ...options })
@@ -96,14 +117,19 @@ export async function proxy(request: NextRequest) {
     // Keep both params during transition since some pages still read `next`.
     redirectUrl.searchParams.set('redirect', redirectPath)
     redirectUrl.searchParams.set('next', redirectPath)
-    return NextResponse.redirect(redirectUrl)
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+    applySecurityHeaders(redirectResponse, pathname, nonce)
+    return redirectResponse
   }
 
   // If user is authenticated and trying to access auth routes (login/signup)
   if (user && isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL('/discover', request.url))
+    const redirectResponse = NextResponse.redirect(new URL('/discover', request.url))
+    applySecurityHeaders(redirectResponse, pathname, nonce)
+    return redirectResponse
   }
 
+  applySecurityHeaders(response, pathname, nonce)
   return response
 }
 

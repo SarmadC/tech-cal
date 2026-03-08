@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,6 +12,7 @@ import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import type { AgendaItem } from '@/types/events';
 import { SITE_URL } from '@/config/site';
 import { sanitizeBlogHtml } from '@/lib/sanitizeHtml';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 // Revalidate every hour
 export const revalidate = 3600;
@@ -113,6 +115,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
     const { slug } = await params;
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
     const supabase = await createClient();
 
     const fullSelect = `
@@ -209,6 +212,7 @@ export default async function BlogPostPage({ params }: Props) {
     return (
         <>
             <ArticleJsonLd
+                nonce={nonce}
                 title={post.title}
                 description={post.excerpt || 'Read the latest insights from the Kure-Cal blog on tech events, conferences, and developer growth.'}
                 publishedAt={post.published_at || new Date().toISOString()}
@@ -216,7 +220,7 @@ export default async function BlogPostPage({ params }: Props) {
                 slug={post.slug}
                 imageUrl={post.featured_image_url || undefined}
             />
-            <BreadcrumbJsonLd items={[
+            <BreadcrumbJsonLd nonce={nonce} items={[
                 { name: 'Home', url: SITE_URL },
                 { name: 'Blog', url: `${SITE_URL}/blog` },
                 { name: post.title },

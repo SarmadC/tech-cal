@@ -3,62 +3,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-type CspStage = 'compat' | 'balanced' | 'strict';
-
-type CspOptions = {
-  frameAncestors: string;
-  allowUnsafeInline: boolean;
-  allowUnsafeEval: boolean;
-};
-
-const cspStage = ((process.env.CSP_STAGE || 'balanced').toLowerCase()) as CspStage;
-const isProduction = process.env.NODE_ENV === 'production';
-
-function getCspFlags(stage: CspStage) {
-  if (stage === 'strict') {
-    return { allowUnsafeInline: false, allowUnsafeEval: false };
-  }
-  if (stage === 'compat') {
-    return { allowUnsafeInline: true, allowUnsafeEval: true };
-  }
-  // balanced (default): keep inline for compatibility, remove eval in production
-  return { allowUnsafeInline: true, allowUnsafeEval: !isProduction };
-}
-
-const activeCspFlags = getCspFlags(cspStage);
-
-const buildCsp = ({ frameAncestors, allowUnsafeInline, allowUnsafeEval }: CspOptions) => {
-  const scriptSrc = [
-    "'self'",
-    allowUnsafeInline ? "'unsafe-inline'" : null,
-    allowUnsafeEval ? "'unsafe-eval'" : null,
-    'https://cdnjs.cloudflare.com',
-    'https://js.sentry-cdn.com',
-    'https://cdn.paddle.com',
-    'https://public.profitwell.com',
-    'https://us.i.posthog.com',
-    'https://us-assets.i.posthog.com',
-    'https://www.googletagmanager.com',
-  ].filter(Boolean).join(' ');
-
-  return `
-        default-src 'self';
-        script-src ${scriptSrc};
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
-        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
-        img-src 'self' data: blob: https:;
-        font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
-        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com https://us.i.posthog.com https://us-assets.i.posthog.com https://www.google-analytics.com https://region1.google-analytics.com;
-        frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;
-        frame-ancestors ${frameAncestors};
-        base-uri 'self';
-        form-action 'self';
-        object-src 'none';
-        `.replace(/\s+/g, ' ').trim();
-};
-
-const strictReportOnlyCspFlags = { allowUnsafeInline: false, allowUnsafeEval: false };
-
 // Shared security headers for all routes
 const commonSecurityHeaders = [
   {
@@ -90,28 +34,12 @@ const securityHeaders = [
   {
     key: 'X-Frame-Options',
     value: 'DENY'
-  },
-  {
-    key: 'Content-Security-Policy',
-    value: buildCsp({ frameAncestors: "'none'", ...activeCspFlags })
-  },
-  {
-    key: 'Content-Security-Policy-Report-Only',
-    value: buildCsp({ frameAncestors: "'none'", ...strictReportOnlyCspFlags })
   }
 ];
 
 // Embed pages: explicitly allow framing by external sites.
 const embedHeaders = [
   ...commonSecurityHeaders,
-  {
-    key: 'Content-Security-Policy',
-    value: buildCsp({ frameAncestors: '*', ...activeCspFlags })
-  },
-  {
-    key: 'Content-Security-Policy-Report-Only',
-    value: buildCsp({ frameAncestors: '*', ...strictReportOnlyCspFlags })
-  }
 ];
 
 
@@ -215,24 +143,12 @@ const nextConfig: NextConfig = {
         hostname: 'icon.horse',
       },
       {
-        protocol: 'http',
-        hostname: 'static1.squarespace.com',
-      },
-      {
         protocol: 'https',
         hostname: 'static1.squarespace.com',
       },
       {
-        protocol: 'http',
-        hostname: 'reactsummit.us',
-      },
-      {
         protocol: 'https',
         hostname: 'reactsummit.us',
-      },
-      {
-        protocol: 'http',
-        hostname: 'www.swetugg.se',
       },
       {
         protocol: 'https',

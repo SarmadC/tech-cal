@@ -1,8 +1,13 @@
 import { logger } from '@/utils/logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import * as Sentry from '@sentry/nextjs';
+import { requireDebugRouteAccess } from '@/lib/debugRouteAccess';
 
 export const dynamic = 'force-dynamic';
+
+interface TagRelationRow {
+  event_id: string;
+}
 
 /**
  * Debug endpoint to test tag search directly
@@ -13,7 +18,12 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const term = searchParams.get('term') || 'data';
 
-    const supabase = await createClient();
+    const access = await requireDebugRouteAccess();
+    if (access.response) {
+      return access.response;
+    }
+
+    const { supabase } = access;
 
     // 1. Check if tag exists
     logger.debug('[DEBUG API] Searching for tags matching:', term);
@@ -24,7 +34,10 @@ export async function GET(request: NextRequest) {
 
     if (tagError) {
       console.error('[DEBUG API] Tag query error:', tagError);
-      return NextResponse.json({ error: 'Tag query failed', details: tagError }, { status: 500 });
+      Sentry.captureException(tagError, {
+        extra: { function: 'debug_tag_search_tags', term },
+      });
+      return NextResponse.json({ error: 'Tag query failed' }, { status: 500 });
     }
 
     logger.debug('[DEBUG API] Found tags:', tags?.length || 0);
@@ -43,7 +56,10 @@ export async function GET(request: NextRequest) {
 
     if (relError) {
       console.error('[DEBUG API] Relations query error:', relError);
-      return NextResponse.json({ error: 'Relations query failed', details: relError }, { status: 500 });
+      Sentry.captureException(relError, {
+        extra: { function: 'debug_tag_search_relations', term },
+      });
+      return NextResponse.json({ error: 'Relations query failed' }, { status: 500 });
     }
 
     logger.debug('[DEBUG API] Found relations:', relations?.length || 0);
@@ -63,7 +79,7 @@ export async function GET(request: NextRequest) {
       results: {
         matchingTags: tags || [],
         matchingRelations: relations || [],
-        eventIds: relations ? [...new Set(relations.map((r: any) => r.event_id))] : []
+        eventIds: relations ? [...new Set((relations as TagRelationRow[]).map((relation) => relation.event_id))] : []
       },
       stats: {
         matchingTagCount: tags?.length || 0,
@@ -74,8 +90,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[DEBUG API] Unexpected error:', error);
+    Sentry.captureException(error, {
+      extra: { function: 'debug_tag_search' },
+    });
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

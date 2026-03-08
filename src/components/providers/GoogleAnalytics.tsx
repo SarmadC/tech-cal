@@ -3,7 +3,11 @@
 import Script from 'next/script';
 import React from 'react';
 
-export default function GoogleAnalytics() {
+interface GoogleAnalyticsProps {
+    nonce: string;
+}
+
+export default function GoogleAnalytics({ nonce }: GoogleAnalyticsProps) {
     // Don't render anything if the GA ID is missing
     if (!process.env.NEXT_PUBLIC_GA_ID) {
         return null;
@@ -13,11 +17,13 @@ export default function GoogleAnalytics() {
         <>
             <Script
                 strategy="lazyOnload"
+                nonce={nonce}
                 src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
             />
             <Script
                 id="google-analytics"
                 strategy="lazyOnload"
+                nonce={nonce}
                 dangerouslySetInnerHTML={{
                     __html: `
             window.dataLayer = window.dataLayer || [];

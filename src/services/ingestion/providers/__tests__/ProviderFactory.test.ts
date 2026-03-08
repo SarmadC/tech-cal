@@ -25,8 +25,8 @@ describe('ProviderFactory', () => {
     });
 
     it('caches providers by provider and model', () => {
-        const defaultProvider = getExtractionProvider('gemini', 'gemini-1.5-flash');
-        const sameModelProvider = getExtractionProvider('gemini', 'gemini-1.5-flash');
+        const defaultProvider = getExtractionProvider('gemini', 'gemini-2.5-flash');
+        const sameModelProvider = getExtractionProvider('gemini', 'gemini-2.5-flash');
         const otherModelProvider = getExtractionProvider('gemini', 'gemini-2.0-flash');
 
         expect(defaultProvider).toBe(sameModelProvider);

@@ -9,6 +9,7 @@ const WEBSITE_ID = `${SITE_URL}/#website`;
 
 interface JsonLdProps {
     data: Record<string, unknown>;
+    nonce?: string;
 }
 
 /**
@@ -22,19 +23,24 @@ const safeJsonLdStringify = (data: Record<string, unknown>): string => {
 /**
  * Base component for rendering JSON-LD structured data
  */
-function JsonLd({ data }: JsonLdProps) {
+function JsonLd({ data, nonce }: JsonLdProps) {
     return (
         <script
             type="application/ld+json"
+            nonce={nonce}
             dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(data) }} // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
         />
     );
 }
 
+interface NoncedJsonLdProps {
+    nonce?: string;
+}
+
 /**
  * Organization schema - Use in root layout for site-wide branding
  */
-export function OrganizationJsonLd() {
+export function OrganizationJsonLd({ nonce }: NoncedJsonLdProps) {
     const sameAs = [
         'https://twitter.com/kure_cal',
         'https://linkedin.com/company/kure-cal',
@@ -54,13 +60,13 @@ export function OrganizationJsonLd() {
         ...(sameAs.length > 0 && { sameAs }),
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 /**
  * WebSite schema with search action - Use in root layout
  */
-export function WebsiteJsonLd() {
+export function WebsiteJsonLd({ nonce }: NoncedJsonLdProps) {
     const data = {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
@@ -82,7 +88,7 @@ export function WebsiteJsonLd() {
         },
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 /**
@@ -95,9 +101,10 @@ interface FAQ {
 
 interface FAQPageJsonLdProps {
     faqs: FAQ[];
+    nonce?: string;
 }
 
-export function FAQPageJsonLd({ faqs }: FAQPageJsonLdProps) {
+export function FAQPageJsonLd({ faqs, nonce }: FAQPageJsonLdProps) {
     const data = {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
@@ -111,7 +118,7 @@ export function FAQPageJsonLd({ faqs }: FAQPageJsonLdProps) {
         })),
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 /**
@@ -125,6 +132,7 @@ interface ArticleJsonLdProps {
     authorName: string;
     slug: string;
     imageUrl?: string;
+    nonce: string;
 }
 
 export function ArticleJsonLd({
@@ -135,6 +143,7 @@ export function ArticleJsonLd({
     authorName,
     slug,
     imageUrl,
+    nonce,
 }: ArticleJsonLdProps) {
     const data = {
         '@context': 'https://schema.org',
@@ -164,7 +173,7 @@ export function ArticleJsonLd({
         }),
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 /**
@@ -191,6 +200,7 @@ interface EventJsonLdProps {
         priceMax?: number | null;
         currency?: string | null;
     };
+    nonce: string;
 }
 
 export function EventJsonLd({
@@ -204,6 +214,7 @@ export function EventJsonLd({
     isOnline,
     organizer,
     offers,
+    nonce,
 }: EventJsonLdProps) {
     const fallbackImage = `${SITE_URL}/og-image.png`;
     const resolvedImage = imageUrl || fallbackImage;
@@ -270,7 +281,7 @@ export function EventJsonLd({
         ...(offersSchema && { offers: offersSchema }),
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 /**
@@ -283,9 +294,10 @@ interface BreadcrumbItem {
 
 interface BreadcrumbJsonLdProps {
     items: BreadcrumbItem[];
+    nonce: string;
 }
 
-export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
+export function BreadcrumbJsonLd({ items, nonce }: BreadcrumbJsonLdProps) {
     const data = {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
@@ -297,7 +309,7 @@ export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
         })),
     };
 
-    return <JsonLd data={data} />;
+    return <JsonLd data={data} nonce={nonce} />;
 }
 
 export default JsonLd;

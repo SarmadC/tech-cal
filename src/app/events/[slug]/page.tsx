@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -19,6 +20,7 @@ import WhosGoingSection from '@/components/events/WhosGoingSection';
 import { SITE_URL } from '@/config/site';
 import PublicEventMoreActions from '@/components/events/PublicEventMoreActions';
 import PublicEventShortcuts from '@/components/events/PublicEventShortcuts';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -246,6 +248,7 @@ import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 export default async function PublicEventPage({ params }: EventPageProps) {
     const { slug } = await params;
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
     const result = await getEventBySlug(slug);
 
     if (!result) {
@@ -272,6 +275,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
         <>
             {/* JSON-LD Structured Data for Google Rich Results */}
             <EventJsonLd
+                nonce={nonce}
                 name={event.title}
                 description={event.description || ''}
                 startDate={event.start_time}
@@ -288,6 +292,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 }}
             />
             <BreadcrumbJsonLd
+                nonce={nonce}
                 items={[
                     { name: 'Home', url: SITE_URL },
                     { name: 'Events', url: `${SITE_URL}/events` },

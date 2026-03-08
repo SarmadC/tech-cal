@@ -5,6 +5,7 @@
 
 import type { Metadata } from "next";
 import { DM_Sans, Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
+import { headers } from 'next/headers';
 
 import "./styles/globals.css";
 import './styles/premium-animation.css';
@@ -37,6 +38,7 @@ import PostHogPageView from '@/components/providers/PostHogPageView';
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
 import { SITE_URL } from '@/config/site';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 
 const inter = Inter({
@@ -117,18 +119,20 @@ export const metadata: Metadata = {
     },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
             <head>
                 {/* FullCalendar CSS moved to calendar-specific components for better performance */}
                 {/* Structured Data for SEO */}
-                <OrganizationJsonLd />
-                <WebsiteJsonLd />
+                <OrganizationJsonLd nonce={nonce} />
+                <WebsiteJsonLd nonce={nonce} />
                 <link rel="alternate" type="application/rss+xml" title="Kure-Cal Blog RSS Feed" href="/blog/feed.xml" />
             </head>
             <body className={`${inter.className} ${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`}>
@@ -136,7 +140,7 @@ export default function RootLayout({
                     Skip to main content
                 </a>
                 <PostHogProvider>
-                    <GoogleAnalytics />
+                    <GoogleAnalytics nonce={nonce} />
                     <Suspense fallback={null}>
                         <PostHogPageView />
                     </Suspense>

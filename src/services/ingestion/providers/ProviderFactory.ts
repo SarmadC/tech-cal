@@ -1,6 +1,6 @@
 import { env } from '@/utils/env';
 import type { ExtractionProvider } from './ExtractionProvider';
-import { GeminiExtractionProvider } from './GeminiExtractionProvider';
+import { DEFAULT_GEMINI_MODEL, GeminiExtractionProvider } from './GeminiExtractionProvider';
 
 type ProviderName = 'gemini';
 
@@ -17,7 +17,7 @@ export const getExtractionProvider = (
     modelOverride?: string
 ): ExtractionProvider => {
     const providerName = getProviderName(providerOverride);
-    const modelName = modelOverride || env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
+    const modelName = modelOverride || env('LLM_ENRICHMENT_MODEL', DEFAULT_GEMINI_MODEL);
     const cacheKey = `${providerName}:${modelName}`;
 
     const cachedProvider = providerCache.get(cacheKey);

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import * as Sentry from '@sentry/nextjs';
+import { requireDebugRouteAccess } from '@/lib/debugRouteAccess';
 
 export const dynamic = 'force-dynamic';
+
+interface TagEventRelationRow {
+  event_id: string;
+}
 
 /**
  * Debug endpoint to check dates of events tagged with "data"
@@ -9,7 +14,12 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const access = await requireDebugRouteAccess();
+    if (access.response) {
+      return access.response;
+    }
+
+    const { supabase } = access;
 
     // Get events with "data" tags
     const { data: relations, error } = await supabase
@@ -23,10 +33,13 @@ export async function GET(_request: NextRequest) {
       .ilike('event_tags.event_tag', '%data%');
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      Sentry.captureException(error, {
+        extra: { function: 'debug_tag_events_dates_relations' },
+      });
+      return NextResponse.json({ error: 'Failed to load tagged events' }, { status: 500 });
     }
 
-    const eventIds = [...new Set(relations?.map((r: any) => r.event_id) || [])];
+    const eventIds = [...new Set((relations as TagEventRelationRow[] | null)?.map((relation) => relation.event_id) || [])];
 
     // Get full event details including dates
     const { data: events, error: eventsError } = await supabase
@@ -36,7 +49,10 @@ export async function GET(_request: NextRequest) {
       .order('start_time', { ascending: false });
 
     if (eventsError) {
-      return NextResponse.json({ error: eventsError.message }, { status: 500 });
+      Sentry.captureException(eventsError, {
+        extra: { function: 'debug_tag_events_dates_events' },
+      });
+      return NextResponse.json({ error: 'Failed to load event details' }, { status: 500 });
     }
 
     const today = new Date();
@@ -63,6 +79,9 @@ export async function GET(_request: NextRequest) {
     });
   } catch (error) {
     console.error('[DEBUG] Error:', error);
+    Sentry.captureException(error, {
+      extra: { function: 'debug_tag_events_dates' },
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

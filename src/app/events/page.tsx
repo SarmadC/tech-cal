@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { EventTypeService } from '@/services/eventTypeService';
@@ -8,6 +9,7 @@ import { BreadcrumbJsonLd, ItemListJsonLd } from '@/components/seo';
 import { formatDate } from '@/utils/dateUtils';
 import { generateEventSlug } from '@/utils/slugUtils';
 import { SITE_URL } from '@/config/site';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 export const metadata: Metadata = {
     title: 'Tech Events Calendar 2026 — Conferences, Meetups & Hackathons | Kure-Cal',
@@ -84,6 +86,7 @@ export default async function EventsPage(
 ) {
     const searchParams = await props.searchParams;
     const circleSlug = searchParams?.circle as string | undefined;
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
 
     const supabase = await createClient();
 
@@ -113,12 +116,14 @@ export default async function EventsPage(
         <>
             {/* Structured data */}
             <BreadcrumbJsonLd
+                nonce={nonce}
                 items={[
                     { name: 'Home', url: SITE_URL },
                     { name: 'Events' },
                 ]}
             />
             <ItemListJsonLd
+                nonce={nonce}
                 items={ssrEvents.map((event) => ({
                     title: event.title,
                     startDate: event.start_time,
