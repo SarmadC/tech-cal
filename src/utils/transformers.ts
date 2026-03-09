@@ -177,6 +177,7 @@ export const eventTransformer = {
             status: supabaseEvent.status || 'confirmed',
             sourceUrl: supabaseEvent.source_url || '#',
             livestreamUrl: supabaseEvent.livestream_url,
+            eventImageUrl: supabaseEvent.event_image_url ?? undefined,
             eventTypeId: supabaseEvent.event_type_id || '',
             agendaUrl: (supabaseEvent as Record<string, unknown>).agenda_url as string | null,
             ...(eventTags.length > 0 && { tags: eventTags }),
@@ -207,6 +208,7 @@ export const eventTransformer = {
         ...(appEvent.status && { status: appEvent.status }),
         ...(appEvent.sourceUrl && { source_url: appEvent.sourceUrl }),
         ...(appEvent.livestreamUrl !== undefined && { livestream_url: appEvent.livestreamUrl }),
+        ...(appEvent.eventImageUrl !== undefined && { event_image_url: appEvent.eventImageUrl }),
         ...(appEvent.eventTypeId && { event_type_id: appEvent.eventTypeId }),
     })
 };

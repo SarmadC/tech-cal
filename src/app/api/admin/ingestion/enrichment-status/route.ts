@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { EnrichmentMetadata } from '@/types/enrichment';
+import { LLM_ENRICHMENT_REVIEW_REASONS } from '@/services/ingestion/utils/enrichmentQueue';
 
 interface ReviewQueueRow {
     event_id: string | null;
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
         serviceClient
             .from('event_update_queue')
             .select('event_id, status, created_at')
-            .eq('requires_review_reason', 'llm_enrichment')
+            .in('requires_review_reason', [...LLM_ENRICHMENT_REVIEW_REASONS])
             .order('created_at', { ascending: false })
             .limit(5000),
     ]);

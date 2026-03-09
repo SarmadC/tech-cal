@@ -28,6 +28,7 @@ function JsonLd({ data, nonce }: JsonLdProps) {
         <script
             type="application/ld+json"
             nonce={nonce}
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(data) }} // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
         />
     );

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildReviewQueueSignature,
     extractRelationIds,
+    isLlmEnrichmentReviewReason,
     isRetryDue,
     selectPendingInferenceCandidates,
     selectPendingScrapeCandidates,
@@ -134,5 +135,11 @@ describe('enrichmentQueue utilities', () => {
         expect(extractRelationIds(['a', 'b'])).toEqual(['a', 'b']);
         expect(extractRelationIds({ ids: ['a', 'b'], labels: ['Alpha', 'Beta'] })).toEqual(['a', 'b']);
         expect(extractRelationIds({ labels: ['Alpha'] })).toBeUndefined();
+    });
+
+    it('recognizes both primary and merged llm review queue reasons', () => {
+        expect(isLlmEnrichmentReviewReason('llm_enrichment')).toBe(true);
+        expect(isLlmEnrichmentReviewReason('llm_enrichment_merged')).toBe(true);
+        expect(isLlmEnrichmentReviewReason('Fields require review: tags')).toBe(false);
     });
 });

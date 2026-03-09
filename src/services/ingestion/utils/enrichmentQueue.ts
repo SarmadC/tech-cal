@@ -1,6 +1,13 @@
 import type { EnrichmentMetadata } from '@/types/enrichment';
 import type { FieldDiff } from '../EventUpdateService';
 
+export const LLM_ENRICHMENT_REVIEW_REASON = 'llm_enrichment';
+export const LLM_ENRICHMENT_MERGED_REVIEW_REASON = 'llm_enrichment_merged';
+export const LLM_ENRICHMENT_REVIEW_REASONS = [
+    LLM_ENRICHMENT_REVIEW_REASON,
+    LLM_ENRICHMENT_MERGED_REVIEW_REASON,
+] as const;
+
 export interface QueueFieldSnapshot {
     field_name: string;
     old_value: unknown;
@@ -193,3 +200,8 @@ export const formatRelationLabels = (value: unknown): string[] | null => {
 
     return null;
 };
+
+export const isLlmEnrichmentReviewReason = (reason: string | null | undefined): boolean =>
+    typeof reason === 'string' && LLM_ENRICHMENT_REVIEW_REASONS.includes(
+        reason as (typeof LLM_ENRICHMENT_REVIEW_REASONS)[number]
+    );

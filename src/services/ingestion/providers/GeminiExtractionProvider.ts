@@ -18,6 +18,10 @@ interface GeminiProviderOptions {
 }
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const MAX_PROVIDER_TAGS = 25;
+const PAID_PRICING_KEYWORDS = ['paid', 'ticket', 'tickets', 'fixed', 'registration', 'fee', 'cost', 'price'];
+const FREE_PRICING_KEYWORDS = ['free', 'complimentary', 'gratis', 'no cost'];
+const VARIABLE_PRICING_KEYWORDS = ['varies', 'variable', 'depends', 'tbd', 'range', 'sliding'];
 
 const RESPONSE_SCHEMA = {
     type: SchemaType.OBJECT,
@@ -138,6 +142,154 @@ const INFERENCE_RESPONSE_SCHEMA = {
     },
 };
 
+const normalizeTagList = (value: unknown, allowedTags?: string[]): string[] | undefined => {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const allowlist = new Map<string, string>();
+    (allowedTags ?? []).forEach((tag) => {
+        const normalized = tag.trim().toLowerCase();
+        if (normalized) {
+            allowlist.set(normalized, tag);
+        }
+    });
+
+    const normalized = value
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean)
+        .map((tag) => {
+            if (allowlist.size === 0) {
+                return tag;
+            }
+            return allowlist.get(tag.toLowerCase()) ?? null;
+        })
+        .filter((tag): tag is string => Boolean(tag));
+
+    const deduped = Array.from(new Set(normalized)).slice(0, MAX_PROVIDER_TAGS);
+    return deduped.length > 0 ? deduped : undefined;
+};
+
+export const normalizePricingType = (value: unknown): 'Free' | 'Paid' | 'Varies' | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (FREE_PRICING_KEYWORDS.some((keyword) => normalized.includes(keyword))) {
+        return 'Free';
+    }
+
+    if (VARIABLE_PRICING_KEYWORDS.some((keyword) => normalized.includes(keyword))) {
+        return 'Varies';
+    }
+
+    if (PAID_PRICING_KEYWORDS.some((keyword) => normalized.includes(keyword))) {
+        return 'Paid';
+    }
+
+    return undefined;
+};
+
+const normalizeEventFormat = (value: unknown): 'Online' | 'In-person' | 'Hybrid' | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (normalized.includes('hybrid')) {
+        return 'Hybrid';
+    }
+
+    if (
+        normalized.includes('online')
+        || normalized.includes('virtual')
+        || normalized.includes('remote')
+    ) {
+        return 'Online';
+    }
+
+    if (
+        normalized.includes('in-person')
+        || normalized.includes('in person')
+        || normalized.includes('onsite')
+        || normalized.includes('on-site')
+        || normalized.includes('physical')
+    ) {
+        return 'In-person';
+    }
+
+    return undefined;
+};
+
+export const normalizeExtractedProviderPayload = (
+    value: unknown,
+    allowedTags?: string[],
+): unknown => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return value;
+    }
+
+    const payload = { ...(value as Record<string, unknown>) };
+    const normalizedTags = normalizeTagList(payload.tags, allowedTags);
+
+    if (normalizedTags) {
+        payload.tags = normalizedTags;
+    } else {
+        delete payload.tags;
+    }
+
+    if (payload.pricing && typeof payload.pricing === 'object' && !Array.isArray(payload.pricing)) {
+        const pricing = { ...(payload.pricing as Record<string, unknown>) };
+        const normalizedPricingType = normalizePricingType(pricing.pricingType);
+
+        if (normalizedPricingType) {
+            pricing.pricingType = normalizedPricingType;
+        } else {
+            delete pricing.pricingType;
+        }
+
+        payload.pricing = pricing;
+    }
+
+    const normalizedFormat = normalizeEventFormat(payload.eventFormat);
+    if (normalizedFormat) {
+        payload.eventFormat = normalizedFormat;
+    } else if ('eventFormat' in payload) {
+        delete payload.eventFormat;
+    }
+
+    return payload;
+};
+
+export const normalizeInferredProviderPayload = (
+    value: unknown,
+    allowedTags?: string[],
+): unknown => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return value;
+    }
+
+    const payload = { ...(value as Record<string, unknown>) };
+    const normalizedTags = normalizeTagList(payload.tags, allowedTags);
+
+    if (normalizedTags) {
+        payload.tags = normalizedTags;
+    } else {
+        delete payload.tags;
+    }
+
+    return payload;
+};
+
 export class GeminiExtractionProvider implements ExtractionProvider {
     public readonly name = 'gemini';
     private readonly model: string;
@@ -179,8 +331,8 @@ export class GeminiExtractionProvider implements ExtractionProvider {
 
         const parsed = this.parseResponse(response);
         const sanitized = this.pruneNulls(parsed);
-        const withAllowedTags = this.restrictTagsToAllowlist(sanitized, request.allowedTags);
-        const validated = ExtractedEventDataSchema.safeParse(withAllowedTags);
+        const normalized = normalizeExtractedProviderPayload(sanitized, request.allowedTags);
+        const validated = ExtractedEventDataSchema.safeParse(normalized);
         if (!validated.success) {
             const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
             throw new Error(`Gemini response failed validation: ${issues}`);
@@ -248,31 +400,6 @@ ${content}
         return value;
     }
 
-    private restrictTagsToAllowlist(value: unknown, allowedTags?: string[]): unknown {
-        if (!allowedTags || allowedTags.length === 0) return value;
-        const allowed = new Map<string, string>();
-        allowedTags.forEach(tag => {
-            const key = tag.trim().toLowerCase();
-            if (key) allowed.set(key, tag);
-        });
-
-        if (!allowed.size) return value;
-
-        if (value && typeof value === 'object' && 'tags' in (value as Record<string, unknown>)) {
-            const obj = { ...(value as Record<string, unknown>) };
-            const incoming = Array.isArray(obj.tags) ? obj.tags : [];
-            const filtered = incoming
-                .map(t => (typeof t === 'string' ? t.trim() : ''))
-                .filter(Boolean)
-                .map(t => allowed.get(t.toLowerCase()))
-                .filter((t): t is string => !!t);
-            obj.tags = Array.from(new Set(filtered));
-            return obj;
-        }
-
-        return value;
-    }
-
     // =============================================
     // INFERENCE MODE (no scraping required)
     // =============================================
@@ -302,12 +429,12 @@ ${content}
 
         const parsed = this.parseResponse(response);
         const sanitized = this.pruneNullsAndEmptyArrays(parsed);
-        const withAllowedTags = this.restrictTagsToAllowlist(sanitized, request.allowedTags);
-        const validated = InferredEventDataSchema.safeParse(withAllowedTags);
+        const normalized = normalizeInferredProviderPayload(sanitized, request.allowedTags);
+        const validated = InferredEventDataSchema.safeParse(normalized);
 
         if (!validated.success) {
             const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
-            console.warn('Inference validation failed:', JSON.stringify(withAllowedTags, null, 2));
+            console.warn('Inference validation failed:', JSON.stringify(normalized, null, 2));
             throw new Error(`Gemini inference response failed validation: ${issues}`);
         }
 

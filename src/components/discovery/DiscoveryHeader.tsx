@@ -328,7 +328,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         placeholder="Search events..."
                         maxLength={200}
                         aria-label="Search events"
-                        className="w-full pl-11 pr-16 py-2.5 bg-background focus:bg-background border border-border focus:border-black/20 dark:focus:border-white/20 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none shadow-sm"
+                        className="w-full pl-11 pr-16 py-2.5 bg-background focus:bg-background border-none rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none shadow-sm"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onFocus={() => {

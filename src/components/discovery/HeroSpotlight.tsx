@@ -39,7 +39,7 @@ const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
 }) => {
     const heroEvents = React.useMemo(() => {
         const topCandidates = events
-            .filter(e => (e.careerImpact?.overall ?? 0) >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH)
+            .filter(e => (e.careerImpact?.overall ?? 0) >= 60)
             .sort((a, b) => (b.careerImpact?.overall ?? 0) - (a.careerImpact?.overall ?? 0))
             .slice(0, 9);
 

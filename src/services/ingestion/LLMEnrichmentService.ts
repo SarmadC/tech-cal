@@ -20,6 +20,9 @@ import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
 import {
     buildReviewQueueSignature,
+    isLlmEnrichmentReviewReason,
+    LLM_ENRICHMENT_MERGED_REVIEW_REASON,
+    LLM_ENRICHMENT_REVIEW_REASON,
     selectPendingInferenceCandidates,
     selectPendingScrapeCandidates,
     type QueueFieldSnapshot,
@@ -82,6 +85,7 @@ type ReviewQueueRow = {
     id: string;
     status: string;
     created_at?: string | null;
+    requires_review_reason?: string | null;
 };
 
 type ReviewQueueField = QueueFieldSnapshot & {
@@ -604,26 +608,28 @@ export class LLMEnrichmentService {
 
         const queueSignature = buildReviewQueueSignature(diffs);
         const recentQueues = await this.fetchRecentReviewQueues(eventId);
-        const openQueue = recentQueues.find((queue) =>
+        const openQueues = recentQueues.filter((queue) =>
             OPEN_REVIEW_QUEUE_STATUSES.includes(queue.status as typeof OPEN_REVIEW_QUEUE_STATUSES[number])
         );
+        const openQueue = openQueues.find((queue) => isLlmEnrichmentReviewReason(queue.requires_review_reason))
+            ?? openQueues[0];
 
         if (openQueue) {
             const openFields = await this.fetchReviewQueueFields(openQueue.id);
-            const openSignature = buildReviewQueueSignature(
-                openFields.filter((field) => field.field_status === 'pending')
-            );
-
-            if (openSignature === queueSignature) {
+            if (this.hasMatchingPendingSignature(openFields, diffs, queueSignature)) {
+                await this.ensureMergedReviewQueueReason(openQueue);
                 return;
             }
 
-            await this.syncOpenReviewQueue(openQueue, openFields, diffs);
+            await this.syncOpenReviewQueue(openQueue, openFields, diffs, {
+                pruneMissingFields: openQueue.requires_review_reason === LLM_ENRICHMENT_REVIEW_REASON,
+            });
             return;
         }
 
         const latestResolvedQueue = recentQueues.find((queue) =>
             !OPEN_REVIEW_QUEUE_STATUSES.includes(queue.status as typeof OPEN_REVIEW_QUEUE_STATUSES[number])
+            && isLlmEnrichmentReviewReason(queue.requires_review_reason)
         );
 
         if (
@@ -648,11 +654,10 @@ export class LLMEnrichmentService {
 
         const { data, error } = await tableClient
             .from('event_update_queue')
-            .select('id, status, created_at')
+            .select('id, status, created_at, requires_review_reason')
             .eq('event_id', eventId)
-            .eq('requires_review_reason', 'llm_enrichment')
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(25);
 
         if (error) {
             throw new Error(`Failed to fetch review queue entries: ${error.message}`);
@@ -681,6 +686,7 @@ export class LLMEnrichmentService {
         queue: ReviewQueueRow,
         existingFields: ReviewQueueField[],
         diffs: FieldDiff[],
+        options: { pruneMissingFields: boolean },
     ): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tableClient = this.supabaseClient as any;
@@ -755,13 +761,15 @@ export class LLMEnrichmentService {
             });
         }
 
-        for (const staleField of pendingByField.values()) {
-            deletePromises.push(
-                tableClient
-                    .from('event_update_queue_fields')
-                    .delete()
-                    .eq('id', staleField.id)
-            );
+        if (options.pruneMissingFields) {
+            for (const staleField of pendingByField.values()) {
+                deletePromises.push(
+                    tableClient
+                        .from('event_update_queue_fields')
+                        .delete()
+                        .eq('id', staleField.id)
+                );
+            }
         }
 
         if (fieldsToInsert.length > 0) {
@@ -783,14 +791,22 @@ export class LLMEnrichmentService {
             throw new Error(`Failed to update review queue fields: ${errorMessage}`);
         }
 
+        const queueUpdates: Record<string, unknown> = {};
+
         if (queue.status !== 'pending' && fieldsToInsert.length > 0) {
+            queueUpdates.status = 'partially_approved';
+            queueUpdates.reviewed_by = null;
+            queueUpdates.reviewed_at = null;
+        }
+
+        if (!isLlmEnrichmentReviewReason(queue.requires_review_reason)) {
+            queueUpdates.requires_review_reason = LLM_ENRICHMENT_MERGED_REVIEW_REASON;
+        }
+
+        if (Object.keys(queueUpdates).length > 0) {
             const { error } = await tableClient
                 .from('event_update_queue')
-                .update({
-                    status: 'partially_approved',
-                    reviewed_by: null,
-                    reviewed_at: null,
-                })
+                .update(queueUpdates)
                 .eq('id', queue.id);
 
             if (error) {
@@ -808,7 +824,7 @@ export class LLMEnrichmentService {
             .insert({
                 event_id: eventId,
                 status: 'pending',
-                requires_review_reason: 'llm_enrichment',
+                requires_review_reason: LLM_ENRICHMENT_REVIEW_REASON,
                 // Use event_id as source_event_id to satisfy NOT NULL constraints in some deployments
                 source_event_id: eventId,
             })
@@ -834,6 +850,40 @@ export class LLMEnrichmentService {
 
         if (fieldsError) {
             throw new Error(`Failed to create review queue fields: ${fieldsError.message}`);
+        }
+    }
+
+    private hasMatchingPendingSignature(
+        existingFields: ReviewQueueField[],
+        diffs: FieldDiff[],
+        queueSignature: string,
+    ): boolean {
+        const diffFieldNames = new Set(diffs.map((diff) => diff.fieldName));
+        const relevantPendingFields = existingFields.filter((field) =>
+            field.field_status === 'pending' && diffFieldNames.has(field.field_name)
+        );
+
+        if (relevantPendingFields.length !== diffs.length) {
+            return false;
+        }
+
+        return buildReviewQueueSignature(relevantPendingFields) === queueSignature;
+    }
+
+    private async ensureMergedReviewQueueReason(queue: ReviewQueueRow): Promise<void> {
+        if (isLlmEnrichmentReviewReason(queue.requires_review_reason)) {
+            return;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = this.supabaseClient as any;
+        const { error } = await tableClient
+            .from('event_update_queue')
+            .update({ requires_review_reason: LLM_ENRICHMENT_MERGED_REVIEW_REASON })
+            .eq('id', queue.id);
+
+        if (error) {
+            throw new Error(`Failed to update review queue reason: ${error.message}`);
         }
     }
 

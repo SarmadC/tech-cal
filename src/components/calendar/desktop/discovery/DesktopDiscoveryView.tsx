@@ -365,7 +365,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         if (!isPersonalizedHome) return new Set<string>();
         return new Set(
             diversifiedEvents
-                .filter(e => (e.careerImpact?.overall ?? 0) >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH)
+                .filter(e => (e.careerImpact?.overall ?? 0) >= 60)
                 .slice(0, 3)
                 .map(e => e.id)
         );

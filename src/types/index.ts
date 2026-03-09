@@ -38,6 +38,7 @@ export type SupabaseEvent = {
     livestream_url: string | null;
     event_type_id: string | null;
     agenda_url: string | null;
+    event_image_url?: string | null;
 };
 
 export type SupabaseEventType = {
