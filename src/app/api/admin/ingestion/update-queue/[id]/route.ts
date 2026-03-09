@@ -30,6 +30,24 @@ interface QueueFieldRecord {
     new_value: unknown;
 }
 
+interface ApprovalPlan {
+    scalarUpdateData: Record<string, unknown>;
+    relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] };
+    agendaUpdates: AgendaItemInput[];
+    fieldsToApprove: QueueFieldRecord[];
+    fieldsToReject: QueueFieldRecord[];
+    sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }>;
+    warnings: string[];
+}
+
+interface QueueActionResponse {
+    success: boolean;
+    approvedFields?: string[];
+    rejectedFields?: string[];
+    status?: 'approved' | 'rejected' | 'partially_approved' | 'pending';
+    warnings?: string[];
+}
+
 const coerceAgendaItems = (
     value: unknown
 ): { items: AgendaItemInput[]; invalidItems: string[] } => {
@@ -88,21 +106,43 @@ const coerceAgendaItems = (
     };
 };
 
-const collectFieldUpdates = (fields: QueueFieldRecord[]) => {
+const collectFieldUpdates = (fields: QueueFieldRecord[]): ApprovalPlan => {
     const scalarUpdateData: Record<string, unknown> = {};
     const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
     const agendaUpdates: AgendaItemInput[] = [];
+    const fieldsToApprove: QueueFieldRecord[] = [];
+    const fieldsToReject: QueueFieldRecord[] = [];
+    const sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }> = [];
+    const warnings: string[] = [];
 
     for (const field of fields) {
         if (field.field_name === 'agenda') {
             const { items, invalidItems } = coerceAgendaItems(field.new_value);
-            if (invalidItems.length > 0) {
-                throw new Error(
-                    `Agenda items require title, start_time, and end_time. Invalid: ${invalidItems.slice(0, 5).join(', ')}`
-                );
-            }
+
             if (items.length > 0) {
                 agendaUpdates.push(...items);
+                fieldsToApprove.push(field);
+                if (invalidItems.length > 0) {
+                    sanitizedFieldUpdates.push({
+                        id: field.id,
+                        newValue: items.map((item) => ({
+                            title: item.title,
+                            start_time: item.startTime,
+                            end_time: item.endTime,
+                            description: item.description ?? null,
+                            location: item.location ?? null,
+                            speakerIds: item.speakerIds ?? [],
+                        })),
+                    });
+                    warnings.push(
+                        `Skipped invalid agenda items missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
+                    );
+                }
+            } else if (invalidItems.length > 0) {
+                fieldsToReject.push(field);
+                warnings.push(
+                    `Rejected agenda field because every agenda item was missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
+                );
             }
             continue;
         }
@@ -120,16 +160,22 @@ const collectFieldUpdates = (fields: QueueFieldRecord[]) => {
             } else if (field.field_name === 'prerequisites') {
                 relationshipUpdates.prerequisiteIds = relationIds;
             }
+            fieldsToApprove.push(field);
             continue;
         }
 
         scalarUpdateData[field.field_name] = field.new_value;
+        fieldsToApprove.push(field);
     }
 
     return {
         scalarUpdateData,
         relationshipUpdates,
         agendaUpdates,
+        fieldsToApprove,
+        fieldsToReject,
+        sanitizedFieldUpdates,
+        warnings,
     };
 };
 
@@ -209,7 +255,7 @@ const updateQueueStatusForSelectiveAction = async (
 
 const applyApprovedFieldUpdates = async (
     queueItem: QueueItemForAction,
-    fields: QueueFieldRecord[],
+    plan: ApprovalPlan,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceClient: any,
     editedBy: string,
@@ -219,7 +265,7 @@ const applyApprovedFieldUpdates = async (
     }
 
     const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
-    const { scalarUpdateData, relationshipUpdates, agendaUpdates } = collectFieldUpdates(fields);
+    const { scalarUpdateData, relationshipUpdates, agendaUpdates } = plan;
 
     if (Object.keys(scalarUpdateData).length > 0) {
         const { error: updateError } = await serviceClient
@@ -257,6 +303,10 @@ const applyApprovedFieldUpdates = async (
             throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
         }
     }
+
+    return {
+        warnings: plan.warnings,
+    };
 };
 
 export async function GET(
@@ -295,14 +345,10 @@ export async function GET(
 
         const { id: queueId } = await context.params;
 
-        // Fetch queue item with event details
+        // Fetch queue item directly first to avoid join-related false 404s.
         const { data: queueItem, error: queueError } = await tableClient
             .from('event_update_queue')
-            .select(`
-                *,
-                event:events(id, title, start_time, description, organizer:organizers(id, name)),
-                source_event:source_events(id, source_id, ingestion_sources(name))
-            `)
+            .select('*')
             .eq('id', queueId)
             .single();
 
@@ -311,6 +357,46 @@ export async function GET(
                 { error: 'Queue item not found' },
                 { status: 404 }
             );
+        }
+
+        let event: {
+            id: string;
+            title: string | null;
+            start_time: string;
+            description?: string | null;
+            organizer?: { id: string; name: string } | null;
+        } | null = null;
+
+        if (queueItem.event_id) {
+            const { data: eventRow } = await serviceClient
+                .from('events')
+                .select('id, title, start_time, description, organizer_id')
+                .eq('id', queueItem.event_id)
+                .maybeSingle();
+
+            if (eventRow) {
+                let organizer: { id: string; name: string } | null = null;
+
+                if (eventRow.organizer_id) {
+                    const { data: organizerRow } = await serviceClient
+                        .from('organizers')
+                        .select('id, name')
+                        .eq('id', eventRow.organizer_id)
+                        .maybeSingle();
+
+                    if (organizerRow) {
+                        organizer = organizerRow;
+                    }
+                }
+
+                event = {
+                    id: eventRow.id,
+                    title: eventRow.title,
+                    start_time: eventRow.start_time,
+                    description: eventRow.description,
+                    organizer,
+                };
+            }
         }
 
         // Fetch all field-level diffs
@@ -325,7 +411,10 @@ export async function GET(
         }
 
         return NextResponse.json({
-            queue: queueItem,
+            queue: {
+                ...queueItem,
+                event,
+            },
             fields: fieldDiffs || [],
         });
     } catch (error) {
@@ -452,23 +541,61 @@ export async function POST(
             }
 
             // Update selected fields to approved and apply updates
-            const fieldsToApprove = await fetchPendingFields(tableClient, queueId, fieldNames);
-            await applyApprovedFieldUpdates(queueItem as QueueItemForAction, fieldsToApprove, serviceClient, user.id);
+            const pendingFields = await fetchPendingFields(tableClient, queueId, fieldNames);
+            if (pendingFields.length === 0) {
+                return NextResponse.json(
+                    { error: 'No matching pending fields to approve' },
+                    { status: 400 }
+                );
+            }
+            const approvalPlan = collectFieldUpdates(pendingFields);
+            const applyResult = await applyApprovedFieldUpdates(
+                queueItem as QueueItemForAction,
+                approvalPlan,
+                serviceClient,
+                user.id
+            );
+
+            await Promise.all(
+                approvalPlan.sanitizedFieldUpdates.map((update) =>
+                    tableClient
+                        .from('event_update_queue_fields')
+                        .update({ new_value: update.newValue })
+                        .eq('id', update.id)
+                )
+            );
 
             // Mark selected fields as approved, others as rejected
-            const { error: approveError } = await tableClient
-                .from('event_update_queue_fields')
-                .update({
-                    field_status: 'approved',
-                    reviewed_by: user.id,
-                    reviewed_at: new Date().toISOString(),
-                })
-                .eq('queue_id', queueId)
-                .in('field_name', fieldNames)
-                .eq('field_status', 'pending');
+            if (approvalPlan.fieldsToApprove.length > 0) {
+                const { error: approveError } = await tableClient
+                    .from('event_update_queue_fields')
+                    .update({
+                        field_status: 'approved',
+                        reviewed_by: user.id,
+                        reviewed_at: new Date().toISOString(),
+                    })
+                    .in('id', approvalPlan.fieldsToApprove.map((field) => field.id))
+                    .eq('field_status', 'pending');
 
-            if (approveError) {
-                throw new Error(`Failed to approve fields: ${approveError.message}`);
+                if (approveError) {
+                    throw new Error(`Failed to approve fields: ${approveError.message}`);
+                }
+            }
+
+            if (approvalPlan.fieldsToReject.length > 0) {
+                const { error: rejectInvalidError } = await tableClient
+                    .from('event_update_queue_fields')
+                    .update({
+                        field_status: 'rejected',
+                        reviewed_by: user.id,
+                        reviewed_at: new Date().toISOString(),
+                    })
+                    .in('id', approvalPlan.fieldsToReject.map((field) => field.id))
+                    .eq('field_status', 'pending');
+
+                if (rejectInvalidError) {
+                    throw new Error(`Failed to reject invalid fields: ${rejectInvalidError.message}`);
+                }
             }
 
             // Reject remaining pending fields
@@ -486,9 +613,15 @@ export async function POST(
                 console.warn('Failed to reject remaining fields:', rejectError);
             }
 
-            await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
+            const nextStatus = await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
 
-            return NextResponse.json({ success: true, approvedFields: fieldNames });
+            return NextResponse.json<QueueActionResponse>({
+                success: true,
+                approvedFields: approvalPlan.fieldsToApprove.map((field) => field.field_name),
+                rejectedFields: approvalPlan.fieldsToReject.map((field) => field.field_name),
+                status: nextStatus,
+                warnings: applyResult.warnings,
+            });
         } else if (action === 'reject-selective') {
             const body = await request.json();
             const { fieldNames } = body as { fieldNames: string[] };
@@ -550,34 +683,86 @@ export async function POST(
         } else if (action === 'approve') {
             // Approve all pending fields
             const pendingFields = await fetchPendingFields(tableClient, queueId);
-            await applyApprovedFieldUpdates(queueItem as QueueItemForAction, pendingFields, serviceClient, user.id);
+            if (pendingFields.length === 0) {
+                return NextResponse.json(
+                    { error: 'No pending fields to approve' },
+                    { status: 400 }
+                );
+            }
+            const approvalPlan = collectFieldUpdates(pendingFields);
+            const applyResult = await applyApprovedFieldUpdates(
+                queueItem as QueueItemForAction,
+                approvalPlan,
+                serviceClient,
+                user.id
+            );
+
+            await Promise.all(
+                approvalPlan.sanitizedFieldUpdates.map((update) =>
+                    tableClient
+                        .from('event_update_queue_fields')
+                        .update({ new_value: update.newValue })
+                        .eq('id', update.id)
+                )
+            );
 
             // Mark all pending fields as approved
-            const { error: approveError } = await tableClient
-                .from('event_update_queue_fields')
-                .update({
-                    field_status: 'approved',
-                    reviewed_by: user.id,
-                    reviewed_at: new Date().toISOString(),
-                })
-                .eq('queue_id', queueId)
-                .eq('field_status', 'pending');
+            if (approvalPlan.fieldsToApprove.length > 0) {
+                const { error: approveError } = await tableClient
+                    .from('event_update_queue_fields')
+                    .update({
+                        field_status: 'approved',
+                        reviewed_by: user.id,
+                        reviewed_at: new Date().toISOString(),
+                    })
+                    .in('id', approvalPlan.fieldsToApprove.map((field) => field.id))
+                    .eq('field_status', 'pending');
 
-            if (approveError) {
-                throw new Error(`Failed to approve fields: ${approveError.message}`);
+                if (approveError) {
+                    throw new Error(`Failed to approve fields: ${approveError.message}`);
+                }
+            }
+
+            if (approvalPlan.fieldsToReject.length > 0) {
+                const { error: rejectInvalidError } = await tableClient
+                    .from('event_update_queue_fields')
+                    .update({
+                        field_status: 'rejected',
+                        reviewed_by: user.id,
+                        reviewed_at: new Date().toISOString(),
+                    })
+                    .in('id', approvalPlan.fieldsToReject.map((field) => field.id))
+                    .eq('field_status', 'pending');
+
+                if (rejectInvalidError) {
+                    throw new Error(`Failed to reject invalid fields: ${rejectInvalidError.message}`);
+                }
             }
 
             // Update queue status
-            await tableClient
+            const nextStatus = approvalPlan.fieldsToApprove.length > 0
+                ? (approvalPlan.fieldsToReject.length > 0 ? 'partially_approved' : 'approved')
+                : 'rejected';
+            const { error: queueUpdateError } = await tableClient
                 .from('event_update_queue')
                 .update({
-                    status: 'approved',
+                    status: nextStatus,
                     reviewed_by: user.id,
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq('id', queueId);
 
-            return NextResponse.json({ success: true });
+            if (queueUpdateError) {
+                throw new Error(`Failed to update queue status: ${queueUpdateError.message}`);
+            }
+
+            return NextResponse.json<QueueActionResponse>({
+                success: true,
+                approvedFields: approvalPlan.fieldsToApprove.map((field) => field.field_name),
+                rejectedFields: approvalPlan.fieldsToReject.map((field) => field.field_name),
+                status: nextStatus,
+                warnings: applyResult.warnings,
+            });
         } else if (action === 'reject') {
             // Reject all pending fields
             const { error: rejectError } = await tableClient

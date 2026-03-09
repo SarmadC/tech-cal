@@ -58,6 +58,15 @@ interface NextPendingItem {
     eventTitle: string;
 }
 
+interface QueueActionResponse {
+    success?: boolean;
+    approvedFields?: string[];
+    rejectedFields?: string[];
+    status?: string;
+    warnings?: string[];
+    error?: string;
+}
+
 const readResponseError = async (response: Response, fallback: string): Promise<string> => {
     if (response.ok) {
         return fallback;
@@ -65,6 +74,47 @@ const readResponseError = async (response: Response, fallback: string): Promise<
 
     const errorBody = await response.json().catch(() => ({}));
     return (errorBody && typeof errorBody.error === 'string' && errorBody.error) || fallback;
+};
+
+const readActionResponse = async (response: Response): Promise<QueueActionResponse> => {
+    return response.json().catch(() => ({}));
+};
+
+const formatActionWarnings = (warnings?: string[]): string => {
+    if (!warnings || warnings.length === 0) {
+        return '';
+    }
+
+    return ` ${warnings.join(' ')}`;
+};
+
+const buildApprovalMessage = (
+    data: QueueActionResponse,
+    defaultSuccess: string,
+): { type: 'success' | 'error'; text: string } => {
+    const approvedCount = data.approvedFields?.length ?? 0;
+    const rejectedCount = data.rejectedFields?.length ?? 0;
+    const warningText = formatActionWarnings(data.warnings);
+
+    if (approvedCount === 0 && rejectedCount > 0) {
+        const rejectedList = data.rejectedFields?.join(', ') ?? 'selected fields';
+        return {
+            type: 'error',
+            text: `No fields were approved. Rejected: ${rejectedList}.${warningText}`,
+        };
+    }
+
+    if (approvedCount > 0 && rejectedCount > 0) {
+        return {
+            type: 'success',
+            text: `${defaultSuccess} Rejected ${rejectedCount} invalid field(s).${warningText}`,
+        };
+    }
+
+    return {
+        type: 'success',
+        text: `${defaultSuccess}${warningText}`,
+    };
 };
 
 export default function UpdateReviewClient({ queueId, initialData }: UpdateReviewClientProps) {
@@ -169,7 +219,8 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 { method: 'POST' }
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve'));
-            setMessage({ type: 'success', text: 'All fields approved successfully' });
+            const data = await readActionResponse(response);
+            setMessage(buildApprovalMessage(data, 'All fields approved successfully.'));
 
             // Check for next pending item
             const next = await fetchNextPending();
@@ -258,9 +309,23 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 }
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve selected fields'));
-            setMessage({ type: 'success', text: `${selectedFields.size} field(s) approved successfully` });
+            const data = await readActionResponse(response);
+            setMessage(
+                buildApprovalMessage(data, `${selectedFields.size} field(s) approved successfully.`)
+            );
             setSelectedFields(new Set());
-            await fetchQueueDetail();
+
+            if (data.status && data.status !== 'pending') {
+                const next = await fetchNextPending();
+                if (next) {
+                    setNextItem(next);
+                    setShowNextPrompt(true);
+                } else {
+                    await fetchQueueDetail();
+                }
+            } else {
+                await fetchQueueDetail();
+            }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
         } finally {
@@ -282,8 +347,20 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 }
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve field'));
-            setMessage({ type: 'success', text: `Field "${fieldName}" approved` });
-            await fetchQueueDetail();
+            const data = await readActionResponse(response);
+            setMessage(buildApprovalMessage(data, `Field "${fieldName}" approved.`));
+
+            if (data.status && data.status !== 'pending') {
+                const next = await fetchNextPending();
+                if (next) {
+                    setNextItem(next);
+                    setShowNextPrompt(true);
+                } else {
+                    await fetchQueueDetail();
+                }
+            } else {
+                await fetchQueueDetail();
+            }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
         } finally {
