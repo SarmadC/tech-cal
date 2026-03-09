@@ -19,6 +19,7 @@ interface StreamProgress {
     currentEventTitle?: string;
     result?: {
         eventId: string;
+        title?: string;
         status: 'enriched' | 'failed';
         error?: string;
     };
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
                                     currentEventTitle: title,
                                     result: {
                                         eventId,
+                                        title: result.title ?? title,
                                         status: result.status,
                                         error: result.error,
                                     },

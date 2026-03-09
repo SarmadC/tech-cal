@@ -5,6 +5,7 @@
  * POST /approve: Approve all pending fields
  * POST /reject: Reject all pending fields
  * POST /approve-selective: Approve only specific fields
+ * POST /reject-selective: Reject only specific pending fields
  * POST /update-field: Update a pending field's proposed value
  */
 
@@ -15,31 +16,247 @@ import { isAdminUser } from '@/lib/adminAuth';
 import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
 import { extractRelationIds } from '@/services/ingestion/utils/enrichmentQueue';
 
-const coerceAgendaItems = (value: unknown): AgendaItemInput[] => {
-    if (!Array.isArray(value)) return [];
-    return value
-        .map((item) => {
-            const typed = item as Record<string, unknown>;
-            const title = typeof typed.title === 'string' ? typed.title : '';
-            if (!title) return null;
+const RELATIONSHIP_FIELDS = ['tags', 'audiences', 'prerequisites'] as const;
 
-            const speakerIds =
-                Array.isArray(typed.speakers) && typed.speakers.every((s) => typeof s === 'string')
-                    ? (typed.speakers as string[])
-                    : Array.isArray(typed.speakerIds) && typed.speakerIds.every((s) => typeof s === 'string')
-                        ? (typed.speakerIds as string[])
-                        : undefined;
+interface QueueItemForAction {
+    event_id: string | null;
+    status: string;
+}
 
-            return {
-                title,
-                startTime: typeof typed.start_time === 'string' ? typed.start_time : typeof typed.startTime === 'string' ? typed.startTime : '',
-                endTime: typeof typed.end_time === 'string' ? typed.end_time : typeof typed.endTime === 'string' ? typed.endTime : '',
-                description: typeof typed.description === 'string' ? typed.description : undefined,
-                location: typeof typed.location === 'string' ? typed.location : undefined,
-                speakerIds,
-            };
+interface QueueFieldRecord {
+    id: string;
+    field_name: string;
+    field_status: string;
+    new_value: unknown;
+}
+
+const coerceAgendaItems = (
+    value: unknown
+): { items: AgendaItemInput[]; invalidItems: string[] } => {
+    if (!Array.isArray(value)) {
+        return {
+            items: [],
+            invalidItems: [],
+        };
+    }
+
+    const items: AgendaItemInput[] = [];
+    const invalidItems: string[] = [];
+
+    value.forEach((item, index) => {
+        const typed = item as Record<string, unknown>;
+        const rawTitle = typeof typed.title === 'string' ? typed.title.trim() : '';
+        const startTime =
+            typeof typed.start_time === 'string'
+                ? typed.start_time
+                : typeof typed.startTime === 'string'
+                    ? typed.startTime
+                    : '';
+        const endTime =
+            typeof typed.end_time === 'string'
+                ? typed.end_time
+                : typeof typed.endTime === 'string'
+                    ? typed.endTime
+                    : '';
+
+        const label = rawTitle || `item ${index + 1}`;
+        if (!rawTitle || !startTime || !endTime) {
+            invalidItems.push(label);
+            return;
+        }
+
+        const speakerIds =
+            Array.isArray(typed.speakers) && typed.speakers.every((s) => typeof s === 'string')
+                ? (typed.speakers as string[])
+                : Array.isArray(typed.speakerIds) && typed.speakerIds.every((s) => typeof s === 'string')
+                    ? (typed.speakerIds as string[])
+                    : undefined;
+
+        items.push({
+            title: rawTitle,
+            startTime,
+            endTime,
+            description: typeof typed.description === 'string' ? typed.description : undefined,
+            location: typeof typed.location === 'string' ? typed.location : undefined,
+            speakerIds,
+        });
+    });
+
+    return {
+        items,
+        invalidItems,
+    };
+};
+
+const collectFieldUpdates = (fields: QueueFieldRecord[]) => {
+    const scalarUpdateData: Record<string, unknown> = {};
+    const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
+    const agendaUpdates: AgendaItemInput[] = [];
+
+    for (const field of fields) {
+        if (field.field_name === 'agenda') {
+            const { items, invalidItems } = coerceAgendaItems(field.new_value);
+            if (invalidItems.length > 0) {
+                throw new Error(
+                    `Agenda items require title, start_time, and end_time. Invalid: ${invalidItems.slice(0, 5).join(', ')}`
+                );
+            }
+            if (items.length > 0) {
+                agendaUpdates.push(...items);
+            }
+            continue;
+        }
+
+        if (RELATIONSHIP_FIELDS.includes(field.field_name as typeof RELATIONSHIP_FIELDS[number])) {
+            const relationIds = extractRelationIds(field.new_value);
+            if (!relationIds) {
+                continue;
+            }
+
+            if (field.field_name === 'tags') {
+                relationshipUpdates.tagIds = relationIds;
+            } else if (field.field_name === 'audiences') {
+                relationshipUpdates.audienceIds = relationIds;
+            } else if (field.field_name === 'prerequisites') {
+                relationshipUpdates.prerequisiteIds = relationIds;
+            }
+            continue;
+        }
+
+        scalarUpdateData[field.field_name] = field.new_value;
+    }
+
+    return {
+        scalarUpdateData,
+        relationshipUpdates,
+        agendaUpdates,
+    };
+};
+
+const fetchPendingFields = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tableClient: any,
+    queueId: string,
+    fieldNames?: string[],
+): Promise<QueueFieldRecord[]> => {
+    let query = tableClient
+        .from('event_update_queue_fields')
+        .select('*')
+        .eq('queue_id', queueId)
+        .eq('field_status', 'pending');
+
+    if (fieldNames && fieldNames.length > 0) {
+        query = query.in('field_name', fieldNames);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        throw new Error(`Failed to fetch pending fields: ${error.message}`);
+    }
+
+    return (data ?? []) as QueueFieldRecord[];
+};
+
+const updateQueueStatusForSelectiveAction = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tableClient: any,
+    queueId: string,
+    reviewedBy: string,
+) => {
+    const [{ data: remainingPending, error: pendingError }, { data: approvedFields, error: approvedError }] = await Promise.all([
+        tableClient
+            .from('event_update_queue_fields')
+            .select('id')
+            .eq('queue_id', queueId)
+            .eq('field_status', 'pending')
+            .limit(1),
+        tableClient
+            .from('event_update_queue_fields')
+            .select('id')
+            .eq('queue_id', queueId)
+            .eq('field_status', 'approved')
+            .limit(1),
+    ]);
+
+    if (pendingError) {
+        throw new Error(`Failed to determine remaining pending fields: ${pendingError.message}`);
+    }
+
+    if (approvedError) {
+        throw new Error(`Failed to determine approved fields: ${approvedError.message}`);
+    }
+
+    const hasPending = Boolean(remainingPending && remainingPending.length > 0);
+    const hasApproved = Boolean(approvedFields && approvedFields.length > 0);
+    const nextStatus = hasPending ? (hasApproved ? 'partially_approved' : 'pending') : (hasApproved ? 'approved' : 'rejected');
+
+    const { error: queueUpdateError } = await tableClient
+        .from('event_update_queue')
+        .update({
+            status: nextStatus,
+            reviewed_by: reviewedBy,
+            reviewed_at: new Date().toISOString(),
         })
-        .filter(Boolean) as AgendaItemInput[];
+        .eq('id', queueId);
+
+    if (queueUpdateError) {
+        throw new Error(`Failed to update queue status: ${queueUpdateError.message}`);
+    }
+
+    return nextStatus;
+};
+
+const applyApprovedFieldUpdates = async (
+    queueItem: QueueItemForAction,
+    fields: QueueFieldRecord[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serviceClient: any,
+    editedBy: string,
+) => {
+    if (!queueItem.event_id) {
+        throw new Error('Queue item is missing event_id');
+    }
+
+    const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
+    const { scalarUpdateData, relationshipUpdates, agendaUpdates } = collectFieldUpdates(fields);
+
+    if (Object.keys(scalarUpdateData).length > 0) {
+        const { error: updateError } = await serviceClient
+            .from('events')
+            .update(scalarUpdateData)
+            .eq('id', queueItem.event_id);
+
+        if (updateError) {
+            throw new Error(`Failed to apply scalar updates: ${updateError.message}`);
+        }
+    }
+
+    if (Object.keys(relationshipUpdates).length > 0) {
+        const relResult = await EventEnrichmentService.manageEventRelationships(
+            queueItem.event_id,
+            relationshipUpdates,
+            serviceClient,
+            editedBy
+        );
+
+        if (!relResult.success) {
+            throw new Error(`Failed to update relationships: ${relResult.error}`);
+        }
+    }
+
+    if (agendaUpdates.length > 0) {
+        const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
+            queueItem.event_id,
+            agendaUpdates,
+            serviceClient,
+            editedBy
+        );
+
+        if (!agendaResult.success) {
+            throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
+        }
+    }
 };
 
 export async function GET(
@@ -159,9 +376,9 @@ export async function POST(
         const url = new URL(request.url);
         const action = url.searchParams.get('action'); // approve, reject, approve-selective, delete-event, update-field, reset
 
-        if (!action || !['approve', 'reject', 'approve-selective', 'delete-event', 'update-field', 'reset'].includes(action)) {
+        if (!action || !['approve', 'reject', 'approve-selective', 'reject-selective', 'delete-event', 'update-field', 'reset'].includes(action)) {
             return NextResponse.json(
-                { error: 'Invalid action. Must be approve, reject, approve-selective, delete-event, update-field, or reset' },
+                { error: 'Invalid action. Must be approve, reject, approve-selective, reject-selective, delete-event, update-field, or reset' },
                 { status: 400 }
             );
         }
@@ -235,92 +452,8 @@ export async function POST(
             }
 
             // Update selected fields to approved and apply updates
-        const { data: fieldsToApprove, error: fieldsError } = await tableClient
-                .from('event_update_queue_fields')
-                .select('*')
-                .eq('queue_id', queueId)
-                .eq('field_status', 'pending')
-                .in('field_name', fieldNames);
-
-            if (fieldsError) {
-                throw new Error(`Failed to fetch fields: ${fieldsError.message}`);
-            }
-
-            // Import EventEnrichmentService for relationship updates
-            const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
-
-            // Separate scalar and relationship fields
-            const relationshipFields = ['tags', 'audiences', 'prerequisites'];
-            const scalarUpdateData: Record<string, unknown> = {};
-            const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
-            const agendaUpdates: ReturnType<typeof coerceAgendaItems> = [];
-
-            for (const field of fieldsToApprove || []) {
-                if (field.field_name === 'agenda') {
-                    const agendaItems = coerceAgendaItems(field.new_value);
-                    if (agendaItems.length > 0) {
-                        agendaUpdates.push(...agendaItems);
-                    }
-                    continue;
-                }
-
-                if (relationshipFields.includes(field.field_name)) {
-                    // Handle relationship fields
-                    const relationIds = extractRelationIds(field.new_value);
-                    if (relationIds) {
-                        if (field.field_name === 'tags') {
-                            relationshipUpdates.tagIds = relationIds;
-                        } else if (field.field_name === 'audiences') {
-                            relationshipUpdates.audienceIds = relationIds;
-                        } else if (field.field_name === 'prerequisites') {
-                            relationshipUpdates.prerequisiteIds = relationIds;
-                        }
-                    }
-                } else {
-                    // Scalar fields
-                    scalarUpdateData[field.field_name] = field.new_value;
-                }
-            }
-
-            // Update scalar fields
-            if (Object.keys(scalarUpdateData).length > 0) {
-                const { error: updateError } = await supabase
-                    .from('events')
-                    .update(scalarUpdateData)
-                    .eq('id', queueItem.event_id);
-
-                if (updateError) {
-                    throw new Error(`Failed to apply scalar updates: ${updateError.message}`);
-                }
-            }
-
-            // Update relationship fields
-            if (Object.keys(relationshipUpdates).length > 0) {
-                const relResult = await EventEnrichmentService.manageEventRelationships(
-                    queueItem.event_id,
-                    relationshipUpdates,
-                    supabase,
-                    user.id
-                );
-
-                if (!relResult.success) {
-                    throw new Error(`Failed to update relationships: ${relResult.error}`);
-                }
-            }
-
-            // Update agenda items
-            if (agendaUpdates.length > 0) {
-                const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
-                    queueItem.event_id,
-                    agendaUpdates,
-                    supabase,
-                    user.id
-                );
-
-                if (!agendaResult.success) {
-                    throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
-                }
-            }
+            const fieldsToApprove = await fetchPendingFields(tableClient, queueId, fieldNames);
+            await applyApprovedFieldUpdates(queueItem as QueueItemForAction, fieldsToApprove, serviceClient, user.id);
 
             // Mark selected fields as approved, others as rejected
             const { error: approveError } = await tableClient
@@ -353,26 +486,38 @@ export async function POST(
                 console.warn('Failed to reject remaining fields:', rejectError);
             }
 
-            // Check if any fields are still pending
-            const { data: remainingPending } = await tableClient
-                .from('event_update_queue_fields')
-                .select('id')
-                .eq('queue_id', queueId)
-                .eq('field_status', 'pending')
-                .limit(1);
+            await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
 
-            // Update queue status
-            const newStatus = remainingPending && remainingPending.length > 0 ? 'partially_approved' : 'approved';
-            await tableClient
-                .from('event_update_queue')
+            return NextResponse.json({ success: true, approvedFields: fieldNames });
+        } else if (action === 'reject-selective') {
+            const body = await request.json();
+            const { fieldNames } = body as { fieldNames: string[] };
+
+            if (!fieldNames || !Array.isArray(fieldNames) || fieldNames.length === 0) {
+                return NextResponse.json(
+                    { error: 'Missing or invalid fieldNames array' },
+                    { status: 400 }
+                );
+            }
+
+            const { error: rejectError } = await tableClient
+                .from('event_update_queue_fields')
                 .update({
-                    status: newStatus,
+                    field_status: 'rejected',
                     reviewed_by: user.id,
                     reviewed_at: new Date().toISOString(),
                 })
-                .eq('id', queueId);
+                .eq('queue_id', queueId)
+                .in('field_name', fieldNames)
+                .eq('field_status', 'pending');
 
-            return NextResponse.json({ success: true, approvedFields: fieldNames });
+            if (rejectError) {
+                throw new Error(`Failed to reject fields: ${rejectError.message}`);
+            }
+
+            const nextStatus = await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
+
+            return NextResponse.json({ success: true, rejectedFields: fieldNames, status: nextStatus });
         } else if (action === 'reset') {
             // Reset queue item and fields back to pending for re-review
             const { error: resetFieldsError } = await tableClient
@@ -404,91 +549,8 @@ export async function POST(
             return NextResponse.json({ success: true, status: 'pending' });
         } else if (action === 'approve') {
             // Approve all pending fields
-            const { data: pendingFields, error: fieldsError } = await tableClient
-                .from('event_update_queue_fields')
-                .select('*')
-                .eq('queue_id', queueId)
-                .eq('field_status', 'pending');
-
-            if (fieldsError) {
-                throw new Error(`Failed to fetch pending fields: ${fieldsError.message}`);
-            }
-
-            // Import EventEnrichmentService for relationship updates
-            const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
-
-            // Separate scalar and relationship fields
-            const relationshipFields = ['tags', 'audiences', 'prerequisites'];
-            const scalarUpdateData: Record<string, unknown> = {};
-            const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
-            const agendaUpdates: ReturnType<typeof coerceAgendaItems> = [];
-
-            for (const field of pendingFields || []) {
-                if (field.field_name === 'agenda') {
-                    const agendaItems = coerceAgendaItems(field.new_value);
-                    if (agendaItems.length > 0) {
-                        agendaUpdates.push(...agendaItems);
-                    }
-                    continue;
-                }
-
-                if (relationshipFields.includes(field.field_name)) {
-                    // Handle relationship fields
-                    const relationIds = extractRelationIds(field.new_value);
-                    if (relationIds) {
-                        if (field.field_name === 'tags') {
-                            relationshipUpdates.tagIds = relationIds;
-                        } else if (field.field_name === 'audiences') {
-                            relationshipUpdates.audienceIds = relationIds;
-                        } else if (field.field_name === 'prerequisites') {
-                            relationshipUpdates.prerequisiteIds = relationIds;
-                        }
-                    }
-                } else {
-                    // Scalar fields
-                    scalarUpdateData[field.field_name] = field.new_value;
-                }
-            }
-
-            // Update scalar fields
-            if (Object.keys(scalarUpdateData).length > 0) {
-                const { error: updateError } = await tableClient
-                    .from('events')
-                    .update(scalarUpdateData)
-                    .eq('id', queueItem.event_id);
-
-                if (updateError) {
-                    throw new Error(`Failed to apply scalar updates: ${updateError.message}`);
-                }
-            }
-
-            // Update relationship fields
-            if (Object.keys(relationshipUpdates).length > 0) {
-                const relResult = await EventEnrichmentService.manageEventRelationships(
-                    queueItem.event_id,
-                    relationshipUpdates,
-                    supabase,
-                    user.id
-                );
-
-                if (!relResult.success) {
-                    throw new Error(`Failed to update relationships: ${relResult.error}`);
-                }
-            }
-
-            // Update agenda items
-            if (agendaUpdates.length > 0) {
-                const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
-                    queueItem.event_id,
-                    agendaUpdates,
-                    supabase,
-                    user.id
-                );
-
-                if (!agendaResult.success) {
-                    throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
-                }
-            }
+            const pendingFields = await fetchPendingFields(tableClient, queueId);
+            await applyApprovedFieldUpdates(queueItem as QueueItemForAction, pendingFields, serviceClient, user.id);
 
             // Mark all pending fields as approved
             const { error: approveError } = await tableClient

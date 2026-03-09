@@ -58,6 +58,15 @@ interface NextPendingItem {
     eventTitle: string;
 }
 
+const readResponseError = async (response: Response, fallback: string): Promise<string> => {
+    if (response.ok) {
+        return fallback;
+    }
+
+    const errorBody = await response.json().catch(() => ({}));
+    return (errorBody && typeof errorBody.error === 'string' && errorBody.error) || fallback;
+};
+
 export default function UpdateReviewClient({ queueId, initialData }: UpdateReviewClientProps) {
     const router = useRouter();
     const [queue, setQueue] = useState<QueueItem | null>(initialData?.queue || null);
@@ -159,7 +168,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 `/api/admin/ingestion/update-queue/${queueId}?action=approve`,
                 { method: 'POST' }
             );
-            if (!response.ok) throw new Error('Failed to approve');
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve'));
             setMessage({ type: 'success', text: 'All fields approved successfully' });
 
             // Check for next pending item
@@ -185,7 +194,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 `/api/admin/ingestion/update-queue/${queueId}?action=reject`,
                 { method: 'POST' }
             );
-            if (!response.ok) throw new Error('Failed to reject');
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to reject'));
             setMessage({ type: 'success', text: 'All fields rejected' });
 
             // Check for next pending item
@@ -248,7 +257,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     body: JSON.stringify({ fieldNames: Array.from(selectedFields) }),
                 }
             );
-            if (!response.ok) throw new Error('Failed to approve selected fields');
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve selected fields'));
             setMessage({ type: 'success', text: `${selectedFields.size} field(s) approved successfully` });
             setSelectedFields(new Set());
             await fetchQueueDetail();
@@ -272,7 +281,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     body: JSON.stringify({ fieldNames: [fieldName] }),
                 }
             );
-            if (!response.ok) throw new Error('Failed to approve field');
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve field'));
             setMessage({ type: 'success', text: `Field "${fieldName}" approved` });
             await fetchQueueDetail();
         } catch (error) {
@@ -295,7 +304,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     body: JSON.stringify({ fieldNames: [fieldName] }),
                 }
             );
-            if (!response.ok) throw new Error('Failed to reject field');
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to reject field'));
             setMessage({ type: 'success', text: `Field "${fieldName}" rejected` });
             await fetchQueueDetail();
         } catch (error) {

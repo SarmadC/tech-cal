@@ -8,10 +8,8 @@
 export const dynamic = 'force-dynamic';
 
 import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { redirect } from 'next/navigation';
-import type { EnrichmentMetadata } from '@/types/enrichment';
 import EnrichmentDashboardClient from './EnrichmentDashboardClient';
 
 export default async function EnrichmentPage() {
@@ -28,33 +26,6 @@ export default async function EnrichmentPage() {
         redirect('/dashboard');
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase service credentials are required for enrichment dashboard');
-    }
-
-    const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
-
-    const { data } = await serviceClient
-        .from('events')
-        .select('id, title, start_time, source_url, ingestion_source_id, enrichment_status, enrichment_metadata, updated_at')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-    const events =
-        data?.map((event) => ({
-            id: event.id,
-            title: event.title ?? 'Untitled',
-            start_time: event.start_time,
-            source_url: event.source_url ?? '',
-            ingestion_source_id: event.ingestion_source_id,
-            enrichment_status: (event.enrichment_status as string | null) ?? 'pending',
-            enrichment_metadata: (event.enrichment_metadata as EnrichmentMetadata | null) ?? null,
-            updated_at: event.updated_at ?? null,
-        })) || [];
-
     return (
         <div className="container mx-auto py-8">
             <div className="mb-6">
@@ -64,8 +35,7 @@ export default async function EnrichmentPage() {
                 </p>
             </div>
 
-            <EnrichmentDashboardClient initialEvents={events} />
+            <EnrichmentDashboardClient />
         </div>
     );
 }
-

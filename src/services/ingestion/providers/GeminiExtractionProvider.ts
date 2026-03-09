@@ -19,6 +19,8 @@ interface GeminiProviderOptions {
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const MAX_PROVIDER_TAGS = 25;
+const MAX_PROVIDER_SPEAKERS = 50;
+const MAX_PROVIDER_AGENDA_ITEMS = 100;
 const MAX_SPEAKER_BIO_LENGTH = 500;
 const MAX_AGENDA_DESCRIPTION_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
@@ -26,6 +28,13 @@ const MAX_LOCATION_LENGTH = 500;
 const PAID_PRICING_KEYWORDS = ['paid', 'ticket', 'tickets', 'fixed', 'registration', 'fee', 'cost', 'price'];
 const FREE_PRICING_KEYWORDS = ['free', 'complimentary', 'gratis', 'no cost'];
 const VARIABLE_PRICING_KEYWORDS = ['varies', 'variable', 'depends', 'tbd', 'range', 'sliding'];
+const CURRENCY_PATTERNS: Array<{ code: string; pattern: RegExp }> = [
+    { code: 'USD', pattern: /(?:\bUSD\b|US\s*DOLLAR|US\$|\$|DOLLAR)/i },
+    { code: 'EUR', pattern: /(?:\bEUR\b|EURO|€)/i },
+    { code: 'GBP', pattern: /(?:\bGBP\b|POUND|STERLING|£)/i },
+    { code: 'INR', pattern: /(?:\bINR\b|RUPEE|₹)/i },
+    { code: 'JPY', pattern: /(?:\bJPY\b|YEN|¥)/i },
+];
 
 const RESPONSE_SCHEMA = {
     type: SchemaType.OBJECT,
@@ -162,6 +171,12 @@ const truncateText = (value: unknown, maxLength: number): string | undefined => 
     return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized;
 };
 
+interface CollectionNormalizationResult {
+    items?: Record<string, unknown>[];
+    originalCount: number;
+    retainedCount: number;
+}
+
 const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefined => {
     if (!Array.isArray(value)) {
         return undefined;
@@ -206,6 +221,29 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
         });
 
     return normalized.length > 0 ? normalized : undefined;
+};
+
+const normalizeCollection = (
+    value: unknown,
+    maxItems: number,
+    normalizer: (items: unknown) => Record<string, unknown>[] | undefined,
+): CollectionNormalizationResult => {
+    if (!Array.isArray(value)) {
+        return {
+            items: undefined,
+            originalCount: 0,
+            retainedCount: 0,
+        };
+    }
+
+    const normalized = normalizer(value);
+    const limited = normalized?.slice(0, maxItems);
+
+    return {
+        items: limited && limited.length > 0 ? limited : undefined,
+        originalCount: value.length,
+        retainedCount: limited?.length ?? 0,
+    };
 };
 
 const normalizeTagList = (value: unknown, allowedTags?: string[]): string[] | undefined => {
@@ -261,6 +299,30 @@ export const normalizePricingType = (value: unknown): 'Free' | 'Paid' | 'Varies'
     return undefined;
 };
 
+export const normalizePricingCurrency = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    const explicitCode = normalized.match(/\b[A-Z]{3}\b/);
+    if (explicitCode) {
+        return explicitCode[0];
+    }
+
+    for (const { code, pattern } of CURRENCY_PATTERNS) {
+        if (pattern.test(value)) {
+            return code;
+        }
+    }
+
+    return undefined;
+};
+
 const normalizeEventFormat = (value: unknown): 'Online' | 'In-person' | 'Hybrid' | undefined => {
     if (typeof value !== 'string') {
         return undefined;
@@ -299,6 +361,11 @@ const normalizeEventFormat = (value: unknown): 'Online' | 'In-person' | 'Hybrid'
 export const normalizeExtractedProviderPayload = (
     value: unknown,
     allowedTags?: string[],
+    onCollectionTruncated?: (details: {
+        field: 'speakers' | 'agenda';
+        originalCount: number;
+        retainedCount: number;
+    }) => void,
 ): unknown => {
     if (!isPlainObject(value)) {
         return value;
@@ -306,8 +373,16 @@ export const normalizeExtractedProviderPayload = (
 
     const payload = { ...value };
     const normalizedTags = normalizeTagList(payload.tags, allowedTags);
-    const normalizedSpeakers = normalizeSpeakers(payload.speakers);
-    const normalizedAgenda = normalizeAgenda(payload.agenda);
+    const normalizedSpeakers = normalizeCollection(
+        payload.speakers,
+        MAX_PROVIDER_SPEAKERS,
+        normalizeSpeakers
+    );
+    const normalizedAgenda = normalizeCollection(
+        payload.agenda,
+        MAX_PROVIDER_AGENDA_ITEMS,
+        normalizeAgenda
+    );
 
     if (normalizedTags) {
         payload.tags = normalizedTags;
@@ -318,6 +393,7 @@ export const normalizeExtractedProviderPayload = (
     if (payload.pricing && typeof payload.pricing === 'object' && !Array.isArray(payload.pricing)) {
         const pricing = { ...(payload.pricing as Record<string, unknown>) };
         const normalizedPricingType = normalizePricingType(pricing.pricingType);
+        const normalizedCurrency = normalizePricingCurrency(pricing.currency);
 
         if (normalizedPricingType) {
             pricing.pricingType = normalizedPricingType;
@@ -325,19 +401,41 @@ export const normalizeExtractedProviderPayload = (
             delete pricing.pricingType;
         }
 
+        if (normalizedCurrency) {
+            pricing.currency = normalizedCurrency;
+        } else {
+            delete pricing.currency;
+        }
+
         payload.pricing = pricing;
     }
 
-    if (normalizedSpeakers) {
-        payload.speakers = normalizedSpeakers;
+    if (normalizedSpeakers.items) {
+        payload.speakers = normalizedSpeakers.items;
     } else if ('speakers' in payload) {
         delete payload.speakers;
     }
 
-    if (normalizedAgenda) {
-        payload.agenda = normalizedAgenda;
+    if (normalizedAgenda.items) {
+        payload.agenda = normalizedAgenda.items;
     } else if ('agenda' in payload) {
         delete payload.agenda;
+    }
+
+    if (normalizedSpeakers.originalCount > normalizedSpeakers.retainedCount) {
+        onCollectionTruncated?.({
+            field: 'speakers',
+            originalCount: normalizedSpeakers.originalCount,
+            retainedCount: normalizedSpeakers.retainedCount,
+        });
+    }
+
+    if (normalizedAgenda.originalCount > normalizedAgenda.retainedCount) {
+        onCollectionTruncated?.({
+            field: 'agenda',
+            originalCount: normalizedAgenda.originalCount,
+            retainedCount: normalizedAgenda.retainedCount,
+        });
     }
 
     const normalizedDescription = truncateText(payload.description, MAX_DESCRIPTION_LENGTH);
@@ -425,7 +523,18 @@ export class GeminiExtractionProvider implements ExtractionProvider {
 
         const parsed = this.parseResponse(response);
         const sanitized = this.pruneNulls(parsed);
-        const normalized = normalizeExtractedProviderPayload(sanitized, request.allowedTags);
+        const normalized = normalizeExtractedProviderPayload(
+            sanitized,
+            request.allowedTags,
+            ({ field, originalCount, retainedCount }) => {
+                console.warn('[GeminiExtractionProvider] Truncated extracted collection', {
+                    eventId: request.context.eventId ?? 'unknown',
+                    field,
+                    originalCount,
+                    retainedCount,
+                });
+            }
+        );
         const validated = ExtractedEventDataSchema.safeParse(normalized);
         if (!validated.success) {
             const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');

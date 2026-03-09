@@ -16,6 +16,20 @@ export interface QueueCountsResponse {
     fieldProtection: number;
 }
 
+interface AdminTableClient {
+    from(table: string): {
+        select(columns: string, options?: Record<string, unknown>): {
+            eq(column: string, value: string): PromiseLike<{ count?: number | null }>;
+        };
+    };
+}
+
+interface ModerationQueueItem {
+    events?: {
+        enrichment_status?: string | null;
+    } | null;
+}
+
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -45,7 +59,7 @@ export async function GET() {
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
 
         // Fetch counts in parallel - use type assertions for tables not in generated types
-        const tableClient = serviceClient as any;
+        const tableClient = serviceClient as unknown as AdminTableClient;
         
         const [
             updateQueueResult,
@@ -65,12 +79,11 @@ export async function GET() {
                 .select('id, events:event_id(enrichment_status)')
                 .eq('status', 'pending'),
             
-            // Events needing enrichment (pending status)
+            // Events needing enrichment (all pending enrichment work)
             serviceClient
                 .from('events')
                 .select('id', { count: 'exact', head: true })
-                .eq('enrichment_status', 'pending')
-                .gt('start_time', new Date().toISOString()),
+                .eq('enrichment_status', 'pending'),
             
             // Fields with review_required protection mode
             tableClient
@@ -82,7 +95,7 @@ export async function GET() {
         // Filter out enriched events from moderation count (enriched events should be reviewed in update queue)
         const moderationCount = moderationQueueItems?.error
             ? 0 // Return 0 on error (will be logged by outer catch)
-            : (moderationQueueItems?.data ?? []).filter((item: any) => {
+            : ((moderationQueueItems?.data ?? []) as ModerationQueueItem[]).filter((item) => {
                   const enrichmentStatus = item.events?.enrichment_status;
                   return enrichmentStatus !== 'enriched';
               }).length;

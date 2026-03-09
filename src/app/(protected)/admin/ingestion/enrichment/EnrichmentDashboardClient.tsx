@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -12,6 +12,11 @@ import type { EnrichmentMetadata } from '@/types/enrichment';
 import { cn } from '@/lib/utils';
 
 const COLUMNS_STORAGE_KEY = 'techcal.admin.enrichment.columns';
+const DEFAULT_PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 250;
+const STATUS_FILTERS = ['all', 'pending', 'processing', 'enriched', 'failed'] as const;
+
+type DashboardStatusFilter = (typeof STATUS_FILTERS)[number];
 
 interface StreamProgress {
     type: 'progress' | 'complete' | 'error';
@@ -21,6 +26,7 @@ interface StreamProgress {
     currentEventTitle?: string;
     result?: {
         eventId: string;
+        title?: string;
         status: 'enriched' | 'failed';
         error?: string;
     };
@@ -57,13 +63,14 @@ type ColumnVisibility = {
 interface EnrichmentEvent {
     id: string;
     title: string;
-    start_time: string;
+    start_time: string | null;
     source_url: string;
     ingestion_source_id: string | null;
     enrichment_status: string;
     enrichment_metadata: EnrichmentMetadata | null;
     updated_at: string | null;
     review_status?: string | null;
+    review_queue_id?: string | null;
 }
 
 interface EnrichmentDashboardMetrics {
@@ -77,19 +84,81 @@ interface EnrichmentDashboardMetrics {
     oldestPendingAgeDays: number | null;
 }
 
-interface EnrichmentDashboardClientProps {
-    initialEvents: EnrichmentEvent[];
+interface EnrichmentDashboardResponse {
+    events: EnrichmentEvent[];
+    total: number;
+    page: number;
+    pageSize: number;
+    metrics: EnrichmentDashboardMetrics | null;
+    statusCounts?: Record<DashboardStatusFilter, number>;
 }
 
-// Removed unused statusBadgeStyles
+const DEFAULT_STATUS_COUNTS: Record<DashboardStatusFilter, number> = {
+    all: 0,
+    pending: 0,
+    processing: 0,
+    enriched: 0,
+    failed: 0,
+};
 
-export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentDashboardClientProps) {
+const formatRelativeTimestamp = (value: string | null, emptyLabel = '—') => {
+    if (!value) {
+        return emptyLabel;
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return emptyLabel;
+    }
+
+    return formatDistanceToNow(date, { addSuffix: true });
+};
+
+const getExtractedFieldSummary = (metadata: EnrichmentMetadata | null): string[] => {
+    const data = metadata?.enriched_data;
+    if (!data) {
+        return [];
+    }
+
+    const summary: string[] = [];
+
+    if (data.description) {
+        summary.push('description');
+    }
+    if (data.location) {
+        summary.push('location');
+    }
+    if (data.registrationUrl) {
+        summary.push('registration URL');
+    }
+    if (data.eventFormat) {
+        summary.push('format');
+    }
+    if (data.pricing && Object.values(data.pricing).some((value) => value !== undefined && value !== null)) {
+        summary.push('pricing');
+    }
+    if (data.speakers?.length) {
+        summary.push(`${data.speakers.length} speaker${data.speakers.length === 1 ? '' : 's'}`);
+    }
+    if (data.agenda?.length) {
+        summary.push(`${data.agenda.length} agenda item${data.agenda.length === 1 ? '' : 's'}`);
+    }
+    if (data.tags?.length) {
+        summary.push(`${data.tags.length} tag${data.tags.length === 1 ? '' : 's'}`);
+    }
+
+    return summary;
+};
+
+export default function EnrichmentDashboardClient() {
     const router = useRouter();
-    const [events, setEvents] = useState<EnrichmentEvent[]>(initialEvents);
+    const [events, setEvents] = useState<EnrichmentEvent[]>([]);
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'enriched' | 'failed'>('all');
+    const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>('all');
     const [searchValue, setSearchValue] = useState('');
-    const [loading, setLoading] = useState(false);
+    const deferredSearchValue = useDeferredValue(searchValue);
+    const [debouncedSearchValue, setDebouncedSearchValue] = useState('');
+    const [loading, setLoading] = useState(true);
     const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>({
         status: true,
         updated: true,
@@ -97,22 +166,33 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     });
     const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
     const columnsPanelRef = useRef<HTMLDivElement>(null);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+    const [total, setTotal] = useState(0);
+    const [statusCounts, setStatusCounts] = useState<Record<DashboardStatusFilter, number>>(DEFAULT_STATUS_COUNTS);
+    const [dashboardMetrics, setDashboardMetrics] = useState<EnrichmentDashboardMetrics | null>(null);
+    const fetchRequestIdRef = useRef(0);
 
-    // Bulk operation progress state
     const [bulkProgress, setBulkProgress] = useState<BulkOperationProgress | null>(null);
     const [confirmDialog, setConfirmDialog] = useState<ConfirmationDialog>({
         open: false,
         mode: 'infer',
         eventIds: [],
     });
-    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-    const [dashboardMetrics, setDashboardMetrics] = useState<EnrichmentDashboardMetrics | null>(null);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const streamAbortControllerRef = useRef<AbortController | null>(null);
     const streamReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
     const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent } = useAdminToolbar();
     const { showInfo, showSuccess, showError } = useSnackbar();
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedSearchValue(deferredSearchValue.trim());
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [deferredSearchValue]);
 
     useEffect(() => {
         return () => {
@@ -127,7 +207,6 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         };
     }, []);
 
-    // Load column visibility from localStorage
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const stored = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
@@ -145,13 +224,11 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         }
     }, []);
 
-    // Save column visibility to localStorage
     useEffect(() => {
         if (typeof window === 'undefined') return;
         window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
     }, [visibleColumns]);
 
-    // Close columns panel on outside click
     useEffect(() => {
         if (!columnsPanelOpen) return;
         const handleClick = (event: MouseEvent) => {
@@ -168,13 +245,23 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
             const activeCount = Object.values(prev).filter(Boolean).length;
             const nextValue = !prev[key];
             if (!nextValue && activeCount <= 1) {
-                return prev; // Prevent hiding all columns
+                return prev;
             }
             return {
                 ...prev,
                 [key]: nextValue,
             };
         });
+    }, []);
+
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchValue(value);
+        setPage(1);
+    }, []);
+
+    const handleStatusFilterChange = useCallback((value: DashboardStatusFilter) => {
+        setStatusFilter(value);
+        setPage(1);
     }, []);
 
     useEffect(() => {
@@ -186,10 +273,10 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         setSearch({
             placeholder: 'Filter by title or source',
             value: searchValue,
-            onChange: (value) => setSearchValue(value ?? ''),
+            onChange: (value) => handleSearchChange(value ?? ''),
         });
         return () => setSearch(undefined);
-    }, [searchValue, setSearch]);
+    }, [handleSearchChange, searchValue, setSearch]);
 
     useEffect(() => {
         setToolbarContent(undefined);
@@ -197,81 +284,111 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     }, [setToolbarContent]);
 
     useEffect(() => {
-        const totalCount = statusCounts.all ?? Object.values(statusCounts).reduce((a, b) => a + b, 0);
         setQuickFilters([
-            { id: 'all', label: 'All', badge: totalCount > 0 ? totalCount : undefined, active: statusFilter === 'all', onToggle: () => setStatusFilter('all') },
-            { id: 'pending', label: 'Pending', badge: statusCounts.pending || undefined, active: statusFilter === 'pending', onToggle: () => setStatusFilter('pending') },
-            { id: 'processing', label: 'Processing', badge: statusCounts.processing || undefined, active: statusFilter === 'processing', onToggle: () => setStatusFilter('processing') },
-            { id: 'enriched', label: 'Enriched', badge: statusCounts.enriched || undefined, active: statusFilter === 'enriched', onToggle: () => setStatusFilter('enriched') },
-            { id: 'failed', label: 'Failed', badge: statusCounts.failed || undefined, active: statusFilter === 'failed', onToggle: () => setStatusFilter('failed') },
+            {
+                id: 'all',
+                label: 'All',
+                badge: statusCounts.all > 0 ? statusCounts.all : undefined,
+                active: statusFilter === 'all',
+                onToggle: () => handleStatusFilterChange('all'),
+            },
+            {
+                id: 'pending',
+                label: 'Pending',
+                badge: statusCounts.pending || undefined,
+                active: statusFilter === 'pending',
+                onToggle: () => handleStatusFilterChange('pending'),
+            },
+            {
+                id: 'processing',
+                label: 'Processing',
+                badge: statusCounts.processing || undefined,
+                active: statusFilter === 'processing',
+                onToggle: () => handleStatusFilterChange('processing'),
+            },
+            {
+                id: 'enriched',
+                label: 'Enriched',
+                badge: statusCounts.enriched || undefined,
+                active: statusFilter === 'enriched',
+                onToggle: () => handleStatusFilterChange('enriched'),
+            },
+            {
+                id: 'failed',
+                label: 'Failed',
+                badge: statusCounts.failed || undefined,
+                active: statusFilter === 'failed',
+                onToggle: () => handleStatusFilterChange('failed'),
+            },
         ]);
-    }, [setQuickFilters, statusCounts, statusFilter]);
+    }, [handleStatusFilterChange, setQuickFilters, statusCounts, statusFilter]);
 
-    const filteredEvents = useMemo(() => {
-        const needle = searchValue.trim().toLowerCase();
-        return events.filter((event) => {
-            const statusMatch = statusFilter === 'all' ? true : event.enrichment_status === statusFilter;
-            const text = [event.title, event.ingestion_source_id ?? '', event.source_url].join(' ').toLowerCase();
-            const searchMatch = needle ? text.includes(needle) : true;
-            return statusMatch && searchMatch;
-        });
-    }, [events, searchValue, statusFilter]);
+    useEffect(() => {
+        return () => setQuickFilters([]);
+    }, [setQuickFilters]);
 
-    // Fetch status counts for filter badges
-    const fetchStatusCounts = useCallback(async () => {
+    const refresh = useCallback(async () => {
+        const requestId = ++fetchRequestIdRef.current;
+        setLoading(true);
+
         try {
-            const statuses = ['all', 'pending', 'processing', 'enriched', 'failed'];
-            const counts: Record<string, number> = {};
+            const params = new URLSearchParams({
+                status: statusFilter,
+                page: String(page),
+                pageSize: String(pageSize),
+            });
 
-            await Promise.all(
-                statuses.map(async (status) => {
-                    const response = await fetch(`/api/admin/ingestion/enrichment-status?status=${status}&limit=1`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        counts[status] = data.total ?? data.events?.length ?? 0;
-                    }
-                })
-            );
+            if (debouncedSearchValue) {
+                params.set('search', debouncedSearchValue);
+            }
 
-            setStatusCounts(counts);
+            const response = await fetch(`/api/admin/ingestion/enrichment-status?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch enrichment status');
+            }
+
+            const data = (await response.json()) as EnrichmentDashboardResponse;
+            if (requestId !== fetchRequestIdRef.current) {
+                return;
+            }
+
+            const nextEvents = data.events ?? [];
+            const nextTotal = data.total ?? nextEvents.length;
+            const maxPage = Math.max(1, Math.ceil(nextTotal / pageSize));
+
+            if (nextEvents.length === 0 && nextTotal > 0 && page > maxPage) {
+                setPage(maxPage);
+                return;
+            }
+
+            const currentPageIds = new Set(nextEvents.map((event) => event.id));
+
+            setEvents(nextEvents);
+            setTotal(nextTotal);
+            setStatusCounts(data.statusCounts ?? DEFAULT_STATUS_COUNTS);
+            setDashboardMetrics(data.metrics ?? null);
+            setSelectedRows((prev) => prev.filter((id) => currentPageIds.has(id)));
         } catch (error) {
-            console.error('Failed to fetch status counts:', error);
-        }
-    }, []);
-
-    const refresh = useCallback(
-        async () => {
-            setLoading(true);
-            try {
-                const response = await fetch('/api/admin/ingestion/enrichment-status?status=all&limit=100');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch enrichment status');
-                }
-                const data = await response.json();
-                setEvents(data.events || []);
-                setDashboardMetrics(data.metrics ?? null);
-                await fetchStatusCounts();
-            } catch (error) {
-                console.error(error);
-                showError('Failed to refresh enrichment status');
-            } finally {
+            if (requestId !== fetchRequestIdRef.current) {
+                return;
+            }
+            console.error(error);
+            showError('Failed to refresh enrichment status');
+        } finally {
+            if (requestId === fetchRequestIdRef.current) {
                 setLoading(false);
             }
-        },
-        [fetchStatusCounts, showError]
-    );
+        }
+    }, [debouncedSearchValue, page, pageSize, showError, statusFilter]);
 
-    // Initial fetch of status counts and dashboard metrics
     useEffect(() => {
         void refresh();
     }, [refresh]);
 
-    // Get event title map for progress display
     const eventTitleMap = useMemo(() => {
-        return new Map(events.map((e) => [e.id, e.title]));
+        return new Map(events.map((event) => [event.id, event.title]));
     }, [events]);
 
-    // Streaming bulk operation handler
     const executeStreamingOperation = useCallback(
         async (eventIds: string[], mode: 'enrich' | 'infer') => {
             if (eventIds.length === 0) {
@@ -291,7 +408,9 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 errors: [],
             });
 
-            const endpoint = mode === 'enrich' ? '/api/admin/ingestion/enrich-stream' : '/api/admin/ingestion/infer-stream';
+            const endpoint = mode === 'enrich'
+                ? '/api/admin/ingestion/enrich-stream'
+                : '/api/admin/ingestion/infer-stream';
             let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
             if (streamAbortControllerRef.current) {
@@ -301,6 +420,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 await streamReaderRef.current.cancel().catch(() => {});
                 streamReaderRef.current = null;
             }
+
             const streamController = new AbortController();
             streamAbortControllerRef.current = streamController;
 
@@ -325,8 +445,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
                 const decoder = new TextDecoder();
                 let buffer = '';
-                // Maximum buffer size to prevent memory issues on malformed streams (1MB)
-                const MAX_BUFFER_SIZE = 1024 * 1024;
+                const maxBufferSize = 1024 * 1024;
 
                 while (true) {
                     if (streamController.signal.aborted) break;
@@ -335,8 +454,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
                     buffer += decoder.decode(value, { stream: true });
 
-                    // Prevent unbounded buffer growth
-                    if (buffer.length > MAX_BUFFER_SIZE) {
+                    if (buffer.length > maxBufferSize) {
                         console.warn('[EnrichmentDashboard] Stream buffer exceeded maximum size, resetting');
                         buffer = '';
                     }
@@ -345,51 +463,76 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     buffer = lines.pop() || '';
 
                     for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data: StreamProgress = JSON.parse(line.slice(6));
+                        if (!line.startsWith('data: ')) {
+                            continue;
+                        }
 
-                                if (data.type === 'progress') {
-                                    setBulkProgress((prev) => {
-                                        if (!prev) return prev;
-                                        const newErrors = [...prev.errors];
-                                        if (data.result?.status === 'failed' && data.result.error) {
-                                            newErrors.push({
-                                                eventId: data.result.eventId,
-                                                title: data.currentEventTitle || 'Unknown',
-                                                error: data.result.error,
-                                            });
-                                        }
-                                        return {
-                                            ...prev,
-                                            completed: data.completed,
-                                            currentTitle: data.currentEventTitle,
-                                            succeeded: prev.succeeded + (data.result?.status === 'enriched' ? 1 : 0),
-                                            failed: prev.failed + (data.result?.status === 'failed' ? 1 : 0),
-                                            errors: newErrors,
-                                        };
+                        let data: StreamProgress;
+                        try {
+                            data = JSON.parse(line.slice(6)) as StreamProgress;
+                        } catch {
+                            // Ignore malformed stream chunks
+                            continue;
+                        }
+
+                        if (data.type === 'progress') {
+                            setBulkProgress((prev) => {
+                                if (!prev) return prev;
+
+                                const nextErrors = [...prev.errors];
+                                const resultTitle = data.result?.title
+                                    ?? data.currentEventTitle
+                                    ?? eventTitleMap.get(data.result?.eventId ?? data.currentEventId ?? '')
+                                    ?? 'Unknown';
+
+                                if (data.result?.status === 'failed' && data.result.error) {
+                                    nextErrors.push({
+                                        eventId: data.result.eventId,
+                                        title: resultTitle,
+                                        error: data.result.error,
                                     });
-                                } else if (data.type === 'complete') {
-                                    setBulkProgress((prev) =>
-                                        prev
-                                            ? {
-                                                ...prev,
-                                                active: false,
-                                                completed: data.total,
-                                                succeeded: data.summary?.succeeded ?? prev.succeeded,
-                                                failed: data.summary?.failed ?? prev.failed,
-                                            }
-                                            : null
-                                    );
-                                    showSuccess(
-                                        `${mode === 'enrich' ? 'Enriched' : 'Inferred'} ${data.summary?.succeeded ?? 0} of ${data.total} events.`
-                                    );
-                                } else if (data.type === 'error') {
-                                    throw new Error(data.error || 'Unknown error');
                                 }
-                            } catch {
-                                // Ignore parse errors
+
+                                return {
+                                    ...prev,
+                                    completed: data.completed,
+                                    currentTitle: data.result?.title ?? data.currentEventTitle,
+                                    succeeded: prev.succeeded + (data.result?.status === 'enriched' ? 1 : 0),
+                                    failed: prev.failed + (data.result?.status === 'failed' ? 1 : 0),
+                                    errors: nextErrors,
+                                };
+                            });
+                        } else if (data.type === 'complete') {
+                            const succeeded = data.summary?.succeeded ?? 0;
+                            const failed = data.summary?.failed ?? 0;
+
+                            setBulkProgress((prev) =>
+                                prev
+                                    ? {
+                                        ...prev,
+                                        active: false,
+                                        completed: data.total,
+                                        succeeded,
+                                        failed,
+                                    }
+                                    : null
+                            );
+
+                            if (failed === 0) {
+                                showSuccess(
+                                    `${mode === 'enrich' ? 'Enriched' : 'Inferred'} ${succeeded} of ${data.total} events.`
+                                );
+                            } else if (succeeded === 0) {
+                                showError(
+                                    `${mode === 'enrich' ? 'Scrape' : 'Inference'} failed for ${failed} of ${data.total} events.`
+                                );
+                            } else {
+                                showInfo(
+                                    `${mode === 'enrich' ? 'Enriched' : 'Inferred'} ${succeeded} of ${data.total} events. ${failed} failed.`
+                                );
                             }
+                        } else if (data.type === 'error') {
+                            throw new Error(data.error || 'Unknown error');
                         }
                     }
                 }
@@ -416,17 +559,14 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 setLoading(false);
             }
         },
-        [refresh, showError, showInfo, showSuccess]
+        [eventTitleMap, refresh, showError, showInfo, showSuccess]
     );
 
-    // Single event operations (non-streaming, for individual actions)
     const triggerEnrichment = useCallback(
         async (eventIds: string[]) => {
             if (eventIds.length === 1) {
-                // Single event - use streaming for consistency
                 await executeStreamingOperation(eventIds, 'enrich');
             } else {
-                // Bulk - open confirmation dialog
                 setConfirmDialog({ open: true, mode: 'enrich', eventIds });
             }
         },
@@ -436,23 +576,19 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
     const triggerInference = useCallback(
         async (eventIds: string[]) => {
             if (eventIds.length === 1) {
-                // Single event - use streaming for consistency
                 await executeStreamingOperation(eventIds, 'infer');
             } else {
-                // Bulk - open confirmation dialog
                 setConfirmDialog({ open: true, mode: 'infer', eventIds });
             }
         },
         [executeStreamingOperation]
     );
 
-    // Handle confirmation dialog confirm
     const handleConfirmBulkOperation = useCallback(() => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
-        executeStreamingOperation(confirmDialog.eventIds, confirmDialog.mode);
+        void executeStreamingOperation(confirmDialog.eventIds, confirmDialog.mode);
     }, [confirmDialog.eventIds, confirmDialog.mode, executeStreamingOperation]);
 
-    // Navigate to editor on row click
     const handleRowClick = useCallback(
         (event: EnrichmentEvent) => {
             router.push(`/admin/ingestion/enrichment/${event.id}`);
@@ -460,21 +596,17 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         [router]
     );
 
-    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Don't trigger if typing in input
             if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
                 return;
             }
 
-            // ? or Shift+/ to show shortcuts
             if (event.key === '?' || (event.shiftKey && event.key === '/')) {
                 event.preventDefault();
                 setShortcutsOpen(true);
             }
 
-            // Escape to close modals
             if (event.key === 'Escape') {
                 if (shortcutsOpen) {
                     setShortcutsOpen(false);
@@ -485,152 +617,172 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 }
             }
 
-            // e = enrich selected, i = infer selected (when rows selected)
             if (!loading && selectedRows.length > 0) {
                 if (event.key === 'e' && !event.metaKey && !event.ctrlKey) {
                     event.preventDefault();
-                    triggerEnrichment(selectedRows);
+                    void triggerEnrichment(selectedRows);
                 }
                 if (event.key === 'i' && !event.metaKey && !event.ctrlKey) {
                     event.preventDefault();
-                    triggerInference(selectedRows);
+                    void triggerInference(selectedRows);
                 }
             }
 
-            // r = refresh
             if (event.key === 'r' && !event.metaKey && !event.ctrlKey && !loading) {
                 event.preventDefault();
-                refresh();
+                void refresh();
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [shortcutsOpen, confirmDialog.open, bulkProgress, loading, selectedRows, triggerEnrichment, triggerInference, refresh]);
+    }, [bulkProgress, confirmDialog.open, loading, refresh, selectedRows, shortcutsOpen, triggerEnrichment, triggerInference]);
 
-    const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(
-        () => {
-            const baseColumns: AdminDataTableColumn<EnrichmentEvent>[] = [
-                {
-                    key: 'event',
-                    header: 'Event',
-                    render: (event) => (
-                        <div className="flex flex-col gap-0.5">
-                            <div className="font-medium text-foreground-primary text-[13px]">{event.title}</div>
-                            <div className="flex items-center gap-2 text-[11px] text-foreground-muted">
-                                {event.ingestion_source_id && (
-                                    <span className="font-mono text-foreground-tertiary">
-                                        {event.ingestion_source_id}
-                                    </span>
-                                )}
-                                <span>•</span>
-                                <span>{formatDistanceToNow(new Date(event.start_time), { addSuffix: true })}</span>
-                            </div>
+    const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(() => {
+        const nextColumns: AdminDataTableColumn<EnrichmentEvent>[] = [
+            {
+                key: 'event',
+                header: 'Event',
+                render: (event) => (
+                    <div className="flex flex-col gap-0.5">
+                        <div className="font-medium text-foreground-primary text-[13px]">{event.title}</div>
+                        <div className="flex items-center gap-2 text-[11px] text-foreground-muted">
+                            {event.ingestion_source_id && (
+                                <span className="font-mono text-foreground-tertiary">
+                                    {event.ingestion_source_id}
+                                </span>
+                            )}
+                            <span>•</span>
+                            <span>{formatRelativeTimestamp(event.start_time, 'No start time')}</span>
                         </div>
-                    ),
-                },
-            ];
+                    </div>
+                ),
+            },
+        ];
 
-            if (visibleColumns.status) {
-                baseColumns.push({
-                    key: 'status',
-                    header: 'Status',
-                    cellClassName: 'max-w-xl',
-                    render: (event) => {
-                        const statusColors: Record<string, string> = {
-                            pending: 'bg-amber-500',
-                            processing: 'bg-blue-500',
-                            enriched: 'bg-emerald-500',
-                            failed: 'bg-rose-500',
-                            approved: 'bg-emerald-600',
-                            rejected: 'bg-rose-600',
-                            skipped: 'bg-background-tertiary',
-                        };
-                        const color = statusColors[event.enrichment_status] || 'bg-background-tertiary';
+        if (visibleColumns.status) {
+            nextColumns.push({
+                key: 'status',
+                header: 'Status',
+                cellClassName: 'max-w-xl',
+                render: (event) => {
+                    const statusColors: Record<string, string> = {
+                        pending: 'bg-amber-500',
+                        processing: 'bg-blue-500',
+                        enriched: 'bg-emerald-500',
+                        failed: 'bg-rose-500',
+                        approved: 'bg-emerald-600',
+                        rejected: 'bg-rose-600',
+                        skipped: 'bg-background-tertiary',
+                    };
+                    const color = statusColors[event.enrichment_status] || 'bg-background-tertiary';
+                    const extractedSummary = getExtractedFieldSummary(event.enrichment_metadata);
 
-                        return (
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                    <div className={cn("h-1.5 w-1.5 rounded-full", color)} />
-                                    <span className="text-[11px] capitalize text-foreground-tertiary">{event.enrichment_status}</span>
-                                </div>
-                                {event.review_status && (
-                                    <span className="text-[10px] text-foreground-muted">
-                                        Review: {event.review_status.replace('_', ' ')}
-                                    </span>
-                                )}
-                                {event.enrichment_metadata?.last_error && (
-                                    <span className="text-rose-400 text-[10px] leading-snug line-clamp-1">
-                                        {event.enrichment_metadata.last_error}
-                                    </span>
-                                )}
+                    return (
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                                <div className={cn('h-1.5 w-1.5 rounded-full', color)} />
+                                <span className="text-[11px] capitalize text-foreground-tertiary">
+                                    {event.enrichment_status}
+                                </span>
                             </div>
-                        );
-                    },
-                    width: 200,
-                });
-            }
-
-            if (visibleColumns.updated) {
-                baseColumns.push({
-                    key: 'updated_at',
-                    header: 'Updated',
-                    render: (event) => (
-                        <div className="text-[11px] text-foreground-muted">
-                            {event.updated_at ? formatDistanceToNow(new Date(event.updated_at), { addSuffix: true }) : '—'}
-                        </div>
-                    ),
-                    width: 120,
-                });
-            }
-
-            if (visibleColumns.actions) {
-                baseColumns.push({
-                    key: 'actions',
-                    header: 'Actions',
-                    align: 'right',
-                    render: (event) => (
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 px-2 text-[10px] text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
-                                onClick={() => triggerEnrichment([event.id])}
-                                disabled={loading || !event.source_url}
-                                title={!event.source_url ? 'No source URL' : 'Scrape'}
-                            >
-                                Scrape
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 px-2 text-[10px] text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
-                                onClick={() => triggerInference([event.id])}
-                                disabled={loading}
-                                title="Infer"
-                            >
-                                Infer
-                            </Button>
-                            {event.source_url && (
-                                <a
-                                    href={event.source_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex h-6 w-6 items-center justify-center rounded hover:bg-background-tertiary text-foreground-muted hover:text-foreground-tertiary"
-                                >
-                                    <MaterialIcon name="arrow-up-right" size={12} />
-                                </a>
+                            {event.review_status && (
+                                <span className="text-[10px] text-foreground-muted">
+                                    Review: {event.review_status.replace('_', ' ')}
+                                </span>
+                            )}
+                            {extractedSummary.length > 0 && (
+                                <span className="text-[10px] leading-snug text-foreground-muted">
+                                    Extracted: {extractedSummary.slice(0, 3).join(', ')}
+                                    {extractedSummary.length > 3 ? ` +${extractedSummary.length - 3} more` : ''}
+                                </span>
+                            )}
+                            {event.enrichment_status === 'enriched' && !event.review_status && extractedSummary.length === 0 && (
+                                <span className="text-[10px] text-foreground-muted">
+                                    Scrape succeeded with no visible field diff.
+                                </span>
+                            )}
+                            {event.enrichment_metadata?.last_error && (
+                                <span className="text-[10px] leading-snug text-rose-400 line-clamp-2">
+                                    {event.enrichment_metadata.last_error}
+                                </span>
                             )}
                         </div>
-                    ),
-                    width: 180,
-                });
-            }
+                    );
+                },
+                width: 220,
+            });
+        }
 
-            return baseColumns;
-        },
-        [loading, triggerEnrichment, triggerInference, visibleColumns]
-    );
+        if (visibleColumns.updated) {
+            nextColumns.push({
+                key: 'updated_at',
+                header: 'Updated',
+                render: (event) => (
+                    <div className="text-[11px] text-foreground-muted">
+                        {formatRelativeTimestamp(event.updated_at)}
+                    </div>
+                ),
+                width: 120,
+            });
+        }
+
+        if (visibleColumns.actions) {
+            nextColumns.push({
+                key: 'actions',
+                header: 'Actions',
+                align: 'right',
+                render: (event) => (
+                    <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {event.review_queue_id && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px] text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground-primary"
+                                onClick={() => router.push(`/admin/ingestion/update-queue/${event.review_queue_id}`)}
+                                title="View review diff"
+                            >
+                                Review
+                            </Button>
+                        )}
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground-primary"
+                            onClick={() => void triggerEnrichment([event.id])}
+                            disabled={loading || !event.source_url}
+                            title={!event.source_url ? 'No source URL' : 'Scrape'}
+                        >
+                            Scrape
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground-primary"
+                            onClick={() => void triggerInference([event.id])}
+                            disabled={loading}
+                            title="Infer"
+                        >
+                            Infer
+                        </Button>
+                        {event.source_url && (
+                            <a
+                                href={event.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex h-6 w-6 items-center justify-center rounded text-foreground-muted hover:bg-background-tertiary hover:text-foreground-tertiary"
+                            >
+                                <MaterialIcon name="arrow-up-right" size={12} />
+                            </a>
+                        )}
+                    </div>
+                ),
+                width: 240,
+            });
+        }
+
+        return nextColumns;
+    }, [loading, router, triggerEnrichment, triggerInference, visibleColumns]);
 
     const bulkActions = useMemo(
         () => [
@@ -639,39 +791,64 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 label: 'Scrape & Enrich',
                 icon: <MaterialIcon name="arrow-forward" size={14} />,
                 disabled: selectedRows.length === 0 || loading,
-                onSelect: () => triggerEnrichment(selectedRows),
+                onSelect: () => void triggerEnrichment(selectedRows),
             },
             {
                 id: 'infer',
                 label: 'Infer Metadata (No Scrape)',
                 icon: <MaterialIcon name="code" size={14} />,
                 disabled: selectedRows.length === 0 || loading,
-                onSelect: () => triggerInference(selectedRows),
+                onSelect: () => void triggerInference(selectedRows),
             },
             {
                 id: 'refresh',
                 label: 'Refresh',
                 icon: <MaterialIcon name="refresh" size={14} />,
                 disabled: loading,
-                onSelect: () => refresh(),
+                onSelect: () => void refresh(),
             },
         ],
         [loading, refresh, selectedRows, triggerEnrichment, triggerInference]
     );
 
+    const emptyState = useMemo(() => {
+        if (debouncedSearchValue) {
+            return (
+                <p className="py-10 text-center text-sm text-foreground-muted">
+                    No events match “{debouncedSearchValue}”.
+                </p>
+            );
+        }
+
+        if (statusFilter !== 'all') {
+            return (
+                <p className="py-10 text-center text-sm text-foreground-muted">
+                    No {statusFilter} enrichment events found.
+                </p>
+            );
+        }
+
+        return (
+            <p className="py-10 text-center text-sm text-foreground-muted">
+                No enrichment events found.
+            </p>
+        );
+    }, [debouncedSearchValue, statusFilter]);
+
     return (
         <div className="space-y-4">
             {dashboardMetrics && (
-                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
                     {[
                         { label: 'Future Pending', value: dashboardMetrics.futurePending },
                         { label: 'Past Pending', value: dashboardMetrics.pastPending },
+                        { label: 'Unscheduled', value: dashboardMetrics.unscheduledPending },
                         { label: 'Review Pending', value: dashboardMetrics.reviewPending },
                         { label: 'Duplicate Reviews', value: dashboardMetrics.duplicateReviewEntries },
                         {
                             label: 'Latest Enriched',
                             value: dashboardMetrics.latestEnrichedAt
-                                ? formatDistanceToNow(new Date(dashboardMetrics.latestEnrichedAt), { addSuffix: true })
+                                ? formatRelativeTimestamp(dashboardMetrics.latestEnrichedAt)
                                 : '—',
                         },
                         {
@@ -685,30 +862,35 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <p className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
                                 {metric.label}
                             </p>
-                            <p className="mt-2 text-lg font-semibold text-foreground-primary">{metric.value}</p>
+                            <p className="mt-2 text-lg font-semibold text-foreground-primary">
+                                {metric.value}
+                            </p>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Progress Bar */}
             {bulkProgress && (
-                <div className="rounded-lg border border-default bg-background-main p-3 mb-4">
+                <div className="mb-4 rounded-lg border border-default bg-background-main p-3">
                     <div className="mb-2 flex items-center justify-between text-[11px] text-foreground-tertiary">
                         <span>
                             {bulkProgress.active ? (
                                 <>
                                     {bulkProgress.mode === 'enrich' ? 'Enriching' : 'Inferring'}{' '}
-                                    <span className="text-foreground-primary">{bulkProgress.completed}/{bulkProgress.total}</span>
+                                    <span className="text-foreground-primary">
+                                        {bulkProgress.completed}/{bulkProgress.total}
+                                    </span>
                                 </>
                             ) : (
                                 <>
-                                    Complete: <span className="text-emerald-400">{bulkProgress.succeeded}</span> succeeded, <span className="text-rose-400">{bulkProgress.failed}</span> failed
+                                    Complete:{' '}
+                                    <span className="text-emerald-400">{bulkProgress.succeeded}</span> succeeded,{' '}
+                                    <span className="text-rose-400">{bulkProgress.failed}</span> failed
                                 </>
                             )}
                         </span>
                         {bulkProgress.active && bulkProgress.currentTitle && (
-                            <span className="truncate max-w-[300px] opacity-70">
+                            <span className="max-w-[300px] truncate opacity-70">
                                 {bulkProgress.currentTitle}
                             </span>
                         )}
@@ -721,12 +903,14 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     </div>
                     {!bulkProgress.active && bulkProgress.errors.length > 0 && (
                         <div className="mt-3 space-y-1">
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-rose-400">Errors ({bulkProgress.errors.length})</p>
-                            <div className="max-h-32 overflow-y-auto space-y-1">
-                                {bulkProgress.errors.slice(0, 5).map((err) => (
-                                    <div key={err.eventId} className="text-[11px] text-foreground-muted">
-                                        <span className="text-foreground-tertiary">{err.title}:</span>{' '}
-                                        <span className="text-rose-400">{err.error}</span>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-rose-400">
+                                Errors ({bulkProgress.errors.length})
+                            </p>
+                            <div className="max-h-40 space-y-1 overflow-y-auto">
+                                {bulkProgress.errors.map((error) => (
+                                    <div key={`${error.eventId}-${error.error}`} className="text-[11px] text-foreground-muted">
+                                        <span className="text-foreground-tertiary">{error.title}:</span>{' '}
+                                        <span className="text-rose-400">{error.error}</span>
                                     </div>
                                 ))}
                             </div>
@@ -749,48 +933,59 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
             <AdminDataTable
                 columns={columns}
-                rows={filteredEvents}
+                rows={events}
                 getRowId={(event) => event.id}
-                sortKey="start_time"
-                sortDirection="asc"
+                sortKey="created_at"
+                sortDirection="desc"
                 selectable
                 selectedRowIds={selectedRows}
                 onSelectionChange={setSelectedRows}
                 onRowClick={handleRowClick}
                 bulkActions={bulkActions}
-                page={1}
-                pageSize={filteredEvents.length || 10}
-                total={filteredEvents.length}
-                onPageChange={() => undefined}
-                onPageSizeChange={() => undefined}
+                isLoading={loading}
+                emptyState={emptyState}
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={setPage}
+                onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPage(1);
+                }}
                 toolbar={
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <div className="relative">
-                                <MaterialIcon name="search" size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-foreground-muted" />
+                                <MaterialIcon
+                                    name="search"
+                                    size={14}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 text-foreground-muted"
+                                />
                                 <input
                                     type="text"
                                     placeholder="Filter events..."
                                     className="h-7 w-64 rounded-md border border-default bg-background-tertiary pl-8 pr-3 text-[13px] text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
                                     value={searchValue}
-                                    onChange={(e) => setSearchValue(e.target.value)}
+                                    onChange={(event) => handleSearchChange(event.target.value)}
                                 />
                             </div>
-                            <div className="h-4 w-px bg-accent-primary-light mx-1" />
+                            <div className="mx-1 h-4 w-px bg-accent-primary-light" />
                             <div className="flex items-center gap-1">
-                                {(['all', 'pending', 'processing', 'enriched', 'failed'] as const).map((status) => (
+                                {STATUS_FILTERS.map((status) => (
                                     <button
                                         key={status}
-                                        onClick={() => setStatusFilter(status)}
+                                        onClick={() => handleStatusFilterChange(status)}
                                         className={cn(
-                                            "px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                                            'rounded px-2 py-1 text-[11px] font-medium capitalize transition-colors',
                                             statusFilter === status
-                                                ? "bg-accent-primary-light text-foreground-primary"
-                                                : "text-foreground-muted hover:text-foreground-tertiary hover:bg-background-tertiary"
+                                                ? 'bg-accent-primary-light text-foreground-primary'
+                                                : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground-tertiary'
                                         )}
                                     >
                                         {status}
-                                        {statusCounts[status] ? <span className="ml-1 opacity-50">{statusCounts[status]}</span> : null}
+                                        {statusCounts[status] ? (
+                                            <span className="ml-1 opacity-50">{statusCounts[status]}</span>
+                                        ) : null}
                                     </button>
                                 ))}
                             </div>
@@ -802,14 +997,19 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => setColumnsPanelOpen((prev) => !prev)}
-                                    className={cn("h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary", columnsPanelOpen && "bg-accent-primary-light text-foreground-primary")}
+                                    className={cn(
+                                        'h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary',
+                                        columnsPanelOpen && 'bg-accent-primary-light text-foreground-primary'
+                                    )}
                                     title="Columns"
                                 >
                                     <MaterialIcon name="settings" size={14} />
                                 </Button>
                                 {columnsPanelOpen && (
                                     <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-default bg-background-main p-2 shadow-xl">
-                                        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">Columns</p>
+                                        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                                            Columns
+                                        </p>
                                         <div className="space-y-1">
                                             {(
                                                 [
@@ -818,14 +1018,19 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                                     ['actions', 'Actions'],
                                                 ] as Array<[keyof ColumnVisibility, string]>
                                             ).map(([key, label]) => (
-                                                <label key={key} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-background-tertiary cursor-pointer">
+                                                <label
+                                                    key={key}
+                                                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-background-tertiary"
+                                                >
                                                     <input
                                                         type="checkbox"
                                                         className="h-3.5 w-3.5 rounded border-default bg-background-tertiary text-accent-primary focus:ring-0"
                                                         checked={visibleColumns[key]}
                                                         onChange={() => toggleColumnVisibility(key)}
                                                     />
-                                                    <span className="text-[13px] text-foreground-tertiary">{label}</span>
+                                                    <span className="text-[13px] text-foreground-tertiary">
+                                                        {label}
+                                                    </span>
                                                 </label>
                                             ))}
                                         </div>
@@ -835,7 +1040,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => refresh()}
+                                onClick={() => void refresh()}
                                 disabled={loading}
                                 className="h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary"
                                 title="Refresh"
@@ -847,12 +1052,12 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 }
             />
 
-            {/* Confirmation Dialog */}
             {confirmDialog.open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="w-full max-w-md rounded-lg border border-default bg-background-main p-6 shadow-xl">
                         <h2 className="text-lg font-semibold text-foreground-primary">
-                            {confirmDialog.mode === 'enrich' ? 'Scrape & Enrich' : 'Infer Metadata'} {confirmDialog.eventIds.length} Events?
+                            {confirmDialog.mode === 'enrich' ? 'Scrape & Enrich' : 'Infer Metadata'}{' '}
+                            {confirmDialog.eventIds.length} Events?
                         </h2>
                         <p className="mt-2 text-sm text-foreground-tertiary">
                             {confirmDialog.mode === 'enrich'
@@ -890,16 +1095,24 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 </div>
             )}
 
-            {/* Keyboard Shortcuts Modal */}
             {shortcutsOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-main/80 backdrop-blur">
                     <div className="w-full max-w-md rounded-xl border border-default bg-background-main p-6 shadow-2xl">
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-foreground-primary">Keyboard Shortcuts</h2>
-                                <p className="text-sm text-foreground-tertiary">Speed through enrichment without touching your mouse.</p>
+                                <h2 className="text-lg font-semibold text-foreground-primary">
+                                    Keyboard Shortcuts
+                                </h2>
+                                <p className="text-sm text-foreground-tertiary">
+                                    Speed through enrichment without touching your mouse.
+                                </p>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => setShortcutsOpen(false)} className="text-foreground-tertiary hover:bg-background-tertiary">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShortcutsOpen(false)}
+                                className="text-foreground-tertiary hover:bg-background-tertiary"
+                            >
                                 <MaterialIcon name="close" size={16} />
                             </Button>
                         </div>
@@ -912,15 +1125,19 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                 { keys: '?', description: 'Show this help' },
                                 { keys: 'Esc', description: 'Close dialogs/modals' },
                             ].map((shortcut) => (
-                                <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-default/60 bg-background-secondary/60 px-3 py-2">
+                                <div
+                                    key={shortcut.keys}
+                                    className="flex items-center justify-between gap-3 rounded-md border border-default/60 bg-background-secondary/60 px-3 py-2"
+                                >
                                     <span className="font-mono text-xs uppercase tracking-wide text-foreground-primary">
                                         {shortcut.keys}
                                     </span>
-                                    <span className="text-sm text-foreground-tertiary">{shortcut.description}</span>
+                                    <span className="text-sm text-foreground-tertiary">
+                                        {shortcut.description}
+                                    </span>
                                 </div>
                             ))}
                         </div>
-                        <p className="mt-4 text-center text-xs text-foreground-muted">Press Esc to close.</p>
                     </div>
                 </div>
             )}

@@ -99,6 +99,26 @@ export interface SpeakerInput {
     websiteUrl?: string;
 }
 
+const getErrorMessage = (error: unknown, fallback = 'Unknown error'): string => {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+        if ('message' in error && typeof error.message === 'string' && error.message) {
+            return error.message;
+        }
+        if ('details' in error && typeof error.details === 'string' && error.details) {
+            return error.details;
+        }
+        if ('hint' in error && typeof error.hint === 'string' && error.hint) {
+            return error.hint;
+        }
+    }
+
+    return fallback;
+};
+
 export class EventEnrichmentService {
     /**
      * Create or update agenda items for an event
@@ -120,7 +140,7 @@ export class EventEnrichmentService {
             // Ensure unique sort_order per day_number
             // Group items by day_number and assign sequential sort_order within each group
             const dayCounters = new Map<number, number>();
-            const agendaInserts = items.map((item, index) => {
+            const agendaInserts = items.map((item) => {
                 const parseMinutes = (time: string | null | undefined): number | null => {
                     if (!time) return null;
                     const match = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
@@ -241,7 +261,7 @@ export class EventEnrichmentService {
                 agendaItemIds: insertedAgendaIds,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorMessage = getErrorMessage(error);
             console.error('Error creating/updating agenda items:', error);
             Sentry.captureException(error, {
                 extra: { function: 'createOrUpdateAgendaItems', eventId },
@@ -1396,4 +1416,3 @@ export class EventEnrichmentService {
         return parts.length > 1 ? parts[parts.length - 1] : undefined;
     }
 }
-
