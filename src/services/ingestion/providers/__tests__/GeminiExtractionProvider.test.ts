@@ -30,6 +30,21 @@ describe('GeminiExtractionProvider normalization', () => {
         expect(normalized.tags?.[24]).toBe('Tag 25');
     });
 
+    it('truncates speaker bios before validation', () => {
+        const normalized = normalizeExtractedProviderPayload({
+            speakers: [
+                {
+                    name: 'Jane Doe',
+                    bio: 'a'.repeat(800),
+                },
+            ],
+        }) as {
+            speakers?: Array<{ bio?: string }>;
+        };
+
+        expect(normalized.speakers?.[0]?.bio).toHaveLength(500);
+    });
+
     it('normalizes inference tags with dedupe and cap', () => {
         const allowlist = Array.from({ length: 40 }, (_, index) => `Topic ${index + 1}`);
         const tags = ['topic 1', 'Topic 1', ...Array.from({ length: 35 }, (_, index) => `topic ${index + 2}`)];

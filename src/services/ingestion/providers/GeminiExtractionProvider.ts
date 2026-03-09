@@ -19,6 +19,10 @@ interface GeminiProviderOptions {
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const MAX_PROVIDER_TAGS = 25;
+const MAX_SPEAKER_BIO_LENGTH = 500;
+const MAX_AGENDA_DESCRIPTION_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_LOCATION_LENGTH = 500;
 const PAID_PRICING_KEYWORDS = ['paid', 'ticket', 'tickets', 'fixed', 'registration', 'fee', 'cost', 'price'];
 const FREE_PRICING_KEYWORDS = ['free', 'complimentary', 'gratis', 'no cost'];
 const VARIABLE_PRICING_KEYWORDS = ['varies', 'variable', 'depends', 'tbd', 'range', 'sliding'];
@@ -142,6 +146,68 @@ const INFERENCE_RESPONSE_SCHEMA = {
     },
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const truncateText = (value: unknown, maxLength: number): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim();
+    if (!normalized) {
+        return undefined;
+    }
+
+    return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized;
+};
+
+const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefined => {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const normalized = value
+        .filter(isPlainObject)
+        .map((speaker) => {
+            const nextSpeaker = { ...speaker };
+            const bio = truncateText(nextSpeaker.bio, MAX_SPEAKER_BIO_LENGTH);
+
+            if (bio) {
+                nextSpeaker.bio = bio;
+            } else {
+                delete nextSpeaker.bio;
+            }
+
+            return nextSpeaker;
+        });
+
+    return normalized.length > 0 ? normalized : undefined;
+};
+
+const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined => {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const normalized = value
+        .filter(isPlainObject)
+        .map((agendaItem) => {
+            const nextAgendaItem = { ...agendaItem };
+            const description = truncateText(nextAgendaItem.description, MAX_AGENDA_DESCRIPTION_LENGTH);
+
+            if (description) {
+                nextAgendaItem.description = description;
+            } else {
+                delete nextAgendaItem.description;
+            }
+
+            return nextAgendaItem;
+        });
+
+    return normalized.length > 0 ? normalized : undefined;
+};
+
 const normalizeTagList = (value: unknown, allowedTags?: string[]): string[] | undefined => {
     if (!Array.isArray(value)) {
         return undefined;
@@ -234,12 +300,14 @@ export const normalizeExtractedProviderPayload = (
     value: unknown,
     allowedTags?: string[],
 ): unknown => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    if (!isPlainObject(value)) {
         return value;
     }
 
-    const payload = { ...(value as Record<string, unknown>) };
+    const payload = { ...value };
     const normalizedTags = normalizeTagList(payload.tags, allowedTags);
+    const normalizedSpeakers = normalizeSpeakers(payload.speakers);
+    const normalizedAgenda = normalizeAgenda(payload.agenda);
 
     if (normalizedTags) {
         payload.tags = normalizedTags;
@@ -258,6 +326,32 @@ export const normalizeExtractedProviderPayload = (
         }
 
         payload.pricing = pricing;
+    }
+
+    if (normalizedSpeakers) {
+        payload.speakers = normalizedSpeakers;
+    } else if ('speakers' in payload) {
+        delete payload.speakers;
+    }
+
+    if (normalizedAgenda) {
+        payload.agenda = normalizedAgenda;
+    } else if ('agenda' in payload) {
+        delete payload.agenda;
+    }
+
+    const normalizedDescription = truncateText(payload.description, MAX_DESCRIPTION_LENGTH);
+    if (normalizedDescription) {
+        payload.description = normalizedDescription;
+    } else if ('description' in payload) {
+        delete payload.description;
+    }
+
+    const normalizedLocation = truncateText(payload.location, MAX_LOCATION_LENGTH);
+    if (normalizedLocation) {
+        payload.location = normalizedLocation;
+    } else if ('location' in payload) {
+        delete payload.location;
     }
 
     const normalizedFormat = normalizeEventFormat(payload.eventFormat);

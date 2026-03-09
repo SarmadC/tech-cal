@@ -7,6 +7,15 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 const DEFAULT_CRON_BATCH_LIMIT = 25;
 
+const summarizeFailures = (results: Awaited<ReturnType<LLMEnrichmentService['processBatch']>>['results']) =>
+    results
+        .filter((result) => result.status === 'failed')
+        .map((result) => ({
+            eventId: result.eventId,
+            title: result.title ?? null,
+            error: result.error ?? 'Unknown error',
+        }));
+
 async function validateCron(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
@@ -45,17 +54,20 @@ async function handler(request: NextRequest) {
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : fallbackLimit;
 
     const result = await service.processBatch(limit);
+    const failures = summarizeFailures(result.results);
 
     console.log('Enrichment cron completed', {
         processed: result.processed,
         succeeded: result.succeeded,
         failed: result.failed,
         limit,
+        failures,
     });
 
     return NextResponse.json({
         success: true,
         timestamp: new Date().toISOString(),
+        failures,
         ...result,
     });
 }

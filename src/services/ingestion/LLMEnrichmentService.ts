@@ -98,6 +98,7 @@ let allowedTagsCache: { tags: AllowedTag[]; fetchedAt: number } | null = null;
 
 export interface EnrichmentJobResult {
     eventId: string;
+    title?: string;
     status: 'enriched' | 'failed';
     error?: string;
 }
@@ -155,16 +156,20 @@ export class LLMEnrichmentService {
     }
 
     async processEvent(eventId: string): Promise<EnrichmentJobResult> {
+        let eventTitle: string | undefined;
+
         try {
             const event = await this.fetchEvent(eventId);
             if (!event) {
                 return { eventId, status: 'failed', error: 'Event not found' };
             }
 
+            eventTitle = event.title ?? undefined;
+
             const sourceUrl = event.source_url;
             if (!sourceUrl) {
                 await this.markFailed(eventId, event, 'Event is missing source_url');
-                return { eventId, status: 'failed', error: 'Missing source_url' };
+                return { eventId, title: eventTitle, status: 'failed', error: 'Missing source_url' };
             }
 
             this.validateSourceUrl(sourceUrl);
@@ -191,12 +196,12 @@ export class LLMEnrichmentService {
 
             await this.persistSuccess(eventId, event, providerResult, metadata, contentHash, allowedTags);
 
-            return { eventId, status: 'enriched' };
+            return { eventId, title: eventTitle, status: 'enriched' };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             await this.markRetryOrFail(eventId, message);
             Sentry.captureException(error, { extra: { eventId } });
-            return { eventId, status: 'failed', error: message };
+            return { eventId, title: eventTitle, status: 'failed', error: message };
         }
     }
 
@@ -207,6 +212,7 @@ export class LLMEnrichmentService {
             .select(
                 [
                     'id',
+                    'title',
                     'source_url',
                     'enrichment_status',
                     'enrichment_metadata',
@@ -241,6 +247,7 @@ export class LLMEnrichmentService {
             .select(
                 [
                     'id',
+                    'title',
                     'source_url',
                     'enrichment_status',
                     'enrichment_metadata',
@@ -1008,14 +1015,18 @@ export class LLMEnrichmentService {
      * Generates description and tags from title + available metadata
      */
     async processEventInference(eventId: string): Promise<EnrichmentJobResult> {
+        let eventTitle: string | undefined;
+
         try {
             const event = await this.fetchEventForInference(eventId);
             if (!event) {
                 return { eventId, status: 'failed', error: 'Event not found' };
             }
 
+            eventTitle = event.title ?? undefined;
+
             if (!event.title) {
-                return { eventId, status: 'failed', error: 'Event is missing title' };
+                return { eventId, title: eventTitle, status: 'failed', error: 'Event is missing title' };
             }
 
             const metadata = this.normalizeMetadata(event);
@@ -1042,12 +1053,12 @@ export class LLMEnrichmentService {
             // Persist the inferred data
             await this.persistInferenceSuccess(eventId, event, inferenceResult, metadata, allowedTags);
 
-            return { eventId, status: 'enriched' };
+            return { eventId, title: eventTitle, status: 'enriched' };
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             await this.markRetryOrFail(eventId, message);
             Sentry.captureException(error, { extra: { eventId, mode: 'inference' } });
-            return { eventId, status: 'failed', error: message };
+            return { eventId, title: eventTitle, status: 'failed', error: message };
         }
     }
 
