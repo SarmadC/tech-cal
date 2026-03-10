@@ -1,10 +1,15 @@
-import { extractCoreFieldsFromHtml, type HtmlCoreExtractionResult } from './html';
+import type { HtmlCoreExtractionResult } from './html';
 import { createHash, normalizeUrlForCaching } from './utils/urlCanonicalizer';
 import { applyIngestionRecordCleanup } from './utils/recordCleanup';
 import { PageCacheService, type CachedExtractionPayload } from './PageCacheService';
 import type { ScrapedEventData } from '@/types/ingestion';
 import type { EventSourceRecord } from '@/types/ingestion';
 import type { SupabaseClientType } from '@/types';
+import {
+    collectLinkedPageDocuments,
+    htmlExtractionToExtractedEventData,
+    mergeLinkedPageExtractions,
+} from './linkedPageExtraction';
 
 interface FetchHtmlResult {
     success: boolean;
@@ -93,17 +98,8 @@ function toExtractedEventData(
 ): { data: ScrapedEventData; fieldConfidence: Record<string, number> } {
     const fieldConfidence: Record<string, number> = { ...extraction.confidence };
 
-    const agenda = extraction.schedule?.map((item) => ({
-        title: item.title,
-        startTime: item.startTime || item.date,
-        endTime: item.endTime,
-        description: item.description,
-        speakers: item.speakers,
-        location: item.location,
-        track: item.track,
-    }));
-
-    const dailySchedule = extraction.schedule?.map((item, index) => ({
+    const structuredData = htmlExtractionToExtractedEventData(extraction);
+    const dailySchedule = (extraction.dailySchedule ?? extraction.schedule)?.map((item, index) => ({
         dayNumber: item.date ? undefined : index + 1,
         date: item.date,
         startTime: item.startTime,
@@ -119,18 +115,33 @@ function toExtractedEventData(
         location: extraction.location
             ? { venue: extraction.location }
             : undefined,
-        pricing: extraction.pricing
+        pricing: structuredData.pricing
             ? {
-                  priceMin: extraction.pricing.priceMin ?? undefined,
-                  priceMax: extraction.pricing.priceMax ?? undefined,
-                  currency: extraction.pricing.currency ?? undefined,
-                  pricingType: extraction.pricing.pricingType ?? undefined,
+                  priceMin: structuredData.pricing.priceMin ?? undefined,
+                  priceMax: structuredData.pricing.priceMax ?? undefined,
+                  currency: structuredData.pricing.currency ?? undefined,
+                  pricingType: structuredData.pricing.pricingType ?? undefined,
               }
             : undefined,
         imageUrl: extraction.eventImageUrl,
         dailySchedule: dailySchedule && dailySchedule.length > 0 ? dailySchedule : undefined,
-        agenda: agenda && agenda.length > 0 ? agenda : undefined,
-        speakers: extraction.speakers?.map((speaker) => ({
+        agenda: structuredData.agenda?.map((item) => ({
+            title: item.title,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            description: item.description,
+            speakers: item.speakers,
+            location: item.location,
+            track: item.track,
+            dayNumber: item.dayNumber,
+            agendaType: item.agendaType,
+            difficultyLevel: item.difficultyLevel,
+            capacity: item.capacity,
+            prerequisites: item.prerequisites,
+            isRequired: item.isRequired,
+            durationMinutes: item.durationMinutes,
+        })),
+        speakers: structuredData.speakers?.map((speaker) => ({
             name: speaker.name,
             title: speaker.title,
             company: speaker.company,
@@ -165,7 +176,7 @@ function computeAggregateConfidence(fieldConfidence: Record<string, number>): nu
         endTime: 1.0,
         location: 1.0,
         pricing: 0.8,
-        agenda: 0.6,
+        schedule: 0.6,
         speakers: 0.6,
         eventImageUrl: 0.5,
     };
@@ -238,8 +249,7 @@ export class RulesFirstExtractionService {
         }
 
         const normalized = normalizeUrlForCaching(finalUrl);
-        const extraction = extractCoreFieldsFromHtml(html, finalUrl);
-        await this.enrichWithAgenda(extraction, finalUrl, options);
+        const extraction = await this.enrichWithLinkedPages(html, finalUrl, options);
         const { data, fieldConfidence } = toExtractedEventData(extraction, finalUrl);
         const aggregateConfidence = computeAggregateConfidence(fieldConfidence);
         const contentHash = createHash(html);
@@ -322,74 +332,28 @@ export class RulesFirstExtractionService {
         applyIngestionRecordCleanup(record);
     }
 
-    private static async enrichWithAgenda(
-        extraction: HtmlCoreExtractionResult,
+    private static async enrichWithLinkedPages(
+        html: string,
         baseUrl: string,
         options?: RulesFirstExtractionOptions
-    ): Promise<void> {
-        const needsSchedule = !extraction.schedule || extraction.schedule.length === 0;
-        const needsSpeakers = !extraction.speakers || extraction.speakers.length === 0;
-
-        if (!extraction.agendaUrl || (!needsSchedule && !needsSpeakers)) {
-            return;
-        }
-
-        let resolved: URL;
-        let base: URL;
-        try {
-            resolved = new URL(extraction.agendaUrl, baseUrl);
-            base = new URL(baseUrl);
-        } catch {
-            return;
-        }
-
-        if (resolved.hostname !== base.hostname) {
-            return;
-        }
-        if (resolved.toString() === base.toString()) {
-            return;
-        }
-
-        const agendaFetch = await fetchHtml(resolved.toString(), options?.fetchOptions);
-        if (!agendaFetch.success || !agendaFetch.html) {
-            return;
-        }
-
-        const agendaExtraction = extractCoreFieldsFromHtml(agendaFetch.html, resolved.toString());
-
-        if (agendaExtraction.schedule && agendaExtraction.schedule.length > 0) {
-            const existingSchedule = extraction.schedule ?? [];
-            const combined = [...existingSchedule];
-            for (const item of agendaExtraction.schedule) {
-                const exists = combined.some(
-                    (existing) =>
-                        (existing.startTime || '') === (item.startTime || '') &&
-                        (existing.title || '') === (item.title || '')
-                );
-                if (!exists) {
-                    combined.push(item);
+    ): Promise<HtmlCoreExtractionResult> {
+        const documents = await collectLinkedPageDocuments({
+            sourceUrl: baseUrl,
+            html,
+            finalUrl: baseUrl,
+            loadPage: async (url) => {
+                const result = await fetchHtml(url, options?.fetchOptions);
+                if (!result.success || !result.html) {
+                    throw new Error(result.error || `Failed to fetch linked page: ${url}`);
                 }
-            }
-            extraction.schedule = combined;
-            extraction.confidence.schedule = Math.max(extraction.confidence.schedule ?? 0, 0.6);
-            extraction.provenance.sources.push('agenda.follow.schedule');
-        }
 
-        if (agendaExtraction.speakers && agendaExtraction.speakers.length > 0) {
-            const existingSpeakers = extraction.speakers ?? [];
-            const combined = [...existingSpeakers];
-            for (const speaker of agendaExtraction.speakers) {
-                if (!combined.some((existing) => existing.name.toLowerCase() === speaker.name.toLowerCase())) {
-                    combined.push(speaker);
-                }
-            }
-            extraction.speakers = combined;
-            extraction.confidence.speakers = Math.max(extraction.confidence.speakers ?? 0, 0.6);
-            extraction.provenance.sources.push('agenda.follow.speakers');
-        }
+                return {
+                    html: result.html,
+                    finalUrl: result.finalUrl ?? url,
+                };
+            },
+        });
 
-        if ((!extraction.dailySchedule || extraction.dailySchedule.length === 0) && agendaExtraction.schedule?.length) {
-            extraction.dailySchedule = agendaExtraction.schedule;
-        }
+        return mergeLinkedPageExtractions(documents);
     }
 }

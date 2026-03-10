@@ -11,6 +11,7 @@ import * as Sentry from '@sentry/nextjs';
 import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/ExtractNormalization';
 import { EventUpdateService } from './EventUpdateService';
 import { EventRepository } from './repositories/EventRepository';
+import { normalizeAgendaTimeRangeForEvent } from './utils/agendaTimeNormalization';
 
 // Type aliases for enum validation
 type EventFormatEnum = Database['public']['Enums']['event_format_enum'];
@@ -131,47 +132,54 @@ export class EventEnrichmentService {
         editedBy?: string | null
     ): Promise<{ success: boolean; agendaItemIds: string[]; error?: string }> {
         try {
-            // Fetch existing agenda items BEFORE deleting (for edit tracking)
-            const { data: existingAgendaItems } = await supabaseClient
-                .from('event_agenda')
-                .select('id, title, start_time, end_time')
-                .eq('event_id', eventId);
+            const [{ data: existingAgendaItems }, { data: eventRow, error: eventError }] = await Promise.all([
+                supabaseClient
+                    .from('event_agenda')
+                    .select('id, title, start_time, end_time')
+                    .eq('event_id', eventId),
+                supabaseClient
+                    .from('events')
+                    .select('start_time, timezone')
+                    .eq('id', eventId)
+                    .single(),
+            ]);
+
+            if (eventError || !eventRow) {
+                throw eventError || new Error(`Event ${eventId} not found`);
+            }
+
+            const normalizedItems = items.map((item) => {
+                try {
+                    const normalizedTimes = normalizeAgendaTimeRangeForEvent(
+                        {
+                            startTime: item.startTime,
+                            endTime: item.endTime,
+                            dayNumber: item.dayNumber,
+                            durationMinutes: item.durationMinutes ?? null,
+                        },
+                        {
+                            eventStartTime: eventRow.start_time,
+                            eventTimezone: eventRow.timezone,
+                        }
+                    );
+
+                    return {
+                        ...item,
+                        startTime: normalizedTimes.startTime,
+                        endTime: normalizedTimes.endTime,
+                        durationMinutes: normalizedTimes.durationMinutes,
+                    };
+                } catch (error) {
+                    throw new Error(
+                        `Failed to normalize agenda item "${item.title}": ${getErrorMessage(error)}`
+                    );
+                }
+            });
 
             // Ensure unique sort_order per day_number
             // Group items by day_number and assign sequential sort_order within each group
             const dayCounters = new Map<number, number>();
-            const agendaInserts = items.map((item) => {
-                const parseMinutes = (time: string | null | undefined): number | null => {
-                    if (!time) return null;
-                    const match = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-                    if (!match) {
-                        return null;
-                    }
-                    const hours = Number(match[1]);
-                    const minutes = Number(match[2]);
-                    const seconds = match[3] ? Number(match[3]) : 0;
-                    if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
-                        return null;
-                    }
-                    return hours * 60 + minutes + Math.round(seconds / 60);
-                };
-
-                const derivedDuration = (() => {
-                    if (typeof item.durationMinutes === 'number') {
-                        return item.durationMinutes;
-                    }
-                    const startMinutes = parseMinutes(item.startTime);
-                    const endMinutes = parseMinutes(item.endTime);
-                    if (startMinutes === null || endMinutes === null) {
-                        return null;
-                    }
-                    let diff = endMinutes - startMinutes;
-                    if (diff < 0) {
-                        diff += 24 * 60;
-                    }
-                    return diff;
-                })();
-
+            const agendaInserts = normalizedItems.map((item) => {
                 const dayNumber = item.dayNumber || 1;
                 // Get the current counter for this day, or start at 0
                 const currentSortOrder = dayCounters.get(dayNumber) ?? 0;
@@ -189,8 +197,7 @@ export class EventEnrichmentService {
                     day_number: dayNumber,
                     track: item.track || null,
                     sort_order: currentSortOrder,
-                    duration_minutes:
-                        derivedDuration !== null && derivedDuration !== undefined ? derivedDuration : null,
+                    duration_minutes: item.durationMinutes ?? null,
                     capacity: item.capacity ?? null,
                     difficulty_level: item.difficultyLevel || null,
                     prerequisites: item.prerequisites || null,
@@ -207,7 +214,7 @@ export class EventEnrichmentService {
             // Link speakers to agenda items
             const agendaSpeakerLinks: Array<{ agenda_id: string; speaker_id: string; event_id: string }> = [];
             insertedAgendaIds.forEach((agendaId, index) => {
-                const itemInput = items[index];
+                const itemInput = normalizedItems[index];
                 if (itemInput.speakerIds && itemInput.speakerIds.length > 0) {
                     itemInput.speakerIds.forEach(speakerId => {
                         agendaSpeakerLinks.push({
@@ -238,7 +245,7 @@ export class EventEnrichmentService {
                 end_time: item.end_time,
             }));
 
-            const newAgendaItems = items.map((item, index) => ({
+            const newAgendaItems = normalizedItems.map((item, index) => ({
                 id: insertedAgendaIds[index],
                 title: item.title,
                 start_time: item.startTime,

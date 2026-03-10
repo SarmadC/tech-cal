@@ -100,6 +100,12 @@ export interface EventAgendaSchema {
     location?: string;
     track?: string;
     dayNumber?: number;
+    agendaType?: string;
+    difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+    capacity?: number;
+    prerequisites?: string;
+    isRequired?: boolean;
+    durationMinutes?: number;
 }
 
 /**
@@ -183,5 +189,4 @@ export interface ScrapedEventData {
     };
     dailySchedule?: EventDailyScheduleEntry[];
 }
-
 

@@ -19,6 +19,8 @@ export const ExtractedSpeakerSchema = z.object({
     bio: z.string().max(500).optional(),
     linkedinUrl: z.string().url().optional(),
     photoUrl: z.string().url().optional(),
+    twitterUrl: z.string().url().optional(),
+    websiteUrl: z.string().url().optional(),
 });
 
 export type ExtractedSpeaker = z.infer<typeof ExtractedSpeakerSchema>;
@@ -28,6 +30,15 @@ export const ExtractedAgendaItemSchema = z.object({
     startTime: z.string().optional(),
     endTime: z.string().optional(),
     description: z.string().max(500).optional(),
+    location: z.string().max(300).optional(),
+    track: z.string().max(200).optional(),
+    dayNumber: z.number().int().min(1).max(31).optional(),
+    agendaType: z.string().max(64).optional(),
+    difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+    capacity: z.number().int().positive().optional(),
+    prerequisites: z.string().max(500).optional(),
+    isRequired: z.boolean().optional(),
+    durationMinutes: z.number().int().positive().max(24 * 60).optional(),
     speakers: z.array(z.string()).optional(),
 });
 
@@ -131,5 +142,4 @@ export interface InferenceProviderResult {
     tokensUsed?: number;
     raw?: unknown;
 }
-
 

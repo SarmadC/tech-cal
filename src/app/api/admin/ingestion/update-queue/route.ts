@@ -7,9 +7,13 @@ import { logger } from '@/utils/logger';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
+import { createServiceClient, type SupabaseClientType } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { Database } from '@/types/supabase';
+import {
+    matchesUpdateQueueSearch,
+    normalizeUpdateQueueSearch,
+} from './searchUtils';
 
 type EventRow = Database['public']['Tables']['events']['Row'];
 type OrganizerRow = Database['public']['Tables']['organizers']['Row'];
@@ -49,6 +53,150 @@ interface EventSummary {
     organizer: Pick<OrganizerRow, 'id' | 'name'> | null;
 }
 
+interface EventUpdateQueueCandidateRow {
+    id: string;
+    event_id: string | null;
+    source_event_id: string | null;
+    status: string;
+    created_at: string;
+}
+
+interface FieldCountSummary {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+}
+
+const SEARCH_BATCH_SIZE = 1000;
+const EMPTY_FIELD_COUNTS: FieldCountSummary = {
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+};
+
+const uniqueValues = (values: Array<string | null | undefined>): string[] =>
+    Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+
+const buildEventSummaries = async (
+    serviceClient: SupabaseClientType,
+    eventIds: Array<string | null | undefined>,
+): Promise<Record<string, EventSummary>> => {
+    const uniqueEventIds = uniqueValues(eventIds);
+    if (uniqueEventIds.length === 0) {
+        return {};
+    }
+
+    const { data: events, error: eventsError } = await serviceClient
+        .from('events')
+        .select('id, title, start_time, organizer_id')
+        .in('id', uniqueEventIds);
+
+    if (eventsError) {
+        throw new Error(`Failed to fetch events for queue items: ${eventsError.message}`);
+    }
+
+    const organizerIds = uniqueValues((events ?? []).map((event) => event.organizer_id));
+    const organizersMap: Record<string, Pick<OrganizerRow, 'id' | 'name'>> = {};
+
+    if (organizerIds.length > 0) {
+        const { data: organizers, error: organizersError } = await serviceClient
+            .from('organizers')
+            .select('id, name')
+            .in('id', organizerIds);
+
+        if (organizersError) {
+            throw new Error(`Failed to fetch organizers for queue items: ${organizersError.message}`);
+        }
+
+        (organizers ?? []).forEach((organizer) => {
+            organizersMap[organizer.id] = organizer;
+        });
+    }
+
+    return ((events ?? []) as Array<Pick<EventRow, 'id' | 'title' | 'start_time' | 'organizer_id'>>)
+        .reduce<Record<string, EventSummary>>((result, event) => {
+            result[event.id] = {
+                id: event.id,
+                title: event.title,
+                start_time: event.start_time,
+                organizer_id: event.organizer_id,
+                organizer: event.organizer_id ? organizersMap[event.organizer_id] || null : null,
+            };
+            return result;
+        }, {});
+};
+
+const buildFieldCounts = async (
+    serviceClient: SupabaseClientType,
+    queueIds: Array<string | null | undefined>,
+): Promise<Record<string, FieldCountSummary>> => {
+    const uniqueQueueIds = uniqueValues(queueIds);
+    if (uniqueQueueIds.length === 0) {
+        return {};
+    }
+
+    const { data: fieldStats, error: fieldError } = await serviceClient
+        .from('event_update_queue_fields')
+        .select('queue_id, field_status')
+        .in('queue_id', uniqueQueueIds);
+
+    if (fieldError) {
+        throw new Error(`Failed to fetch queue field stats: ${fieldError.message}`);
+    }
+
+    const fieldCounts: Record<string, FieldCountSummary> = {};
+    ((fieldStats ?? []) as Array<Pick<EventUpdateQueueFieldRow, 'queue_id' | 'field_status'>>)
+        .forEach((stat) => {
+            if (!fieldCounts[stat.queue_id]) {
+                fieldCounts[stat.queue_id] = { ...EMPTY_FIELD_COUNTS };
+            }
+            fieldCounts[stat.queue_id].total++;
+            if (stat.field_status === 'pending') fieldCounts[stat.queue_id].pending++;
+            if (stat.field_status === 'approved') fieldCounts[stat.queue_id].approved++;
+            if (stat.field_status === 'rejected') fieldCounts[stat.queue_id].rejected++;
+        });
+
+    return fieldCounts;
+};
+
+const fetchSearchCandidates = async (
+    serviceClient: SupabaseClientType,
+    status: string,
+): Promise<EventUpdateQueueCandidateRow[]> => {
+    const candidates: EventUpdateQueueCandidateRow[] = [];
+    let rangeStart = 0;
+
+    while (true) {
+        let query = serviceClient
+            .from('event_update_queue')
+            .select('id, event_id, source_event_id, status, created_at')
+            .order('created_at', { ascending: false })
+            .range(rangeStart, rangeStart + SEARCH_BATCH_SIZE - 1);
+
+        if (status !== 'all') {
+            query = query.eq('status', status);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            throw new Error(`Failed to fetch searchable queue items: ${error.message}`);
+        }
+
+        const batch = (data ?? []) as EventUpdateQueueCandidateRow[];
+        candidates.push(...batch);
+
+        if (batch.length < SEARCH_BATCH_SIZE) {
+            break;
+        }
+
+        rangeStart += SEARCH_BATCH_SIZE;
+    }
+
+    return candidates;
+};
+
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -77,8 +225,6 @@ export async function GET(request: NextRequest) {
         }
 
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = serviceClient as any;
 
         // Parse query parameters
         const searchParams = request.nextUrl.searchParams;
@@ -86,114 +232,104 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '1', 10);
         const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
         const offset = (page - 1) * pageSize;
+        const search = normalizeUpdateQueueSearch(searchParams.get('q'));
 
-        // Fetch queue items with event details
-        // Use simpler query first to avoid join issues
-        let query = tableClient
-            .from('event_update_queue')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .range(offset, offset + pageSize - 1);
+        let typedQueueItems: EventUpdateQueueRow[] = [];
+        let totalCount = 0;
+        let eventsMap: Record<string, EventSummary> = {};
 
-        if (status !== 'all') {
-            query = query.eq('status', status);
-        }
+        if (search) {
+            const candidates = await fetchSearchCandidates(serviceClient, status);
+            eventsMap = await buildEventSummaries(
+                serviceClient,
+                candidates.map((candidate) => candidate.event_id)
+            );
 
-        const { data: queueItems, error: queueError } = await query;
+            const filteredCandidates = candidates.filter((candidate) =>
+                matchesUpdateQueueSearch(
+                    {
+                        eventId: candidate.event_id,
+                        sourceEventId: candidate.source_event_id,
+                        title: candidate.event_id ? eventsMap[candidate.event_id]?.title : null,
+                        organizerName: candidate.event_id
+                            ? eventsMap[candidate.event_id]?.organizer?.name
+                            : null,
+                    },
+                    search
+                )
+            );
 
-        if (queueError) {
-            throw new Error(`Failed to fetch queue items: ${queueError.message}`);
-        }
+            totalCount = filteredCandidates.length;
 
-        const typedQueueItems = (queueItems || []) as EventUpdateQueueRow[];
+            const pagedCandidateIds = filteredCandidates
+                .slice(offset, offset + pageSize)
+                .map((candidate) => candidate.id);
 
-        // Fetch event details separately to avoid join issues
-        const eventIds = typedQueueItems
-            .map((item) => item.event_id)
-            .filter((id): id is string => Boolean(id));
-        const eventsMap: Record<string, EventSummary> = {};
+            if (pagedCandidateIds.length > 0) {
+                const { data: queueItems, error: queueError } = await serviceClient
+                    .from('event_update_queue')
+                    .select('*')
+                    .in('id', pagedCandidateIds);
 
-        if (eventIds.length > 0) {
-            const { data: events, error: eventsError } = await serviceClient
-                .from('events')
-                .select('id, title, start_time, organizer_id')
-                .in('id', eventIds);
-
-            if (!eventsError && events) {
-                // Fetch organizers separately
-                const organizerIds = events.map(e => e.organizer_id).filter((id): id is string => Boolean(id));
-                const organizersMap: Record<string, Pick<OrganizerRow, 'id' | 'name'>> = {};
-
-                if (organizerIds.length > 0) {
-                    const { data: organizers } = await serviceClient
-                        .from('organizers')
-                        .select('id, name')
-                        .in('id', organizerIds);
-
-                    if (organizers) {
-                        organizers.forEach(org => {
-                            organizersMap[org.id] = org;
-                        });
-                    }
+                if (queueError) {
+                    throw new Error(`Failed to fetch queue items: ${queueError.message}`);
                 }
 
-                const typedEvents = events as Array<Pick<EventRow, 'id' | 'title' | 'start_time' | 'organizer_id'>>;
-                typedEvents.forEach(event => {
-                    eventsMap[event.id] = {
-                        id: event.id,
-                        title: event.title,
-                        start_time: event.start_time,
-                        organizer_id: event.organizer_id,
-                        organizer: event.organizer_id ? organizersMap[event.organizer_id] || null : null,
-                    };
-                });
+                const queueItemsById = new Map(
+                    ((queueItems ?? []) as EventUpdateQueueRow[]).map((item) => [item.id, item])
+                );
+                typedQueueItems = pagedCandidateIds
+                    .map((id) => queueItemsById.get(id))
+                    .filter((item): item is EventUpdateQueueRow => Boolean(item));
             }
-        }
+        } else {
+            let query = serviceClient
+                .from('event_update_queue')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(offset, offset + pageSize - 1);
 
-        // Fetch field counts for each queue item
-        const queueIds = typedQueueItems.map(item => item.id);
-        const fieldCounts: Record<string, { total: number; pending: number; approved: number; rejected: number }> = {};
-
-        if (queueIds.length > 0) {
-            const { data: fieldStats, error: fieldError } = await tableClient
-                .from('event_update_queue_fields')
-                .select('queue_id, field_status')
-                .in('queue_id', queueIds);
-
-            if (!fieldError && fieldStats) {
-                const typedStats = fieldStats as Array<Pick<EventUpdateQueueFieldRow, 'queue_id' | 'field_status'>>;
-                for (const stat of typedStats) {
-                    if (!fieldCounts[stat.queue_id]) {
-                        fieldCounts[stat.queue_id] = { total: 0, pending: 0, approved: 0, rejected: 0 };
-                    }
-                    fieldCounts[stat.queue_id].total++;
-                    if (stat.field_status === 'pending') fieldCounts[stat.queue_id].pending++;
-                    if (stat.field_status === 'approved') fieldCounts[stat.queue_id].approved++;
-                    if (stat.field_status === 'rejected') fieldCounts[stat.queue_id].rejected++;
-                }
+            if (status !== 'all') {
+                query = query.eq('status', status);
             }
+
+            const { data: queueItems, error: queueError } = await query;
+
+            if (queueError) {
+                throw new Error(`Failed to fetch queue items: ${queueError.message}`);
+            }
+
+            typedQueueItems = (queueItems ?? []) as EventUpdateQueueRow[];
+
+            let countQuery = serviceClient
+                .from('event_update_queue')
+                .select('id', { count: 'exact', head: true });
+
+            if (status !== 'all') {
+                countQuery = countQuery.eq('status', status);
+            }
+
+            const { count, error: countError } = await countQuery;
+
+            if (countError) {
+                throw new Error(`Failed to count queue items: ${countError.message}`);
+            }
+
+            totalCount = count || 0;
+            eventsMap = await buildEventSummaries(
+                serviceClient,
+                typedQueueItems.map((item) => item.event_id)
+            );
         }
 
-        // Get total count for pagination
-        let countQuery = tableClient
-            .from('event_update_queue')
-            .select('id', { count: 'exact', head: true });
-
-        if (status !== 'all') {
-            countQuery = countQuery.eq('status', status);
-        }
-
-        const { count, error: countError } = await countQuery;
-
-        if (countError) {
-            throw new Error(`Failed to count queue items: ${countError.message}`);
-        }
+        const queueIds = typedQueueItems.map((item) => item.id);
+        const fieldCounts = await buildFieldCounts(serviceClient, queueIds);
 
         // Enrich queue items with event details and field counts
         const enrichedItems = typedQueueItems.map(item => ({
             ...item,
             event: item.event_id ? eventsMap[item.event_id] || null : null,
-            fieldCounts: fieldCounts[item.id] || { total: 0, pending: 0, approved: 0, rejected: 0 },
+            fieldCounts: fieldCounts[item.id] || EMPTY_FIELD_COUNTS,
         }));
 
         return NextResponse.json({
@@ -201,8 +337,8 @@ export async function GET(request: NextRequest) {
             pagination: {
                 page,
                 pageSize,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / pageSize),
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / pageSize),
             },
         });
     } catch (error) {
@@ -304,4 +440,3 @@ export async function DELETE(_request: NextRequest) {
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
-

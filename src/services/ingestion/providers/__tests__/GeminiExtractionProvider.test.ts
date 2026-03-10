@@ -74,6 +74,103 @@ describe('GeminiExtractionProvider normalization', () => {
         expect(normalized.agenda?.[99]?.title).toBe('Session 100');
     });
 
+    it('preserves rich agenda fields and speaker social urls during normalization', () => {
+        const normalized = normalizeExtractedProviderPayload({
+            speakers: [
+                {
+                    name: 'Jane Doe',
+                    twitterUrl: 'https://x.com/jane',
+                    websiteUrl: 'https://janedoe.dev',
+                },
+            ],
+            agenda: [
+                {
+                    title: 'Scaling Systems',
+                    startTime: '09:00',
+                    endTime: '10:00',
+                    location: 'Room A',
+                    track: 'Platform',
+                    dayNumber: '2',
+                    agendaType: 'Keynote Session',
+                    difficultyLevel: 'Advanced',
+                    capacity: '300 seats',
+                    prerequisites: 'Conference badge',
+                    isRequired: 'required',
+                    durationMinutes: '60',
+                    speakers: [' Jane Doe ', 'Jane Doe'],
+                },
+            ],
+        }) as {
+            speakers?: Array<{ twitterUrl?: string; websiteUrl?: string }>;
+            agenda?: Array<{
+                location?: string;
+                track?: string;
+                dayNumber?: number;
+                agendaType?: string;
+                difficultyLevel?: string;
+                capacity?: number;
+                prerequisites?: string;
+                isRequired?: boolean;
+                durationMinutes?: number;
+                speakers?: string[];
+            }>;
+        };
+
+        expect(normalized.speakers?.[0]).toEqual(
+            expect.objectContaining({
+                twitterUrl: 'https://x.com/jane',
+                websiteUrl: 'https://janedoe.dev/',
+            })
+        );
+        expect(normalized.agenda?.[0]).toEqual(
+            expect.objectContaining({
+                location: 'Room A',
+                track: 'Platform',
+                dayNumber: 2,
+                agendaType: 'keynote',
+                difficultyLevel: 'advanced',
+                capacity: 300,
+                prerequisites: 'Conference badge',
+                isRequired: true,
+                durationMinutes: 60,
+                speakers: ['Jane Doe'],
+            })
+        );
+    });
+
+    it('drops invalid url fields before validation', () => {
+        const normalized = normalizeExtractedProviderPayload({
+            registrationUrl: '/register',
+            speakers: [
+                {
+                    name: 'Jane Doe',
+                    linkedinUrl: 'not-a-url',
+                    photoUrl: '/images/jane.jpg',
+                    twitterUrl: 'https://x.com/jane',
+                    websiteUrl: 'https://janedoe.dev',
+                },
+            ],
+        }) as {
+            registrationUrl?: string;
+            speakers?: Array<{
+                linkedinUrl?: string;
+                photoUrl?: string;
+                twitterUrl?: string;
+                websiteUrl?: string;
+            }>;
+        };
+
+        expect(normalized.registrationUrl).toBeUndefined();
+        expect(normalized.speakers?.[0]).toEqual(
+            expect.objectContaining({
+                twitterUrl: 'https://x.com/jane',
+                websiteUrl: 'https://janedoe.dev/',
+            })
+        );
+        expect(normalized.speakers?.[0]?.linkedinUrl).toBeUndefined();
+        expect(normalized.speakers?.[0]?.photoUrl).toBeUndefined();
+    });
+
     it('normalizes inference tags with dedupe and cap', () => {
         const allowlist = Array.from({ length: 40 }, (_, index) => `Topic ${index + 1}`);
         const tags = ['topic 1', 'Topic 1', ...Array.from({ length: 35 }, (_, index) => `topic ${index + 2}`)];

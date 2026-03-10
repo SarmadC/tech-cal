@@ -149,6 +149,8 @@ export default function UpdateQueueClient() {
     const { showSuccess, showError, showInfo } = useSnackbar();
 
     const columnsPanelRef = useRef<HTMLDivElement>(null);
+    const fetchAbortControllerRef = useRef<AbortController | null>(null);
+    const fetchRequestIdRef = useRef(0);
 
     const updateQuery = useCallback(
         (updates: Record<string, string | number | undefined>, options: { resetPage?: boolean } = {}) => {
@@ -180,6 +182,7 @@ export default function UpdateQueueClient() {
     useEffect(() => {
         setSearch({
             placeholder: 'Search titles, organizers, event or source IDs',
+            ariaLabel: 'Search update queue by event title, organizer, event ID, or source ID',
             value: searchTerm,
             onChange: (value: string) => {
                 setSearchTerm(value);
@@ -287,7 +290,19 @@ export default function UpdateQueueClient() {
         return () => document.removeEventListener('mousedown', handleClick);
     }, [columnsPanelOpen]);
 
+    useEffect(() => {
+        return () => {
+            fetchAbortControllerRef.current?.abort();
+            fetchAbortControllerRef.current = null;
+        };
+    }, []);
+
     const fetchQueueItems = useCallback(async () => {
+        const requestId = ++fetchRequestIdRef.current;
+        fetchAbortControllerRef.current?.abort();
+        const abortController = new AbortController();
+        fetchAbortControllerRef.current = abortController;
+
         setLoading(true);
         setError(null);
         try {
@@ -303,10 +318,17 @@ export default function UpdateQueueClient() {
                 query.set('q', queryParam);
             }
 
-            const response = await fetch(`/api/admin/ingestion/update-queue?${query.toString()}`);
+            const response = await fetch(`/api/admin/ingestion/update-queue?${query.toString()}`, {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                signal: abortController.signal,
+            });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                 const errorMessage = errorData.error || `HTTP ${response.status}: Failed to fetch queue items`;
+                if (requestId !== fetchRequestIdRef.current) {
+                    return;
+                }
                 if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
                     setError(
                         'Database tables not found. Please run migrations: 20250101000010, 20250101000011, 20250101000012'
@@ -318,6 +340,9 @@ export default function UpdateQueueClient() {
             }
 
             const data = await response.json();
+            if (requestId !== fetchRequestIdRef.current) {
+                return;
+            }
             setItems(data.items || []);
             setPagination(
                 data.pagination || {
@@ -329,9 +354,20 @@ export default function UpdateQueueClient() {
             );
             setSelectedRows([]);
         } catch (err) {
+            if (requestId !== fetchRequestIdRef.current) {
+                return;
+            }
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                return;
+            }
             console.error('Error fetching queue items:', err);
         } finally {
-            setLoading(false);
+            if (fetchAbortControllerRef.current === abortController) {
+                fetchAbortControllerRef.current = null;
+            }
+            if (requestId === fetchRequestIdRef.current) {
+                setLoading(false);
+            }
         }
     }, [statusParam, pageParam, pageSizeParam, sortParam, directionParam, queryParam]);
 
@@ -999,4 +1035,3 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
         </div>
     );
 }
-

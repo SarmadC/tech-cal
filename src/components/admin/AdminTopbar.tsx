@@ -148,7 +148,7 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                                         placeholder={search?.placeholder ?? 'Search admin data...'}
                                         value={search?.value ?? ''}
                                         onChange={(event) => search?.onChange?.(event.target.value)}
-                                        aria-label="Search admin data"
+                                        aria-label={search?.ariaLabel ?? search?.placeholder ?? 'Search admin data'}
                                     />
                                     <div className="pointer-events-none absolute right-2 flex items-center gap-1 text-[10px] uppercase text-foreground-muted">
                                         <span className="rounded border border-default px-1.5 py-0.5">/</span>
@@ -193,5 +193,4 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
         </header>
     );
 }
-
 

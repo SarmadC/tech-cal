@@ -14,9 +14,12 @@ import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
-import { extractRelationIds } from '@/services/ingestion/utils/enrichmentQueue';
-
-const RELATIONSHIP_FIELDS = ['tags', 'audiences', 'prerequisites'] as const;
+import {
+    collectFieldUpdates,
+    type AgendaApprovalItem,
+    type ApprovalPlan,
+} from '@/services/ingestion/utils/updateQueueApproval';
+import { EventRepository } from '@/services/ingestion/repositories/EventRepository';
 
 interface QueueItemForAction {
     event_id: string | null;
@@ -30,16 +33,6 @@ interface QueueFieldRecord {
     new_value: unknown;
 }
 
-interface ApprovalPlan {
-    scalarUpdateData: Record<string, unknown>;
-    relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] };
-    agendaUpdates: AgendaItemInput[];
-    fieldsToApprove: QueueFieldRecord[];
-    fieldsToReject: QueueFieldRecord[];
-    sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }>;
-    warnings: string[];
-}
-
 interface QueueActionResponse {
     success: boolean;
     approvedFields?: string[];
@@ -47,137 +40,6 @@ interface QueueActionResponse {
     status?: 'approved' | 'rejected' | 'partially_approved' | 'pending';
     warnings?: string[];
 }
-
-const coerceAgendaItems = (
-    value: unknown
-): { items: AgendaItemInput[]; invalidItems: string[] } => {
-    if (!Array.isArray(value)) {
-        return {
-            items: [],
-            invalidItems: [],
-        };
-    }
-
-    const items: AgendaItemInput[] = [];
-    const invalidItems: string[] = [];
-
-    value.forEach((item, index) => {
-        const typed = item as Record<string, unknown>;
-        const rawTitle = typeof typed.title === 'string' ? typed.title.trim() : '';
-        const startTime =
-            typeof typed.start_time === 'string'
-                ? typed.start_time
-                : typeof typed.startTime === 'string'
-                    ? typed.startTime
-                    : '';
-        const endTime =
-            typeof typed.end_time === 'string'
-                ? typed.end_time
-                : typeof typed.endTime === 'string'
-                    ? typed.endTime
-                    : '';
-
-        const label = rawTitle || `item ${index + 1}`;
-        if (!rawTitle || !startTime || !endTime) {
-            invalidItems.push(label);
-            return;
-        }
-
-        const speakerIds =
-            Array.isArray(typed.speakers) && typed.speakers.every((s) => typeof s === 'string')
-                ? (typed.speakers as string[])
-                : Array.isArray(typed.speakerIds) && typed.speakerIds.every((s) => typeof s === 'string')
-                    ? (typed.speakerIds as string[])
-                    : undefined;
-
-        items.push({
-            title: rawTitle,
-            startTime,
-            endTime,
-            description: typeof typed.description === 'string' ? typed.description : undefined,
-            location: typeof typed.location === 'string' ? typed.location : undefined,
-            speakerIds,
-        });
-    });
-
-    return {
-        items,
-        invalidItems,
-    };
-};
-
-const collectFieldUpdates = (fields: QueueFieldRecord[]): ApprovalPlan => {
-    const scalarUpdateData: Record<string, unknown> = {};
-    const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
-    const agendaUpdates: AgendaItemInput[] = [];
-    const fieldsToApprove: QueueFieldRecord[] = [];
-    const fieldsToReject: QueueFieldRecord[] = [];
-    const sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }> = [];
-    const warnings: string[] = [];
-
-    for (const field of fields) {
-        if (field.field_name === 'agenda') {
-            const { items, invalidItems } = coerceAgendaItems(field.new_value);
-
-            if (items.length > 0) {
-                agendaUpdates.push(...items);
-                fieldsToApprove.push(field);
-                if (invalidItems.length > 0) {
-                    sanitizedFieldUpdates.push({
-                        id: field.id,
-                        newValue: items.map((item) => ({
-                            title: item.title,
-                            start_time: item.startTime,
-                            end_time: item.endTime,
-                            description: item.description ?? null,
-                            location: item.location ?? null,
-                            speakerIds: item.speakerIds ?? [],
-                        })),
-                    });
-                    warnings.push(
-                        `Skipped invalid agenda items missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
-                    );
-                }
-            } else if (invalidItems.length > 0) {
-                fieldsToReject.push(field);
-                warnings.push(
-                    `Rejected agenda field because every agenda item was missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
-                );
-            }
-            continue;
-        }
-
-        if (RELATIONSHIP_FIELDS.includes(field.field_name as typeof RELATIONSHIP_FIELDS[number])) {
-            const relationIds = extractRelationIds(field.new_value);
-            if (!relationIds) {
-                continue;
-            }
-
-            if (field.field_name === 'tags') {
-                relationshipUpdates.tagIds = relationIds;
-            } else if (field.field_name === 'audiences') {
-                relationshipUpdates.audienceIds = relationIds;
-            } else if (field.field_name === 'prerequisites') {
-                relationshipUpdates.prerequisiteIds = relationIds;
-            }
-            fieldsToApprove.push(field);
-            continue;
-        }
-
-        scalarUpdateData[field.field_name] = field.new_value;
-        fieldsToApprove.push(field);
-    }
-
-    return {
-        scalarUpdateData,
-        relationshipUpdates,
-        agendaUpdates,
-        fieldsToApprove,
-        fieldsToReject,
-        sanitizedFieldUpdates,
-        warnings,
-    };
-};
 
 const fetchPendingFields = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -253,9 +115,98 @@ const updateQueueStatusForSelectiveAction = async (
     return nextStatus;
 };
 
+const buildSpeakerLookupKey = (name: string) => name.trim().toLowerCase();
+
+const addSpeakerMappings = (
+    lookup: Map<string, string>,
+    speakers: Array<{ name: string; linkedinUrl?: string }>,
+    speakerIds: string[],
+) => {
+    speakers.forEach((speaker, index) => {
+        const speakerId = speakerIds[index];
+        if (!speakerId) {
+            return;
+        }
+
+        if (speaker.linkedinUrl) {
+            lookup.set(`linkedin:${speaker.linkedinUrl.toLowerCase()}`, speakerId);
+        }
+        lookup.set(`name:${buildSpeakerLookupKey(speaker.name)}`, speakerId);
+    });
+};
+
+const resolveAgendaSpeakerIds = async (
+    agendaUpdates: AgendaApprovalItem[],
+    approvedSpeakerLookup: Map<string, string>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serviceClient: any,
+): Promise<AgendaItemInput[]> => {
+    const speakerLookup = new Map(approvedSpeakerLookup);
+    const unresolvedNames = Array.from(
+        new Set(
+            agendaUpdates
+                .flatMap((item) => item.speakerNames ?? [])
+                .map((name) => name.trim())
+                .filter(Boolean)
+                .filter((name) => !speakerLookup.has(`name:${buildSpeakerLookupKey(name)}`))
+        )
+    );
+
+    if (unresolvedNames.length > 0) {
+        const { data: existingSpeakers, error: existingSpeakersError } = await serviceClient
+            .from('speakers')
+            .select('id, name, linkedin_url')
+            .in('name', unresolvedNames);
+
+        if (existingSpeakersError) {
+            throw new Error(`Failed to resolve existing speakers by name: ${existingSpeakersError.message}`);
+        }
+
+        if (existingSpeakers) {
+            existingSpeakers.forEach((speaker: { id: string; name: string; linkedin_url: string | null }) => {
+                if (speaker.linkedin_url) {
+                    speakerLookup.set(`linkedin:${speaker.linkedin_url.toLowerCase()}`, speaker.id);
+                }
+                speakerLookup.set(`name:${buildSpeakerLookupKey(speaker.name)}`, speaker.id);
+            });
+        }
+    }
+
+    const namesToCreate = unresolvedNames.filter((name) => !speakerLookup.has(`name:${buildSpeakerLookupKey(name)}`));
+    if (namesToCreate.length > 0) {
+        const speakerIds = await EventRepository.upsertSpeakers(
+            serviceClient,
+            namesToCreate.map((name) => ({ name }))
+        );
+        addSpeakerMappings(
+            speakerLookup,
+            namesToCreate.map((name) => ({ name })),
+            speakerIds
+        );
+    }
+
+    return agendaUpdates.map((item) => {
+        const resolvedSpeakerIds = Array.from(
+            new Set([
+                ...(item.speakerIds ?? []),
+                ...((item.speakerNames ?? []).flatMap((speakerName) => {
+                    const resolved = speakerLookup.get(`name:${buildSpeakerLookupKey(speakerName)}`);
+                    return resolved ? [resolved] : [];
+                })),
+            ])
+        );
+
+        const { speakerNames: _speakerNames, ...agendaItem } = item;
+        return {
+            ...agendaItem,
+            speakerIds: resolvedSpeakerIds.length > 0 ? resolvedSpeakerIds : undefined,
+        };
+    });
+};
+
 const applyApprovedFieldUpdates = async (
     queueItem: QueueItemForAction,
-    plan: ApprovalPlan,
+    plan: ApprovalPlan<QueueFieldRecord>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceClient: any,
     editedBy: string,
@@ -265,7 +216,7 @@ const applyApprovedFieldUpdates = async (
     }
 
     const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
-    const { scalarUpdateData, relationshipUpdates, agendaUpdates } = plan;
+    const { scalarUpdateData, relationshipUpdates, speakerUpdates, agendaUpdates } = plan;
 
     if (Object.keys(scalarUpdateData).length > 0) {
         const { error: updateError } = await serviceClient
@@ -291,10 +242,31 @@ const applyApprovedFieldUpdates = async (
         }
     }
 
+    const approvedSpeakerLookup = new Map<string, string>();
+    if (speakerUpdates.length > 0) {
+        const speakerResult = await EventEnrichmentService.createOrUpdateSpeakers(
+            queueItem.event_id,
+            speakerUpdates,
+            serviceClient,
+            editedBy
+        );
+
+        if (!speakerResult.success) {
+            throw new Error(`Failed to update speakers: ${speakerResult.error}`);
+        }
+
+        addSpeakerMappings(approvedSpeakerLookup, speakerUpdates, speakerResult.speakerIds);
+    }
+
     if (agendaUpdates.length > 0) {
+        const resolvedAgendaUpdates = await resolveAgendaSpeakerIds(
+            agendaUpdates,
+            approvedSpeakerLookup,
+            serviceClient
+        );
         const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
             queueItem.event_id,
-            agendaUpdates,
+            resolvedAgendaUpdates,
             serviceClient,
             editedBy
         );

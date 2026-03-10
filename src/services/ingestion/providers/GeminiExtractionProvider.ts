@@ -10,7 +10,7 @@ import {
     type InferenceRequest,
     type InferenceProviderResult,
 } from '@/types/enrichment';
-import type { ExtractionProvider, ExtractionProviderRequest } from './ExtractionProvider';
+import type { ExtractionProvider, ExtractionProviderDocument, ExtractionProviderRequest } from './ExtractionProvider';
 
 interface GeminiProviderOptions {
     apiKey: string;
@@ -23,6 +23,9 @@ const MAX_PROVIDER_SPEAKERS = 50;
 const MAX_PROVIDER_AGENDA_ITEMS = 100;
 const MAX_SPEAKER_BIO_LENGTH = 500;
 const MAX_AGENDA_DESCRIPTION_LENGTH = 500;
+const MAX_AGENDA_TRACK_LENGTH = 200;
+const MAX_AGENDA_LOCATION_LENGTH = 300;
+const MAX_AGENDA_PREREQUISITES_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_LOCATION_LENGTH = 500;
 const PAID_PRICING_KEYWORDS = ['paid', 'ticket', 'tickets', 'fixed', 'registration', 'fee', 'cost', 'price'];
@@ -56,6 +59,8 @@ const RESPONSE_SCHEMA = {
                     bio: { type: SchemaType.STRING, nullable: true },
                     linkedinUrl: { type: SchemaType.STRING, nullable: true },
                     photoUrl: { type: SchemaType.STRING, nullable: true },
+                    twitterUrl: { type: SchemaType.STRING, nullable: true },
+                    websiteUrl: { type: SchemaType.STRING, nullable: true },
                 },
             },
         },
@@ -69,6 +74,15 @@ const RESPONSE_SCHEMA = {
                     startTime: { type: SchemaType.STRING, nullable: true },
                     endTime: { type: SchemaType.STRING, nullable: true },
                     description: { type: SchemaType.STRING, nullable: true },
+                    location: { type: SchemaType.STRING, nullable: true },
+                    track: { type: SchemaType.STRING, nullable: true },
+                    dayNumber: { type: SchemaType.NUMBER, nullable: true },
+                    agendaType: { type: SchemaType.STRING, nullable: true },
+                    difficultyLevel: { type: SchemaType.STRING, nullable: true },
+                    capacity: { type: SchemaType.NUMBER, nullable: true },
+                    prerequisites: { type: SchemaType.STRING, nullable: true },
+                    isRequired: { type: SchemaType.BOOLEAN, nullable: true },
+                    durationMinutes: { type: SchemaType.NUMBER, nullable: true },
                     speakers: {
                         type: SchemaType.ARRAY,
                         nullable: true,
@@ -98,7 +112,9 @@ const SYSTEM_PROMPT = `
 Extract structured event information from the provided webpage content.
 Return ONLY valid JSON matching the schema. Do not include explanations or prose.
 If a field cannot be determined confidently, omit it rather than guessing.
-Focus on speakers (include LinkedIn URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
+Focus on speakers (include LinkedIn/Twitter/website URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
+Extract the richest agenda detail available: track, day number, room/stage, session type, difficulty, prerequisites, required/optional status, duration, and speaker names per session.
+If linked agenda, speaker, or session pages are included, prefer those over generic marketing copy.
 When choosing tags, only use items from the provided Allowed Tags list. If none apply, return an empty array.
 `.trim();
 
@@ -171,11 +187,101 @@ const truncateText = (value: unknown, maxLength: number): string | undefined => 
     return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized;
 };
 
+const normalizeAbsoluteUrl = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim();
+    if (!normalized) {
+        return undefined;
+    }
+
+    try {
+        const parsed = new URL(normalized);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return undefined;
+        }
+
+        return parsed.toString();
+    } catch {
+        return undefined;
+    }
+};
+
 interface CollectionNormalizationResult {
     items?: Record<string, unknown>[];
     originalCount: number;
     retainedCount: number;
 }
+
+const normalizeDifficultyLevel = (value: unknown): 'beginner' | 'intermediate' | 'advanced' | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (normalized.startsWith('begin')) return 'beginner';
+    if (normalized.startsWith('inter')) return 'intermediate';
+    if (normalized.startsWith('adv')) return 'advanced';
+    return undefined;
+};
+
+const normalizePositiveInteger = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        return Math.round(value);
+    }
+
+    if (typeof value === 'string') {
+        const parsed = Number(value.replace(/[^\d.]/g, ''));
+        if (Number.isFinite(parsed) && parsed > 0) {
+            return Math.round(parsed);
+        }
+    }
+
+    return undefined;
+};
+
+const normalizeBoolean = (value: unknown): boolean | undefined => {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['true', 'yes', 'required'].includes(normalized)) return true;
+        if (['false', 'no', 'optional'].includes(normalized)) return false;
+    }
+
+    return undefined;
+};
+
+const normalizeAgendaType = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (normalized.includes('keynote')) return 'keynote';
+    if (normalized.includes('talk')) return 'talk';
+    if (normalized.includes('workshop')) return 'workshop';
+    if (normalized.includes('panel')) return 'panel';
+    if (normalized.includes('network')) return 'networking';
+    if (normalized.includes('break')) return 'break';
+    if (normalized.includes('registration') || normalized.includes('check-in')) return 'registration';
+    if (normalized.includes('meal') || normalized.includes('lunch') || normalized.includes('breakfast') || normalized.includes('dinner')) return 'meal';
+    if (normalized.includes('expo') || normalized.includes('exhibit')) return 'exhibition';
+    if (normalized.includes('support') || normalized.includes('office hour')) return 'support';
+    return normalized;
+};
 
 const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefined => {
     if (!Array.isArray(value)) {
@@ -187,11 +293,39 @@ const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefine
         .map((speaker) => {
             const nextSpeaker = { ...speaker };
             const bio = truncateText(nextSpeaker.bio, MAX_SPEAKER_BIO_LENGTH);
+            const linkedinUrl = normalizeAbsoluteUrl(nextSpeaker.linkedinUrl);
+            const photoUrl = normalizeAbsoluteUrl(nextSpeaker.photoUrl);
+            const twitterUrl = normalizeAbsoluteUrl(nextSpeaker.twitterUrl);
+            const websiteUrl = normalizeAbsoluteUrl(nextSpeaker.websiteUrl);
 
             if (bio) {
                 nextSpeaker.bio = bio;
             } else {
                 delete nextSpeaker.bio;
+            }
+
+            if (linkedinUrl) {
+                nextSpeaker.linkedinUrl = linkedinUrl;
+            } else {
+                delete nextSpeaker.linkedinUrl;
+            }
+
+            if (photoUrl) {
+                nextSpeaker.photoUrl = photoUrl;
+            } else {
+                delete nextSpeaker.photoUrl;
+            }
+
+            if (twitterUrl) {
+                nextSpeaker.twitterUrl = twitterUrl;
+            } else {
+                delete nextSpeaker.twitterUrl;
+            }
+
+            if (websiteUrl) {
+                nextSpeaker.websiteUrl = websiteUrl;
+            } else {
+                delete nextSpeaker.websiteUrl;
             }
 
             return nextSpeaker;
@@ -210,11 +344,85 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
         .map((agendaItem) => {
             const nextAgendaItem = { ...agendaItem };
             const description = truncateText(nextAgendaItem.description, MAX_AGENDA_DESCRIPTION_LENGTH);
+            const location = truncateText(nextAgendaItem.location, MAX_AGENDA_LOCATION_LENGTH);
+            const track = truncateText(nextAgendaItem.track, MAX_AGENDA_TRACK_LENGTH);
+            const prerequisites = truncateText(nextAgendaItem.prerequisites, MAX_AGENDA_PREREQUISITES_LENGTH);
+            const capacity = normalizePositiveInteger(nextAgendaItem.capacity);
+            const dayNumber = normalizePositiveInteger(nextAgendaItem.dayNumber);
+            const durationMinutes = normalizePositiveInteger(nextAgendaItem.durationMinutes);
+            const difficultyLevel = normalizeDifficultyLevel(nextAgendaItem.difficultyLevel);
+            const agendaType = normalizeAgendaType(nextAgendaItem.agendaType);
+            const isRequired = normalizeBoolean(nextAgendaItem.isRequired);
 
             if (description) {
                 nextAgendaItem.description = description;
             } else {
                 delete nextAgendaItem.description;
+            }
+
+            if (location) {
+                nextAgendaItem.location = location;
+            } else {
+                delete nextAgendaItem.location;
+            }
+
+            if (track) {
+                nextAgendaItem.track = track;
+            } else {
+                delete nextAgendaItem.track;
+            }
+
+            if (prerequisites) {
+                nextAgendaItem.prerequisites = prerequisites;
+            } else {
+                delete nextAgendaItem.prerequisites;
+            }
+
+            if (capacity) {
+                nextAgendaItem.capacity = capacity;
+            } else {
+                delete nextAgendaItem.capacity;
+            }
+
+            if (dayNumber) {
+                nextAgendaItem.dayNumber = dayNumber;
+            } else {
+                delete nextAgendaItem.dayNumber;
+            }
+
+            if (durationMinutes) {
+                nextAgendaItem.durationMinutes = durationMinutes;
+            } else {
+                delete nextAgendaItem.durationMinutes;
+            }
+
+            if (difficultyLevel) {
+                nextAgendaItem.difficultyLevel = difficultyLevel;
+            } else {
+                delete nextAgendaItem.difficultyLevel;
+            }
+
+            if (agendaType) {
+                nextAgendaItem.agendaType = agendaType;
+            } else {
+                delete nextAgendaItem.agendaType;
+            }
+
+            if (typeof isRequired === 'boolean') {
+                nextAgendaItem.isRequired = isRequired;
+            } else {
+                delete nextAgendaItem.isRequired;
+            }
+
+            if (Array.isArray(nextAgendaItem.speakers)) {
+                nextAgendaItem.speakers = Array.from(new Set(
+                    nextAgendaItem.speakers
+                        .map((speaker) => (typeof speaker === 'string' ? speaker.trim() : ''))
+                        .filter(Boolean)
+                ));
+                if ((nextAgendaItem.speakers as string[]).length === 0) {
+                    delete nextAgendaItem.speakers;
+                }
             }
 
             return nextAgendaItem;
@@ -452,6 +660,13 @@ export const normalizeExtractedProviderPayload = (
         delete payload.location;
     }
 
+    const normalizedRegistrationUrl = normalizeAbsoluteUrl(payload.registrationUrl);
+    if (normalizedRegistrationUrl) {
+        payload.registrationUrl = normalizedRegistrationUrl;
+    } else if ('registrationUrl' in payload) {
+        delete payload.registrationUrl;
+    }
+
     const normalizedFormat = normalizeEventFormat(payload.eventFormat);
     if (normalizedFormat) {
         payload.eventFormat = normalizedFormat;
@@ -507,7 +722,8 @@ export class GeminiExtractionProvider implements ExtractionProvider {
         const prompt = this.buildPrompt(
             request.content,
             request.context.sourceUrl,
-            request.allowedTags
+            request.allowedTags,
+            request.documents
         );
         const response = await modelInstance.generateContent(
             {
@@ -551,11 +767,25 @@ export class GeminiExtractionProvider implements ExtractionProvider {
         };
     }
 
-    private buildPrompt(content: string, sourceUrl: string, allowedTags?: string[]): string {
+    private buildPrompt(
+        content: string,
+        sourceUrl: string,
+        allowedTags?: string[],
+        documents?: ExtractionProviderDocument[],
+    ): string {
         const topAllowed = (allowedTags || []).slice(0, 200);
         const allowedSection = topAllowed.length
             ? `Allowed Tags (choose only from this list, case-insensitive): ${topAllowed.join(', ')}`
             : 'No allowed tags provided; return an empty array for tags.';
+
+        const documentSection = (documents ?? [])
+            .filter((document) => document.content.trim().length > 0)
+            .map((document, index) => `Supporting document ${index + 1}
+Label: ${document.label}
+URL: ${document.url}
+Content:
+${document.content}`)
+            .join('\n\n');
 
         return `${SYSTEM_PROMPT}
 
@@ -563,8 +793,10 @@ Source URL: ${sourceUrl}
 
 ${allowedSection}
 
-Webpage content:
+Primary webpage content:
 ${content}
+
+${documentSection ? `\n\nSupporting linked-page content:\n${documentSection}` : ''}
 `;
     }
 

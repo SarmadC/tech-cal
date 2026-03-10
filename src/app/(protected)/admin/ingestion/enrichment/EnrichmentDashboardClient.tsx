@@ -114,6 +114,28 @@ const formatRelativeTimestamp = (value: string | null, emptyLabel = '—') => {
     return formatDistanceToNow(date, { addSuffix: true });
 };
 
+const getFetchErrorMessage = async (response: Response, fallback: string) => {
+    try {
+        const text = await response.text();
+        if (!text.trim()) {
+            return `${fallback} (${response.status})`;
+        }
+
+        try {
+            const payload = JSON.parse(text) as { error?: string };
+            if (payload?.error) {
+                return payload.error;
+            }
+        } catch {
+            return text.trim();
+        }
+    } catch {
+        return `${fallback} (${response.status})`;
+    }
+
+    return `${fallback} (${response.status})`;
+};
+
 const getExtractedFieldSummary = (metadata: EnrichmentMetadata | null): string[] => {
     const data = metadata?.enriched_data;
     if (!data) {
@@ -342,9 +364,12 @@ export default function EnrichmentDashboardClient() {
                 params.set('search', debouncedSearchValue);
             }
 
-            const response = await fetch(`/api/admin/ingestion/enrichment-status?${params.toString()}`);
+            const response = await fetch(`/api/admin/ingestion/enrichment-status?${params.toString()}`, {
+                cache: 'no-store',
+                credentials: 'same-origin',
+            });
             if (!response.ok) {
-                throw new Error('Failed to fetch enrichment status');
+                throw new Error(await getFetchErrorMessage(response, 'Failed to fetch enrichment status'));
             }
 
             const data = (await response.json()) as EnrichmentDashboardResponse;
@@ -372,8 +397,10 @@ export default function EnrichmentDashboardClient() {
             if (requestId !== fetchRequestIdRef.current) {
                 return;
             }
-            console.error(error);
-            showError('Failed to refresh enrichment status');
+
+            showError(
+                error instanceof Error ? error.message : 'Failed to refresh enrichment status'
+            );
         } finally {
             if (requestId === fetchRequestIdRef.current) {
                 setLoading(false);

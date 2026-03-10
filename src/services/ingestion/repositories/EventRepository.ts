@@ -189,8 +189,16 @@ export class EventRepository {
         const linkedInUrls = speakers
             .map(s => s.linkedinUrl)
             .filter((url): url is string => !!url);
+        const speakerNames = Array.from(
+            new Set(
+                speakers
+                    .map((speaker) => speaker.name.trim())
+                    .filter(Boolean)
+            )
+        );
 
         const existingSpeakersMap = new Map<string, string>(); // linkedInUrl -> speakerId
+        const existingSpeakersByName = new Map<string, string>(); // normalized name -> speakerId
 
         if (linkedInUrls.length > 0) {
             const { data: existingSpeakers } = await supabaseClient
@@ -207,22 +215,46 @@ export class EventRepository {
             }
         }
 
+        if (speakerNames.length > 0) {
+            const { data: existingByName } = await supabaseClient
+                .from('speakers')
+                .select('id, name')
+                .in('name', speakerNames);
+
+            if (existingByName) {
+                for (const speaker of existingByName) {
+                    if (speaker.name) {
+                        existingSpeakersByName.set(speaker.name.trim().toLowerCase(), speaker.id);
+                    }
+                }
+            }
+        }
+
         // Step 2: Separate speakers into update vs insert groups
         const speakersToUpdate: Array<{ id: string; input: SpeakerUpsertInput }> = [];
         const speakersToInsert: SpeakerUpsertInput[] = [];
-        const resultOrder: Array<{ linkedinUrl?: string; insertIndex?: number }> = [];
+        const resultOrder: Array<{ existingId?: string; insertIndex?: number }> = [];
 
         let insertIndex = 0;
         for (const speaker of speakers) {
             if (speaker.linkedinUrl && existingSpeakersMap.has(speaker.linkedinUrl)) {
                 const existingId = existingSpeakersMap.get(speaker.linkedinUrl)!;
                 speakersToUpdate.push({ id: existingId, input: speaker });
-                resultOrder.push({ linkedinUrl: speaker.linkedinUrl });
-            } else {
-                speakersToInsert.push(speaker);
-                resultOrder.push({ insertIndex });
-                insertIndex++;
+                resultOrder.push({ existingId });
+                continue;
             }
+
+            const normalizedName = speaker.name.trim().toLowerCase();
+            const existingByName = existingSpeakersByName.get(normalizedName);
+            if (existingByName) {
+                speakersToUpdate.push({ id: existingByName, input: speaker });
+                resultOrder.push({ existingId: existingByName });
+                continue;
+            }
+
+            speakersToInsert.push(speaker);
+            resultOrder.push({ insertIndex });
+            insertIndex++;
         }
 
         // Step 3: Batch update existing speakers (parallel updates)
@@ -277,8 +309,8 @@ export class EventRepository {
 
         // Step 5: Build result array in original order
         return resultOrder.map(item => {
-            if (item.linkedinUrl) {
-                return existingSpeakersMap.get(item.linkedinUrl)!;
+            if (item.existingId) {
+                return item.existingId;
             } else if (item.insertIndex !== undefined) {
                 return insertedSpeakerIds[item.insertIndex];
             }

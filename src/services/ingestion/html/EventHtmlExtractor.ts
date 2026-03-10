@@ -12,6 +12,7 @@ export interface ExtractedScheduleItem {
     speakers?: string[];
     location?: string;
     track?: string;
+    dayNumber?: number;
 }
 
 export interface HtmlCoreExtractionResult {
@@ -164,7 +165,24 @@ function validateUrlHost(url: string, allowedHosts: string[]): string | undefine
     }
 }
 
-function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>): SpeakerRecord[] {
+function resolveHttpUrl(url: string | undefined | null, baseUrl?: string): string | undefined {
+    if (!url) {
+        return undefined;
+    }
+
+    try {
+        const resolved = baseUrl ? new URL(url, baseUrl) : new URL(url);
+        if (!['http:', 'https:'].includes(resolved.protocol)) {
+            return undefined;
+        }
+
+        return resolved.toString();
+    } catch {
+        return undefined;
+    }
+}
+
+function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>, baseUrl?: string): SpeakerRecord[] {
     const performers = [
         ...asArray(eventPayload.performer),
         ...asArray(eventPayload.performers),
@@ -190,7 +208,10 @@ function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>): Speak
             company: (affiliation?.name as string | undefined) || (worksFor?.name as string | undefined) || undefined,
             bio: (performerObj.description as string | undefined) || undefined,
             linkedinUrl: sameAs ? validateUrlHost(sameAs, ['linkedin.com']) : undefined,
-            photoUrl: (performerObj.image as string | undefined) || (performerObj.logo as string | undefined) || undefined,
+            photoUrl: resolveHttpUrl(
+                (performerObj.image as string | undefined) || (performerObj.logo as string | undefined) || undefined,
+                baseUrl
+            ),
             githubUrl: sameAs ? validateUrlHost(sameAs, ['github.com']) : undefined,
         });
     }
@@ -359,6 +380,7 @@ function extractAgendaFromDocument(document: Document): ExtractedScheduleItem[] 
 function extractSpeakersFromDocument(document: Document): SpeakerRecord[] {
     const speakers: SpeakerRecord[] = [];
     const seen = new Set<string>();
+    const baseUrl = document.baseURI || document.URL || undefined;
     const speakerElements = Array.from(
         document.querySelectorAll(
             '.speaker, .speaker-card, .speaker-item, .event-speaker, .presenter, [class*="speaker-card"], [class*="speaker"]'
@@ -383,13 +405,28 @@ function extractSpeakersFromDocument(document: Document): SpeakerRecord[] {
             element.querySelector('.speaker-bio, .bio, .description, p') ||
             element.querySelector('[class*="bio"]');
         const imageNode = element.querySelector('img');
+        const linkUrls = Array.from(element.querySelectorAll<HTMLAnchorElement>('a[href]'))
+            .map((link) => link.href)
+            .filter(Boolean);
+        const linkedinUrl = linkUrls.find((url) => validateUrlHost(url, ['linkedin.com']));
+        const twitterUrl = linkUrls.find((url) => validateUrlHost(url, ['twitter.com', 'x.com']));
+        const websiteUrl = linkUrls.find((url) => {
+            if (!/^https?:/i.test(url)) {
+                return false;
+            }
+
+            return !validateUrlHost(url, ['linkedin.com', 'github.com', 'twitter.com', 'x.com']);
+        });
 
         speakers.push({
             name,
             title: titleNode?.textContent?.trim() || undefined,
             company: companyNode?.textContent?.trim() || undefined,
             bio: bioNode?.textContent?.trim() || undefined,
-            photoUrl: imageNode?.getAttribute('src') || undefined,
+            photoUrl: resolveHttpUrl(imageNode?.getAttribute('src') || undefined, baseUrl),
+            linkedinUrl,
+            twitterUrl,
+            websiteUrl,
         });
         seen.add(name.toLowerCase());
     });
@@ -485,7 +522,7 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
             result.provenance.sources.push('jsonld.schedule');
         }
 
-        const speakers = extractSpeakersFromJsonLd(primaryEvent);
+        const speakers = extractSpeakersFromJsonLd(primaryEvent, document.baseURI || document.URL || baseUrl);
         if (speakers.length > 0) {
             result.speakers = speakers;
             result.confidence.speakers = 0.65;
@@ -601,4 +638,3 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
 
     return result;
 }
-

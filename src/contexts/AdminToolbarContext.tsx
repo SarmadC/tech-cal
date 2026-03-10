@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 
 export type AdminToolbarSearchConfig = {
     placeholder?: string;
+    ariaLabel?: string;
     value?: string;
     onChange?: (value: string) => void;
     onSubmit?: (value: string) => void;
@@ -152,5 +153,4 @@ export function useAdminToolbar() {
     }
     return ctx;
 }
-
 

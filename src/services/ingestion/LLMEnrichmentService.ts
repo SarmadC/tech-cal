@@ -8,6 +8,7 @@ import {
     type EnrichmentMetadata,
     type ExtractionProviderResult,
     type ExtractedAgendaItem,
+    ExtractedEventDataSchema,
     type ExtractedEventData,
     type ExtractedSpeaker,
     type InferenceRequest,
@@ -15,7 +16,11 @@ import {
 } from '@/types/enrichment';
 import { PlaywrightScraper } from './PlaywrightScraper';
 import { getExtractionProvider } from './providers/ProviderFactory';
-import { DEFAULT_GEMINI_MODEL, GeminiExtractionProvider } from './providers/GeminiExtractionProvider';
+import {
+    DEFAULT_GEMINI_MODEL,
+    GeminiExtractionProvider,
+    normalizeExtractedProviderPayload,
+} from './providers/GeminiExtractionProvider';
 import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
 import {
@@ -28,6 +33,12 @@ import {
     type QueueFieldSnapshot,
     type RelationReviewValue,
 } from './utils/enrichmentQueue';
+import {
+    buildProviderDocuments,
+    buildStructuredExtractedEventData,
+    collectLinkedPageDocuments,
+    mergeExtractedEventData,
+} from './linkedPageExtraction';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
 const MAX_RETRIES = 3;
@@ -178,9 +189,20 @@ export class LLMEnrichmentService {
             await this.markProcessing(eventId, metadata);
 
             const scrape = await this.scraper.scrapeUrl(sourceUrl);
-            const content = this.extractReadableContent(scrape.html);
+            const documents = await collectLinkedPageDocuments({
+                sourceUrl,
+                html: scrape.html,
+                finalUrl: scrape.finalUrl,
+                loadPage: async (url) => this.scraper.scrapeUrl(url),
+            });
+            const primaryContent = documents[0]?.content ?? '';
+            const providerDocuments = buildProviderDocuments(documents.slice(1));
+            const structuredData = buildStructuredExtractedEventData(documents);
+            const content = [primaryContent, ...providerDocuments.map((document) => document.content)]
+                .filter(Boolean)
+                .join('\n\n');
 
-            if (!content) {
+            if (!content.trim()) {
                 throw new Error('Unable to extract readable content from page');
             }
 
@@ -192,9 +214,35 @@ export class LLMEnrichmentService {
                 context: { sourceUrl, eventId, contentHash },
                 model: this.modelOverride,
                 allowedTags: allowedTags.map(t => t.name),
+                documents: providerDocuments,
             });
+            const mergedData = mergeExtractedEventData(
+                structuredData,
+                providerResult.data
+            );
+            const normalizedMergedData = normalizeExtractedProviderPayload(
+                mergedData,
+                allowedTags.map((tag) => tag.name)
+            );
+            const validatedData = ExtractedEventDataSchema.safeParse(normalizedMergedData);
+            if (!validatedData.success) {
+                const issues = validatedData.error.issues
+                    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+                    .join('; ');
+                throw new Error(`Merged enrichment payload failed validation: ${issues}`);
+            }
 
-            await this.persistSuccess(eventId, event, providerResult, metadata, contentHash, allowedTags);
+            await this.persistSuccess(
+                eventId,
+                event,
+                {
+                    ...providerResult,
+                    data: validatedData.data,
+                },
+                metadata,
+                contentHash,
+                allowedTags
+            );
 
             return { eventId, title: eventTitle, status: 'enriched' };
         } catch (error) {
@@ -226,6 +274,7 @@ export class LLMEnrichmentService {
                     'pricing_type',
                     'speaker_lineup',
                     'start_time',
+                    'difficulty_level',
                     'created_at',
                 ].join(','),
             )
@@ -260,6 +309,7 @@ export class LLMEnrichmentService {
                     'currency',
                     'pricing_type',
                     'speaker_lineup',
+                    'difficulty_level',
                 ].join(','),
             )
             .eq('id', eventId)
@@ -967,6 +1017,8 @@ export class LLMEnrichmentService {
             bio: speaker.bio,
             linkedinUrl: speaker.linkedinUrl,
             photoUrl: speaker.photoUrl,
+            twitterUrl: speaker.twitterUrl,
+            websiteUrl: speaker.websiteUrl,
         }));
     }
 
@@ -976,6 +1028,15 @@ export class LLMEnrichmentService {
             start_time: item.startTime ?? null,
             end_time: item.endTime ?? null,
             description: item.description ?? null,
+            location: item.location ?? null,
+            track: item.track ?? null,
+            day_number: item.dayNumber ?? null,
+            agenda_type: item.agendaType ?? null,
+            difficulty_level: item.difficultyLevel ?? null,
+            capacity: item.capacity ?? null,
+            prerequisites: item.prerequisites ?? null,
+            is_required: item.isRequired ?? null,
+            duration_minutes: item.durationMinutes ?? null,
             speakers: item.speakers ?? [],
         }));
     }
