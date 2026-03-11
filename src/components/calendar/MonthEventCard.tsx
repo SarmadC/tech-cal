@@ -6,6 +6,7 @@ import { Event, MultiDayEventInstance } from '@/types';
 import { isEventPast } from '@/utils/dateUtils';
 import { isParentMultiDayEvent } from '@/utils/multiDayEventUtils';
 import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 interface MonthEventCardProps {
     event: Event | MultiDayEventInstance;
@@ -133,6 +134,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     style = {}
 }) => {
     const accentColor = getEventAccentColor(event);
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
     const isPast = isEventPast(event.startTime, event.endTime);
     const timeLabelRaw = formatTimeLabel(event);
     const durationLabelRaw = getDurationLabel(event);
@@ -203,11 +205,11 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             <span className="month-event-card-accent" aria-hidden="true" />
 
             {/* Icon Lockup: Left Aligned */}
-            {event.organization?.logo && (
+            {organizationLogoSrc && (
                 <span className="month-event-card-logo" style={{ marginRight: '6px', marginLeft: '2px' }}>
                     <Image
-                        src={event.organization.logo}
-                        alt={`${event.organization.name} logo`}
+                        src={organizationLogoSrc}
+                        alt={`${event.organization?.name ?? event.organizer ?? 'Organization'} logo`}
                         width={16}
                         height={16}
                         onError={(imageEvent) => {

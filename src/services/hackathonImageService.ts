@@ -2,6 +2,16 @@ import * as Sentry from '@sentry/nextjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export class HackathonImageService {
+    private static normalizeImageMimeType(mimeType?: string | null): string {
+        const normalized = (mimeType || '').split(';')[0].trim().toLowerCase();
+
+        if (normalized === 'image/pjpeg') return 'image/jpeg';
+        if (normalized === 'image/x-png') return 'image/png';
+        if (normalized === 'image/svg') return 'image/svg+xml';
+
+        return normalized;
+    }
+
     static async uploadHackathonHeaderImage(
         hackathonId: string,
         file: File,
@@ -9,7 +19,8 @@ export class HackathonImageService {
     ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
         try {
             const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
-            if (!validTypes.includes(file.type)) {
+            const normalizedType = HackathonImageService.normalizeImageMimeType(file.type);
+            if (!validTypes.includes(normalizedType)) {
                 return { success: false, error: `Invalid file type. Allowed: ${validTypes.join(', ')}` };
             }
 
@@ -56,4 +67,3 @@ export class HackathonImageService {
         }
     }
 }
-

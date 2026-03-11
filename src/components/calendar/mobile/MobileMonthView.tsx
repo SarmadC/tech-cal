@@ -15,6 +15,7 @@ import { getSpeakerAvatarUrl } from '@/services/avatarService';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 export interface MobileMonthViewProps {
   events: Event[];
@@ -569,9 +570,9 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
                       {formatEventTime(event)}
                     </div>
                     <div className="event-logo">
-                      {event.organization?.logo ? (
+                      {getSafeImageSrc(event.organization?.logo) ? (
                         <Image
-                          src={event.organization.logo}
+                          src={getSafeImageSrc(event.organization?.logo)!}
                           alt={`${event.organizer || event.title} logo`}
                           width={40}
                           height={40}

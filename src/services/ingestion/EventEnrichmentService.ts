@@ -141,6 +141,16 @@ const normalizeAgendaTopics = (value: unknown): string[] | undefined => {
 };
 
 export class EventEnrichmentService {
+    private static normalizeImageMimeType(mimeType?: string | null): string {
+        const normalized = (mimeType || '').split(';')[0].trim().toLowerCase();
+
+        if (normalized === 'image/pjpeg') return 'image/jpeg';
+        if (normalized === 'image/x-png') return 'image/png';
+        if (normalized === 'image/svg') return 'image/svg+xml';
+
+        return normalized;
+    }
+
     /**
      * Create or update agenda items for an event
      * Replaces existing agenda items for the event
@@ -393,7 +403,8 @@ export class EventEnrichmentService {
         try {
             // Validate file type
             const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
-            if (!validTypes.includes(file.type)) {
+            const normalizedType = EventEnrichmentService.normalizeImageMimeType(file.type);
+            if (!validTypes.includes(normalizedType)) {
                 return {
                     success: false,
                     error: `Invalid file type. Allowed: ${validTypes.join(', ')}`,
@@ -1288,7 +1299,8 @@ export class EventEnrichmentService {
         try {
             // Validate file type
             const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-            if (!validTypes.includes(file.type)) {
+            const normalizedType = EventEnrichmentService.normalizeImageMimeType(file.type);
+            if (!validTypes.includes(normalizedType)) {
                 return {
                     success: false,
                     error: `Invalid file type. Allowed: ${validTypes.join(', ')}`,

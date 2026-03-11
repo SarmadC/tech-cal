@@ -11,6 +11,7 @@ import { isMultiDayEvent, getMultiDayDuration, getCategoryColor } from '@/utils/
 // Career impact components removed - using inline implementation
 import { getPillColor } from '@/utils/pillColorUtils';
 import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 export interface EventCardProps {
     event: Event | MultiDayEventInstance | (Event & { careerImpactLite?: CareerImpactScoreLite });
@@ -56,6 +57,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
     hiddenEvents: _hiddenEvents = [],
     onBadgeClick: _onBadgeClick
 }) => {
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
 
     const live = isEventLive(event.startTime, event.endTime);
     const isPast = isEventPast(event.startTime, event.endTime);
@@ -293,7 +295,7 @@ const EventCardComponent: React.FC<EventCardProps> = ({
                             {/* Primary Title Block with Icon Lockup - Pixel-Perfect Optical Alignment */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0px' }}>
                                 {/* Organizer Logo - Perfectly aligned to text cap-height */}
-                                {event.organization?.logo && (
+                                {organizationLogoSrc && (
                                     <div className="event-organizer-logo-lockup" style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -304,8 +306,8 @@ const EventCardComponent: React.FC<EventCardProps> = ({
                                         lineHeight: 0 // Remove any line-height spacing
                                     }}>
                                         <Image
-                                            src={event.organization.logo}
-                                            alt={`${event.organization.name} logo`}
+                                            src={organizationLogoSrc}
+                                            alt={`${event.organization?.name ?? event.organizer ?? 'Organization'} logo`}
                                             width={16}
                                             height={16}
                                             className="organizer-logo-image rounded-sm"

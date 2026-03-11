@@ -10,6 +10,16 @@ import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
 import { fetchWithSafeRedirects, validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
+function normalizeImageMimeType(mimeType?: string | null): string {
+    const normalized = (mimeType || '').split(';')[0].trim().toLowerCase();
+
+    if (normalized === 'image/pjpeg') return 'image/jpeg';
+    if (normalized === 'image/x-png') return 'image/png';
+    if (normalized === 'image/svg') return 'image/svg+xml';
+
+    return normalized;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -80,7 +90,9 @@ export async function POST(request: NextRequest) {
             }
 
             // Validate blob type
-            const contentType = response.headers.get('content-type') || blob.type || 'image/png';
+            const contentType = normalizeImageMimeType(
+                response.headers.get('content-type') || blob.type || 'image/png'
+            );
             if (!contentType.startsWith('image/') && !contentType.includes('svg')) {
                 console.warn('Content type may not be an image:', contentType);
             }

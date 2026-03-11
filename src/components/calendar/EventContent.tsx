@@ -6,6 +6,7 @@ import { formatTime } from '@/utils/dateUtils';
 import { getCategoryColor, isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';
 import { getPillColor } from '@/utils/pillColorUtils';
 import Image from 'next/image';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 interface EventContentProps extends EventContentArg {
     onEventHover?: (event: Event, position: { x: number; y: number }) => void;
@@ -20,6 +21,7 @@ const EventContent: FC<EventContentProps> = ({
 }) => {
     const elementRef = useRef<HTMLDivElement>(null);
     const eventData = event.extendedProps as Event;
+    const organizationLogoSrc = getSafeImageSrc(eventData.organization?.logo);
     
     // Get tracking status
     const isTracked = ('isTracked' in eventData) && eventData.isTracked;
@@ -100,11 +102,11 @@ const EventContent: FC<EventContentProps> = ({
             } as React.CSSProperties}
         >
             {/* Event Logo */}
-            {eventData.organization?.logo && (
+            {organizationLogoSrc && (
                 <div className="event-logo">
                     <Image
-                        src={eventData.organization.logo}
-                        alt={eventData.organization.name || 'Event logo'}
+                        src={organizationLogoSrc}
+                        alt={eventData.organization?.name || 'Event logo'}
                         width={16}
                         height={16}
                         className="logo-image"
