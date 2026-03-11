@@ -65,6 +65,18 @@ interface PublicEvent {
     event_type: { id: string; name: string; color: string } | null;
     organizer: { id: string; name: string; logo_url?: string } | null;
     agenda: DbAgendaItem[];
+    series: { id: string; name: string; description: string | null; website_url: string | null } | null;
+    series_id: string | null;
+}
+
+// Explicit type for other events in the series
+interface SeriesEvent {
+    id: string;
+    slug: string;
+    title: string;
+    start_time: string;
+    end_time: string | null;
+    location: string | null;
 }
 
 // UUID v4 regex pattern for legacy link detection
@@ -90,6 +102,8 @@ const EVENT_SELECT_QUERY = `
     difficulty:difficulty_level,
     target_audience,
     status,
+    series_id,
+    series:event_series(id, name, description, website_url),
     event_type:event_type_id(id, name, color),
     organizer:organizer_id(id, name, logo_url),
     agenda:event_agenda(*)
@@ -142,7 +156,24 @@ async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shoul
             }
         }
 
-        return { event, shouldRedirect: false };
+        // Fetch other events in the same series, if applicable
+        let otherEventsInSeries: SeriesEvent[] = [];
+        if (event.series_id) {
+            const { data: relatedEvents } = await supabase
+                .from('events')
+                .select('id, slug, title, start_time, end_time, location')
+                .eq('series_id', event.series_id)
+                .eq('status', 'confirmed')
+                .neq('id', event.id)
+                .order('start_time', { ascending: true })
+                .limit(5);
+
+            if (relatedEvents) {
+                otherEventsInSeries = relatedEvents as unknown as SeriesEvent[];
+            }
+        }
+
+        return { event, shouldRedirect: false, otherEventsInSeries };
     }
 
     // 2. Try extracting ID from composite slug (title--id) or checking if it's a raw UUID
@@ -162,7 +193,7 @@ async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shoul
 
             // Found by ID (either raw UUID or extracted from composite)
             // We should redirect to the canonical slug URL to clean up the browser bar
-            return { event, shouldRedirect: true };
+            return { event, shouldRedirect: true, otherEventsInSeries: [] };
         }
     }
 
@@ -255,7 +286,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
         notFound();
     }
 
-    const { event, shouldRedirect } = result;
+    const { event, shouldRedirect, otherEventsInSeries } = result;
 
     // 301 redirect legacy UUID links to canonical slug URL
     if (shouldRedirect && event.slug) {
@@ -495,6 +526,46 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                             <div className="px-1 pt-2">
                                 <WhosGoingSection eventId={event.id} />
                             </div>
+
+                            {/* Series Events Section */}
+                            {event.series && otherEventsInSeries && otherEventsInSeries.length > 0 && (
+                                <div className="mt-8 border-t border-border-subtle pt-6">
+                                    <h3 className="text-[13px] font-semibold text-foreground-primary mb-3">
+                                        More from {event.series.name}
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {otherEventsInSeries.map((seriesEvent) => (
+                                            <Link
+                                                key={seriesEvent.id}
+                                                href={`/events/${seriesEvent.slug}`}
+                                                className="group block p-2.5 -mx-2.5 rounded-md hover:bg-background-main/50 transition-colors border border-transparent hover:border-border-subtle/50"
+                                            >
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[13px] font-medium text-foreground-primary group-hover:text-accent-tertiary transition-colors truncate">
+                                                        {seriesEvent.location ? seriesEvent.location : seriesEvent.title}
+                                                    </span>
+                                                    <div className="flex items-center text-[11px] text-foreground-tertiary">
+                                                        <span>{formatDate(seriesEvent.start_time)}</span>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                    {event.series.website_url && (
+                                        <div className="mt-4 pt-4 border-t border-border-subtle/50 text-center">
+                                            <a
+                                                href={event.series.website_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[12px] text-accent-tertiary hover:underline inline-flex items-center gap-1"
+                                            >
+                                                Visit Series Website
+                                                <ArrowSquareOut className="w-3 h-3" />
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </aside>
 

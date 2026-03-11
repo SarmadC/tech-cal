@@ -154,7 +154,7 @@ export function ClassificationSection({
                 <h3 className="text-lg font-medium text-foreground-primary">Event Classification</h3>
             </div>
             <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                         <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Type</label>
                         <select
@@ -186,6 +186,19 @@ export function ClassificationSection({
                             <option value="Online" className="bg-background-main">Online</option>
                             <option value="In-person" className="bg-background-main">In-person</option>
                             <option value="Hybrid" className="bg-background-main">Hybrid</option>
+                        </select>
+                    </div>
+                    <div className="grid gap-2">
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Series</label>
+                        <select
+                            value={relationships.series_id || ''}
+                            onChange={(e) => setRelationships(prev => ({ ...prev, series_id: e.target.value || null }))}
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
+                        >
+                            <option value="" className="bg-background-main">None</option>
+                            {lookupData.eventSeries?.map(series => (
+                                <option key={series.id} value={series.id} className="bg-background-main">{series.name}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
