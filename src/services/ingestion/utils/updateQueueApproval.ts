@@ -84,7 +84,7 @@ const normalizeSpeakerNames = (value: unknown): string[] | undefined => {
 export const serializeAgendaApprovalItem = (item: AgendaApprovalItem) => ({
     title: item.title,
     start_time: item.startTime,
-    end_time: item.endTime,
+    end_time: item.endTime ?? null,
     description: item.description ?? null,
     location: item.location ?? null,
     track: item.track ?? null,
@@ -133,10 +133,10 @@ export const coerceAgendaItems = (
         const endTime =
             toTrimmedString(typed.end_time) ??
             toTrimmedString(typed.endTime) ??
-            '';
+            undefined;
 
         const label = rawTitle || `item ${index + 1}`;
-        if (!rawTitle || !startTime || !endTime) {
+        if (!rawTitle || !startTime) {
             invalidItems.push(label);
             return;
         }
@@ -242,13 +242,13 @@ export const collectFieldUpdates = <TField extends QueueFieldLike>(
                         newValue: items.map(serializeAgendaApprovalItem),
                     });
                     warnings.push(
-                        `Skipped invalid agenda items missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
+                        `Skipped invalid agenda items missing title/start: ${invalidItems.slice(0, 5).join(', ')}`
                     );
                 }
             } else if (invalidItems.length > 0) {
                 fieldsToReject.push(field);
                 warnings.push(
-                    `Rejected agenda field because every agenda item was missing title/start/end: ${invalidItems.slice(0, 5).join(', ')}`
+                    `Rejected agenda field because every agenda item was missing title/start: ${invalidItems.slice(0, 5).join(', ')}`
                 );
             }
             continue;

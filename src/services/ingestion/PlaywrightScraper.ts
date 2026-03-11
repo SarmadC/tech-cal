@@ -11,6 +11,7 @@ const MISSING_BROWSER_ERROR_PATTERNS = [
     "Executable doesn't exist",
     'Please run the following command to download new browsers',
 ] as const;
+const MAX_CAPTURED_NETWORK_PAYLOADS = 10;
 
 export interface ScrapeOptions {
     timeoutMs?: number;
@@ -27,6 +28,24 @@ export interface ScrapeResult {
     finalUrl: string;
     statusCode?: number;
     usedPlaywright: boolean;
+}
+
+export interface ObserveAction {
+    selector: string;
+    label?: string;
+    actionType?: 'switch_day' | 'expand_section' | 'load_more';
+}
+
+export interface CapturedPayload {
+    url: string;
+    contentType?: string;
+    bodyText: string;
+}
+
+export interface ObserveResult extends ScrapeResult {
+    evidenceSource: 'page_html' | 'interaction';
+    originActionLabel?: string;
+    capturedPayloads?: CapturedPayload[];
 }
 
 export class PlaywrightScraper {
@@ -113,6 +132,141 @@ export class PlaywrightScraper {
             }
             const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
             return { ...fallback, usedPlaywright: false };
+        } finally {
+            await context?.close();
+            await browser?.close();
+            release();
+        }
+    }
+
+    async observePage(
+        url: string,
+        action?: ObserveAction,
+        options: ScrapeOptions = {},
+    ): Promise<ObserveResult> {
+        const release = await this.acquireSlot();
+        const timeoutMs = options.timeoutMs ?? 30000;
+        const waitUntil = options.waitUntil ?? 'domcontentloaded';
+        const blockResources = options.blockResources ?? ['image', 'font', 'media'];
+        const postNavigationDelayMs = options.postNavigationDelayMs ?? 1000;
+        const userAgent = options.userAgent ?? this.pickUserAgent();
+        const useFetchFallback = options.useFetchFallback ?? true;
+
+        let browser: Browser | null = null;
+        let context: BrowserContext | null = null;
+
+        try {
+            if (this.shouldUseFetchOnly()) {
+                const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
+                return {
+                    ...fallback,
+                    evidenceSource: action ? 'interaction' : 'page_html',
+                    originActionLabel: action?.label,
+                    capturedPayloads: [],
+                };
+            }
+
+            browser = await chromium.launch({ headless: true });
+            context = await browser.newContext({ userAgent });
+            const page = await context.newPage();
+
+            if (blockResources.length > 0) {
+                await page.route('**/*', (route) => {
+                    const type = route.request().resourceType();
+                    if (blockResources.includes(type as 'image' | 'font' | 'media')) {
+                        return route.abort();
+                    }
+                    return route.continue();
+                });
+            }
+
+            const capturedPayloads: CapturedPayload[] = [];
+            page.on('response', async (response) => {
+                if (capturedPayloads.length >= MAX_CAPTURED_NETWORK_PAYLOADS) {
+                    return;
+                }
+
+                const headers = response.headers();
+                const contentType = headers['content-type'] || '';
+                const responseUrl = response.url();
+                const looksLikeJson =
+                    contentType.includes('application/json')
+                    || contentType.includes('+json')
+                    || /\/graphql\b|\/api\//i.test(responseUrl);
+
+                if (!looksLikeJson) {
+                    return;
+                }
+
+                try {
+                    const bodyText = await response.text();
+                    if (!bodyText || bodyText.length > 200_000) {
+                        return;
+                    }
+
+                    JSON.parse(bodyText);
+                    capturedPayloads.push({
+                        url: responseUrl,
+                        contentType: contentType || undefined,
+                        bodyText,
+                    });
+                } catch {
+                    // Ignore unreadable responses.
+                }
+            });
+
+            const response = await page.goto(url, { timeout: timeoutMs, waitUntil });
+            if (postNavigationDelayMs > 0) {
+                await page.waitForTimeout(postNavigationDelayMs);
+            }
+
+            if (action?.selector) {
+                const locator = page.locator(action.selector).first();
+                await locator.waitFor({ state: 'visible', timeout: Math.min(timeoutMs, 5000) });
+                await locator.click({ timeout: Math.min(timeoutMs, 5000) });
+                try {
+                    await page.waitForLoadState('networkidle', { timeout: 3000 });
+                } catch {
+                    // Ignore pages that never reach networkidle.
+                }
+                await page.waitForTimeout(1000);
+            }
+
+            const html = await page.content();
+            const finalUrl = page.url();
+            const statusCode = response?.status();
+
+            return {
+                html,
+                finalUrl,
+                statusCode,
+                usedPlaywright: true,
+                evidenceSource: action ? 'interaction' : 'page_html',
+                originActionLabel: action?.label,
+                capturedPayloads,
+            };
+        } catch (error) {
+            if (this.isMissingBrowserError(error)) {
+                PlaywrightScraper.browserUnavailable = true;
+                if (!PlaywrightScraper.warnedUnavailable) {
+                    PlaywrightScraper.warnedUnavailable = true;
+                    console.warn(
+                        '[PlaywrightScraper] Playwright browser is unavailable in this runtime. Falling back to fetch for all subsequent observations.'
+                    );
+                }
+            }
+
+            if (!useFetchFallback) {
+                throw error;
+            }
+
+            const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
+            return {
+                ...fallback,
+                evidenceSource: action ? 'interaction' : 'page_html',
+                originActionLabel: action?.label,
+                capturedPayloads: [],
+            };
         } finally {
             await context?.close();
             await browser?.close();

@@ -2,9 +2,12 @@ import { Readability } from '@mozilla/readability';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import type { ExtractedAgendaItem, ExtractedEventData, ExtractedSpeaker } from '@/types/enrichment';
 import type { SpeakerRecord } from '@/types/ingestion';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
+import { isDescriptionThin } from '@/utils/ingestion/DescriptionHeuristics';
 import { parseDurationMinutes, parseLocalTime } from '@/utils/ingestion/ExtractNormalization';
 import {
     extractCoreFieldsFromHtml,
+    extractCoreFieldsFromJsonPayload,
     type ExtractedScheduleItem,
     type HtmlCoreExtractionResult,
 } from './html';
@@ -15,14 +18,48 @@ const MAX_PROVIDER_DOCUMENTS = 16;
 const MAX_PROVIDER_DOCUMENT_CONTENT = 6_000;
 const DEFAULT_MAX_HUB_PAGES = 3;
 const DEFAULT_MAX_DETAIL_PAGES = 25;
+export const DEFAULT_AGENTIC_VENDOR_HOST_ALLOWLIST = [
+    'sched.com',
+    'sessionize.com',
+    'swapcard.com',
+    'hopin.com',
+    'airmeet.com',
+    'goldcast.io',
+    'eventfinity.co',
+] as const;
 
-const AGENDA_KEYWORDS = /(agenda|schedule|program|timetable|itinerary|session list|conference program|tracks?)/i;
+const AGENDA_KEYWORDS = /(agenda|schedule|program|timetable|itinerary|session list|conference program|tracks?|talks?)/i;
 const SPEAKER_KEYWORDS = /(speakers?|presenters?|panelists?|experts?|instructors?|hosts?)/i;
 const SESSION_DETAIL_KEYWORDS = /(session details?|view session|session page|speaker profile|profile)/i;
 const NOISE_LINK_KEYWORDS = /(register|registration|tickets?|pricing|sponsor|exhibitor|venue|hotel|travel|faq|contact|privacy|terms)/i;
-const SESSION_PATH_HINTS = /(\/sessions?\/|\/agenda\/[^/]+\/|\/program\/[^/]+\/|\/talks?\/|\/tracks?\/[^/]+\/[^/]+|\/speaker\/[^/]+)/i;
+const AGENDA_PATH_HINTS = /(\/agenda(?:\/|$)|\/schedule(?:\/|$)|\/program(?:\/|$)|\/talks?(?:\/|$))/i;
+const SESSION_PATH_HINTS = /(\/sessions?\/[^/?#]+|\/agenda\/[^/]+\/|\/program\/[^/]+\/|\/talks?\/[^/?#]+|\/tracks?\/[^/]+\/[^/]+|\/speaker\/[^/]+)/i;
+const REGISTRATION_CTA_KEYWORDS = /\b(register|registration|tickets?|buy tickets?|get tickets?|reserve (?:your )?spot|book now|sign up)\b/i;
+const DAY_SWITCH_KEYWORDS = /\b(pre-event|day\s+\d+|day one|day two|day three|day four|workshop day)\b/i;
+const LOAD_MORE_KEYWORDS = /\b(load more|show more|view more|see more|more sessions|more talks|show all)\b/i;
+const EXPAND_SECTION_KEYWORDS = /\b(details|expand|show details|view details|learn more|read more|more info)\b/i;
+const ABSOLUTE_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}/i;
+const OFFSET_WITHOUT_COLON_PATTERN = /([+-]\d{2})(\d{2})$/;
 
 export type LinkedPageKind = 'primary' | 'agenda' | 'speakers' | 'session';
+export type PageInteractionType = 'switch_day' | 'expand_section' | 'load_more';
+
+export interface PageInteractionCandidate {
+    id: string;
+    actionType: PageInteractionType;
+    label: string;
+    selector: string;
+    pageUrl: string;
+    score: number;
+    kind: Extract<LinkedPageKind, 'agenda' | 'session'>;
+}
+
+export interface InteractionSignals {
+    expectedAgendaDays?: number;
+    detectedDayLabels?: string[];
+    collapsedAgendaCount?: number;
+    loadMoreCount?: number;
+}
 
 export interface LinkedPageDocument {
     kind: LinkedPageKind;
@@ -30,18 +67,32 @@ export interface LinkedPageDocument {
     url: string;
     content: string;
     extracted: HtmlCoreExtractionResult;
+    evidenceSource?: 'page_html' | 'embedded_json' | 'interaction' | 'network_json';
+    originActionLabel?: string;
+    candidateLinks?: CandidateLink[];
+    interactionCandidates?: PageInteractionCandidate[];
+    interactionSignals?: InteractionSignals;
+    registrationCtaUrls?: string[];
 }
 
-interface CandidateLink {
+export interface CandidateLink {
     url: string;
     label: string;
     kind: Exclude<LinkedPageKind, 'primary'>;
     score: number;
+    host: string;
 }
 
 export interface PageLoadResult {
     html: string;
     finalUrl?: string;
+    evidenceSource?: 'page_html' | 'interaction';
+    originActionLabel?: string;
+    capturedPayloads?: Array<{
+        url: string;
+        contentType?: string;
+        bodyText: string;
+    }>;
 }
 
 export interface LinkedPageCollectionOptions {
@@ -51,6 +102,7 @@ export interface LinkedPageCollectionOptions {
     loadPage: (url: string) => Promise<PageLoadResult>;
     maxHubPages?: number;
     maxDetailPages?: number;
+    allowedHosts?: string[];
 }
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -72,6 +124,207 @@ const normalizeUrlForTraversal = (rawUrl: string): string | null => {
     }
 };
 
+const normalizeAllowedHost = (host: string): string =>
+    host.trim().toLowerCase().replace(/^www\./, '');
+
+const matchesAllowedHost = (hostname: string, allowedHost: string): boolean => {
+    const normalizedHostname = normalizeAllowedHost(hostname);
+    const normalizedAllowedHost = normalizeAllowedHost(allowedHost);
+
+    return (
+        normalizedHostname === normalizedAllowedHost
+        || normalizedHostname.endsWith(`.${normalizedAllowedHost}`)
+    );
+};
+
+const buildAllowedHosts = (baseHostname: string, additionalHosts: string[] = []): string[] =>
+    Array.from(
+        new Set(
+            [baseHostname, normalizeAllowedHost(baseHostname), ...additionalHosts.map(normalizeAllowedHost)]
+                .filter(Boolean)
+        )
+    );
+
+const cssEscape = (value: string): string =>
+    value.replace(/["\\]/g, '\\$&');
+
+const buildElementSelector = (element: Element): string => {
+    const htmlElement = element as HTMLElement;
+    const id = htmlElement.getAttribute('id');
+    if (id) {
+        return `#${cssEscape(id)}`;
+    }
+
+    const testId =
+        htmlElement.getAttribute('data-testid')
+        || htmlElement.getAttribute('data-test')
+        || htmlElement.getAttribute('data-qa');
+    if (testId) {
+        return `[data-testid="${cssEscape(testId)}"], [data-test="${cssEscape(testId)}"], [data-qa="${cssEscape(testId)}"]`;
+    }
+
+    const href = htmlElement.getAttribute('href');
+    if (element.tagName.toLowerCase() === 'a' && href) {
+        return `a[href="${cssEscape(href)}"]`;
+    }
+
+    const ariaControls = htmlElement.getAttribute('aria-controls');
+    if (ariaControls) {
+        return `${element.tagName.toLowerCase()}[aria-controls="${cssEscape(ariaControls)}"]`;
+    }
+
+    const parts: string[] = [];
+    let current: Element | null = element;
+    while (current && current.tagName.toLowerCase() !== 'html') {
+        const parent: Element | null = current.parentElement;
+        const siblings = parent
+            ? Array.from(parent.children).filter((child: Element) => child.tagName === current?.tagName)
+            : [];
+        const index = siblings.length > 1 ? siblings.indexOf(current) + 1 : 0;
+        const selector = `${current.tagName.toLowerCase()}${index > 0 ? `:nth-of-type(${index})` : ''}`;
+        parts.unshift(selector);
+        current = parent;
+    }
+
+    return parts.join(' > ');
+};
+
+const hashInteractionId = (value: string): string => {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+    }
+
+    return Math.abs(hash).toString(36);
+};
+
+const scoreInteractionCandidate = (actionType: PageInteractionType, label: string): number => {
+    const normalizedLabel = label.toLowerCase();
+    let score = 70;
+
+    if (actionType === 'switch_day') {
+        score = 95;
+    } else if (actionType === 'load_more') {
+        score = 85;
+    }
+
+    if (/agenda|schedule|program|session|talk/.test(normalizedLabel)) {
+        score += 5;
+    }
+
+    return score;
+};
+
+const classifyInteractionElement = (element: HTMLElement): PageInteractionType | null => {
+    const text = [
+        element.textContent,
+        element.getAttribute('aria-label'),
+        element.getAttribute('title'),
+    ]
+        .filter(isNonEmptyString)
+        .join(' ')
+        .toLowerCase();
+
+    if (!text) {
+        return null;
+    }
+
+    if (DAY_SWITCH_KEYWORDS.test(text) || element.getAttribute('role') === 'tab') {
+        return 'switch_day';
+    }
+
+    if (LOAD_MORE_KEYWORDS.test(text)) {
+        return 'load_more';
+    }
+
+    if (
+        EXPAND_SECTION_KEYWORDS.test(text)
+        || element.getAttribute('aria-expanded') === 'false'
+        || element.tagName.toLowerCase() === 'summary'
+    ) {
+        return 'expand_section';
+    }
+
+    return null;
+};
+
+const discoverInteractionCandidates = (
+    html: string,
+    baseUrl: string,
+): { candidates: PageInteractionCandidate[]; signals: InteractionSignals } => {
+    let document: Document;
+    try {
+        document = new JSDOM(html, { url: baseUrl }).window.document;
+    } catch {
+        return { candidates: [], signals: {} };
+    }
+
+    const seenIds = new Set<string>();
+    const dayLabels = new Set<string>();
+    let collapsedAgendaCount = 0;
+    let loadMoreCount = 0;
+
+    const candidates: PageInteractionCandidate[] = [];
+    const actionableElements = Array.from(
+        document.querySelectorAll<HTMLElement>('button, [role="tab"], a[href], summary, [aria-controls]')
+    );
+
+    actionableElements.forEach((element) => {
+        const actionType = classifyInteractionElement(element);
+        if (!actionType) {
+            return;
+        }
+
+        const label = normalizeText(
+            [
+                element.textContent,
+                element.getAttribute('aria-label'),
+                element.getAttribute('title'),
+            ]
+                .filter(isNonEmptyString)
+                .join(' ')
+        );
+        if (!label) {
+            return;
+        }
+
+        const selector = buildElementSelector(element);
+        const id = `${actionType}:${hashInteractionId(`${baseUrl}|${label}|${selector}`)}`;
+        if (seenIds.has(id)) {
+            return;
+        }
+        seenIds.add(id);
+
+        if (actionType === 'switch_day') {
+            dayLabels.add(label);
+        } else if (actionType === 'expand_section') {
+            collapsedAgendaCount += 1;
+        } else if (actionType === 'load_more') {
+            loadMoreCount += 1;
+        }
+
+        candidates.push({
+            id,
+            actionType,
+            label,
+            selector,
+            pageUrl: baseUrl,
+            score: scoreInteractionCandidate(actionType, label),
+            kind: 'agenda',
+        });
+    });
+
+    return {
+        candidates,
+        signals: {
+            expectedAgendaDays: dayLabels.size >= 2 ? dayLabels.size : undefined,
+            detectedDayLabels: dayLabels.size > 0 ? Array.from(dayLabels) : undefined,
+            collapsedAgendaCount: collapsedAgendaCount || undefined,
+            loadMoreCount: loadMoreCount || undefined,
+        },
+    };
+};
+
 const inferAgendaType = (...values: Array<string | undefined>): string | undefined => {
     const combined = values.filter(isNonEmptyString).join(' ').toLowerCase();
     if (!combined) return undefined;
@@ -91,7 +344,20 @@ const inferAgendaType = (...values: Array<string | undefined>): string | undefin
 
 const toAgendaTime = (value?: string): string | undefined => {
     if (!value) return undefined;
-    return parseLocalTime(value) ?? normalizeText(value);
+    const normalizedValue = normalizeText(value);
+    if (ABSOLUTE_DATETIME_PATTERN.test(normalizedValue)) {
+        const absoluteDate = new Date(normalizedValue);
+        if (!Number.isNaN(absoluteDate.getTime())) {
+            if (/z$/i.test(normalizedValue) || /[+-]\d{2}:\d{2}$/i.test(normalizedValue)) {
+                return normalizedValue;
+            }
+            if (OFFSET_WITHOUT_COLON_PATTERN.test(normalizedValue)) {
+                return normalizedValue.replace(OFFSET_WITHOUT_COLON_PATTERN, '$1:$2');
+            }
+            return normalizedValue;
+        }
+    }
+    return parseLocalTime(normalizedValue) ?? normalizedValue;
 };
 
 const extractAgendaTimes = (
@@ -151,7 +417,69 @@ const buildAgendaKey = (item: Partial<ExtractedAgendaItem>): string => {
     const title = normalizeText(item.title);
     const start = normalizeText(item.startTime);
     const day = item.dayNumber ?? 0;
-    return `${title.toLowerCase()}|${start}|${day}`;
+    const location = normalizeText(item.location).toLowerCase();
+    return `${title.toLowerCase()}|${start}|${day}|${location}`;
+};
+
+const extractAgendaDateKey = (value?: string): string | undefined => {
+    const normalized = normalizeText(value);
+    const match = normalized.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match?.[1];
+};
+
+const extractAgendaClockKey = (value?: string): string | undefined => {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return undefined;
+    }
+
+    const absoluteMatch = normalized.match(/^\d{4}-\d{2}-\d{2}t(\d{2}:\d{2})/i);
+    if (absoluteMatch) {
+        return absoluteMatch[1];
+    }
+
+    const localTime = parseLocalTime(normalized);
+    if (localTime) {
+        return localTime;
+    }
+
+    const timeMatch = normalized.match(/^(\d{1,2}:\d{2})/);
+    if (!timeMatch) {
+        return undefined;
+    }
+
+    const [hours, minutes] = timeMatch[1].split(':').map(Number);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const buildAgendaMatchBaseKey = (item: Partial<ExtractedAgendaItem>): string | undefined => {
+    const title = normalizeText(item.title).toLowerCase();
+    const location = normalizeText(item.location).toLowerCase();
+    const clock = extractAgendaClockKey(item.startTime);
+
+    if (!title || !clock) {
+        return undefined;
+    }
+
+    return `${title}|${location}|${clock}`;
+};
+
+const buildAgendaSpecificMatchKey = (item: Partial<ExtractedAgendaItem>): string | undefined => {
+    const baseKey = buildAgendaMatchBaseKey(item);
+    if (!baseKey) {
+        return undefined;
+    }
+
+    if (item.dayNumber != null) {
+        return `${baseKey}|day:${item.dayNumber}`;
+    }
+
+    const dateKey = extractAgendaDateKey(item.startTime);
+    if (dateKey) {
+        return `${baseKey}|date:${dateKey}`;
+    }
+
+    return undefined;
 };
 
 const buildSpeakerKey = (speaker: Partial<ExtractedSpeaker>): string => {
@@ -305,25 +633,75 @@ const buildDocumentContent = (html: string, extracted: HtmlCoreExtractionResult)
     return combined.slice(0, MAX_PROVIDER_DOCUMENT_CONTENT);
 };
 
-const buildLinkedPageDocument = (
+const buildPayloadDocumentContent = (payloadText: string, extracted: HtmlCoreExtractionResult): string => {
+    const summary = summarizeExtraction(extracted);
+    const combined = [summary, payloadText].filter(Boolean).join('\n\n');
+    return combined.slice(0, MAX_PROVIDER_DOCUMENT_CONTENT);
+};
+
+export const buildLinkedPageDocumentFromHtml = (
     html: string,
     url: string,
     kind: LinkedPageKind,
     label: string,
+    allowedHosts: string[] = [],
+    metadata: {
+        evidenceSource?: LinkedPageDocument['evidenceSource'];
+        originActionLabel?: string;
+    } = {},
 ): LinkedPageDocument => {
     const extracted = extractCoreFieldsFromHtml(html, url);
+    const interaction = discoverInteractionCandidates(html, url);
     return {
         kind,
         label,
         url,
         content: buildDocumentContent(html, extracted),
         extracted,
+        evidenceSource: metadata.evidenceSource ?? 'page_html',
+        originActionLabel: metadata.originActionLabel,
+        candidateLinks: discoverCandidateLinks(html, url, allowedHosts),
+        interactionCandidates: interaction.candidates,
+        interactionSignals: interaction.signals,
+        registrationCtaUrls: discoverRegistrationCtaUrls(html, url),
     };
+};
+
+export const buildLinkedPageDocumentFromJsonPayload = (
+    payloadText: string,
+    url: string,
+    kind: LinkedPageKind,
+    label: string,
+    metadata: {
+        evidenceSource?: LinkedPageDocument['evidenceSource'];
+        originActionLabel?: string;
+    } = {},
+): LinkedPageDocument | null => {
+    try {
+        const parsedPayload = JSON.parse(payloadText) as unknown;
+        const extracted = extractCoreFieldsFromJsonPayload(parsedPayload, url, 'network.json');
+
+        return {
+            kind,
+            label,
+            url,
+            content: buildPayloadDocumentContent(payloadText, extracted),
+            extracted,
+            evidenceSource: metadata.evidenceSource ?? 'network_json',
+            originActionLabel: metadata.originActionLabel,
+            candidateLinks: [],
+            interactionCandidates: [],
+            interactionSignals: {},
+            registrationCtaUrls: [],
+        };
+    } catch {
+        return null;
+    }
 };
 
 const anchorScore = (kind: Exclude<LinkedPageKind, 'primary'>, path: string, text: string): number => {
     let score = kind === 'session' ? 40 : 60;
-    if (kind === 'agenda' && /agenda|schedule/.test(path)) score += 20;
+    if (kind === 'agenda' && /agenda|schedule|talks?/.test(path)) score += 20;
     if (kind === 'speakers' && /speakers?|presenters?/.test(path)) score += 20;
     if (kind === 'session' && SESSION_PATH_HINTS.test(path)) score += 25;
     if (/view|details?|profile/.test(text)) score += 5;
@@ -333,7 +711,7 @@ const anchorScore = (kind: Exclude<LinkedPageKind, 'primary'>, path: string, tex
 const classifyCandidateLink = (
     anchor: HTMLAnchorElement,
     baseUrl: string,
-    host: string,
+    allowedHosts: string[],
 ): CandidateLink | null => {
     const rawHref = anchor.getAttribute('href');
     if (!rawHref) return null;
@@ -348,7 +726,7 @@ const classifyCandidateLink = (
     if (!['http:', 'https:'].includes(resolved.protocol)) {
         return null;
     }
-    if (resolved.hostname !== host) {
+    if (!allowedHosts.some((allowedHost) => matchesAllowedHost(resolved.hostname, allowedHost))) {
         return null;
     }
 
@@ -371,7 +749,7 @@ const classifyCandidateLink = (
         kind = 'session';
     } else if (SPEAKER_KEYWORDS.test(combined)) {
         kind = 'speakers';
-    } else if (AGENDA_KEYWORDS.test(combined)) {
+    } else if (AGENDA_PATH_HINTS.test(path) || AGENDA_KEYWORDS.test(combined)) {
         kind = 'agenda';
     }
 
@@ -384,13 +762,69 @@ const classifyCandidateLink = (
         label: label || resolved.pathname,
         kind,
         score: anchorScore(kind, path, text),
+        host: resolved.hostname,
     };
 };
 
-const discoverCandidateLinks = (
+const discoverRegistrationCtaUrls = (
     html: string,
     baseUrl: string,
-    host: string,
+): string[] => {
+    let document: Document;
+    try {
+        document = new JSDOM(html, { url: baseUrl }).window.document;
+    } catch {
+        return [];
+    }
+
+    const seen = new Set<string>();
+    const urls: string[] = [];
+
+    Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]')).forEach((anchor) => {
+        const rawHref = anchor.getAttribute('href');
+        if (!rawHref) {
+            return;
+        }
+
+        let resolved: URL;
+        try {
+            resolved = new URL(rawHref, baseUrl);
+        } catch {
+            return;
+        }
+
+        if (!['http:', 'https:'].includes(resolved.protocol)) {
+            return;
+        }
+
+        const label = [
+            anchor.textContent,
+            anchor.getAttribute('aria-label'),
+            anchor.getAttribute('title'),
+        ]
+            .filter(isNonEmptyString)
+            .join(' ');
+        const combined = `${label} ${resolved.pathname} ${resolved.search}`.toLowerCase();
+        if (!REGISTRATION_CTA_KEYWORDS.test(combined)) {
+            return;
+        }
+
+        const normalizedUrl = normalizeUrlForTraversal(resolved.toString());
+        if (!normalizedUrl || seen.has(normalizedUrl)) {
+            return;
+        }
+
+        seen.add(normalizedUrl);
+        urls.push(normalizedUrl);
+    });
+
+    return urls;
+};
+
+export const discoverCandidateLinks = (
+    html: string,
+    baseUrl: string,
+    allowedHosts: string[] = [],
 ): CandidateLink[] => {
     let document: Document;
     try {
@@ -403,7 +837,7 @@ const discoverCandidateLinks = (
     const candidates: CandidateLink[] = [];
 
     Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]')).forEach((anchor) => {
-        const candidate = classifyCandidateLink(anchor, baseUrl, host);
+        const candidate = classifyCandidateLink(anchor, baseUrl, allowedHosts);
         if (!candidate || seen.has(candidate.url)) {
             return;
         }
@@ -426,6 +860,7 @@ const mergeScheduleItems = (
             title: item.title,
             startTime: toAgendaTime(item.startTime || item.date),
             dayNumber: item.dayNumber,
+            location: item.location,
         }), index);
     });
 
@@ -446,6 +881,7 @@ const mergeScheduleItems = (
             title: normalizedItem.title,
             startTime: normalizedItem.startTime,
             dayNumber: normalizedItem.dayNumber,
+            location: normalizedItem.location,
         });
         let existingIndex = keyToIndex.get(key);
 
@@ -564,10 +1000,17 @@ export async function collectLinkedPageDocuments(
     try {
         parsedBase = new URL(baseUrl);
     } catch {
-        return [buildLinkedPageDocument(options.html, options.sourceUrl, 'primary', 'Primary page')];
+        return [buildLinkedPageDocumentFromHtml(options.html, options.sourceUrl, 'primary', 'Primary page')];
     }
 
-    const primary = buildLinkedPageDocument(options.html, baseUrl, 'primary', 'Primary page');
+    const allowedHosts = buildAllowedHosts(parsedBase.hostname, options.allowedHosts);
+    const primary = buildLinkedPageDocumentFromHtml(
+        options.html,
+        baseUrl,
+        'primary',
+        'Primary page',
+        allowedHosts
+    );
     const documents: LinkedPageDocument[] = [primary];
     const seenUrls = new Set<string>();
     const normalizedBaseUrl = normalizeUrlForTraversal(baseUrl);
@@ -580,16 +1023,21 @@ export async function collectLinkedPageDocuments(
     let remainingHubPages = maxHubPages;
     let remainingDetailPages = maxDetailPages;
 
-    const queue = discoverCandidateLinks(options.html, baseUrl, parsedBase.hostname);
+    const queue = discoverCandidateLinks(options.html, baseUrl, allowedHosts);
     if (primary.extracted.agendaUrl) {
         try {
-            const resolvedAgendaUrl = normalizeUrlForTraversal(new URL(primary.extracted.agendaUrl, baseUrl).toString());
+            const agendaCandidate = new URL(primary.extracted.agendaUrl, baseUrl);
+            if (!allowedHosts.some((allowedHost) => matchesAllowedHost(agendaCandidate.hostname, allowedHost))) {
+                throw new Error('agenda_url_host_not_allowed');
+            }
+            const resolvedAgendaUrl = normalizeUrlForTraversal(agendaCandidate.toString());
             if (resolvedAgendaUrl && !seenUrls.has(resolvedAgendaUrl)) {
                 queue.unshift({
                     url: resolvedAgendaUrl,
                     label: 'Agenda page',
                     kind: 'agenda',
                     score: 100,
+                    host: agendaCandidate.hostname,
                 });
             }
         } catch {
@@ -621,7 +1069,13 @@ export async function collectLinkedPageDocuments(
             }
             seenUrls.add(finalUrl);
 
-            const document = buildLinkedPageDocument(page.html, finalUrl, candidate.kind, candidate.label);
+            const document = buildLinkedPageDocumentFromHtml(
+                page.html,
+                finalUrl,
+                candidate.kind,
+                candidate.label,
+                allowedHosts
+            );
             documents.push(document);
 
             if (candidate.kind === 'session') {
@@ -631,7 +1085,7 @@ export async function collectLinkedPageDocuments(
             }
 
             if (candidate.kind !== 'session' && remainingDetailPages > 0) {
-                const discovered = discoverCandidateLinks(page.html, finalUrl, parsedBase.hostname)
+                const discovered = discoverCandidateLinks(page.html, finalUrl, allowedHosts)
                     .filter((item) => item.kind === 'session' || item.kind !== candidate.kind)
                     .sort((a, b) => b.score - a.score);
 
@@ -754,6 +1208,9 @@ const toExtractedAgendaItem = (item: ExtractedScheduleItem): ExtractedAgendaItem
 export function htmlExtractionToExtractedEventData(
     extraction: HtmlCoreExtractionResult,
 ): Partial<ExtractedEventData> {
+    const description =
+        cleanEventDescription(extraction.description) ??
+        (isNonEmptyString(extraction.description) ? extraction.description.trim() : undefined);
     const agenda = (extraction.schedule ?? [])
         .map(toExtractedAgendaItem)
         .filter((item): item is ExtractedAgendaItem => Boolean(item));
@@ -763,7 +1220,7 @@ export function htmlExtractionToExtractedEventData(
         .filter((speaker) => isNonEmptyString(speaker.name));
 
     return {
-        description: isNonEmptyString(extraction.description) ? extraction.description.trim() : undefined,
+        description,
         location: isNonEmptyString(extraction.location) ? extraction.location.trim() : undefined,
         pricing: extraction.pricing
             ? {
@@ -790,6 +1247,9 @@ export function buildProviderDocuments(
     return documents.slice(0, MAX_PROVIDER_DOCUMENTS).map((document) => ({
         url: document.url,
         label: `${document.kind}: ${document.label}`,
+        kind: document.kind,
+        evidenceSource: document.evidenceSource,
+        originActionLabel: document.originActionLabel,
         content: document.content.slice(0, MAX_PROVIDER_DOCUMENT_CONTENT),
     }));
 }
@@ -806,16 +1266,76 @@ export function mergeExtractedEventData(
     });
 
     const agendaMap = new Map<string, ExtractedAgendaItem>();
-    [...(fallback.agenda ?? []), ...(preferred.agenda ?? [])].forEach((item) => {
+    const agendaSpecificMatchIndex = new Map<string, string>();
+    const agendaBaseMatchIndex = new Map<string, Set<string>>();
+
+    const indexAgendaItem = (key: string, item: Partial<ExtractedAgendaItem>) => {
+        const specificMatchKey = buildAgendaSpecificMatchKey(item);
+        if (specificMatchKey) {
+            agendaSpecificMatchIndex.set(specificMatchKey, key);
+        }
+
+        const baseMatchKey = buildAgendaMatchBaseKey(item);
+        if (baseMatchKey) {
+            const existing = agendaBaseMatchIndex.get(baseMatchKey) ?? new Set<string>();
+            existing.add(key);
+            agendaBaseMatchIndex.set(baseMatchKey, existing);
+        }
+    };
+
+    (preferred.agenda ?? []).forEach((item) => {
         const key = buildAgendaKey(item);
-        const existing = agendaMap.get(key);
-        agendaMap.set(key, existing ? mergeAgendaItem(item, existing) : mergeAgendaItem(item, {}));
+        const merged = mergeAgendaItem(item, {});
+        agendaMap.set(key, merged);
+        indexAgendaItem(key, merged);
+    });
+
+    (fallback.agenda ?? []).forEach((item) => {
+        const exactKey = buildAgendaKey(item);
+        const existingExact = agendaMap.get(exactKey);
+        if (existingExact) {
+            const merged = mergeAgendaItem(existingExact, item);
+            agendaMap.set(exactKey, merged);
+            indexAgendaItem(exactKey, merged);
+            return;
+        }
+
+        const specificMatchKey = buildAgendaSpecificMatchKey(item);
+        if (specificMatchKey) {
+            const matchedKey = agendaSpecificMatchIndex.get(specificMatchKey);
+            if (matchedKey) {
+                const merged = mergeAgendaItem(agendaMap.get(matchedKey) ?? {}, item);
+                agendaMap.set(matchedKey, merged);
+                indexAgendaItem(matchedKey, merged);
+                return;
+            }
+        }
+
+        const baseMatchKey = buildAgendaMatchBaseKey(item);
+        if (baseMatchKey) {
+            const candidates = Array.from(agendaBaseMatchIndex.get(baseMatchKey) ?? []);
+            if (candidates.length === 1) {
+                const matchedKey = candidates[0];
+                const merged = mergeAgendaItem(agendaMap.get(matchedKey) ?? {}, item);
+                agendaMap.set(matchedKey, merged);
+                indexAgendaItem(matchedKey, merged);
+                return;
+            }
+
+            if (candidates.length > 1 && item.dayNumber == null && !extractAgendaDateKey(item.startTime)) {
+                return;
+            }
+        }
+
+        const merged = mergeAgendaItem(item, {});
+        agendaMap.set(exactKey, merged);
+        indexAgendaItem(exactKey, merged);
     });
 
     const tags = Array.from(new Set([...(preferred.tags ?? []), ...(fallback.tags ?? [])])).filter(Boolean);
 
     return {
-        description: preferred.description ?? fallback.description,
+        description: pickPreferredDescription(preferred.description, fallback.description),
         location: preferred.location ?? fallback.location,
         registrationUrl: preferred.registrationUrl ?? fallback.registrationUrl,
         eventFormat: preferred.eventFormat ?? fallback.eventFormat,
@@ -825,3 +1345,41 @@ export function mergeExtractedEventData(
         tags: tags.length > 0 ? tags : undefined,
     };
 }
+
+const normalizeDescriptionForMerge = (value?: string): string | undefined => {
+    const cleaned = cleanEventDescription(value);
+    if (cleaned) {
+        return cleaned;
+    }
+
+    return isNonEmptyString(value) ? value.trim() : undefined;
+};
+
+const pickPreferredDescription = (
+    preferred?: string,
+    fallback?: string,
+): string | undefined => {
+    const normalizedPreferred = normalizeDescriptionForMerge(preferred);
+    const normalizedFallback = normalizeDescriptionForMerge(fallback);
+
+    if (!normalizedPreferred) {
+        return normalizedFallback;
+    }
+
+    if (!normalizedFallback) {
+        return normalizedPreferred;
+    }
+
+    const preferredThin = isDescriptionThin(normalizedPreferred);
+    const fallbackThin = isDescriptionThin(normalizedFallback);
+
+    if (preferredThin !== fallbackThin) {
+        return preferredThin ? normalizedFallback : normalizedPreferred;
+    }
+
+    if (normalizedFallback.length > normalizedPreferred.length * 1.25) {
+        return normalizedFallback;
+    }
+
+    return normalizedPreferred;
+};

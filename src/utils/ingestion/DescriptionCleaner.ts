@@ -6,6 +6,8 @@ const MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*]\([^)]*\)/g;
 const INLINE_URL_PATTERN = /https?:\/\/[^\s)]+/gi;
 const MULTIPLE_SPACE_PATTERN = /[ \t]{2,}/g;
 const MULTIPLE_NEWLINE_PATTERN = /\n{3,}/g;
+const CAMELCASE_BOUNDARY_PATTERN = /([a-z])([A-Z])/g;
+const PUNCTUATION_BOUNDARY_PATTERN = /([.!?])([A-Z])/g;
 
 const MARKETING_PATTERNS: RegExp[] = [
     /from techmeme's event calendar/i,
@@ -38,6 +40,8 @@ const STRIP_LINE_PATTERNS: RegExp[] = [
 ];
 
 const MIN_CONTENT_LENGTH = 18;
+const MAX_CONDENSED_SENTENCES = 4;
+const MAX_CONDENSED_LENGTH = 700;
 
 const ACRONYM_MAX_LENGTH = 3;
 
@@ -153,19 +157,114 @@ function shouldDropLine(line: string): boolean {
     return STRIP_LINE_PATTERNS.some((pattern) => pattern.test(line));
 }
 
+function collapseRepeatedTitlePhrases(value: string): string {
+    let current = value;
+    const repeatedPhrasePattern =
+        /\b([A-Z0-9][A-Za-z0-9&.+/'’-]*(?:\s+[A-Z0-9][A-Za-z0-9&.+/'’-]*){1,6})\b(?:\s+\1\b){1,}/g;
+
+    while (true) {
+        const next = current.replace(repeatedPhrasePattern, '$1');
+        if (next === current) {
+            return current;
+        }
+        current = next;
+    }
+}
+
+function stripOrganizerNoteSection(value: string): string {
+    const organizerNotePattern = /\b(?:a\s+)?note from (?:the\s+)?organizers\b/i;
+    const match = organizerNotePattern.exec(value);
+    if (!match || match.index === undefined) {
+        return value;
+    }
+
+    return value.slice(0, match.index).trim();
+}
+
+function splitIntoSentences(value: string): string[] {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+        return [];
+    }
+
+    const matched = normalized.match(/[^.!?]+[.!?]?/g);
+    return (matched ?? [normalized]).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+function stripHeadingPrefixFromSentence(sentence: string): string {
+    const tokens = sentence.split(/\s+/).filter(Boolean);
+    const firstLowercaseIndex = tokens.findIndex((token) => /^[a-z]/.test(token));
+
+    if (firstLowercaseIndex <= 1) {
+        return sentence.trim();
+    }
+
+    const prefixTokens = tokens.slice(0, firstLowercaseIndex - 1);
+    const prefixLooksLikeHeading =
+        prefixTokens.length >= 2 &&
+        prefixTokens.every((token) => /^[A-Z0-9][A-Za-z0-9&.+/'’-]*$/.test(token));
+
+    if (!prefixLooksLikeHeading) {
+        return sentence.trim();
+    }
+
+    return tokens.slice(firstLowercaseIndex - 1).join(' ').trim();
+}
+
+function condenseNoisyDescription(value: string): string {
+    const sentences = splitIntoSentences(value)
+        .map((sentence) => stripHeadingPrefixFromSentence(sentence))
+        .map((sentence) => sentence.replace(/\s+/g, ' ').trim())
+        .filter((sentence) => sentence.length >= 25)
+        .filter((sentence) => !/what can you expect/i.test(sentence));
+
+    if (sentences.length === 0) {
+        return value;
+    }
+
+    const selected: string[] = [];
+    let totalLength = 0;
+
+    for (const sentence of sentences) {
+        const canonical = sentence.toLowerCase();
+        if (selected.some((existing) => existing.toLowerCase() === canonical)) {
+            continue;
+        }
+
+        if (selected.length >= MAX_CONDENSED_SENTENCES) {
+            break;
+        }
+
+        if (selected.length > 0 && totalLength + sentence.length + 1 > MAX_CONDENSED_LENGTH) {
+            break;
+        }
+
+        selected.push(sentence);
+        totalLength += sentence.length + 1;
+    }
+
+    return selected.length > 0 ? selected.join(' ') : value;
+}
+
 export function cleanEventDescription(raw?: string | null): string | undefined {
     if (!raw) {
         return undefined;
     }
 
-    const text = decodeEntities(raw)
+    const text = stripOrganizerNoteSection(
+        collapseRepeatedTitlePhrases(
+            decodeEntities(raw)
         .replace(/\r\n/g, '\n')
+        .replace(CAMELCASE_BOUNDARY_PATTERN, '$1 $2')
+        .replace(PUNCTUATION_BOUNDARY_PATTERN, '$1 $2')
         .replace(HTML_BREAK_PATTERN, '\n')
         .replace(MARKDOWN_IMAGE_PATTERN, '')
         .replace(HTML_TAG_PATTERN, ' ')
         .replace(INLINE_URL_PATTERN, ' ')
         .replace(MULTIPLE_SPACE_PATTERN, ' ')
-        .trim();
+        .trim()
+        )
+    );
 
     if (!text) {
         return undefined;
@@ -191,6 +290,17 @@ export function cleanEventDescription(raw?: string | null): string | undefined {
     }
 
     let cleaned = lineBuffer.join('\n\n').replace(MULTIPLE_NEWLINE_PATTERN, '\n\n').trim();
+    cleaned = stripOrganizerNoteSection(collapseRepeatedTitlePhrases(cleaned));
+
+    const shouldCondense =
+        cleaned.length > 900 ||
+        splitIntoSentences(cleaned).length > 6 ||
+        /\b(?:a\s+)?note from (?:the\s+)?organizers\b/i.test(raw) ||
+        /\b([A-Z0-9][A-Za-z0-9&.+/'’-]*(?:\s+[A-Z0-9][A-Za-z0-9&.+/'’-]*){1,6})\b(?:\s+\1\b){1,}/.test(raw);
+
+    if (shouldCondense) {
+        cleaned = condenseNoisyDescription(cleaned);
+    }
 
     if (cleaned.length < MIN_CONTENT_LENGTH) {
         cleaned = cleaned.replace(/\s+/g, ' ').trim();
@@ -209,4 +319,3 @@ export function cleanEventDescription(raw?: string | null): string | undefined {
 }
 
 export default cleanEventDescription;
-

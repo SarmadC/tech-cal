@@ -1,6 +1,8 @@
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import type { SpeakerRecord } from '@/types/ingestion';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
+import { isDescriptionThin } from '@/utils/ingestion/DescriptionHeuristics';
 import { applyDomainAdapters } from './adapters/registry';
 
 export interface ExtractedScheduleItem {
@@ -256,11 +258,580 @@ function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): Extra
     return scheduleItems;
 }
 
+const EMBEDDED_ASSIGNMENT_NAME_PATTERN = /(?:window\.)?([A-Za-z0-9_]+)\s*=\s*([\s\S]+)$/;
+const EMBEDDED_STATE_NAME_PATTERN = /(?:^|__)(NEXT_DATA|NUXT|APOLLO_STATE|RELAY_STATE|INITIAL_STATE|PRELOADED_STATE|DATA|STATE)(?:__|$)/i;
+const STRUCTURED_SCHEDULE_PATH_PATTERN = /(agenda|schedule|program|session|sessions|talk|talks|event|events|track|tracks|day|days|items)/i;
+const STRUCTURED_SCHEDULE_MEMBER_PATH_PATTERN = /(agenda|schedule|program|session|sessions|talk|talks|track|tracks|day|days)/i;
+const STRUCTURED_SPEAKER_PATH_PATTERN = /(speaker|speakers|presenter|presenters|performer|performers|panelist|panelists|host|hosts|people)/i;
+const STRUCTURED_COLLECTION_WRAPPER_KEYS = new Set(['items', 'nodes', 'edges', 'results', 'data']);
+const ABSOLUTE_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}/i;
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const OFFSET_WITHOUT_COLON_PATTERN = /([+-]\d{2})(\d{2})$/;
+const SCHEDULE_START_KEYS = ['startDateTime', 'startDate', 'start', 'start_time', 'startsAt', 'starts_at', 'dateTime'];
+const SCHEDULE_END_KEYS = ['endDateTime', 'endDate', 'end', 'end_time', 'endsAt', 'ends_at'];
+const SCHEDULE_TITLE_KEYS = ['title', 'name', 'sessionTitle', 'label', 'headline'];
+const DESCRIPTION_KEYS = ['description', 'summary', 'abstract', 'body', 'excerpt'];
+const LOCATION_KEYS = ['location', 'room', 'venue', 'stage'];
+const TRACK_KEYS = ['track', 'tracks', 'category', 'categories', 'topic', 'topics', 'tag', 'tags'];
+const SPEAKER_KEYS = ['speakers', 'speaker', 'presenters', 'presenter', 'performers', 'performer', 'hosts', 'host'];
+
+interface EmbeddedPayloadRecord {
+    source: string;
+    payload: unknown;
+}
+
+interface StructuredVisitNode {
+    value: unknown;
+    path: string[];
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeText = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized || undefined;
+};
+
+const normalizeDateTimeLike = (value: unknown): string | undefined => {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return undefined;
+    }
+
+    if (ABSOLUTE_DATE_TIME_PATTERN.test(normalized)) {
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) {
+            return undefined;
+        }
+
+        if (/z$/i.test(normalized) || /[+-]\d{2}:\d{2}$/i.test(normalized)) {
+            return normalized;
+        }
+
+        if (OFFSET_WITHOUT_COLON_PATTERN.test(normalized)) {
+            return normalized.replace(OFFSET_WITHOUT_COLON_PATTERN, '$1:$2');
+        }
+
+        return normalized;
+    }
+
+    if (DATE_ONLY_PATTERN.test(normalized)) {
+        return toISODate(normalized);
+    }
+
+    return toISODate(normalized) ?? normalized;
+};
+
+const readNestedValue = (record: Record<string, unknown>, path: string[]): unknown => {
+    let current: unknown = record;
+    for (const segment of path) {
+        if (!isPlainObject(current)) {
+            return undefined;
+        }
+        current = current[segment];
+    }
+
+    return current;
+};
+
+const readStringFromKeys = (record: Record<string, unknown>, keys: string[][]): string | undefined => {
+    for (const keyPath of keys) {
+        const value = readNestedValue(record, keyPath);
+        const normalized = normalizeText(value);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return undefined;
+};
+
+const normalizeSpeakerNames = (value: unknown): string[] => {
+    if (!value) {
+        return [];
+    }
+
+    if (typeof value === 'string') {
+        const normalized = normalizeText(value);
+        return normalized ? [normalized] : [];
+    }
+
+    if (!Array.isArray(value)) {
+        if (!isPlainObject(value)) {
+            return [];
+        }
+
+        if (Array.isArray(value.items)) {
+            return value.items.flatMap((item) => normalizeSpeakerNames(item));
+        }
+
+        const name = readStringFromKeys(value, [
+            ['name'],
+            ['fullName'],
+            ['speakerName'],
+            ['displayName'],
+        ]);
+        return name ? [name] : [];
+    }
+
+    return value.flatMap((item) => normalizeSpeakerNames(item));
+};
+
+const normalizeTrack = (value: unknown): string | undefined => {
+    if (!value) {
+        return undefined;
+    }
+
+    if (typeof value === 'string') {
+        return normalizeText(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => normalizeTrack(item)).find(Boolean);
+    }
+
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    if (Array.isArray(value.items)) {
+        return value.items.map((item) => normalizeTrack(item)).find(Boolean);
+    }
+
+    return readStringFromKeys(value, [['name'], ['label'], ['title']]);
+};
+
+const normalizeLocation = (value: unknown): string | undefined => {
+    if (!value) {
+        return undefined;
+    }
+
+    if (typeof value === 'string') {
+        return normalizeText(value);
+    }
+
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    return readStringFromKeys(value, [
+        ['name'],
+        ['title'],
+        ['venue'],
+        ['room'],
+        ['label'],
+        ['address', 'streetAddress'],
+        ['address', 'addressLocality'],
+    ]);
+};
+
+const normalizeSpeakerFromObject = (value: unknown, baseUrl?: string): SpeakerRecord | undefined => {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const name = readStringFromKeys(value, [['name'], ['fullName'], ['speakerName'], ['displayName']]);
+    if (!name) {
+        return undefined;
+    }
+
+    return {
+        name,
+        title: readStringFromKeys(value, [['title'], ['jobTitle'], ['role']]),
+        company: readStringFromKeys(value, [['company'], ['companyName'], ['organization'], ['worksFor', 'name']]),
+        bio: readStringFromKeys(value, [['bio'], ['description'], ['summary']]),
+        linkedinUrl: resolveHttpUrl(
+            readStringFromKeys(value, [['linkedinUrl'], ['linkedInProfile'], ['linkedin'], ['social', 'linkedin']]),
+            baseUrl
+        ),
+        photoUrl: resolveHttpUrl(
+            readStringFromKeys(value, [['photoUrl'], ['image'], ['avatar'], ['fullColorPortrait', 'url']]),
+            baseUrl
+        ),
+        twitterUrl: resolveHttpUrl(
+            readStringFromKeys(value, [['twitterUrl'], ['twitter'], ['xUrl'], ['social', 'twitter']]),
+            baseUrl
+        ),
+        websiteUrl: resolveHttpUrl(
+            readStringFromKeys(value, [['websiteUrl'], ['website'], ['url']]),
+            baseUrl
+        ),
+        githubUrl: resolveHttpUrl(
+            readStringFromKeys(value, [['githubUrl'], ['github']]),
+            baseUrl
+        ),
+    };
+};
+
+const scoreSpeakerRecordRichness = (speaker: SpeakerRecord): number =>
+    (speaker.title ? 1 : 0)
+    + (speaker.company ? 1 : 0)
+    + (speaker.bio ? 1 : 0)
+    + (speaker.linkedinUrl ? 2 : 0)
+    + (speaker.photoUrl ? 1 : 0)
+    + (speaker.twitterUrl ? 1 : 0)
+    + (speaker.websiteUrl ? 1 : 0)
+    + (speaker.githubUrl ? 1 : 0);
+
+const normalizeScheduleItemFromObject = (value: unknown): ExtractedScheduleItem | undefined => {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const title = readStringFromKeys(value, SCHEDULE_TITLE_KEYS.map((key) => [key]));
+    if (!title) {
+        return undefined;
+    }
+
+    const startTime = readStringFromKeys(value, SCHEDULE_START_KEYS.map((key) => [key]));
+    const endTime = readStringFromKeys(value, SCHEDULE_END_KEYS.map((key) => [key]));
+    const description = readStringFromKeys(value, DESCRIPTION_KEYS.map((key) => [key]));
+    const locationValue = LOCATION_KEYS.map((key) => value[key]).find((item) => item != null);
+    const trackValue = TRACK_KEYS.map((key) => value[key]).find((item) => item != null);
+    const speakersValue = SPEAKER_KEYS.map((key) => value[key]).find((item) => item != null);
+
+    const normalizedStart = normalizeDateTimeLike(startTime);
+    const normalizedEnd = normalizeDateTimeLike(endTime);
+    const location = normalizeLocation(locationValue);
+    const track = normalizeTrack(trackValue);
+    const speakers = normalizeSpeakerNames(speakersValue);
+
+    if (!normalizedStart && !normalizedEnd && !description && !location && !track && speakers.length === 0) {
+        return undefined;
+    }
+
+    return {
+        title,
+        startTime: normalizedStart,
+        endTime: normalizedEnd,
+        description,
+        location,
+        track,
+        speakers: speakers.length > 0 ? speakers : undefined,
+    };
+};
+
+const normalizeEmbeddedMetadataCandidate = (value: unknown): Partial<HtmlCoreExtractionResult> | undefined => {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const title = readStringFromKeys(value, [['title'], ['name'], ['headline']]);
+    const description = readStringFromKeys(value, DESCRIPTION_KEYS.map((key) => [key]));
+    const startTime = readStringFromKeys(value, [['startDate'], ['startTime'], ['startDateTime']]);
+    const endTime = readStringFromKeys(value, [['endDate'], ['endTime'], ['endDateTime']]);
+    const location = normalizeLocation(LOCATION_KEYS.map((key) => value[key]).find((item) => item != null));
+    const registrationUrl = readStringFromKeys(value, [['registrationPageUrl'], ['registrationUrl'], ['registerUrl']]);
+
+    if (!title || (!description && !startTime && !location && !registrationUrl)) {
+        return undefined;
+    }
+
+    return {
+        title,
+        description,
+        startTime: normalizeDateTimeLike(startTime),
+        endTime: normalizeDateTimeLike(endTime),
+        location,
+    };
+};
+
+const walkStructuredValues = (
+    root: unknown,
+    visitor: (node: StructuredVisitNode) => void,
+): void => {
+    const queue: StructuredVisitNode[] = [{ value: root, path: ['root'] }];
+    const seen = new Set<unknown>();
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current) {
+            continue;
+        }
+
+        if (typeof current.value !== 'object' || current.value === null || seen.has(current.value)) {
+            continue;
+        }
+
+        seen.add(current.value);
+        visitor(current);
+
+        if (Array.isArray(current.value)) {
+            current.value.forEach((item, index) => {
+                queue.push({ value: item, path: [...current.path, String(index)] });
+            });
+            continue;
+        }
+
+        Object.entries(current.value).forEach(([key, child]) => {
+            queue.push({ value: child, path: [...current.path, key] });
+        });
+    }
+};
+
+const scoreStructuredPath = (path: string[]): number => {
+    const joinedPath = path.join('.').toLowerCase();
+    let score = 0;
+    if (STRUCTURED_SCHEDULE_PATH_PATTERN.test(joinedPath)) {
+        score += 2;
+    }
+    if (STRUCTURED_SPEAKER_PATH_PATTERN.test(joinedPath)) {
+        score += 2;
+    }
+    return score;
+};
+
+const isNumericPathSegment = (segment: string | undefined): boolean =>
+    typeof segment === 'string' && /^\d+$/.test(segment);
+
+const isStructuredCollectionMemberPath = (
+    path: string[],
+    pattern: RegExp,
+): boolean => {
+    for (let index = 1; index < path.length; index += 1) {
+        if (!isNumericPathSegment(path[index])) {
+            continue;
+        }
+
+        const directParent = path[index - 1]?.toLowerCase();
+        const grandParent = path[index - 2]?.toLowerCase();
+
+        if (pattern.test(directParent ?? '')) {
+            return true;
+        }
+
+        if (
+            directParent
+            && STRUCTURED_COLLECTION_WRAPPER_KEYS.has(directParent)
+            && pattern.test(grandParent ?? '')
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+const mergeScheduleCandidates = (items: ExtractedScheduleItem[]): ExtractedScheduleItem[] => {
+    const seen = new Map<string, ExtractedScheduleItem>();
+
+    items.forEach((item) => {
+        const key = [
+            normalizeText(item.title)?.toLowerCase() ?? '',
+            normalizeText(item.startTime)?.toLowerCase() ?? '',
+            normalizeText(item.location)?.toLowerCase() ?? '',
+        ].join('|');
+        const existing = seen.get(key);
+        seen.set(key, existing
+            ? {
+                ...existing,
+                endTime: existing.endTime ?? item.endTime,
+                description: existing.description ?? item.description,
+                track: existing.track ?? item.track,
+                speakers: Array.from(new Set([...(existing.speakers ?? []), ...(item.speakers ?? [])])),
+            }
+            : item);
+    });
+
+    return Array.from(seen.values());
+};
+
+const mergeSpeakerCandidates = (speakers: SpeakerRecord[]): SpeakerRecord[] => {
+    const seen = new Map<string, SpeakerRecord>();
+
+    speakers.forEach((speaker) => {
+        const key = (speaker.linkedinUrl || speaker.name).toLowerCase();
+        const existing = seen.get(key);
+        seen.set(key, existing
+            ? {
+                ...existing,
+                title: existing.title ?? speaker.title,
+                company: existing.company ?? speaker.company,
+                bio: existing.bio ?? speaker.bio,
+                photoUrl: existing.photoUrl ?? speaker.photoUrl,
+                twitterUrl: existing.twitterUrl ?? speaker.twitterUrl,
+                websiteUrl: existing.websiteUrl ?? speaker.websiteUrl,
+            }
+            : speaker);
+    });
+
+    return Array.from(seen.values());
+};
+
+const extractEmbeddedPayloads = (document: Document): EmbeddedPayloadRecord[] => {
+    const payloads: EmbeddedPayloadRecord[] = [];
+    const scripts = Array.from(document.querySelectorAll('script'));
+
+    scripts.forEach((script, index) => {
+        const raw = script.textContent?.trim();
+        if (!raw) {
+            return;
+        }
+
+        const type = script.getAttribute('type')?.toLowerCase() ?? '';
+        const id = script.getAttribute('id') ?? `script-${index}`;
+        if (type === 'application/ld+json') {
+            return;
+        }
+
+        const maybePayload = (source: string, value: string) => {
+            const parsed = tryParseJson(value);
+            if (parsed !== null) {
+                payloads.push({ source, payload: parsed });
+            }
+        };
+
+        if (id === '__NEXT_DATA__') {
+            maybePayload('embedded.__NEXT_DATA__', raw);
+            return;
+        }
+
+        if (type === 'application/json') {
+            maybePayload(`embedded.script#${id}`, raw);
+        }
+
+        const assignmentMatch = raw.match(EMBEDDED_ASSIGNMENT_NAME_PATTERN);
+        if (!assignmentMatch) {
+            return;
+        }
+
+        const [, variableName, assignedValue] = assignmentMatch;
+        if (!EMBEDDED_STATE_NAME_PATTERN.test(variableName)) {
+            return;
+        }
+
+        const stripped = assignedValue.trim().replace(/;$/, '');
+        maybePayload(`embedded.${variableName}`, stripped);
+    });
+
+    return payloads;
+};
+
+export function extractCoreFieldsFromJsonPayload(
+    payload: unknown,
+    baseUrl?: string,
+    sourceLabel = 'embedded.json',
+): HtmlCoreExtractionResult {
+    const result: HtmlCoreExtractionResult = {
+        confidence: {},
+        provenance: {
+            sources: [sourceLabel],
+            usedReadability: false,
+            jsonLdCount: 0,
+        },
+    };
+
+    let bestMetadata: Partial<HtmlCoreExtractionResult> | undefined;
+    let bestMetadataScore = 0;
+    const scheduleCandidates: ExtractedScheduleItem[] = [];
+    const speakerCandidates: SpeakerRecord[] = [];
+
+    walkStructuredValues(payload, ({ value, path }) => {
+        const pathScore = scoreStructuredPath(path);
+        const pathLabel = path.join('.').toLowerCase();
+        const speakerPathMatch = STRUCTURED_SPEAKER_PATH_PATTERN.test(pathLabel);
+        const scheduleMemberPath = isStructuredCollectionMemberPath(path, STRUCTURED_SCHEDULE_MEMBER_PATH_PATTERN);
+        const speakerMemberPath = isStructuredCollectionMemberPath(path, STRUCTURED_SPEAKER_PATH_PATTERN);
+
+        if (Array.isArray(value)) {
+            const scheduleItems = value
+                .map((item) => normalizeScheduleItemFromObject(item))
+                .filter((item): item is ExtractedScheduleItem => Boolean(item));
+            if (scheduleItems.length >= 2 || (scheduleItems.length >= 1 && pathScore >= 2)) {
+                scheduleCandidates.push(...scheduleItems);
+            }
+
+            const speakers = value
+                .map((item) => normalizeSpeakerFromObject(item, baseUrl))
+                .filter((speaker): speaker is SpeakerRecord => Boolean(speaker));
+            const maxSpeakerRichness = speakers.reduce(
+                (maxScore, speaker) => Math.max(maxScore, scoreSpeakerRecordRichness(speaker)),
+                0
+            );
+            if (speakers.length >= 2 && (speakerPathMatch || maxSpeakerRichness >= 1)) {
+                speakerCandidates.push(...speakers);
+            } else if (speakers.length >= 1 && speakerPathMatch) {
+                speakerCandidates.push(...speakers);
+            }
+
+            return;
+        }
+
+        const metadataCandidate = normalizeEmbeddedMetadataCandidate(value);
+        if (metadataCandidate && !scheduleMemberPath && !speakerMemberPath) {
+            const metadataScore =
+                pathScore
+                + (metadataCandidate.description ? 1 : 0)
+                + (metadataCandidate.startTime ? 1 : 0)
+                + (metadataCandidate.location ? 1 : 0);
+
+            if (metadataScore > bestMetadataScore) {
+                bestMetadata = metadataCandidate;
+                bestMetadataScore = metadataScore;
+            }
+        }
+    });
+
+    if (bestMetadata?.title) {
+        result.title = bestMetadata.title;
+        result.confidence.title = 0.85;
+        result.provenance.sources.push(`${sourceLabel}.title`);
+    }
+    if (bestMetadata?.description) {
+        result.description = cleanEventDescription(bestMetadata.description) ?? bestMetadata.description;
+        result.confidence.description = 0.75;
+        result.provenance.sources.push(`${sourceLabel}.description`);
+    }
+    if (bestMetadata?.startTime) {
+        result.startTime = bestMetadata.startTime;
+        result.confidence.startTime = 0.8;
+        result.provenance.sources.push(`${sourceLabel}.start`);
+    }
+    if (bestMetadata?.endTime) {
+        result.endTime = bestMetadata.endTime;
+        result.confidence.endTime = 0.75;
+        result.provenance.sources.push(`${sourceLabel}.end`);
+    }
+    if (bestMetadata?.location) {
+        result.location = bestMetadata.location;
+        result.confidence.location = 0.8;
+        result.provenance.sources.push(`${sourceLabel}.location`);
+    }
+
+    const mergedSchedule = mergeScheduleCandidates(scheduleCandidates);
+    if (mergedSchedule.length > 0) {
+        result.schedule = mergedSchedule;
+        result.confidence.schedule = 0.88;
+        result.provenance.sources.push(`${sourceLabel}.schedule`);
+    }
+
+    const mergedSpeakers = mergeSpeakerCandidates(speakerCandidates);
+    if (mergedSpeakers.length > 0) {
+        result.speakers = mergedSpeakers;
+        result.confidence.speakers = 0.82;
+        result.provenance.sources.push(`${sourceLabel}.speakers`);
+    }
+
+    return result;
+}
+
 function extractAgendaLink(document: Document): string | undefined {
     const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'));
     for (const anchor of anchors) {
         const text = anchor.textContent?.toLowerCase() ?? '';
-        if (text.includes('agenda') || text.includes('schedule') || text.includes('program')) {
+        const href = anchor.getAttribute('href')?.toLowerCase() ?? '';
+        if (
+            text.includes('agenda')
+            || text.includes('schedule')
+            || text.includes('program')
+            || text.includes('talk')
+            || href.includes('/talk')
+        ) {
             return anchor.href;
         }
     }
@@ -471,9 +1042,12 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
         const jsonDescription = primaryEvent.description;
         if (jsonDescription && typeof jsonDescription === 'string') {
-            result.description = jsonDescription.trim();
-            result.confidence.description = 0.7;
-            result.provenance.sources.push('jsonld.description');
+            const cleanedDescription = cleanEventDescription(jsonDescription) ?? jsonDescription.trim();
+            if (cleanedDescription) {
+                result.description = cleanedDescription;
+                result.confidence.description = 0.7;
+                result.provenance.sources.push('jsonld.description');
+            }
         }
         const jsonLocation = primaryEvent.location;
         if (jsonLocation && typeof jsonLocation === 'object' && jsonLocation !== null) {
@@ -530,6 +1104,66 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
     }
 
+    const embeddedPayloads = extractEmbeddedPayloads(document);
+    embeddedPayloads.forEach(({ source, payload }) => {
+        const embeddedExtraction = extractCoreFieldsFromJsonPayload(
+            payload,
+            document.baseURI || document.URL || baseUrl,
+            source
+        );
+
+        if (!result.title && embeddedExtraction.title) {
+            result.title = embeddedExtraction.title;
+            result.confidence.title = Math.max(result.confidence.title ?? 0, embeddedExtraction.confidence.title ?? 0.8);
+            result.provenance.sources.push(`${source}.title`);
+        }
+
+        const currentDescription = cleanEventDescription(result.description) ?? result.description;
+        const embeddedDescription = cleanEventDescription(embeddedExtraction.description) ?? embeddedExtraction.description;
+        if (
+            embeddedDescription &&
+            (
+                !currentDescription
+                || isDescriptionThin(currentDescription, result.title)
+                || embeddedDescription.length > currentDescription.length * 1.2
+            )
+        ) {
+            result.description = embeddedDescription;
+            result.confidence.description = Math.max(result.confidence.description ?? 0, embeddedExtraction.confidence.description ?? 0.75);
+            result.provenance.sources.push(`${source}.description`);
+        }
+
+        if (!result.startTime && embeddedExtraction.startTime) {
+            result.startTime = embeddedExtraction.startTime;
+            result.confidence.startTime = Math.max(result.confidence.startTime ?? 0, embeddedExtraction.confidence.startTime ?? 0.8);
+            result.provenance.sources.push(`${source}.start`);
+        }
+
+        if (!result.endTime && embeddedExtraction.endTime) {
+            result.endTime = embeddedExtraction.endTime;
+            result.confidence.endTime = Math.max(result.confidence.endTime ?? 0, embeddedExtraction.confidence.endTime ?? 0.75);
+            result.provenance.sources.push(`${source}.end`);
+        }
+
+        if (!result.location && embeddedExtraction.location) {
+            result.location = embeddedExtraction.location;
+            result.confidence.location = Math.max(result.confidence.location ?? 0, embeddedExtraction.confidence.location ?? 0.8);
+            result.provenance.sources.push(`${source}.location`);
+        }
+
+        if ((embeddedExtraction.schedule?.length ?? 0) > (result.schedule?.length ?? 0)) {
+            result.schedule = embeddedExtraction.schedule;
+            result.confidence.schedule = Math.max(result.confidence.schedule ?? 0, embeddedExtraction.confidence.schedule ?? 0.88);
+            result.provenance.sources.push(`${source}.schedule`);
+        }
+
+        if ((embeddedExtraction.speakers?.length ?? 0) > (result.speakers?.length ?? 0)) {
+            result.speakers = embeddedExtraction.speakers;
+            result.confidence.speakers = Math.max(result.confidence.speakers ?? 0, embeddedExtraction.confidence.speakers ?? 0.82);
+            result.provenance.sources.push(`${source}.speakers`);
+        }
+    });
+
     if (!result.title) {
         const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
         const twitterTitle = document.querySelector('meta[name="twitter:title"]')?.getAttribute('content');
@@ -547,9 +1181,12 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         const ogDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content');
         const description = metaDescription || ogDescription;
         if (description) {
-            result.description = description.trim();
-            result.confidence.description = DEFAULT_CONFIDENCE;
-            result.provenance.sources.push('meta.description');
+            const cleanedDescription = cleanEventDescription(description) ?? description.trim();
+            if (cleanedDescription) {
+                result.description = cleanedDescription;
+                result.confidence.description = DEFAULT_CONFIDENCE;
+                result.provenance.sources.push('meta.description');
+            }
         }
     }
 
@@ -621,8 +1258,14 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
     const article = readability.parse();
     if (article?.textContent) {
         result.provenance.usedReadability = true;
-        const articleText = article.textContent.trim();
-        if (!result.description || (articleText.length > result.description.length && articleText.length > 100)) {
+        const articleText = cleanEventDescription(article.textContent) ?? article.textContent.trim();
+        const existingDescription = cleanEventDescription(result.description) ?? result.description?.trim();
+        const shouldUseReadability =
+            !existingDescription ||
+            isDescriptionThin(existingDescription, result.title) ||
+            (!result.description && articleText.length > 100);
+
+        if (shouldUseReadability && articleText.length > 100) {
             result.description = articleText;
             result.confidence.description = Math.max(result.confidence.description ?? 0, 0.6);
             result.provenance.sources.push('readability.description');

@@ -171,6 +171,43 @@ describe('GeminiExtractionProvider normalization', () => {
         expect(normalized.speakers?.[0]?.photoUrl).toBeUndefined();
     });
 
+    it('drops malformed speaker and agenda items instead of failing valid siblings', () => {
+        const normalized = normalizeExtractedProviderPayload({
+            speakers: [
+                {
+                    title: 'Missing name',
+                },
+                {
+                    name: 'Jane Doe',
+                    linkedinUrl: 'https://www.linkedin.com/in/jane-doe',
+                },
+            ],
+            agenda: [
+                {
+                    startTime: '09:00',
+                },
+                {
+                    title: 'Valid Session',
+                    startTime: '09:00',
+                },
+            ],
+        }) as {
+            speakers?: Array<{ name: string }>;
+            agenda?: Array<{ title: string }>;
+        };
+
+        expect(normalized.speakers).toEqual([
+            expect.objectContaining({
+                name: 'Jane Doe',
+            }),
+        ]);
+        expect(normalized.agenda).toEqual([
+            expect.objectContaining({
+                title: 'Valid Session',
+            }),
+        ]);
+    });
+
     it('normalizes inference tags with dedupe and cap', () => {
         const allowlist = Array.from({ length: 40 }, (_, index) => `Topic ${index + 1}`);
         const tags = ['topic 1', 'Topic 1', ...Array.from({ length: 35 }, (_, index) => `topic ${index + 2}`)];
@@ -209,5 +246,16 @@ describe('GeminiExtractionProvider normalization', () => {
 
         expect(normalized.pricing?.pricingType).toBe('Paid');
         expect(normalized.pricing?.currency).toBe('USD');
+    });
+
+    it('cleans noisy extracted descriptions before validation', () => {
+        const normalized = normalizeExtractedProviderPayload({
+            description:
+                'IIBA Poland Summit: For Community, From CommunityWhat can you expect from IIBA Poland Summit?Power-Packed 20-Minute TalksPower-Packed 20-Minute TalksPower-Packed 20-Minute TalksGet ready for sharp, inspiring talks that deliver big ideas in a short time. These 20-minute sessions are designed to spark new perspectives, challenge your thinking, and leave you energized to act.Immersive 40-Minute Deep DivesPower-Packed 20-Minute TalksPower-Packed 20-Minute TalksTake a closer look at key topics with focused, in-depth sessions led by industry experts. These 40-minute deep dives offer practical insights, real-world examples, and the space to explore challenges and solutions that truly matter.A Note from OrganizersWe are a non-profit, volunteer-based organization.',
+        }) as { description?: string };
+
+        expect(normalized.description).toBe(
+            'Get ready for sharp, inspiring talks that deliver big ideas in a short time. These 20-minute sessions are designed to spark new perspectives, challenge your thinking, and leave you energized to act. Take a closer look at key topics with focused, in-depth sessions led by industry experts. These 40-minute deep dives offer practical insights, real-world examples, and the space to explore challenges and solutions that truly matter.'
+        );
     });
 });

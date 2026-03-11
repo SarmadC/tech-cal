@@ -24,6 +24,7 @@ import {
     Plus, Minus, Rows, Columns
 } from '@phosphor-icons/react';
 import { useEffect, useState, useRef } from 'react';
+import { marked } from 'marked';
 
 const lowlight = createLowlight(common);
 
@@ -508,6 +509,31 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
             attributes: {
                 class: 'prose prose-invert max-w-none focus:outline-none min-h-[300px] px-4 py-4 text-zinc-300 prose-headings:text-white prose-strong:text-white prose-code:text-white prose-code:bg-zinc-800 prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-blockquote:border-l-4 prose-blockquote:border-zinc-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-zinc-400',
             },
+            handlePaste: (view, event, slice) => {
+                // If the user pastes plain text that contains markdown, parse it
+                if (event.clipboardData && event.clipboardData.types.includes('text/plain') && !event.clipboardData.types.includes('text/html')) {
+                    const text = event.clipboardData.getData('text/plain');
+
+                    // Simple heuristic to check if it might be markdown (contains headers, lists, code blocks, or links)
+                    const isLikelyMarkdown = /^#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s|```|\[.*\]\(.*\)/m.test(text);
+
+                    if (isLikelyMarkdown) {
+                        try {
+                            const html = marked.parse(text) as string;
+                            if (editor) {
+                                // Defer the command slightly so the editor state isn't locked during handlePaste
+                                setTimeout(() => {
+                                    editor.commands.insertContent(html);
+                                }, 0);
+                                return true; // Prevent default paste
+                            }
+                        } catch (e) {
+                            console.error("Error parsing markdown paste:", e);
+                        }
+                    }
+                }
+                return false;
+            }
         },
         onUpdate: ({ editor }) => {
             if (!isSourceMode) {

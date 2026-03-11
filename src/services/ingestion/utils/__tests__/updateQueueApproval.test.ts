@@ -44,6 +44,26 @@ describe('updateQueueApproval', () => {
         ]);
     });
 
+    it('accepts agenda items without end_time', () => {
+        const result = coerceAgendaItems([
+            {
+                title: 'Office Hours',
+                start_time: '13:00',
+                speakers: ['Jane Doe'],
+            },
+        ]);
+
+        expect(result.invalidItems).toEqual([]);
+        expect(result.items).toEqual([
+            expect.objectContaining({
+                title: 'Office Hours',
+                startTime: '13:00',
+                endTime: undefined,
+                speakerNames: ['Jane Doe'],
+            }),
+        ]);
+    });
+
     it('coerces speaker lineup entries with social links', () => {
         const result = coerceSpeakerLineup([
             {
@@ -119,5 +139,41 @@ describe('updateQueueApproval', () => {
         ]);
         expect(plan.scalarUpdateData).toEqual({});
         expect(plan.fieldsToReject).toEqual([]);
+    });
+
+    it('sanitizes mixed agenda payloads without rejecting missing end_time items', () => {
+        const plan = collectFieldUpdates([
+            {
+                id: 'agenda-field',
+                field_name: 'agenda',
+                new_value: [
+                    {
+                        title: 'Valid Session',
+                        start_time: '11:00',
+                    },
+                    {
+                        title: 'Missing start',
+                    },
+                ],
+            },
+        ]);
+
+        expect(plan.fieldsToApprove.map((field) => field.id)).toEqual(['agenda-field']);
+        expect(plan.fieldsToReject).toEqual([]);
+        expect(plan.sanitizedFieldUpdates).toEqual([
+            {
+                id: 'agenda-field',
+                newValue: [
+                    expect.objectContaining({
+                        title: 'Valid Session',
+                        start_time: '11:00',
+                        end_time: null,
+                    }),
+                ],
+            },
+        ]);
+        expect(plan.warnings).toEqual([
+            'Skipped invalid agenda items missing title/start: Missing start',
+        ]);
     });
 });

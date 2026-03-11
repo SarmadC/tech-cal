@@ -36,7 +36,17 @@ describe('cleanEventDescription', () => {
 
         expect(result).toBeUndefined();
     });
-});
 
+    it('condenses repeated feature-grid copy into a shorter usable description', () => {
+        const input =
+            'IIBA Poland Summit: For Community, From CommunityWhat can you expect from IIBA Poland Summit?Power-Packed 20-Minute TalksPower-Packed 20-Minute TalksPower-Packed 20-Minute TalksGet ready for sharp, inspiring talks that deliver big ideas in a short time. These 20-minute sessions are designed to spark new perspectives, challenge your thinking, and leave you energized to act.Immersive 40-Minute Deep DivesPower-Packed 20-Minute TalksPower-Packed 20-Minute TalksTake a closer look at key topics with focused, in-depth sessions led by industry experts. These 40-minute deep dives offer practical insights, real-world examples, and the space to explore challenges and solutions that truly matter.A Note from OrganizersWe are a non-profit, volunteer-based organization. We aim to provide a valuable experience while keeping costs low through free and self-made tools.';
+
+        const result = cleanEventDescription(input);
+
+        expect(result).toBe(
+            'Get ready for sharp, inspiring talks that deliver big ideas in a short time. These 20-minute sessions are designed to spark new perspectives, challenge your thinking, and leave you energized to act. Take a closer look at key topics with focused, in-depth sessions led by industry experts. These 40-minute deep dives offer practical insights, real-world examples, and the space to explore challenges and solutions that truly matter.'
+        );
+    });
+});
 
 

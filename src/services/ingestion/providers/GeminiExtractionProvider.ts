@@ -3,6 +3,7 @@ import {
     SchemaType,
     type GenerateContentResult,
 } from '@google/generative-ai';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { 
     ExtractedEventDataSchema, 
     InferredEventDataSchema,
@@ -115,6 +116,7 @@ If a field cannot be determined confidently, omit it rather than guessing.
 Focus on speakers (include LinkedIn/Twitter/website URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
 Extract the richest agenda detail available: track, day number, room/stage, session type, difficulty, prerequisites, required/optional status, duration, and speaker names per session.
 If linked agenda, speaker, or session pages are included, prefer those over generic marketing copy.
+For description, return a concise 2-4 sentence summary of what the event is about. Do not dump repeated headings, feature grids, CTAs, sponsor copy, or organizer notes.
 When choosing tags, only use items from the provided Allowed Tags list. If none apply, return an empty array.
 `.trim();
 
@@ -185,6 +187,15 @@ const truncateText = (value: unknown, maxLength: number): string | undefined => 
     }
 
     return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized;
+};
+
+const normalizeRequiredText = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const normalized = value.trim();
+    return normalized || undefined;
 };
 
 const normalizeAbsoluteUrl = (value: unknown): string | undefined => {
@@ -292,11 +303,18 @@ const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefine
         .filter(isPlainObject)
         .map((speaker) => {
             const nextSpeaker = { ...speaker };
+            const name = normalizeRequiredText(nextSpeaker.name);
             const bio = truncateText(nextSpeaker.bio, MAX_SPEAKER_BIO_LENGTH);
             const linkedinUrl = normalizeAbsoluteUrl(nextSpeaker.linkedinUrl);
             const photoUrl = normalizeAbsoluteUrl(nextSpeaker.photoUrl);
             const twitterUrl = normalizeAbsoluteUrl(nextSpeaker.twitterUrl);
             const websiteUrl = normalizeAbsoluteUrl(nextSpeaker.websiteUrl);
+
+            if (!name) {
+                return undefined;
+            }
+
+            nextSpeaker.name = name;
 
             if (bio) {
                 nextSpeaker.bio = bio;
@@ -329,7 +347,8 @@ const normalizeSpeakers = (value: unknown): Record<string, unknown>[] | undefine
             }
 
             return nextSpeaker;
-        });
+        })
+        .filter((speaker): speaker is Record<string, unknown> => Boolean(speaker));
 
     return normalized.length > 0 ? normalized : undefined;
 };
@@ -343,6 +362,7 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
         .filter(isPlainObject)
         .map((agendaItem) => {
             const nextAgendaItem = { ...agendaItem };
+            const title = normalizeRequiredText(nextAgendaItem.title);
             const description = truncateText(nextAgendaItem.description, MAX_AGENDA_DESCRIPTION_LENGTH);
             const location = truncateText(nextAgendaItem.location, MAX_AGENDA_LOCATION_LENGTH);
             const track = truncateText(nextAgendaItem.track, MAX_AGENDA_TRACK_LENGTH);
@@ -353,6 +373,12 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
             const difficultyLevel = normalizeDifficultyLevel(nextAgendaItem.difficultyLevel);
             const agendaType = normalizeAgendaType(nextAgendaItem.agendaType);
             const isRequired = normalizeBoolean(nextAgendaItem.isRequired);
+
+            if (!title) {
+                return undefined;
+            }
+
+            nextAgendaItem.title = title;
 
             if (description) {
                 nextAgendaItem.description = description;
@@ -426,7 +452,8 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
             }
 
             return nextAgendaItem;
-        });
+        })
+        .filter((agendaItem): agendaItem is Record<string, unknown> => Boolean(agendaItem));
 
     return normalized.length > 0 ? normalized : undefined;
 };
@@ -646,7 +673,10 @@ export const normalizeExtractedProviderPayload = (
         });
     }
 
-    const normalizedDescription = truncateText(payload.description, MAX_DESCRIPTION_LENGTH);
+    const normalizedDescription = truncateText(
+        cleanEventDescription(typeof payload.description === 'string' ? payload.description : undefined),
+        MAX_DESCRIPTION_LENGTH
+    );
     if (normalizedDescription) {
         payload.description = normalizedDescription;
     } else if ('description' in payload) {
@@ -783,7 +813,9 @@ export class GeminiExtractionProvider implements ExtractionProvider {
             .map((document, index) => `Supporting document ${index + 1}
 Label: ${document.label}
 URL: ${document.url}
-Content:
+Kind: ${document.kind ?? 'unknown'}
+Evidence Source: ${document.evidenceSource ?? 'page_html'}
+${document.originActionLabel ? `Origin Action: ${document.originActionLabel}\n` : ''}Content:
 ${document.content}`)
             .join('\n\n');
 

@@ -146,31 +146,21 @@ export class EventRepository {
         eventId: string,
         items: EventAgendaInsert[]
     ): Promise<string[]> {
-        const { data: existingAgenda } = await supabaseClient
-            .from('event_agenda')
-            .select('id')
-            .eq('event_id', eventId);
+        const { data, error } = await (supabaseClient as unknown as {
+            rpc: (
+                fn: string,
+                params: Record<string, unknown>
+            ) => Promise<{ data: string[] | null; error: Error | null }>;
+        }).rpc('replace_event_agenda', {
+            p_event_id: eventId,
+            p_items: items,
+        });
 
-        if (existingAgenda && existingAgenda.length > 0) {
-            const agendaIds = existingAgenda.map((item) => item.id);
-            await supabaseClient.from('agenda_speakers').delete().in('agenda_id', agendaIds);
-            await supabaseClient.from('event_agenda').delete().in('id', agendaIds);
+        if (error) {
+            throw error;
         }
 
-        if (items.length === 0) {
-            return [];
-        }
-
-        const { data: insertedAgenda, error } = await supabaseClient
-            .from('event_agenda')
-            .insert(items)
-            .select('id');
-
-        if (error || !insertedAgenda) {
-            throw error || new Error('Failed to insert agenda items');
-        }
-
-        return insertedAgenda.map((agenda) => agenda.id);
+        return data ?? [];
     }
 
     /**
@@ -198,7 +188,8 @@ export class EventRepository {
         );
 
         const existingSpeakersMap = new Map<string, string>(); // linkedInUrl -> speakerId
-        const existingSpeakersByName = new Map<string, string>(); // normalized name -> speakerId
+        const existingSpeakersByName = new Map<string, { id: string; linkedinUrl?: string | null }>(); // normalized name -> speaker metadata
+        const existingSpeakerMetadataById = new Map<string, { linkedinUrl?: string | null }>();
 
         if (linkedInUrls.length > 0) {
             const { data: existingSpeakers } = await supabaseClient
@@ -211,6 +202,9 @@ export class EventRepository {
                     if (speaker.linkedin_url) {
                         existingSpeakersMap.set(speaker.linkedin_url, speaker.id);
                     }
+                    existingSpeakerMetadataById.set(speaker.id, {
+                        linkedinUrl: speaker.linkedin_url,
+                    });
                 }
             }
         }
@@ -218,13 +212,19 @@ export class EventRepository {
         if (speakerNames.length > 0) {
             const { data: existingByName } = await supabaseClient
                 .from('speakers')
-                .select('id, name')
+                .select('id, name, linkedin_url')
                 .in('name', speakerNames);
 
             if (existingByName) {
                 for (const speaker of existingByName) {
                     if (speaker.name) {
-                        existingSpeakersByName.set(speaker.name.trim().toLowerCase(), speaker.id);
+                        existingSpeakersByName.set(speaker.name.trim().toLowerCase(), {
+                            id: speaker.id,
+                            linkedinUrl: speaker.linkedin_url,
+                        });
+                        existingSpeakerMetadataById.set(speaker.id, {
+                            linkedinUrl: speaker.linkedin_url,
+                        });
                     }
                 }
             }
@@ -247,8 +247,8 @@ export class EventRepository {
             const normalizedName = speaker.name.trim().toLowerCase();
             const existingByName = existingSpeakersByName.get(normalizedName);
             if (existingByName) {
-                speakersToUpdate.push({ id: existingByName, input: speaker });
-                resultOrder.push({ existingId: existingByName });
+                speakersToUpdate.push({ id: existingByName.id, input: speaker });
+                resultOrder.push({ existingId: existingByName.id });
                 continue;
             }
 
@@ -270,6 +270,12 @@ export class EventRepository {
                     if (input.photoUrl !== undefined) updateData.photo_url = input.photoUrl || null;
                     if (input.twitterUrl !== undefined) updateData.twitter_url = input.twitterUrl || null;
                     if (input.websiteUrl !== undefined) updateData.website_url = input.websiteUrl || null;
+                    if (input.linkedinUrl !== undefined) {
+                        const existingSpeaker = existingSpeakerMetadataById.get(id);
+                        if (!existingSpeaker?.linkedinUrl && input.linkedinUrl) {
+                            updateData.linkedin_url = input.linkedinUrl;
+                        }
+                    }
 
                     const { error } = await supabaseClient
                         .from('speakers')

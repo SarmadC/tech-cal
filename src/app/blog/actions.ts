@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
 // Define the shape of the form state
@@ -20,7 +20,7 @@ export async function subscribeToAction(
     prevState: SubscribeFormState,
     formData: FormData
 ): Promise<SubscribeFormState> {
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // 2. Validate the form data
     const validatedFields = SubscribeSchema.safeParse({

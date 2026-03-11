@@ -7,7 +7,7 @@ import {
 
 export interface AgendaTimeNormalizationInput {
     startTime: string;
-    endTime: string;
+    endTime?: string | null;
     dayNumber?: number | null;
     durationMinutes?: number | null;
 }
@@ -19,7 +19,7 @@ export interface AgendaTimeAnchor {
 
 export interface NormalizedAgendaTimeRange {
     startTime: string;
-    endTime: string;
+    endTime: string | null;
     durationMinutes: number | null;
 }
 
@@ -96,19 +96,29 @@ export const normalizeAgendaTimeRangeForEvent = (
     const baseDayOffset = Math.max((input.dayNumber ?? 1) - 1, 0);
 
     const normalizedStart = normalizeSingleAgendaTime(input.startTime, anchor, baseDayOffset);
-    let normalizedEnd = normalizeSingleAgendaTime(input.endTime, anchor, baseDayOffset);
-
-    if (
-        normalizedEnd.isTimeOnly &&
-        new Date(normalizedEnd.isoString).getTime() <= new Date(normalizedStart.isoString).getTime()
-    ) {
-        normalizedEnd = normalizeSingleAgendaTime(input.endTime, anchor, baseDayOffset + 1);
-    }
 
     let durationMinutes =
         typeof input.durationMinutes === 'number' && Number.isFinite(input.durationMinutes)
             ? Math.max(0, Math.round(input.durationMinutes))
             : null;
+
+    const rawEndTime = typeof input.endTime === 'string' ? input.endTime.trim() : '';
+    if (!rawEndTime) {
+        return {
+            startTime: normalizedStart.isoString,
+            endTime: null,
+            durationMinutes,
+        };
+    }
+
+    let normalizedEnd = normalizeSingleAgendaTime(rawEndTime, anchor, baseDayOffset);
+
+    if (
+        normalizedEnd.isTimeOnly &&
+        new Date(normalizedEnd.isoString).getTime() <= new Date(normalizedStart.isoString).getTime()
+    ) {
+        normalizedEnd = normalizeSingleAgendaTime(rawEndTime, anchor, baseDayOffset + 1);
+    }
 
     if (durationMinutes === null) {
         const startMs = new Date(normalizedStart.isoString).getTime();

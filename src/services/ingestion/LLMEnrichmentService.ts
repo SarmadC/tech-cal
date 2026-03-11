@@ -4,7 +4,9 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import * as Sentry from '@sentry/nextjs';
 import pLimit from 'p-limit';
 import type { SupabaseClientType, Json } from '@/types';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import {
+    type AgenticCrawlMetadata,
     type EnrichmentMetadata,
     type ExtractionProviderResult,
     type ExtractedAgendaItem,
@@ -21,6 +23,7 @@ import {
     GeminiExtractionProvider,
     normalizeExtractedProviderPayload,
 } from './providers/GeminiExtractionProvider';
+import { GeminiCrawlPlanner } from './providers/GeminiCrawlPlanner';
 import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
 import {
@@ -37,8 +40,18 @@ import {
     buildProviderDocuments,
     buildStructuredExtractedEventData,
     collectLinkedPageDocuments,
+    DEFAULT_AGENTIC_VENDOR_HOST_ALLOWLIST,
     mergeExtractedEventData,
+    type LinkedPageDocument,
 } from './linkedPageExtraction';
+import {
+    AgenticCrawlService,
+    type AgenticCrawlMode,
+    type CoverageAssessment,
+    assessExtractionCoverage,
+    type CrawlPlanner,
+} from './AgenticCrawlService';
+import type { ExtractionProvider } from './providers/ExtractionProvider';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
 const MAX_RETRIES = 3;
@@ -125,7 +138,37 @@ interface LLMEnrichmentServiceOptions {
     scraper?: PlaywrightScraper;
     provider?: string;
     model?: string;
+    crawlPlanner?: CrawlPlanner;
+    agenticCrawlMode?: AgenticCrawlMode;
 }
+
+interface DocumentExtractionResult {
+    documents: LinkedPageDocument[];
+    contentHash: string;
+    providerResult: ExtractionProviderResult;
+    data: ExtractedEventData;
+}
+
+interface AgenticCrawlResolution {
+    finalExtraction?: DocumentExtractionResult;
+    metadata: AgenticCrawlMetadata;
+}
+
+export const resolveSeedAllowedHosts = (
+    sourceUrl: string,
+    mode: AgenticCrawlMode,
+): string[] | undefined => {
+    if (mode === 'off') {
+        return undefined;
+    }
+
+    return Array.from(
+        new Set([
+            new URL(sourceUrl).hostname,
+            ...DEFAULT_AGENTIC_VENDOR_HOST_ALLOWLIST.map((host) => host.toString()),
+        ])
+    );
+};
 
 export class LLMEnrichmentService {
     private readonly scraper: PlaywrightScraper;
@@ -134,6 +177,10 @@ export class LLMEnrichmentService {
 
     private readonly modelOverride?: string;
 
+    private readonly crawlPlanner?: CrawlPlanner;
+
+    private readonly agenticCrawlMode: AgenticCrawlMode;
+
     constructor(
         private readonly supabaseClient: SupabaseClientType,
         options: LLMEnrichmentServiceOptions = {},
@@ -141,6 +188,8 @@ export class LLMEnrichmentService {
         this.scraper = options.scraper ?? new PlaywrightScraper();
         this.providerOverride = options.provider;
         this.modelOverride = options.model;
+        this.crawlPlanner = options.crawlPlanner;
+        this.agenticCrawlMode = options.agenticCrawlMode ?? this.resolveAgenticCrawlMode();
     }
 
     async processBatch(limit = DEFAULT_BATCH_LIMIT): Promise<EnrichmentBatchResult> {
@@ -188,60 +237,46 @@ export class LLMEnrichmentService {
             const metadata = this.normalizeMetadata(event);
             await this.markProcessing(eventId, metadata);
 
+            const allowedHosts = resolveSeedAllowedHosts(sourceUrl, this.agenticCrawlMode);
             const scrape = await this.scraper.scrapeUrl(sourceUrl);
-            const documents = await collectLinkedPageDocuments({
+            const seedDocuments = await collectLinkedPageDocuments({
                 sourceUrl,
                 html: scrape.html,
                 finalUrl: scrape.finalUrl,
                 loadPage: async (url) => this.scraper.scrapeUrl(url),
+                allowedHosts,
             });
-            const primaryContent = documents[0]?.content ?? '';
-            const providerDocuments = buildProviderDocuments(documents.slice(1));
-            const structuredData = buildStructuredExtractedEventData(documents);
-            const content = [primaryContent, ...providerDocuments.map((document) => document.content)]
-                .filter(Boolean)
-                .join('\n\n');
-
-            if (!content.trim()) {
-                throw new Error('Unable to extract readable content from page');
-            }
-
-            const contentHash = this.hashContent(content);
             const allowedTags = await this.loadAllowedTags();
             const provider = getExtractionProvider(this.providerOverride, this.modelOverride);
-            const providerResult = await provider.extract({
-                content,
-                context: { sourceUrl, eventId, contentHash },
-                model: this.modelOverride,
-                allowedTags: allowedTags.map(t => t.name),
-                documents: providerDocuments,
+            const initialExtraction = await this.extractFromDocuments(provider, seedDocuments, {
+                sourceUrl,
+                eventId,
+                allowedTags: allowedTags.map((tag) => tag.name),
             });
-            const mergedData = mergeExtractedEventData(
-                structuredData,
-                providerResult.data
-            );
-            const normalizedMergedData = normalizeExtractedProviderPayload(
-                mergedData,
-                allowedTags.map((tag) => tag.name)
-            );
-            const validatedData = ExtractedEventDataSchema.safeParse(normalizedMergedData);
-            if (!validatedData.success) {
-                const issues = validatedData.error.issues
-                    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-                    .join('; ');
-                throw new Error(`Merged enrichment payload failed validation: ${issues}`);
-            }
+            const coverageBefore = assessExtractionCoverage(initialExtraction.data, seedDocuments);
+            const crawlResolution = await this.resolveAgenticCrawl({
+                sourceUrl,
+                eventId,
+                documents: seedDocuments,
+                initialExtraction,
+                coverageBefore,
+                provider,
+                allowedTags: allowedTags.map((tag) => tag.name),
+                allowedHosts: allowedHosts ?? [new URL(sourceUrl).hostname],
+            });
+            const finalExtraction = crawlResolution.finalExtraction ?? initialExtraction;
 
             await this.persistSuccess(
                 eventId,
                 event,
                 {
-                    ...providerResult,
-                    data: validatedData.data,
+                    ...finalExtraction.providerResult,
+                    data: finalExtraction.data,
                 },
                 metadata,
-                contentHash,
-                allowedTags
+                finalExtraction.contentHash,
+                allowedTags,
+                crawlResolution.metadata
             );
 
             return { eventId, title: eventTitle, status: 'enriched' };
@@ -323,6 +358,180 @@ export class LLMEnrichmentService {
         return (data as unknown as EventRow | null) || null;
     }
 
+    private resolveAgenticCrawlMode(): AgenticCrawlMode {
+        const configured = (process.env.LLM_ENRICHMENT_AGENTIC_CRAWL_MODE || 'off')
+            .trim()
+            .toLowerCase();
+
+        if (configured === 'shadow' || configured === 'assist') {
+            return configured;
+        }
+
+        return 'off';
+    }
+
+    private getCrawlPlanner(): CrawlPlanner | undefined {
+        if (this.crawlPlanner) {
+            return this.crawlPlanner;
+        }
+
+        if (this.agenticCrawlMode === 'off') {
+            return undefined;
+        }
+
+        return new GeminiCrawlPlanner({
+            apiKey: env('GOOGLE_GENERATIVE_AI_API_KEY'),
+            model: this.modelOverride || env('LLM_ENRICHMENT_MODEL', DEFAULT_GEMINI_MODEL),
+        });
+    }
+
+    private async extractFromDocuments(
+        provider: ExtractionProvider,
+        documents: LinkedPageDocument[],
+        options: {
+            sourceUrl: string;
+            eventId: string;
+            allowedTags: string[];
+        },
+    ): Promise<DocumentExtractionResult> {
+        const primaryContent = documents[0]?.content ?? '';
+        const providerDocuments = buildProviderDocuments(documents.slice(1));
+        const structuredData = buildStructuredExtractedEventData(documents);
+        const content = [primaryContent, ...providerDocuments.map((document) => document.content)]
+            .filter(Boolean)
+            .join('\n\n');
+
+        if (!content.trim()) {
+            throw new Error('Unable to extract readable content from page');
+        }
+
+        const contentHash = this.hashContent(content);
+        const providerResult = await provider.extract({
+            content,
+            context: { sourceUrl: options.sourceUrl, eventId: options.eventId, contentHash },
+            model: this.modelOverride,
+            allowedTags: options.allowedTags,
+            documents: providerDocuments,
+        });
+
+        const mergedData = mergeExtractedEventData(structuredData, providerResult.data);
+        const normalizedMergedData = normalizeExtractedProviderPayload(
+            mergedData,
+            options.allowedTags
+        );
+        const validatedData = ExtractedEventDataSchema.safeParse(normalizedMergedData);
+
+        if (!validatedData.success) {
+            const issues = validatedData.error.issues
+                .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+                .join('; ');
+            throw new Error(`Merged enrichment payload failed validation: ${issues}`);
+        }
+
+        return {
+            documents,
+            contentHash,
+            providerResult,
+            data: validatedData.data,
+        };
+    }
+
+    private async resolveAgenticCrawl(options: {
+        sourceUrl: string;
+        eventId: string;
+        documents: LinkedPageDocument[];
+        initialExtraction: DocumentExtractionResult;
+        coverageBefore: CoverageAssessment;
+        provider: ExtractionProvider;
+        allowedTags: string[];
+        allowedHosts: string[];
+    }): Promise<AgenticCrawlResolution> {
+        const baseMetadata: AgenticCrawlMetadata = {
+            crawl_strategy: 'deterministic_only',
+            agent_invoked: false,
+            agent_shadow_mode: this.agenticCrawlMode === 'shadow',
+            coverage_score_before: options.coverageBefore.score,
+            coverage_score_after: options.coverageBefore.score,
+            escalation_reasons: options.coverageBefore.reasons,
+            pages_crawled: 0,
+            vendor_hosts_used: [],
+            agent_trace: [],
+        };
+
+        if (this.agenticCrawlMode === 'off' || !options.coverageBefore.shouldEscalate) {
+            return { metadata: baseMetadata };
+        }
+
+        const planner = this.getCrawlPlanner();
+        if (!planner) {
+            return { metadata: baseMetadata };
+        }
+
+        const crawlService = new AgenticCrawlService(planner);
+        const crawlResult = await crawlService.augment({
+            sourceUrl: options.sourceUrl,
+            documents: options.documents,
+            assessment: options.coverageBefore,
+            allowedHosts: options.allowedHosts,
+            loadPage: async (url) => this.scraper.scrapeUrl(url),
+            observePage: async (candidate) =>
+                this.scraper.observePage(candidate.pageUrl, {
+                    selector: candidate.selector,
+                    label: candidate.label,
+                    actionType: candidate.actionType,
+                }),
+            assessCoverage: (documents) => {
+                const structuredData = buildStructuredExtractedEventData(documents);
+                const mergedCoverageData = mergeExtractedEventData(
+                    structuredData,
+                    options.initialExtraction.data
+                );
+
+                return assessExtractionCoverage(mergedCoverageData, documents);
+            },
+        });
+
+        const metadata: AgenticCrawlMetadata = {
+            crawl_strategy: 'hybrid_agent',
+            agent_invoked: true,
+            agent_shadow_mode: this.agenticCrawlMode === 'shadow',
+            coverage_score_before: options.coverageBefore.score,
+            coverage_score_after: options.coverageBefore.score,
+            escalation_reasons: options.coverageBefore.reasons,
+            pages_crawled: crawlResult.pagesCrawled,
+            vendor_hosts_used: crawlResult.vendorHostsUsed,
+            agent_trace: crawlResult.trace,
+        };
+
+        if (crawlResult.additionalDocuments.length === 0) {
+            return { metadata };
+        }
+
+        const augmentedExtraction = await this.extractFromDocuments(
+            options.provider,
+            crawlResult.documents,
+            {
+                sourceUrl: options.sourceUrl,
+                eventId: options.eventId,
+                allowedTags: options.allowedTags,
+            }
+        );
+        const coverageAfter = assessExtractionCoverage(
+            augmentedExtraction.data,
+            crawlResult.documents
+        );
+        metadata.coverage_score_after = coverageAfter.score;
+
+        if (this.agenticCrawlMode === 'shadow') {
+            return { metadata };
+        }
+
+        return {
+            finalExtraction: augmentedExtraction,
+            metadata,
+        };
+    }
+
     private normalizeMetadata(event: EventRow): EnrichmentMetadata {
         const metadata = (event.enrichment_metadata || {}) as EnrichmentMetadata;
         return {
@@ -336,6 +545,7 @@ export class LLMEnrichmentService {
             last_error: metadata.last_error,
             content_hash: metadata.content_hash,
             tokens_used: metadata.tokens_used,
+            agentic_crawl: metadata.agentic_crawl,
         };
     }
 
@@ -371,6 +581,7 @@ export class LLMEnrichmentService {
         previousMetadata: EnrichmentMetadata,
         contentHash: string,
         allowedTags: AllowedTag[] = [],
+        crawlMetadata?: AgenticCrawlMetadata,
     ): Promise<void> {
         const now = new Date().toISOString();
         const metadata: EnrichmentMetadata = {
@@ -384,6 +595,7 @@ export class LLMEnrichmentService {
             tokens_used: providerResult.tokensUsed,
             last_error: undefined,
             next_retry_after: undefined,
+            agentic_crawl: crawlMetadata,
         };
 
         await this.supabaseClient
@@ -966,8 +1178,10 @@ export class LLMEnrichmentService {
             });
         };
 
-        if (data.description) {
-            pushDiff('description', event.description, data.description);
+        const normalizedDescription =
+            cleanEventDescription(data.description) ?? data.description?.trim() ?? undefined;
+        if (normalizedDescription) {
+            pushDiff('description', event.description, normalizedDescription);
         }
         if (data.location) {
             pushDiff('location', event.location, data.location);

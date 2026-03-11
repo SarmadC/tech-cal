@@ -53,6 +53,36 @@ export const ExtractedPricingSchema = z.object({
 
 export type ExtractedPricing = z.infer<typeof ExtractedPricingSchema>;
 
+export interface AgenticCrawlTraceEntry {
+    iteration: number;
+    action: 'start' | 'fetch' | 'interact' | 'stop' | 'skip';
+    candidateId?: string;
+    actionType?: 'switch_day' | 'expand_section' | 'load_more';
+    label?: string;
+    pageUrl?: string;
+    url?: string;
+    kind?: 'primary' | 'agenda' | 'speakers' | 'session';
+    rationale?: string;
+    reason?: string;
+    coverageScore?: number;
+    escalationReasons?: string[];
+    evidenceSources?: string[];
+    capturedAgendaDays?: number;
+    expectedAgendaDays?: number;
+}
+
+export interface AgenticCrawlMetadata {
+    crawl_strategy: 'deterministic_only' | 'hybrid_agent';
+    agent_invoked: boolean;
+    agent_shadow_mode?: boolean;
+    coverage_score_before?: number;
+    coverage_score_after?: number;
+    escalation_reasons?: string[];
+    pages_crawled?: number;
+    vendor_hosts_used?: string[];
+    agent_trace?: AgenticCrawlTraceEntry[];
+}
+
 export const ExtractedEventDataSchema = z.object({
     speakers: z.array(ExtractedSpeakerSchema).max(50).optional(),
     agenda: z.array(ExtractedAgendaItemSchema).max(100).optional(),
@@ -79,6 +109,7 @@ export interface EnrichmentMetadata {
     content_hash?: string;
     tokens_used?: number;
     applied_tags?: string[];
+    agentic_crawl?: AgenticCrawlMetadata;
 }
 
 export interface ExtractionContext {
@@ -142,4 +173,3 @@ export interface InferenceProviderResult {
     tokensUsed?: number;
     raw?: unknown;
 }
-

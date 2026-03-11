@@ -13,13 +13,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
-import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
 import {
     collectFieldUpdates,
-    type AgendaApprovalItem,
     type ApprovalPlan,
+    serializeAgendaApprovalItem,
+    serializeSpeakerApprovalItem,
 } from '@/services/ingestion/utils/updateQueueApproval';
-import { EventRepository } from '@/services/ingestion/repositories/EventRepository';
+import { isValidIanaTimezone, normalizeTimezone } from '@/utils/ingestion/ExtractNormalization';
 
 interface QueueItemForAction {
     event_id: string | null;
@@ -115,169 +115,187 @@ const updateQueueStatusForSelectiveAction = async (
     return nextStatus;
 };
 
-const buildSpeakerLookupKey = (name: string) => name.trim().toLowerCase();
+const VALID_EVENT_FORMATS = new Set(['Online', 'In-person', 'Hybrid']);
+const VALID_PRICING_TYPES = new Set(['Free', 'Paid', 'Varies']);
 
-const addSpeakerMappings = (
-    lookup: Map<string, string>,
-    speakers: Array<{ name: string; linkedinUrl?: string }>,
-    speakerIds: string[],
-) => {
-    speakers.forEach((speaker, index) => {
-        const speakerId = speakerIds[index];
-        if (!speakerId) {
-            return;
-        }
+const normalizeCurrencyCode = (value: unknown): string | null | undefined => {
+    if (value === null) {
+        return null;
+    }
 
-        if (speaker.linkedinUrl) {
-            lookup.set(`linkedin:${speaker.linkedinUrl.toLowerCase()}`, speakerId);
-        }
-        lookup.set(`name:${buildSpeakerLookupKey(speaker.name)}`, speakerId);
-    });
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const normalized = trimmed.toUpperCase();
+    return /^[A-Z]{3}$/.test(normalized) ? normalized : undefined;
 };
 
-const resolveAgendaSpeakerIds = async (
-    agendaUpdates: AgendaApprovalItem[],
-    approvedSpeakerLookup: Map<string, string>,
+const normalizeTimezoneValue = (value: unknown): string | null | undefined => {
+    if (value === null) {
+        return null;
+    }
+
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    if (isValidIanaTimezone(trimmed)) {
+        return trimmed;
+    }
+
+    const normalized = normalizeTimezone(trimmed);
+    if (isValidIanaTimezone(normalized.timezone) && (normalized.source !== 'fallback' || normalized.confidence >= 0.3)) {
+        return normalized.timezone;
+    }
+
+    return undefined;
+};
+
+const normalizeScalarApprovalUpdates = async (
+    eventId: string,
+    scalarUpdateData: Record<string, unknown>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceClient: any,
-): Promise<AgendaItemInput[]> => {
-    const speakerLookup = new Map(approvedSpeakerLookup);
-    const unresolvedNames = Array.from(
-        new Set(
-            agendaUpdates
-                .flatMap((item) => item.speakerNames ?? [])
-                .map((name) => name.trim())
-                .filter(Boolean)
-                .filter((name) => !speakerLookup.has(`name:${buildSpeakerLookupKey(name)}`))
-        )
-    );
+): Promise<{ scalarUpdateData: Record<string, unknown>; warnings: string[] }> => {
+    const nextScalarUpdateData = { ...scalarUpdateData };
+    const warnings: string[] = [];
 
-    if (unresolvedNames.length > 0) {
-        const { data: existingSpeakers, error: existingSpeakersError } = await serviceClient
-            .from('speakers')
-            .select('id, name, linkedin_url')
-            .in('name', unresolvedNames);
-
-        if (existingSpeakersError) {
-            throw new Error(`Failed to resolve existing speakers by name: ${existingSpeakersError.message}`);
-        }
-
-        if (existingSpeakers) {
-            existingSpeakers.forEach((speaker: { id: string; name: string; linkedin_url: string | null }) => {
-                if (speaker.linkedin_url) {
-                    speakerLookup.set(`linkedin:${speaker.linkedin_url.toLowerCase()}`, speaker.id);
-                }
-                speakerLookup.set(`name:${buildSpeakerLookupKey(speaker.name)}`, speaker.id);
-            });
+    if ('event_format' in nextScalarUpdateData) {
+        const eventFormat = nextScalarUpdateData.event_format;
+        if (eventFormat == null || VALID_EVENT_FORMATS.has(String(eventFormat))) {
+            // keep as-is
+        } else {
+            delete nextScalarUpdateData.event_format;
+            warnings.push(`Skipped invalid event_format: ${String(eventFormat)}`);
         }
     }
 
-    const namesToCreate = unresolvedNames.filter((name) => !speakerLookup.has(`name:${buildSpeakerLookupKey(name)}`));
-    if (namesToCreate.length > 0) {
-        const speakerIds = await EventRepository.upsertSpeakers(
-            serviceClient,
-            namesToCreate.map((name) => ({ name }))
-        );
-        addSpeakerMappings(
-            speakerLookup,
-            namesToCreate.map((name) => ({ name })),
-            speakerIds
-        );
+    if ('pricing_type' in nextScalarUpdateData) {
+        const pricingType = nextScalarUpdateData.pricing_type;
+        if (pricingType == null || VALID_PRICING_TYPES.has(String(pricingType))) {
+            // keep as-is
+        } else {
+            delete nextScalarUpdateData.pricing_type;
+            warnings.push(`Skipped invalid pricing_type: ${String(pricingType)}`);
+        }
     }
 
-    return agendaUpdates.map((item) => {
-        const resolvedSpeakerIds = Array.from(
-            new Set([
-                ...(item.speakerIds ?? []),
-                ...((item.speakerNames ?? []).flatMap((speakerName) => {
-                    const resolved = speakerLookup.get(`name:${buildSpeakerLookupKey(speakerName)}`);
-                    return resolved ? [resolved] : [];
-                })),
-            ])
-        );
+    if ('currency' in nextScalarUpdateData) {
+        const currency = nextScalarUpdateData.currency;
+        const normalizedCurrency = normalizeCurrencyCode(currency);
+        if (normalizedCurrency === undefined) {
+            delete nextScalarUpdateData.currency;
+            warnings.push(`Skipped invalid currency: ${String(currency)}`);
+        } else {
+            nextScalarUpdateData.currency = normalizedCurrency;
+        }
+    }
 
-        const { speakerNames: _speakerNames, ...agendaItem } = item;
-        return {
-            ...agendaItem,
-            speakerIds: resolvedSpeakerIds.length > 0 ? resolvedSpeakerIds : undefined,
-        };
-    });
+    if ('timezone' in nextScalarUpdateData) {
+        const timezone = nextScalarUpdateData.timezone;
+        const normalizedTimezoneValue = normalizeTimezoneValue(timezone);
+        if (normalizedTimezoneValue === undefined) {
+            delete nextScalarUpdateData.timezone;
+            warnings.push(`Skipped invalid timezone: ${String(timezone)}`);
+        } else {
+            nextScalarUpdateData.timezone = normalizedTimezoneValue;
+        }
+    }
+
+    if ('start_time' in nextScalarUpdateData || 'end_time' in nextScalarUpdateData) {
+        const { data: existingEvent, error } = await serviceClient
+            .from('events')
+            .select('start_time, end_time')
+            .eq('id', eventId)
+            .single();
+
+        if (error || !existingEvent) {
+            throw new Error(`Failed to load existing event times: ${error?.message || 'Event not found'}`);
+        }
+
+        const startCandidate = typeof nextScalarUpdateData.start_time === 'string'
+            ? nextScalarUpdateData.start_time
+            : existingEvent.start_time;
+        const endCandidate = typeof nextScalarUpdateData.end_time === 'string'
+            ? nextScalarUpdateData.end_time
+            : existingEvent.end_time;
+
+        if (startCandidate && endCandidate) {
+            const start = new Date(startCandidate);
+            const end = new Date(endCandidate);
+            if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end <= start) {
+                nextScalarUpdateData.end_time = new Date(start.getTime() + 60 * 60 * 1000).toISOString();
+                warnings.push('Adjusted end_time to remain after start_time during approval');
+            }
+        }
+    }
+
+    return {
+        scalarUpdateData: nextScalarUpdateData,
+        warnings,
+    };
 };
 
 const applyApprovedFieldUpdates = async (
+    queueId: string,
     queueItem: QueueItemForAction,
     plan: ApprovalPlan<QueueFieldRecord>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceClient: any,
     editedBy: string,
+    options?: {
+        rejectRemainingPending?: boolean;
+    },
 ) => {
     if (!queueItem.event_id) {
         throw new Error('Queue item is missing event_id');
     }
 
-    const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
-    const { scalarUpdateData, relationshipUpdates, speakerUpdates, agendaUpdates } = plan;
+    const { scalarUpdateData, warnings: scalarWarnings } = await normalizeScalarApprovalUpdates(
+        queueItem.event_id,
+        plan.scalarUpdateData,
+        serviceClient
+    );
 
-    if (Object.keys(scalarUpdateData).length > 0) {
-        const { error: updateError } = await serviceClient
-            .from('events')
-            .update(scalarUpdateData)
-            .eq('id', queueItem.event_id);
+    const { data, error } = await serviceClient.rpc('apply_event_update_queue_approval', {
+        p_queue_id: queueId,
+        p_reviewed_by: editedBy,
+        p_scalar_updates: scalarUpdateData,
+        p_relationship_updates: plan.relationshipUpdates,
+        p_speaker_updates: plan.speakerUpdates.map(serializeSpeakerApprovalItem),
+        p_agenda_updates: plan.agendaUpdates.map(serializeAgendaApprovalItem),
+        p_approved_field_ids: plan.fieldsToApprove.map((field) => field.id),
+        p_rejected_field_ids: plan.fieldsToReject.map((field) => field.id),
+        p_sanitized_field_updates: plan.sanitizedFieldUpdates.map((update) => ({
+            id: update.id,
+            newValue: update.newValue,
+        })),
+        p_reject_remaining_pending: options?.rejectRemainingPending ?? false,
+    });
 
-        if (updateError) {
-            throw new Error(`Failed to apply scalar updates: ${updateError.message}`);
-        }
+    if (error) {
+        throw new Error(`Failed to apply queue approval: ${error.message}`);
     }
 
-    if (Object.keys(relationshipUpdates).length > 0) {
-        const relResult = await EventEnrichmentService.manageEventRelationships(
-            queueItem.event_id,
-            relationshipUpdates,
-            serviceClient,
-            editedBy
-        );
-
-        if (!relResult.success) {
-            throw new Error(`Failed to update relationships: ${relResult.error}`);
-        }
-    }
-
-    const approvedSpeakerLookup = new Map<string, string>();
-    if (speakerUpdates.length > 0) {
-        const speakerResult = await EventEnrichmentService.createOrUpdateSpeakers(
-            queueItem.event_id,
-            speakerUpdates,
-            serviceClient,
-            editedBy
-        );
-
-        if (!speakerResult.success) {
-            throw new Error(`Failed to update speakers: ${speakerResult.error}`);
-        }
-
-        addSpeakerMappings(approvedSpeakerLookup, speakerUpdates, speakerResult.speakerIds);
-    }
-
-    if (agendaUpdates.length > 0) {
-        const resolvedAgendaUpdates = await resolveAgendaSpeakerIds(
-            agendaUpdates,
-            approvedSpeakerLookup,
-            serviceClient
-        );
-        const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
-            queueItem.event_id,
-            resolvedAgendaUpdates,
-            serviceClient,
-            editedBy
-        );
-
-        if (!agendaResult.success) {
-            throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
-        }
-    }
+    const nextStatus =
+        typeof data === 'object' && data !== null && 'status' in data && typeof data.status === 'string'
+            ? data.status
+            : undefined;
 
     return {
-        warnings: plan.warnings,
+        warnings: [...plan.warnings, ...scalarWarnings],
+        status: nextStatus as QueueActionResponse['status'] | undefined,
     };
 };
 
@@ -522,70 +540,14 @@ export async function POST(
             }
             const approvalPlan = collectFieldUpdates(pendingFields);
             const applyResult = await applyApprovedFieldUpdates(
+                queueId,
                 queueItem as QueueItemForAction,
                 approvalPlan,
                 serviceClient,
-                user.id
+                user.id,
+                { rejectRemainingPending: true }
             );
-
-            await Promise.all(
-                approvalPlan.sanitizedFieldUpdates.map((update) =>
-                    tableClient
-                        .from('event_update_queue_fields')
-                        .update({ new_value: update.newValue })
-                        .eq('id', update.id)
-                )
-            );
-
-            // Mark selected fields as approved, others as rejected
-            if (approvalPlan.fieldsToApprove.length > 0) {
-                const { error: approveError } = await tableClient
-                    .from('event_update_queue_fields')
-                    .update({
-                        field_status: 'approved',
-                        reviewed_by: user.id,
-                        reviewed_at: new Date().toISOString(),
-                    })
-                    .in('id', approvalPlan.fieldsToApprove.map((field) => field.id))
-                    .eq('field_status', 'pending');
-
-                if (approveError) {
-                    throw new Error(`Failed to approve fields: ${approveError.message}`);
-                }
-            }
-
-            if (approvalPlan.fieldsToReject.length > 0) {
-                const { error: rejectInvalidError } = await tableClient
-                    .from('event_update_queue_fields')
-                    .update({
-                        field_status: 'rejected',
-                        reviewed_by: user.id,
-                        reviewed_at: new Date().toISOString(),
-                    })
-                    .in('id', approvalPlan.fieldsToReject.map((field) => field.id))
-                    .eq('field_status', 'pending');
-
-                if (rejectInvalidError) {
-                    throw new Error(`Failed to reject invalid fields: ${rejectInvalidError.message}`);
-                }
-            }
-
-            // Reject remaining pending fields
-            const { error: rejectError } = await tableClient
-                .from('event_update_queue_fields')
-                .update({
-                    field_status: 'rejected',
-                    reviewed_by: user.id,
-                    reviewed_at: new Date().toISOString(),
-                })
-                .eq('queue_id', queueId)
-                .eq('field_status', 'pending');
-
-            if (rejectError) {
-                console.warn('Failed to reject remaining fields:', rejectError);
-            }
-
-            const nextStatus = await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
+            const nextStatus = applyResult.status ?? await updateQueueStatusForSelectiveAction(tableClient, queueId, user.id);
 
             return NextResponse.json<QueueActionResponse>({
                 success: true,
@@ -663,70 +625,16 @@ export async function POST(
             }
             const approvalPlan = collectFieldUpdates(pendingFields);
             const applyResult = await applyApprovedFieldUpdates(
+                queueId,
                 queueItem as QueueItemForAction,
                 approvalPlan,
                 serviceClient,
                 user.id
             );
-
-            await Promise.all(
-                approvalPlan.sanitizedFieldUpdates.map((update) =>
-                    tableClient
-                        .from('event_update_queue_fields')
-                        .update({ new_value: update.newValue })
-                        .eq('id', update.id)
-                )
-            );
-
-            // Mark all pending fields as approved
-            if (approvalPlan.fieldsToApprove.length > 0) {
-                const { error: approveError } = await tableClient
-                    .from('event_update_queue_fields')
-                    .update({
-                        field_status: 'approved',
-                        reviewed_by: user.id,
-                        reviewed_at: new Date().toISOString(),
-                    })
-                    .in('id', approvalPlan.fieldsToApprove.map((field) => field.id))
-                    .eq('field_status', 'pending');
-
-                if (approveError) {
-                    throw new Error(`Failed to approve fields: ${approveError.message}`);
-                }
-            }
-
-            if (approvalPlan.fieldsToReject.length > 0) {
-                const { error: rejectInvalidError } = await tableClient
-                    .from('event_update_queue_fields')
-                    .update({
-                        field_status: 'rejected',
-                        reviewed_by: user.id,
-                        reviewed_at: new Date().toISOString(),
-                    })
-                    .in('id', approvalPlan.fieldsToReject.map((field) => field.id))
-                    .eq('field_status', 'pending');
-
-                if (rejectInvalidError) {
-                    throw new Error(`Failed to reject invalid fields: ${rejectInvalidError.message}`);
-                }
-            }
-
-            // Update queue status
-            const nextStatus = approvalPlan.fieldsToApprove.length > 0
-                ? (approvalPlan.fieldsToReject.length > 0 ? 'partially_approved' : 'approved')
-                : 'rejected';
-            const { error: queueUpdateError } = await tableClient
-                .from('event_update_queue')
-                .update({
-                    status: nextStatus,
-                    reviewed_by: user.id,
-                    reviewed_at: new Date().toISOString(),
-                })
-                .eq('id', queueId);
-
-            if (queueUpdateError) {
-                throw new Error(`Failed to update queue status: ${queueUpdateError.message}`);
-            }
+            const nextStatus = applyResult.status
+                ?? (approvalPlan.fieldsToApprove.length > 0
+                    ? (approvalPlan.fieldsToReject.length > 0 ? 'partially_approved' : 'approved')
+                    : 'rejected');
 
             return NextResponse.json<QueueActionResponse>({
                 success: true,

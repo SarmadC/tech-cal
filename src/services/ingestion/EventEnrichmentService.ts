@@ -20,7 +20,7 @@ type PricingTypeEnum = Database['public']['Enums']['pricing_type_enum'];
 export interface AgendaItemInput {
     title: string;
     startTime: string;
-    endTime: string;
+    endTime?: string | null;
     type?: string;
     description?: string;
     location?: string;
@@ -190,7 +190,7 @@ export class EventEnrichmentService {
                     event_id: eventId,
                     title: item.title,
                     start_time: item.startTime,
-                    end_time: item.endTime,
+                    end_time: item.endTime ?? null,
                     agenda_type: item.type || 'other',
                     description: item.description || null,
                     location: item.location || null,
@@ -249,7 +249,7 @@ export class EventEnrichmentService {
                 id: insertedAgendaIds[index],
                 title: item.title,
                 start_time: item.startTime,
-                end_time: item.endTime,
+                end_time: item.endTime ?? null,
             }));
 
             // Track edit (upsert to keep only latest)

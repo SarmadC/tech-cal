@@ -6,6 +6,9 @@ import type {
 export interface ExtractionProviderDocument {
     url: string;
     label: string;
+    kind?: 'primary' | 'agenda' | 'speakers' | 'session';
+    evidenceSource?: 'page_html' | 'embedded_json' | 'interaction' | 'network_json';
+    originActionLabel?: string;
     content: string;
 }
 
