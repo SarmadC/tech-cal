@@ -12,7 +12,7 @@ import type { EnrichmentMetadata } from '@/types/enrichment';
 import { cn } from '@/lib/utils';
 
 const COLUMNS_STORAGE_KEY = 'techcal.admin.enrichment.columns';
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 250;
 const STATUS_FILTERS = ['all', 'pending', 'processing', 'enriched', 'failed'] as const;
 
@@ -191,6 +191,8 @@ export default function EnrichmentDashboardClient() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
     const [total, setTotal] = useState(0);
+    const [sortKey, setSortKey] = useState('updated_at');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [statusCounts, setStatusCounts] = useState<Record<DashboardStatusFilter, number>>(DEFAULT_STATUS_COUNTS);
     const [dashboardMetrics, setDashboardMetrics] = useState<EnrichmentDashboardMetrics | null>(null);
     const fetchRequestIdRef = useRef(0);
@@ -223,7 +225,7 @@ export default function EnrichmentDashboardClient() {
                 streamAbortControllerRef.current = null;
             }
             if (streamReaderRef.current) {
-                void streamReaderRef.current.cancel().catch(() => {});
+                void streamReaderRef.current.cancel().catch(() => { });
                 streamReaderRef.current = null;
             }
         };
@@ -358,6 +360,8 @@ export default function EnrichmentDashboardClient() {
                 status: statusFilter,
                 page: String(page),
                 pageSize: String(pageSize),
+                sort: sortKey,
+                dir: sortDirection,
             });
 
             if (debouncedSearchValue) {
@@ -406,7 +410,7 @@ export default function EnrichmentDashboardClient() {
                 setLoading(false);
             }
         }
-    }, [debouncedSearchValue, page, pageSize, showError, statusFilter]);
+    }, [debouncedSearchValue, page, pageSize, showError, statusFilter, sortKey, sortDirection]);
 
     useEffect(() => {
         void refresh();
@@ -444,7 +448,7 @@ export default function EnrichmentDashboardClient() {
                 streamAbortControllerRef.current.abort();
             }
             if (streamReaderRef.current) {
-                await streamReaderRef.current.cancel().catch(() => {});
+                await streamReaderRef.current.cancel().catch(() => { });
                 streamReaderRef.current = null;
             }
 
@@ -575,7 +579,7 @@ export default function EnrichmentDashboardClient() {
                 setBulkProgress(null);
             } finally {
                 if (reader) {
-                    await reader.cancel().catch(() => {});
+                    await reader.cancel().catch(() => { });
                 }
                 if (streamReaderRef.current === reader) {
                     streamReaderRef.current = null;
@@ -668,8 +672,9 @@ export default function EnrichmentDashboardClient() {
     const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(() => {
         const nextColumns: AdminDataTableColumn<EnrichmentEvent>[] = [
             {
-                key: 'event',
+                key: 'title',
                 header: 'Event',
+                sortable: true,
                 render: (event) => (
                     <div className="flex flex-col gap-0.5">
                         <div className="font-medium text-foreground-primary text-[13px]">{event.title}</div>
@@ -689,8 +694,9 @@ export default function EnrichmentDashboardClient() {
 
         if (visibleColumns.status) {
             nextColumns.push({
-                key: 'status',
+                key: 'enrichment_status',
                 header: 'Status',
+                sortable: true,
                 cellClassName: 'max-w-xl',
                 render: (event) => {
                     const statusColors: Record<string, string> = {
@@ -745,6 +751,7 @@ export default function EnrichmentDashboardClient() {
             nextColumns.push({
                 key: 'updated_at',
                 header: 'Updated',
+                sortable: true,
                 render: (event) => (
                     <div className="text-[11px] text-foreground-muted">
                         {formatRelativeTimestamp(event.updated_at)}
@@ -962,8 +969,13 @@ export default function EnrichmentDashboardClient() {
                 columns={columns}
                 rows={events}
                 getRowId={(event) => event.id}
-                sortKey="created_at"
-                sortDirection="desc"
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSortChange={(key, dir) => {
+                    setSortKey(key);
+                    setSortDirection(dir);
+                    setPage(1);
+                }}
                 selectable
                 selectedRowIds={selectedRows}
                 onSelectionChange={setSelectedRows}

@@ -1244,6 +1244,7 @@ export class LLMEnrichmentService {
             description: item.description ?? null,
             location: item.location ?? null,
             track: item.track ?? null,
+            topics: item.topics ?? [],
             day_number: item.dayNumber ?? null,
             agenda_type: item.agendaType ?? null,
             difficulty_level: item.difficultyLevel ?? null,

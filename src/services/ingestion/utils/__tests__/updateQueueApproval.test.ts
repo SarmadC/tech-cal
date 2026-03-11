@@ -3,6 +3,8 @@ import {
     coerceAgendaItems,
     coerceSpeakerLineup,
     collectFieldUpdates,
+    normalizeApprovalPlanAgendaUpdates,
+    sanitizeAgendaFieldValue,
 } from '../updateQueueApproval';
 
 describe('updateQueueApproval', () => {
@@ -14,6 +16,7 @@ describe('updateQueueApproval', () => {
                 end_time: '10:00',
                 agenda_type: 'Keynote',
                 track: 'Main Stage',
+                topics: ['platform', 'scaling'],
                 day_number: 2,
                 difficulty_level: 'advanced',
                 capacity: '250',
@@ -32,6 +35,7 @@ describe('updateQueueApproval', () => {
                 endTime: '10:00',
                 type: 'Keynote',
                 track: 'Main Stage',
+                topics: ['platform', 'scaling'],
                 dayNumber: 2,
                 difficultyLevel: 'advanced',
                 capacity: 250,
@@ -115,6 +119,7 @@ describe('updateQueueApproval', () => {
                         speakers: ['Jane Doe'],
                         location: 'Room A',
                         track: 'Platform',
+                        topics: ['architecture', 'commerce'],
                     },
                 ],
             },
@@ -135,6 +140,7 @@ describe('updateQueueApproval', () => {
                 speakerIds: undefined,
                 location: 'Room A',
                 track: 'Platform',
+                topics: ['architecture', 'commerce'],
             }),
         ]);
         expect(plan.scalarUpdateData).toEqual({});
@@ -150,6 +156,7 @@ describe('updateQueueApproval', () => {
                     {
                         title: 'Valid Session',
                         start_time: '11:00',
+                        topics: ['architecture'],
                     },
                     {
                         title: 'Missing start',
@@ -168,12 +175,101 @@ describe('updateQueueApproval', () => {
                         title: 'Valid Session',
                         start_time: '11:00',
                         end_time: null,
+                        topics: ['architecture'],
                     }),
                 ],
             },
         ]);
         expect(plan.warnings).toEqual([
             'Skipped invalid agenda items missing title/start: Missing start',
+        ]);
+    });
+
+    it('normalizes approval agenda updates to ISO timestamps before RPC submission', () => {
+        const plan = collectFieldUpdates([
+            {
+                id: 'agenda-field',
+                field_name: 'agenda',
+                new_value: [
+                    {
+                        title: 'GMT Session',
+                        start_time: '07:15AM GMT',
+                        end_time: '08:00AM GMT',
+                        topics: ['systems', 'commerce'],
+                    },
+                ],
+            },
+        ]);
+
+        const normalizedPlan = normalizeApprovalPlanAgendaUpdates(plan, {
+            eventStartTime: '2026-03-10T15:00:00.000Z',
+            eventTimezone: 'America/New_York',
+        });
+
+        expect(normalizedPlan.agendaUpdates).toEqual([
+            expect.objectContaining({
+                title: 'GMT Session',
+                startTime: '2026-03-10T07:15:00.000Z',
+                endTime: '2026-03-10T08:00:00.000Z',
+                topics: ['systems', 'commerce'],
+                durationMinutes: 45,
+            }),
+        ]);
+        expect(normalizedPlan.sanitizedFieldUpdates).toEqual([
+            {
+                id: 'agenda-field',
+                newValue: [
+                    expect.objectContaining({
+                        title: 'GMT Session',
+                        start_time: '2026-03-10T07:15:00.000Z',
+                        end_time: '2026-03-10T08:00:00.000Z',
+                        topics: ['systems', 'commerce'],
+                        duration_minutes: 45,
+                    }),
+                ],
+            },
+        ]);
+    });
+
+    it('rejects malformed agenda edits instead of saving unsupported time strings', () => {
+        expect(() =>
+            sanitizeAgendaFieldValue(
+                [
+                    {
+                        title: 'Broken Session',
+                        start_time: 'sometime after lunch',
+                    },
+                ],
+                {
+                    eventStartTime: '2026-03-10T15:00:00.000Z',
+                    eventTimezone: 'America/New_York',
+                }
+            )
+        ).toThrow('Agenda items have invalid times');
+    });
+
+    it('sanitizes valid agenda edits into normalized JSON payloads', () => {
+        const sanitized = sanitizeAgendaFieldValue(
+            [
+                {
+                    title: 'GMT Session',
+                    start_time: '07:15AM GMT',
+                    end_time: '08:00AM GMT',
+                },
+            ],
+            {
+                eventStartTime: '2026-03-10T15:00:00.000Z',
+                eventTimezone: 'America/New_York',
+            }
+        );
+
+        expect(sanitized.sanitizedValue).toEqual([
+            expect.objectContaining({
+                title: 'GMT Session',
+                start_time: '2026-03-10T07:15:00.000Z',
+                end_time: '2026-03-10T08:00:00.000Z',
+                duration_minutes: 45,
+            }),
         ]);
     });
 });

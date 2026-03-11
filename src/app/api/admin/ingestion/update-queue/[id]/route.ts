@@ -16,6 +16,8 @@ import { isAdminUser } from '@/lib/adminAuth';
 import {
     collectFieldUpdates,
     type ApprovalPlan,
+    normalizeApprovalPlanAgendaUpdates,
+    sanitizeAgendaFieldValue,
     serializeAgendaApprovalItem,
     serializeSpeakerApprovalItem,
 } from '@/services/ingestion/utils/updateQueueApproval';
@@ -39,6 +41,12 @@ interface QueueActionResponse {
     rejectedFields?: string[];
     status?: 'approved' | 'rejected' | 'partially_approved' | 'pending';
     warnings?: string[];
+}
+
+interface EventApprovalContext {
+    start_time: string | null;
+    end_time: string | null;
+    timezone: string | null;
 }
 
 const fetchPendingFields = async (
@@ -162,14 +170,34 @@ const normalizeTimezoneValue = (value: unknown): string | null | undefined => {
     return undefined;
 };
 
+const fetchEventApprovalContext = async (
+    eventId: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serviceClient: any,
+): Promise<EventApprovalContext> => {
+    const { data: existingEvent, error } = await serviceClient
+        .from('events')
+        .select('start_time, end_time, timezone')
+        .eq('id', eventId)
+        .single();
+
+    if (error || !existingEvent) {
+        throw new Error(`Failed to load existing event times: ${error?.message || 'Event not found'}`);
+    }
+
+    return existingEvent as EventApprovalContext;
+};
+
 const normalizeScalarApprovalUpdates = async (
     eventId: string,
     scalarUpdateData: Record<string, unknown>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceClient: any,
-): Promise<{ scalarUpdateData: Record<string, unknown>; warnings: string[] }> => {
+    existingEvent?: EventApprovalContext,
+): Promise<{ scalarUpdateData: Record<string, unknown>; warnings: string[]; eventContext: EventApprovalContext }> => {
     const nextScalarUpdateData = { ...scalarUpdateData };
     const warnings: string[] = [];
+    let eventContext = existingEvent;
 
     if ('event_format' in nextScalarUpdateData) {
         const eventFormat = nextScalarUpdateData.event_format;
@@ -214,22 +242,16 @@ const normalizeScalarApprovalUpdates = async (
     }
 
     if ('start_time' in nextScalarUpdateData || 'end_time' in nextScalarUpdateData) {
-        const { data: existingEvent, error } = await serviceClient
-            .from('events')
-            .select('start_time, end_time')
-            .eq('id', eventId)
-            .single();
-
-        if (error || !existingEvent) {
-            throw new Error(`Failed to load existing event times: ${error?.message || 'Event not found'}`);
+        if (!eventContext) {
+            eventContext = await fetchEventApprovalContext(eventId, serviceClient);
         }
 
         const startCandidate = typeof nextScalarUpdateData.start_time === 'string'
             ? nextScalarUpdateData.start_time
-            : existingEvent.start_time;
+            : eventContext.start_time;
         const endCandidate = typeof nextScalarUpdateData.end_time === 'string'
             ? nextScalarUpdateData.end_time
-            : existingEvent.end_time;
+            : eventContext.end_time;
 
         if (startCandidate && endCandidate) {
             const start = new Date(startCandidate);
@@ -244,6 +266,7 @@ const normalizeScalarApprovalUpdates = async (
     return {
         scalarUpdateData: nextScalarUpdateData,
         warnings,
+        eventContext: eventContext ?? await fetchEventApprovalContext(eventId, serviceClient),
     };
 };
 
@@ -262,22 +285,44 @@ const applyApprovedFieldUpdates = async (
         throw new Error('Queue item is missing event_id');
     }
 
-    const { scalarUpdateData, warnings: scalarWarnings } = await normalizeScalarApprovalUpdates(
+    const shouldFetchEventContext =
+        plan.agendaUpdates.length > 0 ||
+        'start_time' in plan.scalarUpdateData ||
+        'end_time' in plan.scalarUpdateData ||
+        'timezone' in plan.scalarUpdateData;
+    const existingEvent = shouldFetchEventContext
+        ? await fetchEventApprovalContext(queueItem.event_id, serviceClient)
+        : undefined;
+
+    const { scalarUpdateData, warnings: scalarWarnings, eventContext } = await normalizeScalarApprovalUpdates(
         queueItem.event_id,
         plan.scalarUpdateData,
-        serviceClient
+        serviceClient,
+        existingEvent
     );
+    const normalizedPlan = plan.agendaUpdates.length > 0
+        ? normalizeApprovalPlanAgendaUpdates(plan, {
+            eventStartTime:
+                typeof scalarUpdateData.start_time === 'string'
+                    ? scalarUpdateData.start_time
+                    : eventContext.start_time,
+            eventTimezone:
+                Object.prototype.hasOwnProperty.call(scalarUpdateData, 'timezone')
+                    ? (scalarUpdateData.timezone as string | null | undefined) ?? null
+                    : eventContext.timezone,
+        })
+        : plan;
 
     const { data, error } = await serviceClient.rpc('apply_event_update_queue_approval', {
         p_queue_id: queueId,
         p_reviewed_by: editedBy,
         p_scalar_updates: scalarUpdateData,
-        p_relationship_updates: plan.relationshipUpdates,
-        p_speaker_updates: plan.speakerUpdates.map(serializeSpeakerApprovalItem),
-        p_agenda_updates: plan.agendaUpdates.map(serializeAgendaApprovalItem),
-        p_approved_field_ids: plan.fieldsToApprove.map((field) => field.id),
-        p_rejected_field_ids: plan.fieldsToReject.map((field) => field.id),
-        p_sanitized_field_updates: plan.sanitizedFieldUpdates.map((update) => ({
+        p_relationship_updates: normalizedPlan.relationshipUpdates,
+        p_speaker_updates: normalizedPlan.speakerUpdates.map(serializeSpeakerApprovalItem),
+        p_agenda_updates: normalizedPlan.agendaUpdates.map(serializeAgendaApprovalItem),
+        p_approved_field_ids: normalizedPlan.fieldsToApprove.map((field) => field.id),
+        p_rejected_field_ids: normalizedPlan.fieldsToReject.map((field) => field.id),
+        p_sanitized_field_updates: normalizedPlan.sanitizedFieldUpdates.map((update) => ({
             id: update.id,
             newValue: update.newValue,
         })),
@@ -294,7 +339,8 @@ const applyApprovedFieldUpdates = async (
             : undefined;
 
     return {
-        warnings: [...plan.warnings, ...scalarWarnings],
+        plan: normalizedPlan,
+        warnings: [...normalizedPlan.warnings, ...scalarWarnings],
         status: nextStatus as QueueActionResponse['status'] | undefined,
     };
 };
@@ -508,16 +554,39 @@ export async function POST(
                 );
             }
 
+            let nextValue = newValue;
+            if (fieldName === 'agenda') {
+                if (!queueItem.event_id) {
+                    return NextResponse.json(
+                        { error: 'Queue item is missing event_id' },
+                        { status: 400 }
+                    );
+                }
+
+                try {
+                    const eventContext = await fetchEventApprovalContext(queueItem.event_id, serviceClient);
+                    nextValue = sanitizeAgendaFieldValue(newValue, {
+                        eventStartTime: eventContext.start_time,
+                        eventTimezone: eventContext.timezone,
+                    }).sanitizedValue;
+                } catch (error) {
+                    return NextResponse.json(
+                        { error: error instanceof Error ? error.message : 'Invalid agenda field value' },
+                        { status: 400 }
+                    );
+                }
+            }
+
             const { error: updateError } = await tableClient
                 .from('event_update_queue_fields')
-                .update({ new_value: newValue })
+                .update({ new_value: nextValue })
                 .eq('id', fieldRecord.id);
 
             if (updateError) {
                 throw new Error(`Failed to update field value: ${updateError.message}`);
             }
 
-            return NextResponse.json({ success: true, fieldName, newValue });
+            return NextResponse.json({ success: true, fieldName, newValue: nextValue });
         } else if (action === 'approve-selective') {
             // Approve only specific fields
             const body = await request.json();
@@ -551,8 +620,8 @@ export async function POST(
 
             return NextResponse.json<QueueActionResponse>({
                 success: true,
-                approvedFields: approvalPlan.fieldsToApprove.map((field) => field.field_name),
-                rejectedFields: approvalPlan.fieldsToReject.map((field) => field.field_name),
+                approvedFields: applyResult.plan.fieldsToApprove.map((field) => field.field_name),
+                rejectedFields: applyResult.plan.fieldsToReject.map((field) => field.field_name),
                 status: nextStatus,
                 warnings: applyResult.warnings,
             });
@@ -632,14 +701,14 @@ export async function POST(
                 user.id
             );
             const nextStatus = applyResult.status
-                ?? (approvalPlan.fieldsToApprove.length > 0
-                    ? (approvalPlan.fieldsToReject.length > 0 ? 'partially_approved' : 'approved')
+                ?? (applyResult.plan.fieldsToApprove.length > 0
+                    ? (applyResult.plan.fieldsToReject.length > 0 ? 'partially_approved' : 'approved')
                     : 'rejected');
 
             return NextResponse.json<QueueActionResponse>({
                 success: true,
-                approvedFields: approvalPlan.fieldsToApprove.map((field) => field.field_name),
-                rejectedFields: approvalPlan.fieldsToReject.map((field) => field.field_name),
+                approvedFields: applyResult.plan.fieldsToApprove.map((field) => field.field_name),
+                rejectedFields: applyResult.plan.fieldsToReject.map((field) => field.field_name),
                 status: nextStatus,
                 warnings: applyResult.warnings,
             });

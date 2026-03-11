@@ -590,9 +590,12 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 throw new Error(errorBody.error || 'Failed to update field value');
             }
 
+            const data = await response.json().catch(() => ({ newValue: parsedValue }));
+            const savedValue = 'newValue' in data ? data.newValue : parsedValue;
+
             setFields((prev) =>
                 prev.map((field) =>
-                    field.field_name === fieldName ? { ...field, new_value: parsedValue } : field
+                    field.field_name === fieldName ? { ...field, new_value: savedValue } : field
                 )
             );
 

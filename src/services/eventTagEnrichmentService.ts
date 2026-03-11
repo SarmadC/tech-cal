@@ -74,6 +74,12 @@ export class EventTagEnrichmentService {
           const descTerms = this.extractTerms(item.description);
           descTerms.forEach(term => candidates.add(term));
         }
+        if (Array.isArray(item.topics)) {
+          item.topics.forEach((topic) => {
+            const topicTerms = this.extractTerms(topic);
+            topicTerms.forEach(term => candidates.add(term));
+          });
+        }
       });
     }
     
@@ -487,4 +493,3 @@ export class EventTagEnrichmentService {
     }
   }
 }
-

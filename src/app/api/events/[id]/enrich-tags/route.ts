@@ -59,13 +59,14 @@ export async function POST(
     // Fetch agenda items if available
     const { data: agendaItems } = await supabase
       .from('event_agenda')
-      .select('id, title, description')
+      .select('id, title, description, topics')
       .eq('event_id', eventId);
     
     const agenda = (agendaItems || []).map(item => ({
       id: item.id,
       title: item.title,
       description: item.description || undefined,
+      topics: item.topics || undefined,
       startTime: '',
       endTime: '',
       type: ''
@@ -107,4 +108,3 @@ export async function POST(
     );
   }
 }
-

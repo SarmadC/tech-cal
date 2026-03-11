@@ -90,6 +90,7 @@ describe('GeminiExtractionProvider normalization', () => {
                     endTime: '10:00',
                     location: 'Room A',
                     track: 'Platform',
+                    topics: ['Distributed Systems', '  Platform  ', 'Distributed Systems'],
                     dayNumber: '2',
                     agendaType: 'Keynote Session',
                     difficultyLevel: 'Advanced',
@@ -105,6 +106,7 @@ describe('GeminiExtractionProvider normalization', () => {
             agenda?: Array<{
                 location?: string;
                 track?: string;
+                topics?: string[];
                 dayNumber?: number;
                 agendaType?: string;
                 difficultyLevel?: string;
@@ -126,6 +128,7 @@ describe('GeminiExtractionProvider normalization', () => {
             expect.objectContaining({
                 location: 'Room A',
                 track: 'Platform',
+                topics: ['Distributed Systems', 'Platform'],
                 dayNumber: 2,
                 agendaType: 'keynote',
                 difficultyLevel: 'advanced',

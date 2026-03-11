@@ -80,4 +80,24 @@ describe('agendaTimeNormalization', () => {
             durationMinutes: 30,
         });
     });
+
+    it('uses explicit timezone suffixes on time-only agenda values', () => {
+        const normalized = normalizeAgendaTimeRangeForEvent(
+            {
+                startTime: '7:15am GMT',
+                endTime: '8:00am GMT',
+                durationMinutes: null,
+            },
+            {
+                eventStartTime: '2026-03-10T15:00:00.000Z',
+                eventTimezone: 'America/New_York',
+            }
+        );
+
+        expect(normalized).toEqual({
+            startTime: '2026-03-10T07:15:00.000Z',
+            endTime: '2026-03-10T08:00:00.000Z',
+            durationMinutes: 45,
+        });
+    });
 });

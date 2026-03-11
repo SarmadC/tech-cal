@@ -26,6 +26,7 @@ export interface AgendaItemInput {
     location?: string;
     dayNumber?: number;
     track?: string;
+    topics?: string[];
     sortOrder?: number;
     speakerIds?: string[]; // Speaker IDs to link to this agenda item
     capacity?: number | null;
@@ -120,6 +121,25 @@ const getErrorMessage = (error: unknown, fallback = 'Unknown error'): string => 
     return fallback;
 };
 
+const normalizeAgendaTopics = (value: unknown): string[] | undefined => {
+    const rawTopics =
+        Array.isArray(value)
+            ? value
+            : typeof value === 'string'
+                ? value.split(/[,\n;]/)
+                : [];
+
+    const topics = Array.from(
+        new Set(
+            rawTopics
+                .map((topic) => (typeof topic === 'string' ? topic.trim() : ''))
+                .filter(Boolean)
+        )
+    );
+
+    return topics.length > 0 ? topics : undefined;
+};
+
 export class EventEnrichmentService {
     /**
      * Create or update agenda items for an event
@@ -135,7 +155,7 @@ export class EventEnrichmentService {
             const [{ data: existingAgendaItems }, { data: eventRow, error: eventError }] = await Promise.all([
                 supabaseClient
                     .from('event_agenda')
-                    .select('id, title, start_time, end_time')
+                    .select('id, title, start_time, end_time, topics')
                     .eq('event_id', eventId),
                 supabaseClient
                     .from('events')
@@ -168,6 +188,7 @@ export class EventEnrichmentService {
                         startTime: normalizedTimes.startTime,
                         endTime: normalizedTimes.endTime,
                         durationMinutes: normalizedTimes.durationMinutes,
+                        topics: normalizeAgendaTopics(item.topics),
                     };
                 } catch (error) {
                     throw new Error(
@@ -196,6 +217,7 @@ export class EventEnrichmentService {
                     location: item.location || null,
                     day_number: dayNumber,
                     track: item.track || null,
+                    topics: item.topics && item.topics.length > 0 ? item.topics : null,
                     sort_order: currentSortOrder,
                     duration_minutes: item.durationMinutes ?? null,
                     capacity: item.capacity ?? null,
@@ -243,6 +265,7 @@ export class EventEnrichmentService {
                 title: item.title,
                 start_time: item.start_time,
                 end_time: item.end_time,
+                topics: item.topics ?? null,
             }));
 
             const newAgendaItems = normalizedItems.map((item, index) => ({
@@ -250,6 +273,7 @@ export class EventEnrichmentService {
                 title: item.title,
                 start_time: item.startTime,
                 end_time: item.endTime ?? null,
+                topics: item.topics ?? null,
             }));
 
             // Track edit (upsert to keep only latest)

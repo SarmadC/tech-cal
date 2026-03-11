@@ -1,4 +1,6 @@
 import type { AgendaItemInput, SpeakerInput } from '../EventEnrichmentService';
+import type { AgendaTimeAnchor } from './agendaTimeNormalization';
+import { normalizeAgendaTimeRangeForEvent } from './agendaTimeNormalization';
 import { extractRelationIds } from './enrichmentQueue';
 
 const RELATIONSHIP_FIELDS = ['tags', 'audiences', 'prerequisites'] as const;
@@ -23,6 +25,16 @@ export interface ApprovalPlan<TField extends QueueFieldLike = QueueFieldLike> {
     fieldsToReject: TField[];
     sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }>;
     warnings: string[];
+}
+
+export interface AgendaNormalizationIssue {
+    label: string;
+    reason: string;
+}
+
+export interface NormalizedAgendaItemsResult {
+    items: AgendaApprovalItem[];
+    issues: AgendaNormalizationIssue[];
 }
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -65,6 +77,25 @@ const toBoolean = (value: unknown): boolean | undefined => {
     return undefined;
 };
 
+const normalizeTopicList = (value: unknown): string[] | undefined => {
+    const rawValues =
+        Array.isArray(value)
+            ? value
+            : typeof value === 'string'
+                ? value.split(/[,\n;]/)
+                : [];
+
+    const topics = Array.from(
+        new Set(
+            rawValues
+                .map((topic) => (typeof topic === 'string' ? topic.trim() : ''))
+                .filter(Boolean)
+        )
+    );
+
+    return topics.length > 0 ? topics : undefined;
+};
+
 const normalizeSpeakerNames = (value: unknown): string[] | undefined => {
     if (!Array.isArray(value)) {
         return undefined;
@@ -88,6 +119,7 @@ export const serializeAgendaApprovalItem = (item: AgendaApprovalItem) => ({
     description: item.description ?? null,
     location: item.location ?? null,
     track: item.track ?? null,
+    topics: item.topics ?? [],
     day_number: item.dayNumber ?? null,
     agenda_type: item.type ?? null,
     difficulty_level: item.difficultyLevel ?? null,
@@ -109,6 +141,28 @@ export const serializeSpeakerApprovalItem = (speaker: SpeakerInput) => ({
     twitterUrl: speaker.twitterUrl ?? null,
     websiteUrl: speaker.websiteUrl ?? null,
 });
+
+const getAgendaItemLabel = (item: Pick<AgendaApprovalItem, 'title'>, index: number): string =>
+    item.title?.trim() || `item ${index + 1}`;
+
+const readErrorMessage = (error: unknown): string =>
+    error instanceof Error && error.message ? error.message : 'Unknown agenda normalization error';
+
+const formatIssueLabels = (issues: AgendaNormalizationIssue[]): string =>
+    issues.slice(0, 5).map((issue) => issue.label).join(', ');
+
+const upsertSanitizedFieldUpdate = (
+    sanitizedFieldUpdates: Array<{ id: string; newValue: unknown }>,
+    nextUpdate: { id: string; newValue: unknown }
+) => {
+    const nextIndex = sanitizedFieldUpdates.findIndex((update) => update.id === nextUpdate.id);
+    if (nextIndex >= 0) {
+        sanitizedFieldUpdates[nextIndex] = nextUpdate;
+        return;
+    }
+
+    sanitizedFieldUpdates.push(nextUpdate);
+};
 
 export const coerceAgendaItems = (
     value: unknown
@@ -156,6 +210,7 @@ export const coerceAgendaItems = (
             location: toTrimmedString(typed.location),
             dayNumber: toPositiveInteger(typed.day_number) ?? toPositiveInteger(typed.dayNumber),
             track: toTrimmedString(typed.track),
+            topics: normalizeTopicList(typed.topics ?? typed.topic),
             speakerIds,
             speakerNames,
             capacity: toPositiveInteger(typed.capacity) ?? null,
@@ -175,6 +230,124 @@ export const coerceAgendaItems = (
     return {
         items,
         invalidItems,
+    };
+};
+
+export const normalizeAgendaApprovalItems = (
+    items: AgendaApprovalItem[],
+    anchor: AgendaTimeAnchor
+): NormalizedAgendaItemsResult => {
+    const normalizedItems: AgendaApprovalItem[] = [];
+    const issues: AgendaNormalizationIssue[] = [];
+
+    items.forEach((item, index) => {
+        try {
+            const normalizedTimes = normalizeAgendaTimeRangeForEvent(
+                {
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                    dayNumber: item.dayNumber,
+                    durationMinutes: item.durationMinutes ?? null,
+                },
+                anchor
+            );
+
+            normalizedItems.push({
+                ...item,
+                startTime: normalizedTimes.startTime,
+                endTime: normalizedTimes.endTime,
+                durationMinutes: normalizedTimes.durationMinutes,
+            });
+        } catch (error) {
+            issues.push({
+                label: getAgendaItemLabel(item, index),
+                reason: readErrorMessage(error),
+            });
+        }
+    });
+
+    return {
+        items: normalizedItems,
+        issues,
+    };
+};
+
+export const sanitizeAgendaFieldValue = (
+    value: unknown,
+    anchor: AgendaTimeAnchor
+): { items: AgendaApprovalItem[]; sanitizedValue: ReturnType<typeof serializeAgendaApprovalItem>[] } => {
+    if (!Array.isArray(value)) {
+        throw new Error('Agenda must be a JSON array of agenda items');
+    }
+
+    const { items, invalidItems } = coerceAgendaItems(value);
+    if (invalidItems.length > 0) {
+        throw new Error(`Agenda items missing title/start: ${invalidItems.slice(0, 5).join(', ')}`);
+    }
+
+    const normalizedItems = normalizeAgendaApprovalItems(items, anchor);
+    if (normalizedItems.issues.length > 0) {
+        const issueSummary = normalizedItems.issues
+            .slice(0, 3)
+            .map((issue) => `${issue.label} (${issue.reason})`)
+            .join('; ');
+        throw new Error(`Agenda items have invalid times: ${issueSummary}`);
+    }
+
+    return {
+        items: normalizedItems.items,
+        sanitizedValue: normalizedItems.items.map(serializeAgendaApprovalItem),
+    };
+};
+
+export const normalizeApprovalPlanAgendaUpdates = <TField extends QueueFieldLike>(
+    plan: ApprovalPlan<TField>,
+    anchor: AgendaTimeAnchor
+): ApprovalPlan<TField> => {
+    const agendaUpdates: AgendaApprovalItem[] = [];
+    const fieldsToApprove: TField[] = [];
+    const fieldsToReject = [...plan.fieldsToReject];
+    const sanitizedFieldUpdates = [...plan.sanitizedFieldUpdates];
+    const warnings = [...plan.warnings];
+
+    for (const field of plan.fieldsToApprove) {
+        if (field.field_name !== 'agenda') {
+            fieldsToApprove.push(field);
+            continue;
+        }
+
+        const { items } = coerceAgendaItems(field.new_value);
+        const normalized = normalizeAgendaApprovalItems(items, anchor);
+
+        if (normalized.items.length === 0) {
+            fieldsToReject.push(field);
+            if (normalized.issues.length > 0) {
+                warnings.push(
+                    `Rejected agenda field because every agenda item had invalid times: ${formatIssueLabels(normalized.issues)}`
+                );
+            }
+            continue;
+        }
+
+        fieldsToApprove.push(field);
+        agendaUpdates.push(...normalized.items);
+        upsertSanitizedFieldUpdate(sanitizedFieldUpdates, {
+            id: field.id,
+            newValue: normalized.items.map(serializeAgendaApprovalItem),
+        });
+
+        if (normalized.issues.length > 0) {
+            warnings.push(`Skipped agenda items with invalid times: ${formatIssueLabels(normalized.issues)}`);
+        }
+    }
+
+    return {
+        ...plan,
+        agendaUpdates,
+        fieldsToApprove,
+        fieldsToReject,
+        sanitizedFieldUpdates,
+        warnings,
     };
 };
 

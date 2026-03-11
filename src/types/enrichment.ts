@@ -32,6 +32,7 @@ export const ExtractedAgendaItemSchema = z.object({
     description: z.string().max(500).optional(),
     location: z.string().max(300).optional(),
     track: z.string().max(200).optional(),
+    topics: z.array(z.string().min(1).max(64)).max(20).optional(),
     dayNumber: z.number().int().min(1).max(31).optional(),
     agendaType: z.string().max(64).optional(),
     difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),

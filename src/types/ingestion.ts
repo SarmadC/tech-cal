@@ -99,6 +99,7 @@ export interface EventAgendaSchema {
     speakers?: string[];
     location?: string;
     track?: string;
+    topics?: string[];
     dayNumber?: number;
     agendaType?: string;
     difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
@@ -189,4 +190,3 @@ export interface ScrapedEventData {
     };
     dailySchedule?: EventDailyScheduleEntry[];
 }
-

@@ -3,11 +3,24 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
+import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import { cn } from '@/lib/utils';
 import type { AgendaSectionProps } from '../types';
 import { toDateTimeLocalValue, parseDateTimeLocalValue } from '../types';
 import { format } from 'date-fns';
-import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+
+const parseTopicsInput = (value: string): string[] | undefined => {
+    const topics = Array.from(
+        new Set(
+            value
+                .split(/[,\n;]/)
+                .map((topic) => topic.trim())
+                .filter(Boolean)
+        )
+    );
+
+    return topics.length > 0 ? topics : undefined;
+};
 
 export function AgendaSection({
     agendaItems,
@@ -223,6 +236,16 @@ export function AgendaSection({
                                                     placeholder="Location within venue (optional)"
                                                     value={item.location || ''}
                                                     onChange={(e) => onUpdate(index, { location: e.target.value })}
+                                                    className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Topics</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Comma-separated topics"
+                                                    value={(item.topics ?? []).join(', ')}
+                                                    onChange={(e) => onUpdate(index, { topics: parseTopicsInput(e.target.value) })}
                                                     className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                                 />
                                             </div>

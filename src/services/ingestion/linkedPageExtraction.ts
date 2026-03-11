@@ -33,7 +33,8 @@ const SPEAKER_KEYWORDS = /(speakers?|presenters?|panelists?|experts?|instructors
 const SESSION_DETAIL_KEYWORDS = /(session details?|view session|session page|speaker profile|profile)/i;
 const NOISE_LINK_KEYWORDS = /(register|registration|tickets?|pricing|sponsor|exhibitor|venue|hotel|travel|faq|contact|privacy|terms)/i;
 const AGENDA_PATH_HINTS = /(\/agenda(?:\/|$)|\/schedule(?:\/|$)|\/program(?:\/|$)|\/talks?(?:\/|$))/i;
-const SESSION_PATH_HINTS = /(\/sessions?\/[^/?#]+|\/agenda\/[^/]+\/|\/program\/[^/]+\/|\/talks?\/[^/?#]+|\/tracks?\/[^/]+\/[^/]+|\/speaker\/[^/]+)/i;
+const TRACK_HUB_PATH_HINTS = /\/track\/[^/]+\/[^/?#]+$/i;
+const SESSION_PATH_HINTS = /(\/sessions?\/[^/?#]+|\/agenda\/[^/]+\/|\/program\/[^/]+\/|\/talks?\/[^/?#]+|\/tracks?\/[^/]+\/[^/]+\/[^/]+|\/presentation\/[^/]+\/[^/?#]+|\/speaker\/[^/]+)/i;
 const REGISTRATION_CTA_KEYWORDS = /\b(register|registration|tickets?|buy tickets?|get tickets?|reserve (?:your )?spot|book now|sign up)\b/i;
 const DAY_SWITCH_KEYWORDS = /\b(pre-event|day\s+\d+|day one|day two|day three|day four|workshop day)\b/i;
 const LOAD_MORE_KEYWORDS = /\b(load more|show more|view more|see more|more sessions|more talks|show all)\b/i;
@@ -507,22 +508,56 @@ const mergeSpeaker = (
 const mergeAgendaItem = (
     preferred: Partial<ExtractedAgendaItem>,
     fallback: Partial<ExtractedAgendaItem>,
-): ExtractedAgendaItem => ({
-    title: preferred.title ?? fallback.title ?? '',
-    startTime: preferred.startTime ?? fallback.startTime,
-    endTime: preferred.endTime ?? fallback.endTime,
-    description: preferred.description ?? fallback.description,
-    location: preferred.location ?? fallback.location,
-    track: preferred.track ?? fallback.track,
-    dayNumber: preferred.dayNumber ?? fallback.dayNumber,
-    agendaType: preferred.agendaType ?? fallback.agendaType,
-    difficultyLevel: preferred.difficultyLevel ?? fallback.difficultyLevel,
-    capacity: preferred.capacity ?? fallback.capacity,
-    prerequisites: preferred.prerequisites ?? fallback.prerequisites,
-    isRequired: preferred.isRequired ?? fallback.isRequired,
-    durationMinutes: preferred.durationMinutes ?? fallback.durationMinutes,
-    speakers: Array.from(new Set([...(preferred.speakers ?? []), ...(fallback.speakers ?? [])])).filter(Boolean),
-});
+): ExtractedAgendaItem => {
+    const topics = Array.from(new Set([...(preferred.topics ?? []), ...(fallback.topics ?? [])])).filter(Boolean);
+
+    return {
+        title: preferred.title ?? fallback.title ?? '',
+        startTime: preferred.startTime ?? fallback.startTime,
+        endTime: preferred.endTime ?? fallback.endTime,
+        description: preferred.description ?? fallback.description,
+        location: preferred.location ?? fallback.location,
+        track: preferred.track ?? fallback.track,
+        topics: topics.length > 0 ? topics : undefined,
+        dayNumber: preferred.dayNumber ?? fallback.dayNumber,
+        agendaType: preferred.agendaType ?? fallback.agendaType,
+        difficultyLevel: preferred.difficultyLevel ?? fallback.difficultyLevel,
+        capacity: preferred.capacity ?? fallback.capacity,
+        prerequisites: preferred.prerequisites ?? fallback.prerequisites,
+        isRequired: preferred.isRequired ?? fallback.isRequired,
+        durationMinutes: preferred.durationMinutes ?? fallback.durationMinutes,
+        speakers: Array.from(new Set([...(preferred.speakers ?? []), ...(fallback.speakers ?? [])])).filter(Boolean),
+    };
+};
+
+const pickRicherText = (
+    current?: string,
+    candidate?: string,
+): string | undefined => {
+    const normalizedCurrent = normalizeText(current);
+    const normalizedCandidate = normalizeText(candidate);
+
+    if (!normalizedCurrent) {
+        return normalizedCandidate;
+    }
+
+    if (!normalizedCandidate) {
+        return normalizedCurrent;
+    }
+
+    const currentThin = isDescriptionThin(normalizedCurrent);
+    const candidateThin = isDescriptionThin(normalizedCandidate);
+    if (currentThin && candidateThin) {
+        return normalizedCandidate;
+    }
+    if (currentThin !== candidateThin) {
+        return currentThin ? normalizedCandidate : normalizedCurrent;
+    }
+
+    return normalizedCandidate.length > normalizedCurrent.length * 1.1
+        ? normalizedCandidate
+        : normalizedCurrent;
+};
 
 const mergePricing = (
     preferred: ExtractedEventData['pricing'],
@@ -745,7 +780,9 @@ const classifyCandidateLink = (
     }
 
     let kind: Exclude<LinkedPageKind, 'primary'> | null = null;
-    if (SESSION_PATH_HINTS.test(path) || SESSION_DETAIL_KEYWORDS.test(combined)) {
+    if (TRACK_HUB_PATH_HINTS.test(path)) {
+        kind = 'agenda';
+    } else if (SESSION_PATH_HINTS.test(path) || SESSION_DETAIL_KEYWORDS.test(combined)) {
         kind = 'session';
     } else if (SPEAKER_KEYWORDS.test(combined)) {
         kind = 'speakers';
@@ -871,6 +908,10 @@ const mergeScheduleItems = (
             startTime,
             endTime,
             speakers: Array.from(new Set((item.speakers ?? []).map(normalizeText).filter(Boolean))),
+            topics: (() => {
+                const topics = Array.from(new Set((item.topics ?? []).map(normalizeText).filter(Boolean)));
+                return topics.length > 0 ? topics : undefined;
+            })(),
             title: normalizeText(item.title),
             description: isNonEmptyString(item.description) ? item.description.trim() : undefined,
             location: isNonEmptyString(item.location) ? item.location.trim() : undefined,
@@ -909,9 +950,13 @@ const mergeScheduleItems = (
             title: current.title || normalizedItem.title,
             startTime: current.startTime || normalizedItem.startTime,
             endTime: current.endTime || normalizedItem.endTime,
-            description: current.description || normalizedItem.description,
+            description: pickRicherText(current.description, normalizedItem.description),
             location: current.location || normalizedItem.location,
-            track: current.track || normalizedItem.track,
+            track: pickRicherText(current.track, normalizedItem.track),
+            topics: (() => {
+                const topics = Array.from(new Set([...(current.topics ?? []), ...(normalizedItem.topics ?? [])]));
+                return topics.length > 0 ? topics : undefined;
+            })(),
             dayNumber: current.dayNumber || normalizedItem.dayNumber,
             speakers: Array.from(new Set([...(current.speakers ?? []), ...(normalizedItem.speakers ?? [])])),
         };
@@ -1198,6 +1243,10 @@ const toExtractedAgendaItem = (item: ExtractedScheduleItem): ExtractedAgendaItem
         description: isNonEmptyString(item.description) ? item.description.trim() : undefined,
         location: isNonEmptyString(item.location) ? item.location.trim() : undefined,
         track: isNonEmptyString(item.track) ? item.track.trim() : undefined,
+        topics: (() => {
+            const topics = Array.from(new Set((item.topics ?? []).map(normalizeText).filter(Boolean)));
+            return topics.length > 0 ? topics : undefined;
+        })(),
         dayNumber: item.dayNumber,
         agendaType: inferAgendaType(item.title, item.description, item.track),
         durationMinutes: toAgendaDuration(startTime, endTime),

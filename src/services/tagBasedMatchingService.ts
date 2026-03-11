@@ -215,7 +215,7 @@ export class TagBasedMatchingService {
     
     // Combine all text content
     const agendaText = (event.agenda || [])
-      .map(item => `${item.title} ${item.description || ''}`)
+      .map(item => `${item.title} ${item.description || ''} ${(item.topics || []).join(' ')}`)
       .join(' ');
     const fullText = `${event.title} ${event.description || ''} ${agendaText}`;
     
@@ -434,8 +434,8 @@ export class TagBasedMatchingService {
             tags:event_tag_relations (
               event_tags (event_tag, category)
             ),
-            event_agenda (
-              id, title, description, start_time, end_time, agenda_type
+          event_agenda (
+              id, title, description, start_time, end_time, agenda_type, topics
             )
           `)
           .eq('status', 'confirmed')
@@ -550,13 +550,14 @@ export class TagBasedMatchingService {
       const agendaData = (eventRecord as any).event_agenda;
       if (Array.isArray(agendaData)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        appEvent.agenda = agendaData.map((item: any) => ({
+          appEvent.agenda = agendaData.map((item: any) => ({
           id: item.id,
           title: item.title,
           description: item.description,
           startTime: item.start_time,
           endTime: item.end_time,
-          type: item.agenda_type
+          type: item.agenda_type,
+          topics: Array.isArray(item.topics) ? item.topics : undefined,
         }));
       }
 
@@ -673,7 +674,7 @@ export class TagBasedMatchingService {
           event_tags (event_tag, category)
         ),
         event_agenda (
-          id, title, description, start_time, end_time, agenda_type
+          id, title, description, start_time, end_time, agenda_type, topics
         )
       `)
       .eq('status', 'confirmed')
@@ -736,7 +737,8 @@ export class TagBasedMatchingService {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           appEvent.agenda = agendaData.map((item: any) => ({
             id: item.id, title: item.title, description: item.description,
-            startTime: item.start_time, endTime: item.end_time, type: item.agenda_type
+            startTime: item.start_time, endTime: item.end_time, type: item.agenda_type,
+            topics: Array.isArray(item.topics) ? item.topics : undefined
           }));
         }
   
@@ -939,7 +941,7 @@ export class TagBasedMatchingService {
           event_tags (event_tag, category)
         ),
         event_agenda (
-          id, title, description, start_time, end_time, agenda_type
+          id, title, description, start_time, end_time, agenda_type, topics
         )
       `)
       .eq('status', 'confirmed')
@@ -1074,7 +1076,7 @@ export class TagBasedMatchingService {
           event_tags (event_tag, category)
         ),
         event_agenda (
-          id, title, description, start_time, end_time, agenda_type
+          id, title, description, start_time, end_time, agenda_type, topics
         )
       `)
       .eq('status', 'confirmed')

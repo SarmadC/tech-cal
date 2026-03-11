@@ -56,6 +56,22 @@ export const TimelineDetailPanel: FC<TimelineDetailPanelProps> = ({ event, event
                     </div>
                 )}
 
+                {event.topics && event.topics.length > 0 && (
+                    <div>
+                        <h3 className="text-sm font-semibold mb-3 text-foreground-secondary">Topics</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {event.topics.map((topic) => (
+                                <span
+                                    key={topic}
+                                    className="rounded-full border border-border-subtle bg-background-tertiary/70 px-3 py-1 text-xs font-medium text-foreground-secondary"
+                                >
+                                    {topic}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Speakers */}
                 {event.speakers && event.speakers.length > 0 && (
                     <div className="pt-6 border-t border-border-subtle">

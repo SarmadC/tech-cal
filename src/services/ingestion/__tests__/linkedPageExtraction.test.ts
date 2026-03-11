@@ -198,6 +198,120 @@ describe('linkedPageExtraction', () => {
         );
     });
 
+    it('follows qcon-style presentation links from track hubs and merges detail metadata', async () => {
+        const pages: Record<string, string> = {
+            'https://conf.test/event': `
+                <html>
+                    <body>
+                        <a href="/track/mar2026/architectures-youve-always-wondered-about">Architectures You've Always Wondered About</a>
+                    </body>
+                </html>
+            `,
+            'https://conf.test/track/mar2026/architectures-youve-always-wondered-about': `
+                <html>
+                    <body>
+                        <div class="session-type">
+                            <span class="rounded-xl">Session</span>
+                            <span class="rounded-xl">architecture</span>
+                            <h3>From DVDs to Global Streaming</h3>
+                            <p>Monday Mar 16 / 10:35AM GMT</p>
+                            <p class="session-description">Short summary from the track page.</p>
+                            <a href="/speakers/kasia">Kasia Trapszo</a>
+                            <a href="/presentation/mar2026/dvds-global-streaming" class="link-overlay">From DVDs to Global Streaming</a>
+                        </div>
+                    </body>
+                </html>
+            `,
+            'https://conf.test/presentation/mar2026/dvds-global-streaming': `
+                <html>
+                    <body>
+                        <h1>From DVDs to Global Streaming</h1>
+                        <h3>Abstract</h3>
+                        <div>
+                            Netflix commerce evolution in depth.
+                        </div>
+                        <h3>Speaker</h3>
+                        <div>
+                            <a href="/speakers/kasia">
+                                <img src="/images/kasia.jpg" alt="Kasia Trapszo" />
+                                <h4>Kasia Trapszo</h4>
+                                <p>Principal Engineer @Netflix</p>
+                            </a>
+                        </div>
+                        <div class="sidebar">
+                            <h4>Date</h4>
+                            <p>Monday Mar 16 / 10:35AM GMT ( 50 minutes )</p>
+                            <h4>Location</h4>
+                            <p>Fleming (3rd Fl.)</p>
+                            <h4>Track</h4>
+                            <p><a href="/track/mar2026/architectures-youve-always-wondered-about">Architectures You've Always Wondered About</a></p>
+                            <h4>Topics</h4>
+                            <a class="rounded-xl" href="/topic/architecture">architecture</a>
+                            <span class="rounded-xl">commerce</span>
+                            <a class="rounded-xl" href="/topic/system-design">System Design</a>
+                        </div>
+                    </body>
+                </html>
+            `,
+            'https://conf.test/speakers/kasia': `
+                <html>
+                    <body>
+                        <div class="speaker-card">
+                            <h3 class="speaker-name">Kasia Trapszo</h3>
+                            <div class="speaker-title">Principal Engineer</div>
+                            <div class="speaker-company">Netflix</div>
+                        </div>
+                    </body>
+                </html>
+            `,
+        };
+
+        const documents = await collectLinkedPageDocuments({
+            sourceUrl: 'https://conf.test/event',
+            html: pages['https://conf.test/event'],
+            finalUrl: 'https://conf.test/event',
+            loadPage: async (url) => {
+                if (!pages[url]) {
+                    throw new Error(`Unexpected URL: ${url}`);
+                }
+
+                return {
+                    html: pages[url],
+                    finalUrl: url,
+                };
+            },
+        });
+
+        expect(documents.map((document) => ({ kind: document.kind, url: document.url }))).toEqual(
+            expect.arrayContaining([
+                {
+                    kind: 'agenda',
+                    url: 'https://conf.test/track/mar2026/architectures-youve-always-wondered-about',
+                },
+                {
+                    kind: 'session',
+                    url: 'https://conf.test/presentation/mar2026/dvds-global-streaming',
+                },
+            ])
+        );
+
+        const structured = buildStructuredExtractedEventData(documents);
+
+        expect(structured.agenda).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    title: 'From DVDs to Global Streaming',
+                    startTime: '10:35',
+                    location: 'Fleming (3rd Fl.)',
+                    track: 'Architectures You\'ve Always Wondered About',
+                    topics: ['architecture', 'commerce', 'System Design'],
+                    speakers: ['Kasia Trapszo'],
+                }),
+            ])
+        );
+        expect(structured.agenda?.[0]?.description).toBe('Netflix commerce evolution in depth.');
+    });
+
     it('discovers interaction candidates and day signals from agenda controls', () => {
         const document = buildLinkedPageDocumentFromHtml(
             `

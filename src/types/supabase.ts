@@ -935,6 +935,7 @@ export type Database = {
           sort_order: number | null
           start_time: string
           title: string
+          topics: string[] | null
           track: string | null
           updated_at: string | null
         }
@@ -956,6 +957,7 @@ export type Database = {
           sort_order?: number | null
           start_time: string
           title: string
+          topics?: string[] | null
           track?: string | null
           updated_at?: string | null
         }
@@ -977,6 +979,7 @@ export type Database = {
           sort_order?: number | null
           start_time?: string
           title?: string
+          topics?: string[] | null
           track?: string | null
           updated_at?: string | null
         }

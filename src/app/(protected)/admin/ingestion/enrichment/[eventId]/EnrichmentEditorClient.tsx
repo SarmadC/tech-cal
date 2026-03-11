@@ -179,6 +179,7 @@ export default function EnrichmentEditorClient({
                 location: item.location || '',
                 dayNumber: item.day_number,
                 track: item.track || '',
+                topics: item.topics || undefined,
                 sortOrder: item.sort_order ?? 0,
                 capacity: item.capacity ?? null,
                 difficultyLevel: item.difficulty_level || null,
@@ -209,6 +210,7 @@ export default function EnrichmentEditorClient({
             location: '',
             dayNumber: 1,
             track: '',
+            topics: undefined,
             sortOrder: agendaItems.length,
         }]);
     }, [agendaItems]);

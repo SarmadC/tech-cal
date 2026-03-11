@@ -49,7 +49,7 @@ interface FilterableQuery<T> {
     or(filters: string): T;
 }
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 100;
 const MAX_PAGE_SIZE = 100;
 const NO_STORE_HEADERS = {
     'Cache-Control': 'no-store, max-age=0',
@@ -192,6 +192,16 @@ export async function GET(request: NextRequest) {
         const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE);
         const rangeStart = (page - 1) * pageSize;
         const rangeEnd = rangeStart + pageSize - 1;
+        
+        let sortColumn = request.nextUrl.searchParams.get('sort') || 'created_at';
+        const sortDir = request.nextUrl.searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
+        
+        // whitelist sortable columns
+        const allowedSortCols = ['created_at', 'updated_at', 'title', 'start_time', 'enrichment_status', 'source_url'];
+        if (!allowedSortCols.includes(sortColumn)) {
+            sortColumn = 'created_at';
+        }
+
         const now = new Date();
         const nowIso = now.toISOString();
 
@@ -202,7 +212,7 @@ export async function GET(request: NextRequest) {
                     'id, title, start_time, source_url, ingestion_source_id, enrichment_status, enrichment_metadata, updated_at',
                     { count: 'exact' }
                 )
-                .order('created_at', { ascending: false })
+                .order(sortColumn, { ascending: sortDir === 'asc' })
                 .range(rangeStart, rangeEnd),
             status,
             search

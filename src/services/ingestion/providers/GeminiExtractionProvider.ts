@@ -27,6 +27,8 @@ const MAX_AGENDA_DESCRIPTION_LENGTH = 500;
 const MAX_AGENDA_TRACK_LENGTH = 200;
 const MAX_AGENDA_LOCATION_LENGTH = 300;
 const MAX_AGENDA_PREREQUISITES_LENGTH = 500;
+const MAX_AGENDA_TOPIC_LENGTH = 64;
+const MAX_AGENDA_TOPICS = 20;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_LOCATION_LENGTH = 500;
 const PAID_PRICING_KEYWORDS = ['paid', 'ticket', 'tickets', 'fixed', 'registration', 'fee', 'cost', 'price'];
@@ -77,6 +79,11 @@ const RESPONSE_SCHEMA = {
                     description: { type: SchemaType.STRING, nullable: true },
                     location: { type: SchemaType.STRING, nullable: true },
                     track: { type: SchemaType.STRING, nullable: true },
+                    topics: {
+                        type: SchemaType.ARRAY,
+                        nullable: true,
+                        items: { type: SchemaType.STRING },
+                    },
                     dayNumber: { type: SchemaType.NUMBER, nullable: true },
                     agendaType: { type: SchemaType.STRING, nullable: true },
                     difficultyLevel: { type: SchemaType.STRING, nullable: true },
@@ -114,7 +121,7 @@ Extract structured event information from the provided webpage content.
 Return ONLY valid JSON matching the schema. Do not include explanations or prose.
 If a field cannot be determined confidently, omit it rather than guessing.
 Focus on speakers (include LinkedIn/Twitter/website URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
-Extract the richest agenda detail available: track, day number, room/stage, session type, difficulty, prerequisites, required/optional status, duration, and speaker names per session.
+Extract the richest agenda detail available: track, topics, day number, room/stage, session type, difficulty, prerequisites, required/optional status, duration, and speaker names per session.
 If linked agenda, speaker, or session pages are included, prefer those over generic marketing copy.
 For description, return a concise 2-4 sentence summary of what the event is about. Do not dump repeated headings, feature grids, CTAs, sponsor copy, or organizer notes.
 When choosing tags, only use items from the provided Allowed Tags list. If none apply, return an empty array.
@@ -196,6 +203,25 @@ const normalizeRequiredText = (value: unknown): string | undefined => {
 
     const normalized = value.trim();
     return normalized || undefined;
+};
+
+const normalizeStringList = (value: unknown, maxLength: number, maxItems: number): string[] | undefined => {
+    const rawValues =
+        Array.isArray(value)
+            ? value
+            : typeof value === 'string'
+                ? value.split(/[,\n;]/)
+                : [];
+
+    const normalized = Array.from(
+        new Set(
+            rawValues
+                .map((item) => truncateText(item, maxLength))
+                .filter((item): item is string => Boolean(item))
+        )
+    ).slice(0, maxItems);
+
+    return normalized.length > 0 ? normalized : undefined;
 };
 
 const normalizeAbsoluteUrl = (value: unknown): string | undefined => {
@@ -366,6 +392,7 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
             const description = truncateText(nextAgendaItem.description, MAX_AGENDA_DESCRIPTION_LENGTH);
             const location = truncateText(nextAgendaItem.location, MAX_AGENDA_LOCATION_LENGTH);
             const track = truncateText(nextAgendaItem.track, MAX_AGENDA_TRACK_LENGTH);
+            const topics = normalizeStringList(nextAgendaItem.topics, MAX_AGENDA_TOPIC_LENGTH, MAX_AGENDA_TOPICS);
             const prerequisites = truncateText(nextAgendaItem.prerequisites, MAX_AGENDA_PREREQUISITES_LENGTH);
             const capacity = normalizePositiveInteger(nextAgendaItem.capacity);
             const dayNumber = normalizePositiveInteger(nextAgendaItem.dayNumber);
@@ -396,6 +423,12 @@ const normalizeAgenda = (value: unknown): Record<string, unknown>[] | undefined 
                 nextAgendaItem.track = track;
             } else {
                 delete nextAgendaItem.track;
+            }
+
+            if (topics) {
+                nextAgendaItem.topics = topics;
+            } else {
+                delete nextAgendaItem.topics;
             }
 
             if (prerequisites) {

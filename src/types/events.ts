@@ -58,6 +58,7 @@ export interface AgendaItem {
   duration?: number;
   durationMinutes?: number;
   track?: string;
+  topics?: string[];
   sortOrder?: number;
   speaker?: Speaker;
   speakers?: Speaker[];
@@ -256,6 +257,7 @@ export interface DatabaseAgendaItem {
     agenda_type: string;
     duration_minutes: number;
     track: string;
+    topics: string[] | null;
     difficulty_level: string | null;
     prerequisites: string | null;
     capacity: number | null;

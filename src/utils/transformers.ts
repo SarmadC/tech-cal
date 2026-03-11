@@ -515,6 +515,9 @@ export const transformAgendaItemsToApp = (dbAgendaItems: unknown[]): AgendaItem[
             dayNumber: typeof dbItem.day_number === 'number' ? dbItem.day_number : undefined,
             durationMinutes: typeof dbItem.duration_minutes === 'number' ? dbItem.duration_minutes : undefined,
             track: dbItem.track ? String(dbItem.track) : undefined,
+            topics: Array.isArray(dbItem.topics)
+                ? dbItem.topics.filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+                : undefined,
             difficultyLevel: dbItem.difficulty_level ? String(dbItem.difficulty_level) : undefined,
             prerequisites: dbItem.prerequisites ? String(dbItem.prerequisites) : undefined,
             capacity: typeof dbItem.capacity === 'number' ? dbItem.capacity : undefined,

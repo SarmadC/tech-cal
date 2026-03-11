@@ -39,6 +39,7 @@ interface DbAgendaItem {
     location: string | null;
     agenda_type: string | null;
     track: string | null;
+    topics: string[] | null;
 }
 
 // Explicit type for public event data
@@ -123,7 +124,7 @@ async function getPublicReadClient() {
 import { extractIdFromSlug } from '@/utils/slugUtils';
 
 // Fetch event by slug with fallback to UUID lookup for legacy links or composite slugs
-async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shouldRedirect: boolean } | null> {
+async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shouldRedirect: boolean; otherEventsInSeries: SeriesEvent[] } | null> {
     const supabase = await getPublicReadClient();
 
     // 1. Try exact slug match first (fastest, most common)

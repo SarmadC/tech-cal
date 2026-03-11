@@ -89,7 +89,7 @@ export default async function EnrichmentEditorPage({
                 prerequisites(id, name, description)
             ),
             speaker_lineup,
-            event_agenda(id, title, start_time, end_time, agenda_type, description, location, day_number, track, sort_order, capacity, difficulty_level, prerequisites, is_required)
+            event_agenda(id, title, start_time, end_time, agenda_type, description, location, day_number, track, topics, sort_order, capacity, difficulty_level, prerequisites, is_required)
         `)
         .eq('id', eventId)
         .single();
@@ -216,4 +216,3 @@ export default async function EnrichmentEditorPage({
         </div>
     );
 }
-

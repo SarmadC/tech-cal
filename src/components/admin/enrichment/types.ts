@@ -50,6 +50,7 @@ export interface AgendaItemInput {
     location?: string;
     dayNumber?: number;
     track?: string;
+    topics?: string[];
     sortOrder?: number;
     speakerIds?: string[];
     capacity?: number | null;

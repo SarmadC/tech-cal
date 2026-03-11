@@ -1061,6 +1061,7 @@ export class EventService {
                         agenda_type,
                         duration_minutes,
                         track,
+                        topics,
                         sort_order,
                         agenda_speakers!left (
                             speakers!inner (
@@ -1105,6 +1106,7 @@ export class EventService {
                     agenda_type: string;
                     duration_minutes?: number;
                     track?: string;
+                    topics?: string[] | null;
                     sort_order?: number;
                     agenda_speakers?: Array<{
                         speakers?: {
@@ -1160,6 +1162,9 @@ export class EventService {
                         type: (a.agenda_type as AgendaItem['type']) ?? 'other',
                         durationMinutes: a.duration_minutes as number | undefined,
                         track: a.track as string | undefined,
+                        topics: Array.isArray(a.topics)
+                            ? a.topics.filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+                            : undefined,
                         speakers,
                         speaker: speakers[0]
                     } as AgendaItem;
@@ -1186,6 +1191,9 @@ export class EventService {
                         type: (item.type as AgendaItem['type']) ?? (item.agenda_type as AgendaItem['type']) ?? 'other',
                         durationMinutes: (item.durationMinutes as number) ?? (item.duration_minutes as number) ?? undefined,
                         track: (item.track as string) || undefined,
+                        topics: Array.isArray(item.topics)
+                            ? item.topics.filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+                            : undefined,
                         };
                     });
                 } catch (error) {
@@ -1251,6 +1259,7 @@ export class EventService {
                         agenda_type,
                         duration_minutes,
                         track,
+                        topics,
                         sort_order,
                         agenda_speakers!left (
                             sort_order,
@@ -1300,6 +1309,7 @@ export class EventService {
                         agenda_type: string;
                         duration_minutes?: number;
                         track?: string;
+                        topics?: string[] | null;
                         sort_order?: number;
                         event_agenda_speakers?: Array<{
                             speakers?: {
@@ -1355,6 +1365,9 @@ export class EventService {
                             type: (a.agenda_type as AgendaItem['type']) ?? 'other',
                             durationMinutes: a.duration_minutes as number | undefined,
                             track: a.track as string | undefined,
+                            topics: Array.isArray(a.topics)
+                                ? a.topics.filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+                                : undefined,
                             speakers,
                             speaker: speakers[0]
                         } as AgendaItem;
@@ -1380,6 +1393,9 @@ export class EventService {
                             type: (item.type as AgendaItem['type']) ?? (item.agenda_type as AgendaItem['type']) ?? 'other',
                             durationMinutes: (item.durationMinutes as number) ?? (item.duration_minutes as number) ?? undefined,
                             track: (item.track as string) || undefined,
+                            topics: Array.isArray(item.topics)
+                                ? item.topics.filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+                                : undefined,
                             speakers: Array.isArray(item.speakers) ? (item.speakers as unknown[]).map((sp: unknown) => {
                                 const speaker = sp as Record<string, unknown>;
                                 return {

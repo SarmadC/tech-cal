@@ -14,6 +14,7 @@ export interface ExtractedScheduleItem {
     speakers?: string[];
     location?: string;
     track?: string;
+    topics?: string[];
     dayNumber?: number;
 }
 
@@ -229,6 +230,7 @@ function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): Extra
         if (!schedule || typeof schedule !== 'object') continue;
         const scheduleObj = schedule as Record<string, unknown>;
         const location = scheduleObj.location as Record<string, unknown> | undefined;
+        const topics = normalizeTopics(scheduleObj.keywords ?? scheduleObj.topic ?? scheduleObj.topics);
         scheduleItems.push({
             date: toISODate(scheduleObj.startDate as string | undefined),
             startTime: toISODate(scheduleObj.startTime as string | undefined),
@@ -236,6 +238,7 @@ function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): Extra
             title: (scheduleObj.name as string | undefined) || undefined,
             description: (scheduleObj.description as string | undefined) || undefined,
             location: (location?.name as string | undefined) || undefined,
+            topics: topics.length > 0 ? topics : undefined,
         });
     }
 
@@ -244,6 +247,7 @@ function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): Extra
         if (!subEvent || typeof subEvent !== 'object') continue;
         const subEventObj = subEvent as Record<string, unknown>;
         const location = subEventObj.location as Record<string, unknown> | undefined;
+        const topics = normalizeTopics(subEventObj.keywords ?? subEventObj.topic ?? subEventObj.topics);
         scheduleItems.push({
             date: toISODate(subEventObj.startDate as string | undefined),
             startTime: toISODate(subEventObj.startDate as string | undefined),
@@ -252,6 +256,7 @@ function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): Extra
             description: (subEventObj.description as string | undefined) || undefined,
             speakers: extractSpeakersFromJsonLd(subEventObj).map(speaker => speaker.name),
             location: (location?.name as string | undefined) || undefined,
+            topics: topics.length > 0 ? topics : undefined,
         });
     }
 
@@ -267,13 +272,29 @@ const STRUCTURED_COLLECTION_WRAPPER_KEYS = new Set(['items', 'nodes', 'edges', '
 const ABSOLUTE_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}/i;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const OFFSET_WITHOUT_COLON_PATTERN = /([+-]\d{2})(\d{2})$/;
+const SESSION_CARD_SELECTOR = '.session-type, article.session-card, .agenda-item, .schedule-item, [class*="session-card"], [class*="agenda-item"], [class*="schedule-item"]';
 const SCHEDULE_START_KEYS = ['startDateTime', 'startDate', 'start', 'start_time', 'startsAt', 'starts_at', 'dateTime'];
 const SCHEDULE_END_KEYS = ['endDateTime', 'endDate', 'end', 'end_time', 'endsAt', 'ends_at'];
 const SCHEDULE_TITLE_KEYS = ['title', 'name', 'sessionTitle', 'label', 'headline'];
 const DESCRIPTION_KEYS = ['description', 'summary', 'abstract', 'body', 'excerpt'];
 const LOCATION_KEYS = ['location', 'room', 'venue', 'stage'];
-const TRACK_KEYS = ['track', 'tracks', 'category', 'categories', 'topic', 'topics', 'tag', 'tags'];
+const TRACK_KEYS = ['track', 'tracks', 'category', 'categories'];
+const TOPIC_KEYS = ['topic', 'topics', 'tag', 'tags', 'keywords'];
 const SPEAKER_KEYS = ['speakers', 'speaker', 'presenters', 'presenter', 'performers', 'performer', 'hosts', 'host'];
+const SESSION_CARD_TYPE_LABELS = new Set([
+    'session',
+    'panel',
+    'workshop',
+    'keynote',
+    'unconference',
+    'roundtable',
+    'fireside chat',
+    'tutorial',
+    'talk',
+]);
+const CLOCK_RANGE_PATTERN = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)(?:\s*[a-z]{2,5})?)\s*(?:-|–|to)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)(?:\s*[a-z]{2,5})?)/i;
+const CLOCK_VALUE_PATTERN = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)(?:\s*[a-z]{2,5})?)/i;
+const TIME_SUMMARY_PATTERN = /\b(?:mon|tue|wed|thu|fri|sat|sun|day\s+\d+|\d{1,2}:\d{2}\s*(?:am|pm))\b/i;
 
 interface EmbeddedPayloadRecord {
     source: string;
@@ -406,6 +427,42 @@ const normalizeTrack = (value: unknown): string | undefined => {
     return readStringFromKeys(value, [['name'], ['label'], ['title']]);
 };
 
+const normalizeTopics = (value: unknown): string[] => {
+    if (!value) {
+        return [];
+    }
+
+    if (typeof value === 'string') {
+        return Array.from(
+            new Set(
+                value
+                    .split(/[,\n;]/)
+                    .map((topic) => normalizeText(topic))
+                    .filter((topic): topic is string => Boolean(topic))
+            )
+        );
+    }
+
+    if (Array.isArray(value)) {
+        return Array.from(
+            new Set(
+                value.flatMap((item) => normalizeTopics(item))
+            )
+        );
+    }
+
+    if (!isPlainObject(value)) {
+        return [];
+    }
+
+    if (Array.isArray(value.items)) {
+        return normalizeTopics(value.items);
+    }
+
+    const namedValue = readStringFromKeys(value, [['name'], ['label'], ['title']]);
+    return namedValue ? [namedValue] : [];
+};
+
 const normalizeLocation = (value: unknown): string | undefined => {
     if (!value) {
         return undefined;
@@ -493,15 +550,17 @@ const normalizeScheduleItemFromObject = (value: unknown): ExtractedScheduleItem 
     const description = readStringFromKeys(value, DESCRIPTION_KEYS.map((key) => [key]));
     const locationValue = LOCATION_KEYS.map((key) => value[key]).find((item) => item != null);
     const trackValue = TRACK_KEYS.map((key) => value[key]).find((item) => item != null);
+    const topicsValue = TOPIC_KEYS.map((key) => value[key]).find((item) => item != null);
     const speakersValue = SPEAKER_KEYS.map((key) => value[key]).find((item) => item != null);
 
     const normalizedStart = normalizeDateTimeLike(startTime);
     const normalizedEnd = normalizeDateTimeLike(endTime);
     const location = normalizeLocation(locationValue);
     const track = normalizeTrack(trackValue);
+    const topics = normalizeTopics(topicsValue);
     const speakers = normalizeSpeakerNames(speakersValue);
 
-    if (!normalizedStart && !normalizedEnd && !description && !location && !track && speakers.length === 0) {
+    if (!normalizedStart && !normalizedEnd && !description && !location && !track && topics.length === 0 && speakers.length === 0) {
         return undefined;
     }
 
@@ -512,6 +571,7 @@ const normalizeScheduleItemFromObject = (value: unknown): ExtractedScheduleItem 
         description,
         location,
         track,
+        topics: topics.length > 0 ? topics : undefined,
         speakers: speakers.length > 0 ? speakers : undefined,
     };
 };
@@ -617,6 +677,267 @@ const isStructuredCollectionMemberPath = (
     return false;
 };
 
+const pickRicherText = (
+    current?: string,
+    candidate?: string,
+): string | undefined => {
+    const normalizedCurrent = normalizeText(current);
+    const normalizedCandidate = normalizeText(candidate);
+
+    if (!normalizedCurrent) {
+        return normalizedCandidate;
+    }
+
+    if (!normalizedCandidate) {
+        return normalizedCurrent;
+    }
+
+    const currentThin = isDescriptionThin(normalizedCurrent);
+    const candidateThin = isDescriptionThin(normalizedCandidate);
+    if (currentThin && candidateThin) {
+        return normalizedCandidate;
+    }
+
+    if (currentThin !== candidateThin) {
+        return currentThin ? normalizedCandidate : normalizedCurrent;
+    }
+
+    if (normalizedCandidate.length > normalizedCurrent.length * 1.1) {
+        return normalizedCandidate;
+    }
+
+    return normalizedCurrent;
+};
+
+const normalizeTimeSummary = (value?: string): string | undefined => {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return undefined;
+    }
+
+    const rangeMatch = normalized.match(CLOCK_RANGE_PATTERN);
+    if (rangeMatch) {
+        return `${rangeMatch[1]} - ${rangeMatch[2]}`;
+    }
+
+    const clockMatch = normalized.match(CLOCK_VALUE_PATTERN);
+    if (clockMatch) {
+        return clockMatch[1];
+    }
+
+    return normalized;
+};
+
+const extractSpeakerNamesFromContainer = (container: ParentNode): string[] => {
+    const names = new Set<string>();
+
+    Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href*="/speakers/"]')).forEach((anchor) => {
+        const name = normalizeText(anchor.textContent);
+        if (name) {
+            names.add(name);
+        }
+    });
+
+    Array.from(container.querySelectorAll<HTMLElement>('.speaker-name, .session-speaker, .presenter, [class*="speaker"] strong')).forEach((element) => {
+        const name = normalizeText(element.textContent);
+        if (name) {
+            names.add(name);
+        }
+    });
+
+    Array.from(container.querySelectorAll<HTMLImageElement>('img[alt]')).forEach((image) => {
+        const alt = normalizeText(image.getAttribute('alt'));
+        const match = alt?.match(/^speaker image\s*-\s*(.+)$/i);
+        if (match?.[1]) {
+            names.add(match[1].trim());
+        }
+    });
+
+    return Array.from(names);
+};
+
+const extractTopicChipTexts = (container: ParentNode): string[] => {
+    const topics = new Set<string>();
+
+    Array.from(container.querySelectorAll<HTMLElement>('span, a')).forEach((element) => {
+        const className = element.className || '';
+        if (typeof className !== 'string' || !className.includes('rounded')) {
+            return;
+        }
+
+        const text = normalizeText(element.textContent);
+        if (!text || SESSION_CARD_TYPE_LABELS.has(text.toLowerCase())) {
+            return;
+        }
+
+        topics.add(text);
+    });
+
+    return Array.from(topics);
+};
+
+const extractCardTimeText = (container: Element): string | undefined => {
+    const timeElementText = Array.from(container.querySelectorAll<HTMLElement>('time, p, div, span'))
+        .map((element) => normalizeText(element.textContent))
+        .find((text) => text && TIME_SUMMARY_PATTERN.test(text));
+
+    return normalizeTimeSummary(timeElementText);
+};
+
+const findHeadingByText = (document: Document, headingText: string): HTMLElement | undefined =>
+    Array.from(document.querySelectorAll<HTMLElement>('h4, h5, h3'))
+        .find((heading) => normalizeText(heading.textContent)?.toLowerCase() === headingText.toLowerCase());
+
+const readSingleValueAfterHeading = (heading?: HTMLElement): string | undefined => {
+    if (!heading) {
+        return undefined;
+    }
+
+    const next = heading.nextElementSibling as HTMLElement | null;
+    if (!next) {
+        return undefined;
+    }
+
+    const nextHeading = next.querySelector(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6');
+    if (nextHeading) {
+        return undefined;
+    }
+
+    return normalizeText(next.textContent);
+};
+
+const readTopicValuesAfterHeading = (heading?: HTMLElement): string[] => {
+    if (!heading) {
+        return [];
+    }
+
+    const topics: string[] = [];
+    let current = heading.nextElementSibling as HTMLElement | null;
+
+    while (current) {
+        if (current.matches('h1, h2, h3, h4, h5, h6') || current.querySelector(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6')) {
+            break;
+        }
+
+        const text = normalizeText(current.textContent);
+        if (text) {
+            topics.push(text);
+        }
+
+        const next = current.nextElementSibling as HTMLElement | null;
+        if (!next || (!next.matches('a, span') && next.querySelector(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6'))) {
+            break;
+        }
+
+        current = next;
+    }
+
+    return Array.from(new Set(topics));
+};
+
+const readTrackHubTitle = (document: Document): string | undefined => {
+    if (!/\/tracks?\//i.test(document.location.pathname)) {
+        return undefined;
+    }
+
+    return [
+        normalizeText(document.querySelector('main h1')?.textContent),
+        normalizeText(document.querySelector('h1')?.textContent),
+        normalizeText(document.querySelector('main h2')?.textContent),
+        normalizeText(document.querySelector('h2')?.textContent),
+    ].find((value): value is string => Boolean(value));
+};
+
+const extractSessionCardsFromDocument = (document: Document): ExtractedScheduleItem[] => {
+    const pageTrack = readTrackHubTitle(document);
+
+    return Array.from(document.querySelectorAll<HTMLElement>(SESSION_CARD_SELECTOR)).flatMap((container) => {
+        const title =
+            normalizeText(container.querySelector('.p-title a, .p-title, h3 a, h3, h2 a, h2')?.textContent);
+        if (!title) {
+            return [];
+        }
+
+        const description =
+            normalizeText(container.querySelector('.session-description, p.prose, .prose p, [class*="description"]')?.textContent);
+        const speakers = extractSpeakerNamesFromContainer(container);
+        const topics = extractTopicChipTexts(container);
+        const startTime = extractCardTimeText(container);
+
+        if (!startTime && !description && speakers.length === 0 && topics.length === 0) {
+            return [];
+        }
+
+        return [{
+            title,
+            startTime,
+            description,
+            track: pageTrack,
+            topics: topics.length > 0 ? topics : undefined,
+            speakers: speakers.length > 0 ? speakers : undefined,
+        }];
+    });
+};
+
+const extractPresentationSpeakerRecord = (document: Document): SpeakerRecord | undefined => {
+    const heading = findHeadingByText(document, 'Speaker');
+    const speakerAnchor = heading?.nextElementSibling?.matches('a[href*="/speakers/"]')
+        ? heading.nextElementSibling as HTMLAnchorElement
+        : heading?.parentElement?.querySelector<HTMLAnchorElement>('a[href*="/speakers/"]');
+
+    if (!speakerAnchor) {
+        return undefined;
+    }
+
+    const name = normalizeText(
+        speakerAnchor.querySelector('h4, h5, strong')?.textContent ?? speakerAnchor.textContent
+    );
+    if (!name) {
+        return undefined;
+    }
+
+    const roleText = normalizeText(speakerAnchor.querySelector('p')?.textContent);
+
+    return {
+        name,
+        title: roleText,
+        photoUrl: resolveHttpUrl(speakerAnchor.querySelector('img')?.getAttribute('src') || undefined, document.baseURI || document.URL || undefined),
+    };
+};
+
+const extractPresentationScheduleItem = (document: Document): ExtractedScheduleItem | undefined => {
+    if (!document.location.pathname.includes('/presentation/')) {
+        return undefined;
+    }
+
+    const title = normalizeText(document.querySelector('h1')?.textContent);
+    if (!title) {
+        return undefined;
+    }
+
+    const dateText = readSingleValueAfterHeading(findHeadingByText(document, 'Date'));
+    const location = readSingleValueAfterHeading(findHeadingByText(document, 'Location'));
+    const track = readSingleValueAfterHeading(findHeadingByText(document, 'Track'));
+    const topics = readTopicValuesAfterHeading(findHeadingByText(document, 'Topics'));
+    const featuredSpeaker = extractPresentationSpeakerRecord(document);
+    const abstractHeading = findHeadingByText(document, 'Abstract');
+    const description = normalizeText(abstractHeading?.nextElementSibling?.textContent);
+
+    if (!dateText && !location && !track && topics.length === 0 && !featuredSpeaker && !description) {
+        return undefined;
+    }
+
+    return {
+        title,
+        startTime: normalizeTimeSummary(dateText),
+        description,
+        location,
+        track,
+        topics: topics.length > 0 ? topics : undefined,
+        speakers: featuredSpeaker ? [featuredSpeaker.name] : undefined,
+    };
+};
+
 const mergeScheduleCandidates = (items: ExtractedScheduleItem[]): ExtractedScheduleItem[] => {
     const seen = new Map<string, ExtractedScheduleItem>();
 
@@ -631,8 +952,9 @@ const mergeScheduleCandidates = (items: ExtractedScheduleItem[]): ExtractedSched
             ? {
                 ...existing,
                 endTime: existing.endTime ?? item.endTime,
-                description: existing.description ?? item.description,
-                track: existing.track ?? item.track,
+                description: pickRicherText(existing.description, item.description),
+                track: pickRicherText(existing.track, item.track),
+                topics: Array.from(new Set([...(existing.topics ?? []), ...(item.topics ?? [])])),
                 speakers: Array.from(new Set([...(existing.speakers ?? []), ...(item.speakers ?? [])])),
             }
             : item);
@@ -945,6 +1267,26 @@ function extractAgendaFromDocument(document: Document): ExtractedScheduleItem[] 
         });
     }
 
+    const cardSchedule = extractSessionCardsFromDocument(document);
+    cardSchedule.forEach((item) => {
+        const key = `${item.startTime || ''}|${item.title || ''}`;
+        if (seen.has(key)) {
+            return;
+        }
+
+        seen.add(key);
+        schedule.push(item);
+    });
+
+    const presentationSchedule = extractPresentationScheduleItem(document);
+    if (presentationSchedule) {
+        const key = `${presentationSchedule.startTime || ''}|${presentationSchedule.title || ''}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            schedule.push(presentationSchedule);
+        }
+    }
+
     return schedule;
 }
 
@@ -1001,6 +1343,12 @@ function extractSpeakersFromDocument(document: Document): SpeakerRecord[] {
         });
         seen.add(name.toLowerCase());
     });
+
+    const presentationSpeaker = extractPresentationSpeakerRecord(document);
+    if (presentationSpeaker && !seen.has(presentationSpeaker.name.toLowerCase())) {
+        speakers.push(presentationSpeaker);
+        seen.add(presentationSpeaker.name.toLowerCase());
+    }
 
     return speakers;
 }

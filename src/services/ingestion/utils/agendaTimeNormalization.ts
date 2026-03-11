@@ -29,6 +29,7 @@ interface ResolvedAgendaTime {
 }
 
 const ISO_DATE_PATTERN = /\d{4}-\d{2}-\d{2}/;
+const TIME_ONLY_WITH_TIMEZONE_PATTERN = /^\s*\d{1,2}(?::\d{2})?(?:\s*(?:am|pm))?\s+(.+?)\s*$/i;
 
 const hasCalendarDate = (value: string): boolean => ISO_DATE_PATTERN.test(value);
 
@@ -38,6 +39,21 @@ const isAbsoluteDateTime = (value: string): boolean =>
 const resolveAnchorTimezone = (eventTimezone?: string | null): string => {
     const normalizedTimezone = normalizeTimezone(eventTimezone, undefined, 'UTC').timezone;
     return isValidIanaTimezone(normalizedTimezone) ? normalizedTimezone : 'UTC';
+};
+
+const resolveTimeValueTimezone = (value: string, fallbackTimezone?: string | null): string => {
+    const fallback = resolveAnchorTimezone(fallbackTimezone);
+    const explicitTimezoneMatch = value.match(TIME_ONLY_WITH_TIMEZONE_PATTERN);
+    if (!explicitTimezoneMatch) {
+        return fallback;
+    }
+
+    const normalizedTimezone = normalizeTimezone(explicitTimezoneMatch[1], undefined, fallback);
+    if (isValidIanaTimezone(normalizedTimezone.timezone) && normalizedTimezone.source !== 'fallback') {
+        return normalizedTimezone.timezone;
+    }
+
+    return fallback;
 };
 
 const shiftIsoDate = (isoDate: string, dayOffset: number): string => {
@@ -79,7 +95,7 @@ const normalizeSingleAgendaTime = (
         );
     }
 
-    const timezone = resolveAnchorTimezone(anchor.eventTimezone);
+    const timezone = resolveTimeValueTimezone(trimmed, anchor.eventTimezone);
     const localEventDate = formatInTimeZone(eventStartDate, timezone, 'yyyy-MM-dd');
     const targetDate = shiftIsoDate(localEventDate, dayOffset);
 
