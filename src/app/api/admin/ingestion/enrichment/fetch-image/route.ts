@@ -20,6 +20,37 @@ function normalizeImageMimeType(mimeType?: string | null): string {
     return normalized;
 }
 
+function getExtensionForMimeType(mimeType: string): string {
+    switch (mimeType) {
+        case 'image/png':
+            return 'png';
+        case 'image/jpeg':
+        case 'image/jpg':
+            return 'jpg';
+        case 'image/svg+xml':
+            return 'svg';
+        case 'image/webp':
+            return 'webp';
+        case 'image/avif':
+            return 'avif';
+        case 'image/x-icon':
+        case 'image/vnd.microsoft.icon':
+            return 'ico';
+        default:
+            return '';
+    }
+}
+
+function getFilenameForContentType(imageUrl: string, contentType: string): string {
+    const rawName = imageUrl.split('/').pop()?.split('?')[0] || 'image';
+    const baseName = rawName.replace(/\.[^.]+$/, '');
+    const extension = getExtensionForMimeType(contentType);
+
+    if (!extension) return rawName;
+
+    return `${baseName}.${extension}`;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -56,7 +87,7 @@ export async function POST(request: NextRequest) {
                 headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
@@ -78,27 +109,92 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            // Get the image as a blob
-            const blob = await response.blob();
+            const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
             
-            // Validate blob size
-            if (blob.size === 0) {
+            // Check Content-Length if available
+            const contentLengthHeader = response.headers.get('content-length');
+            if (contentLengthHeader) {
+                const contentLength = parseInt(contentLengthHeader, 10);
+                if (contentLength > MAX_IMAGE_SIZE) {
+                    return NextResponse.json(
+                        { error: 'Image too large. Maximum size is 5MB.' },
+                        { status: 400 }
+                    );
+                }
+            }
+
+            if (!response.body) {
+                return NextResponse.json(
+                    { error: 'Empty response body' },
+                    { status: 400 }
+                );
+            }
+
+            const chunks: Uint8Array[] = [];
+            let totalBytes = 0;
+
+            // Handle both Web Streams and Node Streams
+            if ('getReader' in response.body) {
+                const reader = response.body.getReader();
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        if (value) {
+                            totalBytes += value.length;
+                            if (totalBytes > MAX_IMAGE_SIZE) {
+                                await reader.cancel('File size exceeds limit').catch(() => {});
+                                return NextResponse.json(
+                                    { error: 'Image too large. Maximum size is 5MB.' },
+                                    { status: 400 }
+                                );
+                            }
+                            chunks.push(value);
+                        }
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
+            } else {
+                // Async iterator fallback for Node streams
+                for await (const chunk of response.body as any) {
+                    totalBytes += chunk.length;
+                    if (totalBytes > MAX_IMAGE_SIZE) {
+                        return NextResponse.json(
+                            { error: 'Image too large. Maximum size is 5MB.' },
+                            { status: 400 }
+                        );
+                    }
+                    chunks.push(chunk);
+                }
+            }
+
+            // Validate image size
+            if (totalBytes === 0) {
                 return NextResponse.json(
                     { error: 'Fetched image is empty (0 bytes)' },
                     { status: 400 }
                 );
             }
 
-            // Validate blob type
+            // Validate content type
             const contentType = normalizeImageMimeType(
-                response.headers.get('content-type') || blob.type || 'image/png'
+                response.headers.get('content-type') || 'image/png'
             );
             if (!contentType.startsWith('image/') && !contentType.includes('svg')) {
                 console.warn('Content type may not be an image:', contentType);
             }
 
-            const arrayBuffer = await blob.arrayBuffer();
-            const base64 = Buffer.from(arrayBuffer).toString('base64');
+            // Combine chunks into a single Buffer
+            let offset = 0;
+            const combinedBuffer = new Uint8Array(totalBytes);
+            for (const chunk of chunks) {
+                combinedBuffer.set(chunk, offset);
+                offset += chunk.length;
+            }
+            
+            const base64 = Buffer.from(combinedBuffer).toString('base64');
 
             if (!base64 || base64.length === 0) {
                 return NextResponse.json(
@@ -111,7 +207,7 @@ export async function POST(request: NextRequest) {
                 success: true,
                 imageData: base64,
                 contentType,
-                filename: imageUrl.split('/').pop()?.split('?')[0] || 'logo.png',
+                filename: getFilenameForContentType(imageUrl, contentType),
             });
         } catch (err) {
             clearTimeout(timeoutId);

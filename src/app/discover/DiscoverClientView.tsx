@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { usePostHog } from 'posthog-js/react';
 import { Event, EventType, AppProfile } from '@/types';
 import { isProfileEmpty, extractCareerProfile } from '@/utils/profileTypeGuards';
-import { useUnifiedServerFiltering, UnifiedFilterOptions } from '@/hooks/useUnifiedServerFiltering';
+import { useUnifiedServerFiltering, UnifiedFilterOptions, FilteredEventsData } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 
 import { CalendarProvider } from '@/contexts/CalendarContext';
@@ -38,6 +39,8 @@ const MobileEventDetailPanelDynamic = dynamic(
 interface DiscoverClientViewProps {
     initialCategories: EventType[];
     profile: AppProfile | null;
+    /** Pre-fetched events from the server page for LCP optimization */
+    initialQueryData?: { success: true; data: FilteredEventsData };
 }
 
 const DISCOVERY_RESUME_STATE_KEY = 'discover-resume-state-v1';
@@ -77,10 +80,12 @@ function deserializeFilters(filters: SerializableFilters): UnifiedFilterOptions 
 
 export default function DiscoverClientView({
     initialCategories,
-    profile
+    profile,
+    initialQueryData,
 }: DiscoverClientViewProps) {
     const router = useRouter();
     const nav = useNavigation(router);
+    const posthog = usePostHog();
     const { isMobile, isReady: isDeviceReady } = useDeviceDetection();
 
     const initialFilters = useMemo(() => {
@@ -106,7 +111,7 @@ export default function DiscoverClientView({
         return filters;
     }, [profile]);
 
-    const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
+    const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover', initialQueryData });
     const { showInfo } = useSnackbar();
 
     // Calendar state for CalendarProvider
@@ -223,10 +228,35 @@ export default function DiscoverClientView({
         };
     }, [persistResumeState]);
 
+    // Track search_performed when search term settles (debounced via the existing filter settle)
+    const prevSearchTermRef = useRef('');
+    useEffect(() => {
+        const term = eventData.filters.searchTerm;
+        if (term && term !== prevSearchTermRef.current) {
+            posthog?.capture('search_performed', { query: term, surface: 'discover' });
+        }
+        prevSearchTermRef.current = term;
+    }, [eventData.filters.searchTerm, posthog]);
+
+    // Wrap updateFilter to capture filter_applied events
+    const handleUpdateFilter: typeof eventData.updateFilter = useCallback((key, value) => {
+        const skipTrackingKeys = new Set(['page', 'pageSize', 'sortDirection']);
+        if (!skipTrackingKeys.has(key as string) && key !== 'searchTerm') {
+            posthog?.capture('filter_applied', { filter: key, value, surface: 'discover' });
+        }
+        eventData.updateFilter(key, value);
+    }, [eventData, posthog]);
+
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
         setSelectedEvent(event);
-    }, []);
+        posthog?.capture('event_viewed', {
+            event_id: event.id,
+            event_title: event.title,
+            event_type: (event as unknown as Record<string, unknown>).eventType,
+            surface: 'discover',
+        });
+    }, [posthog]);
 
     // Calendar context handlers
     const handleDateSelect = useCallback((date: Date) => {
@@ -270,7 +300,7 @@ export default function DiscoverClientView({
             profile={profile}
             onEventSelect={handleEventSelect}
             filters={eventData.filters}
-            onUpdateFilter={eventData.updateFilter}
+            onUpdateFilter={handleUpdateFilter}
             onSearch={eventData.refetch}
             totalCount={eventData.totalCount}
             onResetFilters={eventData.resetFilters}
@@ -288,7 +318,7 @@ export default function DiscoverClientView({
             trackedEvents={eventData.filteredEvents.filter(e => e.isTracked)}
             onEventSelect={handleEventSelect}
             filters={eventData.filters}
-            onUpdateFilter={eventData.updateFilter}
+            onUpdateFilter={handleUpdateFilter}
             onSearch={eventData.refetch}
             totalCount={eventData.totalCount}
             onResetFilters={eventData.resetFilters}

@@ -40,7 +40,7 @@ export interface UnifiedFilterOptions {
   pageSize: number;
 }
 
-interface FilteredEventsData {
+export interface FilteredEventsData {
   events: Event[];
   pagination: {
     page: number;
@@ -62,6 +62,8 @@ type FilterSurface = 'calendar' | 'discover' | 'default';
 interface UnifiedFilteringOptions {
   surface?: FilterSurface;
   autoLoadAllPages?: boolean;
+  /** Pre-fetched server data passed as React Query initialData (eliminates first client-side fetch → improves LCP) */
+  initialQueryData?: { success: true; data: FilteredEventsData };
 }
 
 export type UpdateFilterHandler = <K extends keyof UnifiedFilterOptions>(key: K, value: UnifiedFilterOptions[K]) => void;
@@ -265,6 +267,9 @@ export function useUnifiedServerFiltering(
     queryKey: createFilterQueryKey('paged'),
     enabled: isPagedMode,
     placeholderData: (previousData) => previousData,
+    // Server-provided initial data shown immediately (stale at 0 → refetches in background)
+    initialData: options.initialQueryData,
+    initialDataUpdatedAt: options.initialQueryData ? 0 : undefined,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false, // Always refetch in dev

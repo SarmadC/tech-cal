@@ -14,6 +14,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { motion } from 'framer-motion';
 import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCareerOnboarding';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
+import { usePostHog } from 'posthog-js/react';
 
 function CareerOnboardingContent() {
     const router = useRouter();
@@ -25,6 +26,7 @@ function CareerOnboardingContent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCreatingProfile, setIsCreatingProfile] = useState(false);
     const isMobile = useIsMobile();
+    const posthog = usePostHog();
 
     const {
         hasCompletedOnboarding,
@@ -97,6 +99,7 @@ function CareerOnboardingContent() {
             await queryClient.invalidateQueries({ queryKey: ['profile'] });
             await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
             window.dispatchEvent(new CustomEvent('profile-updated'));
+            posthog?.capture('onboarding_completed', { device: isMobile ? 'mobile' : 'desktop' });
             showSuccess('Career profile completed! Discovering personalized events...');
             router.push('/discover');
         } catch (error) {
@@ -149,6 +152,7 @@ function CareerOnboardingContent() {
             }
         }
 
+        posthog?.capture('onboarding_skipped', { device: isMobile ? 'mobile' : 'desktop', had_existing_profile: !!profile });
         showInfo('You can complete your career profile later in settings');
         router.push('/discover');
     };

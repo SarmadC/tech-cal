@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
@@ -36,6 +37,7 @@ export function useEventEngagement() {
   } = useSubscriptionContext();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
+  const posthog = usePostHog();
 
   // AbortController ref for calendar sync requests - prevents state updates on unmounted components
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -179,7 +181,13 @@ export function useEventEngagement() {
       const result = await UserEventService.toggleBookmark(user.id, eventId, !currentIsBookmarked, supabase);
       
       showSuccess(result.isBookmarked ? 'Event bookmarked' : 'Event unbookmarked');
-      
+
+      posthog?.capture(result.isBookmarked ? 'event_bookmarked' : 'event_unbookmarked', {
+        event_id: eventId,
+        event_title: (event as Record<string, unknown>)?.title,
+        event_type: (event as Record<string, unknown>)?.eventType,
+      });
+
       // Log analytics
       if (result.isBookmarked) {
         try {
@@ -325,7 +333,12 @@ export function useEventEngagement() {
       const result = await UserEventService.setAttendanceStatus(user.id, eventId, status, notes, supabase);
       
       showSuccess('Attendance status updated');
-      
+
+      posthog?.capture('event_attendance_updated', {
+        event_id: eventId,
+        status,
+      });
+
       // Log analytics
       try {
         console.log('Attendance status changed:', {

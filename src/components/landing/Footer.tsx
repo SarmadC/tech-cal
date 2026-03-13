@@ -5,6 +5,7 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { EnvelopeSimpleIcon, TwitterLogoIcon, LinkedinLogoIcon } from '@phosphor-icons/react';
 import '@/app/styles/footer.css';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { usePostHog } from 'posthog-js/react';
 
 // Add simple type extension for window.posthog to avoid excessive errors
 declare global {
@@ -16,6 +17,7 @@ declare global {
 export function Footer() {
     const { isMobile } = useDeviceDetection();
     const { showSuccess } = useSnackbar();
+    const posthog = usePostHog();
 
     return (
         <footer className="footer-container">
@@ -33,6 +35,7 @@ export function Footer() {
                                 href="/signup"
                                 className={`cta-button animate-shimmer motion-reduce:animate-none ${isMobile ? 'mobile-optimized' : ''}`}
                                 aria-label="Start your free account to access tech events calendar"
+                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'footer', destination: '/signup' })}
                             >
                                 <span>Start Free Trial</span>
                             </Link>

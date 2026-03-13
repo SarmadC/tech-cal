@@ -1,7 +1,7 @@
 // src/app/signup/page.tsx
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,38 @@ export default function SignupPage() {
     const router = useRouter();
     const posthog = usePostHog();
     const emailInputRef = useRef<HTMLInputElement>(null);
+    const [formStarted, setFormStarted] = useState(false);
+    const [formSubmitted, setFormSubmitted] = useState(false);
+    const pageLoadTime = useRef(Date.now());
+
+    const handleFormFocus = () => {
+        if (!formStarted) {
+            setFormStarted(true);
+            posthog?.capture('signup_form_started', { method: 'email' });
+        }
+    };
+
+    useEffect(() => {
+        const handleAbandon = () => {
+            if (formStarted && !formSubmitted) {
+                posthog?.capture('signup_form_abandoned', {
+                    method: 'email',
+                    time_on_page_seconds: Math.round((Date.now() - pageLoadTime.current) / 1000),
+                });
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') handleAbandon();
+        };
+
+        window.addEventListener('beforeunload', handleAbandon);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            window.removeEventListener('beforeunload', handleAbandon);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [formStarted, formSubmitted, posthog]);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         // Track OAuth signup initiated
@@ -50,6 +82,11 @@ export default function SignupPage() {
     // If email confirmation is needed (no session), show the confirmation UI
     // If already confirmed (rare), redirect to discover
     const handleSignupSuccess = (state: AuthFormState) => {
+        setFormSubmitted(true);
+        posthog?.capture('signup_form_submitted', {
+            method: 'email',
+            email_confirmation_required: !state?.shouldRedirect,
+        });
         if (state?.shouldRedirect) {
             router.push('/events');
             return;
@@ -105,7 +142,7 @@ export default function SignupPage() {
                                 <>
                                     <div className="space-y-2">
                                         <label htmlFor="name" className="text-sm font-medium text-foreground-secondary">Full Name</label>
-                                        <input id="name" name="name" type="text" required className="mt-1 block w-full px-3 py-2 bg-background-tertiary border border-border-default rounded-lg focus:outline-none focus:ring-accent-primary focus:border-accent-primary" />
+                                        <input id="name" name="name" type="text" required onFocus={handleFormFocus} className="mt-1 block w-full px-3 py-2 bg-background-tertiary border border-border-default rounded-lg focus:outline-none focus:ring-accent-primary focus:border-accent-primary" />
                                         {state.errors?.name && <p className="text-sm text-red-500 mt-1">{state.errors.name[0]}</p>}
                                     </div>
                                     <div className="space-y-2">

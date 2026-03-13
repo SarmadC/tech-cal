@@ -151,6 +151,35 @@ export class EventEnrichmentService {
         return normalized;
     }
 
+    private static getImageMimeTypeFromFilename(fileName?: string | null): string {
+        const extension = fileName?.split('.').pop()?.toLowerCase();
+
+        switch (extension) {
+            case 'png':
+                return 'image/png';
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpeg';
+            case 'svg':
+                return 'image/svg+xml';
+            case 'webp':
+                return 'image/webp';
+            case 'avif':
+                return 'image/avif';
+            case 'ico':
+                return 'image/x-icon';
+            default:
+                return '';
+        }
+    }
+
+    private static getValidatedImageType(file: File): string {
+        return (
+            EventEnrichmentService.normalizeImageMimeType(file.type)
+            || EventEnrichmentService.getImageMimeTypeFromFilename(file.name)
+        );
+    }
+
     /**
      * Create or update agenda items for an event
      * Replaces existing agenda items for the event
@@ -402,8 +431,8 @@ export class EventEnrichmentService {
     ): Promise<{ success: boolean; logoUrl?: string; fileName?: string; error?: string }> {
         try {
             // Validate file type
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
-            const normalizedType = EventEnrichmentService.normalizeImageMimeType(file.type);
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/avif', 'image/x-icon', 'image/vnd.microsoft.icon'];
+            const normalizedType = EventEnrichmentService.getValidatedImageType(file);
             if (!validTypes.includes(normalizedType)) {
                 return {
                     success: false,
@@ -1298,8 +1327,8 @@ export class EventEnrichmentService {
     ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
         try {
             // Validate file type
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
-            const normalizedType = EventEnrichmentService.normalizeImageMimeType(file.type);
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/avif'];
+            const normalizedType = EventEnrichmentService.getValidatedImageType(file);
             if (!validTypes.includes(normalizedType)) {
                 return {
                     success: false,

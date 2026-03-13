@@ -35,6 +35,7 @@ import { SnackbarProvider } from '@/contexts/SnackbarContext';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/seo';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
+import { PostHogIdentitySync } from '@/components/providers/PostHogIdentitySync';
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
 import { SITE_URL } from '@/config/site';
@@ -158,6 +159,7 @@ export default async function RootLayout({
                                 <SupabaseProvider>
                                     {/* 2. AuthProvider is next, it needs supabase client */}
                                     <AuthProvider>
+                                        <PostHogIdentitySync />
                                         {/* 3. CheckoutProvider needs Auth info but before Subscription */}
                                         <CheckoutProvider>
                                             <CheckoutOverlay />

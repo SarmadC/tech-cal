@@ -209,7 +209,10 @@ export default function PricingPageClient() {
                         <div className="flex items-center gap-4 pb-2">
                             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
                                 <button
-                                    onClick={() => setBillingCycle('monthly')}
+                                    onClick={() => {
+                                        setBillingCycle('monthly');
+                                        posthog?.capture('pricing_billing_cycle_toggled', { selected_cycle: 'monthly', is_authenticated: !!user });
+                                    }}
                                     className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${billingCycle === 'monthly'
                                         ? 'bg-background shadow-sm text-foreground'
                                         : 'text-muted-foreground hover:text-foreground'
@@ -218,7 +221,10 @@ export default function PricingPageClient() {
                                     MONTHLY
                                 </button>
                                 <button
-                                    onClick={() => setBillingCycle('annual')}
+                                    onClick={() => {
+                                        setBillingCycle('annual');
+                                        posthog?.capture('pricing_billing_cycle_toggled', { selected_cycle: 'annual', is_authenticated: !!user });
+                                    }}
                                     className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${billingCycle === 'annual'
                                         ? 'bg-background shadow-sm text-foreground'
                                         : 'text-muted-foreground hover:text-foreground'
@@ -305,6 +311,7 @@ export default function PricingPageClient() {
                                     ) : (
                                         <Link
                                             href={plan.name === 'Team' ? '/contact' : '/signup'}
+                                            onClick={() => posthog?.capture('pricing_plan_cta_clicked', { plan_name: plan.name as 'Free' | 'Team', billing_cycle: billingCycle, is_authenticated: !!user })}
                                             className={`inline-flex w-full items-center justify-center rounded-lg px-6 py-3 text-sm font-medium transition-all ${plan.highlighted
                                                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                                                 : 'border border-input bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground'

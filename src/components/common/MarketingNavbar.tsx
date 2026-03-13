@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDeviceDetection } from "@/hooks/useDeviceDetection";
+import { usePostHog } from "posthog-js/react";
 import {
     Navbar,
     NavBody,
@@ -17,6 +18,7 @@ import {
 export default function MarketingNavbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { isMobile } = useDeviceDetection();
+    const posthog = usePostHog();
 
     const navItems = [
         {
@@ -55,12 +57,14 @@ export default function MarketingNavbar() {
                                 <NavbarButton
                                     variant="secondary"
                                     href="/login"
+                                    onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Login', cta_location: 'navbar', destination: '/login' })}
                                 >
                                 Login
                             </NavbarButton>
                             <NavbarButton
                                 variant="primary"
                                 href="/pricing?checkout=monthly"
+                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'navbar', destination: '/pricing?checkout=monthly' })}
                             >
                                 Start Free Trial
                             </NavbarButton>
@@ -118,7 +122,10 @@ export default function MarketingNavbar() {
                                 ))}
                                 <a
                                     href="/login"
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        posthog?.capture('landing_cta_clicked', { cta_text: 'Login', cta_location: 'navbar_mobile', destination: '/login' });
+                                    }}
                                     className="flex items-center justify-between text-zinc-900 dark:text-zinc-100 text-xl font-medium hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                                 >
                                     <span className="block">Login</span>
@@ -131,6 +138,7 @@ export default function MarketingNavbar() {
                                     href="/pricing?checkout=monthly"
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
+                                        posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'navbar_mobile', destination: '/pricing?checkout=monthly' });
                                     }}
                                     variant="primary"
                                     className="w-full py-4 text-lg font-semibold rounded-lg"

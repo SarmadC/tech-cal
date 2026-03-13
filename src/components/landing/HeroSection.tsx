@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useTheme } from 'next-themes';
+import { usePostHog } from 'posthog-js/react';
 import { OrbitingCircles } from './OrbitingCircles';
 import { CalendarIcon, ArrowClockwiseIcon, MicrophoneIcon, MegaphoneIcon, RocketIcon, TicketIcon } from '@phosphor-icons/react';
 
@@ -16,6 +17,7 @@ export function HeroSection() {
     const { isMobile, isTablet } = useDeviceDetection();
     const { theme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const posthog = usePostHog();
 
     // Wait for hydration to avoid hydration mismatch on theme
     useEffect(() => {
@@ -138,9 +140,10 @@ export function HeroSection() {
                 {/* CTA Buttons */}
                 <div className="hero-cta">
                     <Link
-                        href="/events"
+                        href="/events?src=hero"
                         aria-label="Discover personalized tech events"
                         className={`hero-primary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} animate-shimmer motion-reduce:animate-none items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
+                        onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Browse Events Free', cta_location: 'hero', destination: '/events' })}
                     >
                         Browse Events Free
                     </Link>
@@ -150,6 +153,7 @@ export function HeroSection() {
                         className={`hero-secondary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
                         onClick={(e) => {
                             e.preventDefault();
+                            posthog?.capture('landing_cta_clicked', { cta_text: 'See It in Action', cta_location: 'hero', destination: '#product-demo' });
                             const element = document.getElementById('product-demo');
                             if (element) {
                                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });

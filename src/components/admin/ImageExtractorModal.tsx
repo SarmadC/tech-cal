@@ -118,7 +118,7 @@ export default function ImageExtractorModal({
         } finally {
             setLoading(false);
         }
-    }, [url, validateUrl]);
+    }, [context, url, validateUrl]);
 
     const handleImageError = useCallback((src: string) => {
         setImageLoadErrors((prev) => new Set([...prev, src]));
@@ -190,7 +190,7 @@ export default function ImageExtractorModal({
                         </label>
                         <input
                             type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/avif"
                             onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {

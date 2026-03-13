@@ -12,6 +12,15 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
             person_profiles: 'identified_only',
             capture_pageview: false,
+            capture_exceptions: true,
+            disable_session_recording: false,
+            loaded: (ph) => {
+                // Mark localhost sessions so they can be filtered in PostHog UI
+                // (Filter > "Test accounts" using $is_test_account property)
+                if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+                    ph.register({ $is_test_account: true });
+                }
+            },
         });
 
         if ('requestIdleCallback' in window) {

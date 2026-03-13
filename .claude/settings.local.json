@@ -96,7 +96,11 @@
       "Bash(python3:*)",
       "Bash(BACKFILL_DRY_RUN=1 npx tsx:*)",
       "Bash(set -a && . /Users/sarmad/tech-cal/.env.local && set +a && BACKFILL_DRY_RUN=1 npx tsx scripts/backfill-hackathon-recommendation-features.ts 2>&1)",
-      "Bash(set -a && . /Users/sarmad/tech-cal/.env.local && set +a && npx tsx scripts/backfill-hackathon-recommendation-features.ts 2>&1)"
+      "Bash(set -a && . /Users/sarmad/tech-cal/.env.local && set +a && npx tsx scripts/backfill-hackathon-recommendation-features.ts 2>&1)",
+      "mcp__posthog__projects-get",
+      "mcp__posthog__list-errors",
+      "mcp__posthog__event-definitions-list",
+      "mcp__posthog__query-run"
     ],
     "deny": [],
     "ask": []

@@ -157,6 +157,9 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
     // Optimize package imports to avoid compiling entire libraries
     optimizePackageImports: [
       "@phosphor-icons/react",

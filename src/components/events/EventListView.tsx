@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { usePostHog } from 'posthog-js/react';
 import dynamic from 'next/dynamic';
 import { SlidersHorizontal, LockKey } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
@@ -67,6 +69,8 @@ const MobileEventDetailPanelDynamic = dynamic(
 export default function EventListView({ initialCategories, profile, locationOptions, initialCircleSlug }: EventListViewProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const posthog = usePostHog();
+    const searchParams = useSearchParams();
 
     const startOfToday = useMemo(() => {
         const date = new Date();
@@ -362,6 +366,16 @@ export default function EventListView({ initialCategories, profile, locationOpti
     const activeQueryError = error; // Error from hook
     const isUnauthorized = activeQueryError?.includes('401') || error?.includes('401');
 
+    useEffect(() => {
+        if (isUnauthorized) {
+            posthog?.capture('events_wall_shown', {
+                referrer: document.referrer,
+                src: searchParams.get('src') ?? null,
+            });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isUnauthorized]);
+
     const tableSortKey = useMemo(() => {
         switch (filters.sortBy) {
             case 'title':
@@ -561,7 +575,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                             <p className="text-sm text-foreground-secondary mb-6 max-w-[280px]">
                                                 Join our community to discover, track, and organize upcoming tech events.
                                             </p>
-                                            <Link href="/login" className="w-full sm:w-auto">
+                                            <Link href="/login" className="w-full sm:w-auto" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/login' })}>
                                                 <Button className="w-full sm:w-auto px-8 font-medium">
                                                     Sign In
                                                 </Button>
@@ -727,7 +741,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                             <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
                                                                 Join our community to discover, track, and organize upcoming tech events.
                                                             </p>
-                                                            <Link href="/login">
+                                                            <Link href="/login" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/login' })}>
                                                                 <Button className="px-8 font-medium">
                                                                     Sign In
                                                                 </Button>
