@@ -15,7 +15,7 @@ describe('enrichmentQueue utilities', () => {
                 fieldName: 'tags',
                 oldValue: { ids: ['b', 'a'], labels: ['Beta', 'Alpha'] },
                 newValue: { ids: ['d', 'c'], labels: ['Delta', 'Charlie'] },
-                confidence: null,
+                confidence: undefined,
             },
         ]);
 
@@ -24,7 +24,7 @@ describe('enrichmentQueue utilities', () => {
                 fieldName: 'tags',
                 oldValue: { ids: ['a', 'b'], labels: ['Alpha', 'Beta'] },
                 newValue: { ids: ['c', 'd'], labels: ['Charlie', 'Delta'] },
-                confidence: null,
+                confidence: undefined,
             },
         ]);
 

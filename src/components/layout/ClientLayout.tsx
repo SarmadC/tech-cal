@@ -69,6 +69,8 @@ export default function ClientLayout({
 
     const shouldShowLegalFooter =
         pathname !== '/' && !pathname.startsWith('/calendar') && !pathname.startsWith('/embed');
+    const usesSelfManagedTopSpacing =
+        pathname.startsWith('/blog');
 
     if (!shouldShowNavbar) {
         return (
@@ -122,8 +124,7 @@ export default function ClientLayout({
                     <Navbar />
                 )
             )}
-            {/* ✅ Offset content for the navbar height */}
-            <div className="pt-16">
+            <div className={usesSelfManagedTopSpacing ? '' : 'pt-16'}>
                 {children}
             </div>
             {shouldShowLegalFooter && <LegalFooter />}

@@ -8,7 +8,7 @@ const ALLOWED_TAGS = [
     'strong', 'em', 'u', 's',
     'table', 'thead', 'tbody', 'tr', 'th', 'td',
     'a', 'img', 'figure', 'figcaption',
-    'iframe',
+    'iframe', 'div', 'aside',
 ];
 
 const ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions['allowedAttributes'] = {
@@ -17,7 +17,7 @@ const ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions['allowedAttributes'] = {
     iframe: ['src', 'title', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
     th: ['colspan', 'rowspan'],
     td: ['colspan', 'rowspan'],
-    '*': ['id'],
+    '*': ['id', 'class', 'data-*'],
 };
 
 const ALLOWED_IFRAME_HOSTNAMES = [
