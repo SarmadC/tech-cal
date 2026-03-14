@@ -23,8 +23,19 @@ export function UrlsMediaSection({
     onError,
 }: UrlsMediaSectionProps) {
     const [eventImageExtractorOpen, setEventImageExtractorOpen] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [imageUploadComplete, setImageUploadComplete] = useState(false);
+    const [imagePreviewNonce, setImagePreviewNonce] = useState(() => Date.now());
+
+    const getPreviewImageSrc = useCallback((url: string) => {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}t=${imagePreviewNonce}`;
+    }, [imagePreviewNonce]);
 
     const handleEventImageFromUrl = useCallback(async (imageUrl: string) => {
+        setUploadingImage(true);
+        setImageUploadComplete(false);
+
         try {
             const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
                 method: 'POST',
@@ -64,14 +75,21 @@ export function UrlsMediaSection({
 
             if (data.imageUrl) {
                 setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
+                setImagePreviewNonce(Date.now());
+                setImageUploadComplete(true);
                 onSuccess();
             }
         } catch (err) {
             onError(err instanceof Error ? err.message : 'Failed to upload image');
+        } finally {
+            setUploadingImage(false);
         }
     }, [eventId, setCoreFields, onSuccess, onError]);
 
     const handleFileSelected = useCallback(async (file: File) => {
+        setUploadingImage(true);
+        setImageUploadComplete(false);
+
         const formData = new FormData();
         formData.append('eventId', eventId);
         formData.append('file', file);
@@ -83,12 +101,16 @@ export function UrlsMediaSection({
             const data = await response.json();
             if (response.ok && data.imageUrl) {
                 setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
+                setImagePreviewNonce(Date.now());
+                setImageUploadComplete(true);
                 onSuccess();
             } else {
                 onError(data.error || 'Failed to upload image');
             }
         } catch {
             onError('Failed to upload image');
+        } finally {
+            setUploadingImage(false);
         }
         setEventImageExtractorOpen(false);
     }, [eventId, setCoreFields, onSuccess, onError]);
@@ -146,10 +168,10 @@ export function UrlsMediaSection({
                             {coreFields.event_image_url && (
                                 <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-default bg-background-tertiary">
                                     <Image
-                                        src={coreFields.event_image_url}
+                                        src={getPreviewImageSrc(coreFields.event_image_url)}
                                         alt="Event"
                                         fill
-                                        className="object-cover"
+                                        className="object-contain"
                                     />
                                 </div>
                             )}
@@ -159,15 +181,25 @@ export function UrlsMediaSection({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setEventImageExtractorOpen(true)}
+                                        disabled={uploadingImage}
                                         className="text-xs"
                                     >
-                                        <MaterialIcon name="image" size={16} className="mr-2" />
-                                        Update Image
+                                        <MaterialIcon
+                                            name={uploadingImage ? 'refresh' : 'image'}
+                                            size={16}
+                                            className={uploadingImage ? 'mr-2 animate-spin' : 'mr-2'}
+                                        />
+                                        {uploadingImage ? 'Uploading...' : 'Update Image'}
                                     </Button>
                                 </div>
                                 <p className="mt-2 text-xs text-foreground-muted">
                                     Recommended: 1200x630px or larger. JPG, PNG, WebP.
                                 </p>
+                                {imageUploadComplete && (
+                                    <p className="mt-2 text-xs text-emerald-400">
+                                        Image uploaded and applied to the event.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

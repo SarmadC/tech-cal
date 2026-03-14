@@ -72,6 +72,9 @@ export function InteractiveBlogContent({
                         experience={domNode.attribs['data-experience']}
                         logoUrl={domNode.attribs['data-logo']}
                         imageUrl={domNode.attribs['data-image']}
+                        eventId={domNode.attribs['data-event-id']}
+                        slug={domNode.attribs['data-event-slug']}
+                        id={domNode.attribs['id']}
                         activeRole={activeRole}
                         roles={roles}
                     >

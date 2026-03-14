@@ -10,6 +10,72 @@ import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
 import { fetchWithSafeRedirects, validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
+function buildImageRequestHeaders(imageUrl: string, includeDocumentContext = false): HeadersInit {
+    const imageOrigin = new URL(imageUrl).origin;
+
+    return {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': `${imageOrigin}/`,
+        'Origin': imageOrigin,
+        ...(includeDocumentContext
+            ? {
+                  'Sec-Fetch-Dest': 'document',
+                  'Sec-Fetch-Mode': 'navigate',
+                  'Sec-Fetch-Site': 'same-origin',
+                  'Upgrade-Insecure-Requests': '1',
+              }
+            : {
+                  'Sec-Fetch-Dest': 'image',
+                  'Sec-Fetch-Mode': 'no-cors',
+                  'Sec-Fetch-Site': 'same-origin',
+              }),
+    };
+}
+
+async function fetchImageWithFallbacks(imageUrl: string, signal: AbortSignal): Promise<Response> {
+    const attempts: Array<HeadersInit> = [
+        buildImageRequestHeaders(imageUrl),
+        buildImageRequestHeaders(imageUrl, true),
+        {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Referer': `${new URL(imageUrl).origin}/`,
+        },
+    ];
+
+    let lastResponse: Response | null = null;
+
+    for (const headers of attempts) {
+        const response = await fetchWithSafeRedirects(imageUrl, {
+            headers,
+            signal,
+        });
+
+        if (response.ok) {
+            return response;
+        }
+
+        lastResponse = response;
+
+        if (response.status !== 403) {
+            return response;
+        }
+    }
+
+    if (lastResponse) {
+        return lastResponse;
+    }
+
+    throw new Error('Failed to fetch image');
+}
+
 function normalizeImageMimeType(mimeType?: string | null): string {
     const normalized = (mimeType || '').split(';')[0].trim().toLowerCase();
 
@@ -83,22 +149,7 @@ export async function POST(request: NextRequest) {
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
         try {
-            const response = await fetchWithSafeRedirects(imageUrl, {
-                headers: {
-                    'User-Agent':
-                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                    'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-                    'Sec-Ch-Ua-Mobile': '?0',
-                    'Sec-Ch-Ua-Platform': '"Windows"',
-                    'Sec-Fetch-Dest': 'image',
-                    'Sec-Fetch-Mode': 'no-cors',
-                    'Sec-Fetch-Site': 'cross-site',
-                },
-                signal: controller.signal,
-            });
+            const response = await fetchImageWithFallbacks(imageUrl, controller.signal);
 
             clearTimeout(timeoutId);
 
@@ -158,7 +209,7 @@ export async function POST(request: NextRequest) {
                 }
             } else {
                 // Async iterator fallback for Node streams
-                for await (const chunk of response.body as any) {
+                for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
                     totalBytes += chunk.length;
                     if (totalBytes > MAX_IMAGE_SIZE) {
                         return NextResponse.json(

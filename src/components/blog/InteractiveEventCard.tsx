@@ -1,12 +1,64 @@
 "use client";
 
+import Link from 'next/link';
+import Image from 'next/image';
 import React, { useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { BookmarkSimple } from '@phosphor-icons/react';
+import { useAuth } from '@/contexts';
+import { useEventEngagement } from '@/hooks/useEventEngagement';
+import { NavigationUtils } from '@/utils/navigationUtils';
 
 type Role = {
     id: string;
     label: string;
     keywords: string[];
 };
+
+function isLikelyLogoAsset(url: string | null | undefined) {
+    if (!url) {
+        return false;
+    }
+
+    const normalized = url.toLowerCase();
+
+    if (
+        normalized.includes('og') ||
+        normalized.includes('open-graph') ||
+        normalized.includes('banner') ||
+        normalized.includes('hero') ||
+        normalized.includes('cover')
+    ) {
+        return false;
+    }
+
+    return (
+        normalized.endsWith('.svg') ||
+        normalized.endsWith('.png') ||
+        normalized.endsWith('.ico') ||
+        normalized.includes('/logo')
+    );
+}
+
+function extractTextFromNode(node: React.ReactNode): string {
+    if (node === null || node === undefined || typeof node === 'boolean') {
+        return '';
+    }
+
+    if (typeof node === 'string' || typeof node === 'number') {
+        return String(node);
+    }
+
+    if (Array.isArray(node)) {
+        return node.map(extractTextFromNode).join(' ');
+    }
+
+    if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+        return extractTextFromNode(node.props.children);
+    }
+
+    return '';
+}
 
 type InteractiveEventCardProps = {
     title: string;
@@ -17,6 +69,9 @@ type InteractiveEventCardProps = {
     experience?: string;
     logoUrl?: string;
     imageUrl?: string;
+    eventId?: string;
+    slug?: string;
+    id?: string;
     activeRole?: string | null;
     roles?: Role[];
     children: React.ReactNode;
@@ -31,13 +86,19 @@ export function InteractiveEventCard({
     experience,
     logoUrl,
     imageUrl,
+    eventId,
+    slug,
+    id,
     activeRole,
     roles,
     children
 }: InteractiveEventCardProps) {
-    const [isAdded, setIsAdded] = useState(false);
-
-    const isTbd = date?.toLowerCase().includes('tba') || date?.toLowerCase().includes('tbd');
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const { user } = useAuth();
+    const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const [isBusy, setIsBusy] = useState(false);
 
     // Filtering logic
     const isDimmed = React.useMemo(() => {
@@ -45,19 +106,44 @@ export function InteractiveEventCard({
         const currentRole = roles.find(r => r.id === activeRole);
         if (!currentRole) return false;
 
-        const textToSearch = `${title} ${focus || ''} ${children?.toString() || ''}`.toLowerCase();
+        const bodyText = extractTextFromNode(children);
+        const textToSearch = `${title} ${focus || ''} ${tech || ''} ${experience || ''} ${location || ''} ${bodyText}`.toLowerCase();
         const hasMatch = currentRole.keywords.some(keyword => textToSearch.includes(keyword.toLowerCase()));
         return !hasMatch;
-    }, [activeRole, roles, title, focus, children]);
+    }, [activeRole, roles, title, focus, tech, experience, location, children]);
+
+    const loginRedirect = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    const eventIsBookmarked = eventId ? isBookmarked(eventId) : false;
+    const shouldRenderLogo = !imageUrl && isLikelyLogoAsset(logoUrl);
+
+    const handleBookmark = async () => {
+        if (!eventId || isBusy) {
+            return;
+        }
+
+        if (!user) {
+            router.push(NavigationUtils.goToLogin(loginRedirect));
+            return;
+        }
+
+        setIsBusy(true);
+        try {
+            await toggleBookmark(eventId, { title });
+        } finally {
+            setIsBusy(false);
+        }
+    };
 
     return (
         <section className={`relative my-16 border-t border-white/10 pt-10 transition-all duration-300 ${isDimmed ? 'opacity-35' : ''}`}>
             {imageUrl && (
                 <div className="mb-8 overflow-hidden rounded-[16px]">
-                    <img
+                    <Image
                         src={imageUrl}
                         alt={`${title} banner`}
-                        className="aspect-[21/9] w-full object-cover md:aspect-[24/7]"
+                        width={1600}
+                        height={700}
+                        className="h-auto max-h-[420px] w-full object-contain md:max-h-[460px]"
                     />
                 </div>
             )}
@@ -65,13 +151,31 @@ export function InteractiveEventCard({
             <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
                 <div className="flex-1">
                     <div className="flex items-center gap-4 mb-4">
-                        {logoUrl && !imageUrl && (
+                        {shouldRenderLogo && (
                             <div className="h-10 w-10 overflow-hidden rounded-[8px] bg-white/[0.03] border border-white/10 flex items-center justify-center p-2">
-                                <img src={logoUrl} alt={`${title} logo`} className="max-h-full max-w-full object-contain" />
+                                <Image
+                                    src={logoUrl as string}
+                                    alt={`${title} logo`}
+                                    width={40}
+                                    height={40}
+                                    className="max-h-full max-w-full object-contain"
+                                />
                             </div>
                         )}
-                        <h3 className="!m-0 text-[22px] font-semibold leading-snug tracking-tight text-zinc-100 md:text-[24px]">
-                            {title}
+                        <h3
+                            id={id}
+                            className="!m-0 text-[22px] font-semibold leading-snug tracking-tight text-zinc-100 md:text-[24px]"
+                        >
+                            {slug ? (
+                                <Link
+                                    href={`/events/${slug}`}
+                                    className="border-b border-transparent transition-colors hover:border-white/40 hover:text-white"
+                                >
+                                    {title}
+                                </Link>
+                            ) : (
+                                title
+                            )}
                         </h3>
                     </div>
 
@@ -114,25 +218,26 @@ export function InteractiveEventCard({
                 </div>
 
                 <div className="flex flex-shrink-0 items-center gap-4 md:flex-col md:items-end">
-                    <button
-                        onClick={() => setIsAdded(!isAdded)}
-                        className={`inline-flex items-center gap-2 rounded-[8px] px-6 py-2.5 text-[13px] font-semibold transition-all duration-200 ${isAdded
-                            ? 'bg-zinc-800 text-zinc-100 border border-zinc-700'
-                            : 'bg-zinc-100 text-zinc-950 hover:bg-white'
-                            }`}
-                    >
-                        {isAdded ? (
-                            <>
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                Following
-                            </>
-                        ) : (
-                            <>
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                                Add to Calendar
-                            </>
-                        )}
-                    </button>
+                    {eventId ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                void handleBookmark();
+                            }}
+                            disabled={isBusy}
+                            aria-pressed={eventIsBookmarked}
+                            className={`inline-flex items-center gap-2 rounded-[8px] px-6 py-2.5 text-[13px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${eventIsBookmarked
+                                ? 'border border-white/12 bg-white/[0.06] text-zinc-100 hover:bg-white/[0.08]'
+                                : 'bg-zinc-100 text-zinc-950 hover:bg-white'
+                                }`}
+                        >
+                            <BookmarkSimple
+                                size={14}
+                                weight={eventIsBookmarked ? 'fill' : 'bold'}
+                            />
+                            {eventIsBookmarked ? 'Bookmarked' : 'Bookmark event'}
+                        </button>
+                    ) : null}
                     <button
                         className="text-[13px] font-medium text-zinc-400 transition-colors hover:text-white"
                         onClick={() => {

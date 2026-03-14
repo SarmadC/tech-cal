@@ -67,17 +67,35 @@ type RelatedPost = {
     title: string | null;
     slug: string | null;
     excerpt: string | null;
+    featured_image_url: string | null;
     published_at: string | null;
     category: { name: string | null } | null;
+    author: { full_name: string | null } | null;
 };
 
-type UpcomingEvent = {
+type EventCardDescriptor = {
+    eventId: string | null;
+};
+
+type ResolvedBlogEvent = {
     id: string;
     title: string;
-    slug: string | null;
+    slug: string;
     start_time: string;
-    location_city: string | null;
+    location: string | null;
+    event_image_url: string | null;
+    organizer_logo_url: string | null;
+    updated_at: string | null;
 };
+
+function withVersionParam(url: string, version: string | null) {
+    if (!version) {
+        return url;
+    }
+
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${encodeURIComponent(version)}`;
+}
 
 function postCategoryName(post: {
     post_categories?: { name?: string | null } | { name?: string | null }[] | null;
@@ -158,19 +176,23 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
         return {
             interactiveHtml: html,
             eventsSummary: [] as EventSummary[],
+            eventCards: [] as EventCardDescriptor[],
         };
     }
 
     const $ = cheerio.load(html, null, false);
     const eventsSummary: EventSummary[] = [];
+    const eventCards: EventCardDescriptor[] = [];
 
     // 1. Collect from existing structured cards (if already in database)
     $('div[data-event-card="true"]').each((_, element) => {
         const title = $(element).attr('data-title') || '';
         const date = $(element).attr('data-date') || '';
         const location = $(element).attr('data-location') || '';
+        const eventId = $(element).attr('data-event-id') || null;
         if (title) {
             eventsSummary.push({ title, date, location });
+            eventCards.push({ eventId });
         }
     });
 
@@ -193,6 +215,7 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
         }
 
         const title = $(element).text().trim();
+        const elementId = $(element).attr('id');
         const siblings = metadataParagraph.nextUntil('hr, h2, h3');
         const wrapper = $('<div data-event-card="true"></div>');
 
@@ -200,6 +223,7 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
         if (metadata.date) wrapper.attr('data-date', metadata.date);
         if (metadata.location) wrapper.attr('data-location', metadata.location);
         if (metadata.focus) wrapper.attr('data-focus', metadata.focus);
+        if (elementId) wrapper.attr('id', elementId);
 
         $(element).before(wrapper);
         wrapper.append(siblings);
@@ -214,6 +238,10 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
                 location: metadata.location,
             });
         }
+
+        if (!eventCards.some((event) => event.eventId === null)) {
+            eventCards.push({ eventId: null });
+        }
     });
 
     // 4. Ensure Map is present if multiple events exist
@@ -224,7 +252,69 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
     return {
         interactiveHtml: $.html(),
         eventsSummary,
+        eventCards,
     };
+}
+
+function isLikelyLogoAsset(url: string | null | undefined) {
+    if (!url) {
+        return false;
+    }
+
+    const normalized = url.toLowerCase();
+
+    if (
+        normalized.includes('og') ||
+        normalized.includes('open-graph') ||
+        normalized.includes('banner') ||
+        normalized.includes('hero') ||
+        normalized.includes('cover')
+    ) {
+        return false;
+    }
+
+    return (
+        normalized.endsWith('.svg') ||
+        normalized.endsWith('.png') ||
+        normalized.endsWith('.ico') ||
+        normalized.includes('/logo')
+    );
+}
+
+function attachResolvedEventData(html: string, resolvedEvents: Map<string, ResolvedBlogEvent>) {
+    const $ = cheerio.load(html, null, false);
+
+    $('div[data-event-card="true"]').each((_, element) => {
+        const eventId = $(element).attr('data-event-id');
+        if (!eventId) {
+            $(element).removeAttr('data-event-slug');
+            $(element).removeAttr('data-image');
+            $(element).removeAttr('data-logo');
+            return;
+        }
+
+        const resolved = resolvedEvents.get(eventId);
+        if (!resolved) {
+            $(element).removeAttr('data-event-slug');
+            $(element).removeAttr('data-image');
+            $(element).removeAttr('data-logo');
+            return;
+        }
+
+        $(element).attr('data-event-slug', resolved.slug);
+
+        if (resolved.event_image_url) {
+            $(element).attr('data-image', withVersionParam(resolved.event_image_url, resolved.updated_at));
+        } else {
+            $(element).removeAttr('data-image');
+        }
+
+        if (isLikelyLogoAsset(resolved.organizer_logo_url) && !$(element).attr('data-logo')) {
+            $(element).attr('data-logo', resolved.organizer_logo_url);
+        }
+    });
+
+    return $.html();
 }
 
 function isMeaningfullyUpdated(publishedAt: string | null, updatedAt: string | null) {
@@ -288,55 +378,35 @@ function RelatedPostsModule({ posts }: { posts: RelatedPost[] }) {
                     All posts
                 </Link>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-5">
                 {posts.map((post) => (
                     <Link
                         href={`/blog/${post.slug}`}
                         key={post.id}
-                        className="block border-b border-white/[0.08] pb-4 transition-colors last:border-b-0 hover:border-white/[0.16]"
+                        className="group flex gap-4"
                     >
-                        <p className="text-xs text-zinc-500">
-                            {post.category?.name || 'Article'}
-                        </p>
-                        <h3 className="mt-2 text-[15px] font-semibold text-zinc-100">
-                            {post.title}
-                        </h3>
-                        {post.excerpt && (
-                            <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">
-                                {post.excerpt}
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[4px] bg-zinc-900 border border-white/5">
+                            {post.featured_image_url ? (
+                                <Image
+                                    src={post.featured_image_url}
+                                    alt={post.title || ''}
+                                    fill
+                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center bg-zinc-800/50">
+                                    <span className="text-[10px] text-zinc-600 font-bold italic">TC</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-1 flex-col justify-center border-b border-white/[0.08] pb-5 transition-colors group-hover:border-white/[0.16] last:border-b-0 group-last:pb-0">
+                            <h3 className="text-[15px] font-semibold leading-tight text-white/90 group-hover:text-white">
+                                {post.title}
+                            </h3>
+                            <p className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                {post.author?.full_name || 'Tech-Cal Team'}
                             </p>
-                        )}
-                    </Link>
-                ))}
-            </div>
-        </section>
-    );
-}
-
-function UpcomingEventsModule({ events }: { events: UpcomingEvent[] }) {
-    if (events.length === 0) {
-        return null;
-    }
-
-    return (
-        <section className="border-t border-white/10 pt-6">
-            <p className="text-sm font-medium text-zinc-300">
-                Upcoming Events
-            </p>
-            <div className="mt-4 space-y-4">
-                {events.map((event) => (
-                    <Link
-                        href={`/events/${event.slug || event.id}`}
-                        key={event.id}
-                        className="block border-b border-white/[0.08] pb-4 transition-colors last:border-b-0 hover:border-white/[0.16]"
-                    >
-                        <h3 className="text-[15px] font-semibold text-zinc-100">
-                            {event.title}
-                        </h3>
-                        <p className="mt-2 text-sm text-zinc-400">
-                            {formatDate(event.start_time)}
-                            {event.location_city ? ` • ${event.location_city}` : ''}
-                        </p>
+                        </div>
                     </Link>
                 ))}
             </div>
@@ -408,7 +478,6 @@ function SupportRail({
     eventLink,
     eventAgenda,
     relatedPosts,
-    upcomingEvents,
     shareTitle,
     shareSlug,
 }: {
@@ -418,7 +487,6 @@ function SupportRail({
     eventLink: string;
     eventAgenda: AgendaItem[];
     relatedPosts: RelatedPost[];
-    upcomingEvents: UpcomingEvent[];
     shareTitle: string;
     shareSlug: string;
 }) {
@@ -439,7 +507,6 @@ function SupportRail({
             )}
 
             <RelatedPostsModule posts={relatedPosts} />
-            <UpcomingEventsModule events={upcomingEvents} />
             <ShareLinks title={shareTitle} slug={shareSlug} />
         </>
     );
@@ -587,7 +654,11 @@ export default async function BlogPostPage({ params }: Props) {
         .replace(/Details/g, 'Value');
     const safeContent = sanitizeBlogHtml(rawContent);
     const presentationMode = inferPresentationMode(safeContent);
-    const { interactiveHtml, eventsSummary } = buildInteractiveHtml(safeContent, presentationMode);
+    const {
+        interactiveHtml: initialInteractiveHtml,
+        eventsSummary,
+        eventCards,
+    } = buildInteractiveHtml(safeContent, presentationMode);
 
     const ctaEventData = post.cta_event || null;
     const ctaEvent = Array.isArray(ctaEventData) ? ctaEventData[0] : ctaEventData;
@@ -597,7 +668,7 @@ export default async function BlogPostPage({ params }: Props) {
     const showUpdatedAt = isMeaningfullyUpdated(post.published_at, post.updated_at);
 
     const relatedPostsPromise = (async (): Promise<RelatedPost[]> => {
-        const baseSelect = 'id, title, slug, excerpt, published_at, category: post_categories ( name )';
+        const baseSelect = 'id, title, slug, excerpt, featured_image_url, published_at, category: post_categories ( name ), author: profiles ( full_name )';
         const relatedQuery = post.category_id
             ? supabase
                 .from('posts')
@@ -639,12 +710,59 @@ export default async function BlogPostPage({ params }: Props) {
         return merged.filter((candidate) => candidate.slug).slice(0, 3);
     })();
 
-    const upcomingEventsPromise = supabase
-        .from('events_detailed')
-        .select('id, title, start_time, venue_city')
-        .gt('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(3);
+    const matchedBlogEventsPromise = (async () => {
+        const eventIds = Array.from(
+            new Set(
+                eventCards
+                    .map((card) => card.eventId)
+                    .filter((eventId): eventId is string => Boolean(eventId))
+            )
+        );
+
+        if (eventIds.length === 0) {
+            return new Map<string, ResolvedBlogEvent>();
+        }
+
+        const { data } = await supabase
+            .from('events')
+            .select(`
+                id,
+                title,
+                slug,
+                start_time,
+                location,
+                event_image_url,
+                updated_at,
+                organizer:organizers (
+                    logo_url
+                )
+            `)
+            .in('id', eventIds);
+
+        const resolvedEvents = (data || [])
+            .filter((event): event is {
+                id: string;
+                title: string;
+                slug: string;
+                start_time: string;
+                location: string | null;
+                event_image_url: string | null;
+                updated_at: string | null;
+                organizer: { logo_url: string | null } | null;
+            } => Boolean(event?.id && event?.title && event?.slug && event?.start_time))
+            .map((event) => ({
+                id: event.id,
+                title: event.title,
+                slug: event.slug,
+                start_time: event.start_time,
+                location: event.location,
+                event_image_url: event.event_image_url,
+                organizer_logo_url: event.organizer?.logo_url || null,
+                updated_at: event.updated_at,
+            }));
+
+        return new Map(resolvedEvents.map((event) => [event.id, event] as const));
+    })();
 
     const eventAgendaPromise: Promise<AgendaItem[]> = ctaEvent?.id
         ? EventService.getEventWithAgenda(ctaEvent.id, supabase)
@@ -655,26 +773,13 @@ export default async function BlogPostPage({ params }: Props) {
             })
         : Promise.resolve([]);
 
-    const [relatedPosts, upcomingEventsResult, eventAgenda] = await Promise.all([
+    const [relatedPosts, matchedBlogEvents, eventAgenda] = await Promise.all([
         relatedPostsPromise,
-        upcomingEventsPromise,
+        matchedBlogEventsPromise,
         eventAgendaPromise,
     ]);
 
-    const upcomingEvents: UpcomingEvent[] = (upcomingEventsResult.data || [])
-        .filter((event): event is {
-            id: string;
-            title: string;
-            start_time: string;
-            venue_city: string | null;
-        } => Boolean(event?.id && event?.title && event?.start_time))
-        .map((event) => ({
-            id: event.id,
-            title: event.title,
-            slug: null,
-            start_time: event.start_time,
-            location_city: event.venue_city,
-        }));
+    const interactiveHtml = attachResolvedEventData(initialInteractiveHtml, matchedBlogEvents);
 
     return (
         <>
@@ -799,24 +904,38 @@ export default async function BlogPostPage({ params }: Props) {
                                     </Link>
                                 </div>
                                 {relatedPosts.length > 0 && (
-                                    <div className="mt-8 grid gap-4 md:grid-cols-3">
+                                    <div className="mt-8 grid gap-6 md:grid-cols-3">
                                         {relatedPosts.map((relatedPost) => (
                                             <Link
                                                 href={`/blog/${relatedPost.slug}`}
                                                 key={relatedPost.id}
-                                                className="border-t border-white/[0.08] pt-5 transition-colors hover:border-white/[0.16]"
+                                                className="group block"
                                             >
-                                                <p className="text-xs text-zinc-500">
-                                                    {relatedPost.category?.name || 'Article'}
-                                                </p>
-                                                <h3 className="mt-3 text-lg font-semibold text-zinc-100">
-                                                    {relatedPost.title}
-                                                </h3>
-                                                {relatedPost.excerpt && (
-                                                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-zinc-400">
-                                                        {relatedPost.excerpt}
+                                                <div className="relative mb-4 aspect-[16/9] w-full overflow-hidden rounded-lg bg-zinc-900 border border-white/5">
+                                                    {relatedPost.featured_image_url ? (
+                                                        <Image
+                                                            src={relatedPost.featured_image_url}
+                                                            alt={relatedPost.title || ''}
+                                                            fill
+                                                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                        />
+                                                    ) : (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-zinc-800/50">
+                                                            <span className="text-xs text-zinc-600 font-bold italic">Tech-Cal</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="border-t border-white/[0.08] pt-4 transition-colors group-hover:border-white/[0.16]">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                                        {relatedPost.category?.name || 'Article'}
                                                     </p>
-                                                )}
+                                                    <h3 className="mt-2 text-[15px] font-semibold leading-snug text-white/90 group-hover:text-white line-clamp-2">
+                                                        {relatedPost.title}
+                                                    </h3>
+                                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500/80">
+                                                        {relatedPost.author?.full_name || 'Tech-Cal Team'}
+                                                    </p>
+                                                </div>
                                             </Link>
                                         ))}
                                     </div>
@@ -831,7 +950,6 @@ export default async function BlogPostPage({ params }: Props) {
                                     eventLink={eventLink}
                                     eventAgenda={eventAgenda}
                                     relatedPosts={relatedPosts}
-                                    upcomingEvents={upcomingEvents}
                                     shareTitle={post.title}
                                     shareSlug={post.slug}
                                 />
@@ -847,7 +965,6 @@ export default async function BlogPostPage({ params }: Props) {
                                     eventLink={eventLink}
                                     eventAgenda={eventAgenda}
                                     relatedPosts={relatedPosts}
-                                    upcomingEvents={upcomingEvents}
                                     shareTitle={post.title}
                                     shareSlug={post.slug}
                                 />
