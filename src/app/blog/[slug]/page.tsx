@@ -10,9 +10,9 @@ import { ArticleJsonLd, BreadcrumbJsonLd } from '@/components/seo';
 import { EventService } from '@/services/eventServices';
 import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import { TableOfContents } from '@/components/blog/TableOfContents';
+import { BlogShareButtons } from '@/components/blog/BlogShareButtons';
 import {
     InteractiveBlogContent,
-    type EventSummary,
     type RoleFilter,
 } from '@/components/blog/InteractiveBlogContent';
 import type { AgendaItem } from '@/types/events';
@@ -175,23 +175,18 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
     if (presentationMode === 'editorial') {
         return {
             interactiveHtml: html,
-            eventsSummary: [] as EventSummary[],
             eventCards: [] as EventCardDescriptor[],
         };
     }
 
     const $ = cheerio.load(html, null, false);
-    const eventsSummary: EventSummary[] = [];
     const eventCards: EventCardDescriptor[] = [];
 
     // 1. Collect from existing structured cards (if already in database)
     $('div[data-event-card="true"]').each((_, element) => {
         const title = $(element).attr('data-title') || '';
-        const date = $(element).attr('data-date') || '';
-        const location = $(element).attr('data-location') || '';
         const eventId = $(element).attr('data-event-id') || null;
         if (title) {
-            eventsSummary.push({ title, date, location });
             eventCards.push({ eventId });
         }
     });
@@ -230,28 +225,13 @@ function buildInteractiveHtml(html: string, presentationMode: PresentationMode) 
         metadataParagraph.remove();
         $(element).remove();
 
-        // Only add to summary if not already added by existing cards
-        if (!eventsSummary.some(e => e.title === title)) {
-            eventsSummary.push({
-                title,
-                date: metadata.date,
-                location: metadata.location,
-            });
-        }
-
         if (!eventCards.some((event) => event.eventId === null)) {
             eventCards.push({ eventId: null });
         }
     });
 
-    // 4. Ensure Map is present if multiple events exist
-    if (eventsSummary.length > 1 && !$('div[data-global-map="true"]').length) {
-        $.root().append('<div class="mt-14"><div data-global-map="true"></div></div>');
-    }
-
     return {
         interactiveHtml: $.html(),
-        eventsSummary,
         eventCards,
     };
 }
@@ -333,30 +313,7 @@ function ShareLinks({ title, slug }: { title: string; slug: string }) {
             <p className="text-sm font-medium text-zinc-300">
                 Share
             </p>
-            <div className="mt-4 flex gap-3">
-                <a
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Share on X (Twitter)"
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white"
-                >
-                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM16.482 19.333h1.833L7.084 4.126H5.117z" />
-                    </svg>
-                </a>
-                <a
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Share on LinkedIn"
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-zinc-400 transition-colors hover:border-[#0A66C2] hover:bg-[#0A66C2] hover:text-white"
-                >
-                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 22.227.792 23 1.771 23h20.451C23.2 23 24 22.227 24 21.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                    </svg>
-                </a>
-            </div>
+            <BlogShareButtons title={title} url={url} />
         </section>
     );
 }
@@ -656,7 +613,6 @@ export default async function BlogPostPage({ params }: Props) {
     const presentationMode = inferPresentationMode(safeContent);
     const {
         interactiveHtml: initialInteractiveHtml,
-        eventsSummary,
         eventCards,
     } = buildInteractiveHtml(safeContent, presentationMode);
 
@@ -874,7 +830,6 @@ export default async function BlogPostPage({ params }: Props) {
 
                                 <InteractiveBlogContent
                                     html={interactiveHtml}
-                                    eventsSummary={eventsSummary}
                                     availableRoles={presentationMode === 'event_guide' ? ROLE_FILTERS : []}
                                     presentationMode={presentationMode}
                                 />

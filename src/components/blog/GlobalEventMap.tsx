@@ -2,7 +2,12 @@
 
 import React, { useMemo } from 'react';
 import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
-import type { EventSummary } from './InteractiveBlogContent';
+
+type EventSummary = {
+    title: string;
+    date: string;
+    location: string;
+};
 
 const geoUrl = "/maps/countries-110m.json";
 

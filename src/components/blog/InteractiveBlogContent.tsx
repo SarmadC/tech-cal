@@ -4,13 +4,6 @@ import React, { useState } from 'react';
 import parse, { domToReact } from 'html-react-parser';
 import type { Element, HTMLReactParserOptions } from 'html-react-parser';
 import { InteractiveEventCard } from './InteractiveEventCard';
-import { GlobalEventMap } from './GlobalEventMap';
-
-export type EventSummary = {
-    title: string;
-    date: string;
-    location: string;
-};
 
 export type RoleFilter = {
     id: string;
@@ -20,7 +13,6 @@ export type RoleFilter = {
 
 type Props = {
     html: string;
-    eventsSummary: EventSummary[];
     availableRoles?: RoleFilter[];
     presentationMode: 'editorial' | 'event_guide';
 };
@@ -50,7 +42,6 @@ function QuickTip({ type, children }: { type: string; children: React.ReactNode 
 
 export function InteractiveBlogContent({
     html,
-    eventsSummary,
     availableRoles,
     presentationMode,
 }: Props) {
@@ -89,10 +80,6 @@ export function InteractiveBlogContent({
                         {domToReact(domNode.children as Element[], options)}
                     </QuickTip>
                 );
-            }
-
-            if (domNode.type === 'tag' && domNode.name === 'div' && domNode.attribs?.['data-global-map']) {
-                return <GlobalEventMap events={eventsSummary} />;
             }
         },
     };
