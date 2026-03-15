@@ -57,12 +57,12 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         }
     }, [hasTrackAgenda, agendaView]);
 
-
-    // Debug: Log the agendaUrl to see if it's populated
-    console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
-
     // Check if event is bookmarked
     const eventIsBookmarked = isBookmarked(displayEvent.id);
+    const eventDetailHref = `/events/${generateEventSlug(
+        displayEvent.title,
+        ('originalEventId' in displayEvent ? (displayEvent as MultiDayEventInstance).originalEventId : displayEvent.id)
+    )}`;
 
     // Handle bookmark/unbookmark event
     const handleBookmarkEvent = async () => {
@@ -87,7 +87,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         const fetchEventWithAgenda = async () => {
             // If event already has agenda, no need to fetch
             if (event.agenda && event.agenda.length > 0) {
-                console.log('[EventDetailPanel] Event already has agenda, skipping fetch');
                 setIsLoading(false);
                 return;
             }
@@ -108,14 +107,12 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 // Use originalEventId for multi-day instances, otherwise the regular id
                 const fetchEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
-                console.log('[EventDetailPanel] Fetching agenda for event:', fetchEventId);
                 const fullEvent = await EventService.getEventWithAgenda(fetchEventId, supabase);
 
                 // Clear the timeout since we got a response
                 clearTimeout(timeoutId);
 
                 if (isMounted) {
-                    console.log('[EventDetailPanel] Agenda fetched successfully:', fullEvent.agenda?.length || 0, 'items');
                     // Only merge in the agenda, keep original event data (including tags) to prevent flash
                     if (fullEvent.agenda && fullEvent.agenda.length > 0) {
                         setEventWithAgenda(prev => ({
@@ -134,7 +131,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 console.warn('[EventDetailPanel] Failed to fetch event agenda, using basic event data:', error);
             } finally {
                 if (isMounted) {
-                    console.log('[EventDetailPanel] Setting isLoading to false');
                     setIsLoading(false);
                 }
             }
@@ -222,19 +218,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 />
             )}
             <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
-                {/* Open Full Page Action */}
-                {/* Open Full Page Action - Internal Event Page */}
-                <Link
-                    href={`/events/${generateEventSlug(displayEvent.title, ('originalEventId' in displayEvent ? (displayEvent as MultiDayEventInstance).originalEventId : displayEvent.id))}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                    title="Open full event page"
-                >
-                    <ArrowSquareOutIcon className="w-4 h-4" />
-                </Link>
-
-                {/* Bookmark Action */}
                 <button
                     type="button"
                     onClick={handleBookmarkEvent}
@@ -248,6 +231,18 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     <Bookmark className="w-4 h-4" weight={eventIsBookmarked ? "fill" : "regular"} />
                 </button>
 
+                <EventTracking event={displayEvent} variant="compact" />
+
+                <Link
+                    href={eventDetailHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                    title="Open full event page"
+                >
+                    <ArrowSquareOutIcon className="w-4 h-4" />
+                </Link>
+
                 <button
                     type="button"
                     onClick={onClose}
@@ -259,23 +254,26 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
-                <div className="flex items-start justify-between">
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">{displayEvent.title}</h3>
+                <div className="pr-52 sm:pr-56">
+                    <h3 className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">
+                        {displayEvent.title}
+                    </h3>
                 </div>
 
                 <EventInfo event={displayEvent} category={category} />
 
-                <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
-                    <div className="text-[11px] font-medium text-foreground-tertiary uppercase tracking-[0.05em] mb-4">
-                        Action
-                    </div>
-                    <EventTracking event={displayEvent} />
-                </div>
-
-                {/* Adaptive Timeline Section */}
-                {/* Show loading skeleton while fetching, then timeline or track view if agenda exists */}
                 <div className="mt-6 pt-6 border-t border-gray-300 dark:border-white/10">
-                    <div className="flex items-center justify-end mb-5">
+                    <div className="flex items-start justify-between gap-4 mb-5">
+                        <div>
+                            <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">
+                                Agenda
+                            </h3>
+                            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+                                {displayEvent.agenda && displayEvent.agenda.length > 0
+                                    ? 'Published sessions and timing for this event.'
+                                    : 'Session details will appear here when the organizer publishes them.'}
+                            </p>
+                        </div>
                         {hasTrackAgenda && (
                             <div className="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-white/5 backdrop-blur px-1 py-1">
                                 <button
@@ -321,7 +319,16 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         ) : (
                             <AdaptiveTimeline event={displayEvent} />
                         )
-                    ) : null}
+                    ) : (
+                        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-5 dark:border-white/10 dark:bg-white/[0.03]">
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                Agenda not published yet
+                            </p>
+                            <p className="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                                We&apos;ll show session timing here as soon as the organizer shares it.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Speakers Section */}

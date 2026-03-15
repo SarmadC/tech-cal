@@ -38,6 +38,7 @@ describe('eventTransformer.toApp', () => {
 
         expect(result.id).toBe('evt_12345');
         expect(result.createdAt).toBe('2024-05-01T10:00:00.000Z');
+        expect(result.updatedAt).toBe('2024-05-01T11:00:00.000Z');
         expect(result.title).toBe('AI Developer Conference');
         expect(result.startTime).toBe('2024-10-20T09:00:00.000Z');
         expect(result.organizer).toBe('Tech Events Inc.');

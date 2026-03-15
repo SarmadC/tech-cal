@@ -47,6 +47,38 @@ html.light {
 
 /* Hero Section */
 .landing-container .hero {
+    --hero-bg: #08090a;
+    --hero-background-wash: none;
+    --hero-title-color: #ffffff;
+    --hero-title-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    --hero-subtitle-color: var(--foreground-secondary);
+    --hero-subtitle-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    --hero-accent-gradient: linear-gradient(135deg, #ffffff 14%, #d4d4d8 58%, #a1a1aa 100%);
+    --hero-orbit-stroke: rgba(255, 255, 255, 0.08);
+    --hero-orbit-icon-color: rgba(255, 255, 255, 0.9);
+    --hero-orbit-icon-shadow: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+    --hero-content-halo:
+        radial-gradient(circle at 50% 42%,
+            rgba(255, 255, 255, 0.1) 0%,
+            rgba(255, 255, 255, 0.04) 28%,
+            rgba(8, 9, 10, 0) 74%);
+    --hero-primary-bg: linear-gradient(110deg, #000103 45%, #1e2631 50%, #000103 55%);
+    --hero-primary-border: rgba(255, 255, 255, 0.1);
+    --hero-primary-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --hero-primary-hover-border: rgba(255, 255, 255, 0.2);
+    --hero-primary-hover-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    --hero-primary-focus-border: rgba(255, 255, 255, 0.3);
+    --hero-primary-focus-ring: rgba(255, 255, 255, 0.12);
+    --hero-secondary-bg: transparent;
+    --hero-secondary-border: var(--border-default);
+    --hero-secondary-color: var(--foreground-secondary);
+    --hero-secondary-shadow: none;
+    --hero-secondary-hover-bg: rgba(255, 255, 255, 0.1);
+    --hero-secondary-hover-border: var(--border-strong);
+    --hero-secondary-hover-color: var(--foreground-primary);
+    --hero-secondary-hover-shadow: none;
+    --hero-secondary-focus-border: rgba(255, 255, 255, 0.22);
+    --hero-secondary-focus-ring: rgba(255, 255, 255, 0.1);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -54,18 +86,20 @@ html.light {
     position: relative;
     overflow: hidden;
     padding: 0;
+    background: var(--hero-bg);
     /* Ensure hero creates its own stacking context */
     isolation: isolate;
 }
 
-/* Dark mode: solid background */
-.dark .landing-container .hero,
-html.dark .landing-container .hero {
-    background: #08090a;
+.landing-container .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--hero-background-wash);
 }
 
-/* Light mode hero section background - solid color to override parent gradient */
-/* Must come after base rule and use high specificity */
 :root:not(.dark) .landing-container section.hero,
 html:not(.dark) .landing-container section.hero,
 :root:not(.dark) .landing-container .hero,
@@ -74,9 +108,52 @@ html:not(.dark) .landing-container .hero,
 .light .landing-container .hero,
 html.light .landing-container section.hero,
 html.light .landing-container .hero {
-    background-color: #ffffff;
-    background: #ffffff;
-    background-image: none;
+    --hero-bg: #fafaf7;
+    --hero-background-wash:
+        radial-gradient(circle at 50% 44%,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(248, 250, 252, 0.66) 24%,
+            rgba(226, 232, 240, 0.34) 50%,
+            rgba(250, 250, 247, 0) 72%),
+        radial-gradient(circle at 70% 16%,
+            rgba(148, 163, 184, 0.09) 0%,
+            rgba(148, 163, 184, 0.045) 16%,
+            rgba(148, 163, 184, 0) 36%),
+        radial-gradient(circle at 28% 84%,
+            rgba(99, 102, 241, 0.08) 0%,
+            rgba(99, 102, 241, 0.03) 18%,
+            rgba(99, 102, 241, 0) 42%);
+    --hero-title-color: #0f172a;
+    --hero-title-shadow: 0 10px 30px rgba(248, 250, 252, 0.9), 0 2px 10px rgba(148, 163, 184, 0.18);
+    --hero-subtitle-color: rgba(15, 23, 42, 0.72);
+    --hero-subtitle-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    --hero-accent-gradient: linear-gradient(135deg, #0f172a 0%, #334155 56%, #64748b 100%);
+    --hero-orbit-stroke: rgba(15, 23, 42, 0.08);
+    --hero-orbit-icon-color: rgba(15, 23, 42, 0.62);
+    --hero-orbit-icon-shadow: drop-shadow(0 10px 18px rgba(255, 255, 255, 0.72));
+    --hero-content-halo:
+        radial-gradient(circle at 50% 42%,
+            rgba(255, 255, 255, 0.96) 0%,
+            rgba(248, 250, 252, 0.8) 32%,
+            rgba(226, 232, 240, 0.34) 58%,
+            rgba(250, 250, 247, 0) 78%);
+    --hero-primary-bg: linear-gradient(135deg, #111827 0%, #1f2937 52%, #111827 100%);
+    --hero-primary-border: rgba(15, 23, 42, 0.14);
+    --hero-primary-shadow: 0 12px 24px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.08);
+    --hero-primary-hover-border: rgba(15, 23, 42, 0.22);
+    --hero-primary-hover-shadow: 0 18px 34px rgba(15, 23, 42, 0.16), 0 8px 16px rgba(15, 23, 42, 0.1);
+    --hero-primary-focus-border: rgba(15, 23, 42, 0.22);
+    --hero-primary-focus-ring: rgba(148, 163, 184, 0.18);
+    --hero-secondary-bg: rgba(255, 255, 255, 0.76);
+    --hero-secondary-border: rgba(15, 23, 42, 0.12);
+    --hero-secondary-color: rgba(15, 23, 42, 0.72);
+    --hero-secondary-shadow: 0 8px 20px rgba(148, 163, 184, 0.12);
+    --hero-secondary-hover-bg: rgba(255, 255, 255, 0.94);
+    --hero-secondary-hover-border: rgba(15, 23, 42, 0.18);
+    --hero-secondary-hover-color: #0f172a;
+    --hero-secondary-hover-shadow: 0 12px 24px rgba(148, 163, 184, 0.16);
+    --hero-secondary-focus-border: rgba(15, 23, 42, 0.18);
+    --hero-secondary-focus-ring: rgba(148, 163, 184, 0.14);
 }
 
 /* Prefer stable small-viewport height on mobile */
@@ -97,12 +174,8 @@ html.light .landing-container .hero {
     width: 100%;
     height: 100%;
     z-index: 1;
-    z-index: 1;
     pointer-events: none;
 }
-
-/* Light rays visibility now handled by component logic */
-
 
 /* Orbit layer: keep icons outside a central safe zone */
 .landing-container .hero .hero-orbit-layer {
@@ -123,6 +196,15 @@ html.light .landing-container .hero {
     transform: translate(var(--parallax-x, 0px), var(--parallax-y, 0px));
 }
 
+.landing-container .hero .orbit-path {
+    border-color: var(--hero-orbit-stroke);
+}
+
+.landing-container .hero .orbit-icon {
+    color: var(--hero-orbit-icon-color);
+    filter: var(--hero-orbit-icon-shadow);
+}
+
 /* Hero Content */
 .landing-container .hero-content {
     position: relative;
@@ -134,6 +216,17 @@ html.light .landing-container .hero {
     max-width: 800px;
     padding: 0 var(--space-8);
     width: 100%;
+    isolation: isolate;
+}
+
+.landing-container .hero-content::before {
+    content: '';
+    position: absolute;
+    inset: -4rem -5rem -3rem;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--hero-content-halo);
+    filter: blur(26px);
 }
 
 /* Enhanced Responsive Hero Content */
@@ -188,20 +281,12 @@ html.light .landing-container .hero {
 .landing-container .hero-subtitle {
     font-family: var(--font-sans);
     font-size: clamp(1rem, 2.5vw, 1.25rem);
-    color: var(--foreground-secondary);
+    color: var(--hero-subtitle-color);
     margin: 0 0 var(--space-12) 0;
     font-weight: 400;
     letter-spacing: 0.02em;
     font-feature-settings: 'liga' 1, 'calt' 1;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
-}
-
-/* Light mode hero subtitle */
-:root:not(.dark) .landing-container .hero-subtitle,
-.light .landing-container .hero-subtitle,
-html.light .landing-container .hero-subtitle {
-    color: var(--foreground-secondary);
-    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+    text-shadow: var(--hero-subtitle-shadow);
 }
 
 /* Hero Title */
@@ -210,22 +295,21 @@ html.light .landing-container .hero-subtitle {
     font-size: clamp(2.75rem, 8vw, 4.5rem) !important;
     font-weight: 600 !important;
     line-height: 1.1 !important;
-    color: white !important;
+    color: var(--hero-title-color) !important;
     margin: 0 0 var(--space-6) 0 !important;
     letter-spacing: -0.02em !important;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3) !important;
+    text-shadow: var(--hero-title-shadow) !important;
     font-feature-settings: 'liga' 1, 'kern' 1 !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: initial !important;
 }
 
-/* Light mode hero title */
-:root:not(.dark) .landing-container .hero .hero-title,
-.light .landing-container .hero .hero-title,
-html.light .landing-container .hero .hero-title {
-    color: #1a1a1a !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+.landing-container .hero .text-gradient-mono {
+    background: var(--hero-accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* Hero CTA Container */
@@ -275,6 +359,7 @@ html.light .landing-container .hero .hero-title {
     font-family: var(--font-sans);
     width: 100%;
     max-width: 280px;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
 
 /* Enhanced Responsive CTA Buttons */
@@ -332,78 +417,53 @@ html.light .landing-container .hero .hero-title {
 .landing-container .hero-primary-btn,
 .landing-container .hero-primary-btn.font-medium,
 .landing-container a.hero-primary-btn {
-    /* Dark mode: dark gradient with shimmer */
-    background: linear-gradient(110deg, #000103 45%, #1e2631 50%, #000103 55%);
+    background: var(--hero-primary-bg);
     background-size: 200% 100%;
     color: rgba(255, 255, 255, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--hero-primary-border);
+    box-shadow: var(--hero-primary-shadow);
 }
 
 .landing-container .hero-primary-btn:hover,
 .landing-container a.hero-primary-btn:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    border-color: var(--hero-primary-hover-border);
+    box-shadow: var(--hero-primary-hover-shadow);
     transform: translateY(-2px);
     color: rgba(255, 255, 255, 1) !important;
 }
 
-/* Light mode primary button */
-:root:not(.dark) .landing-container .hero-primary-btn,
-:root:not(.dark) .landing-container .hero-primary-btn.font-medium,
-:root:not(.dark) .landing-container a.hero-primary-btn,
-.light .landing-container .hero-primary-btn,
-.light .landing-container .hero-primary-btn.font-medium,
-.light .landing-container a.hero-primary-btn,
-html.light .landing-container .hero-primary-btn,
-html.light .landing-container .hero-primary-btn.font-medium,
-html.light .landing-container a.hero-primary-btn {
-    background: linear-gradient(110deg, #1a1a1a 45%, #2d2d2d 50%, #1a1a1a 55%);
-    background-size: 200% 100%;
-    color: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-:root:not(.dark) .landing-container .hero-primary-btn:hover,
-:root:not(.dark) .landing-container a.hero-primary-btn:hover,
-.light .landing-container .hero-primary-btn:hover,
-.light .landing-container a.hero-primary-btn:hover,
-html.light .landing-container .hero-primary-btn:hover,
-html.light .landing-container a.hero-primary-btn:hover {
-    border-color: rgba(0, 0, 0, 0.25);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    color: #ffffff !important;
+.landing-container .hero-primary-btn:focus-visible,
+.landing-container a.hero-primary-btn:focus-visible {
+    outline: none;
+    border-color: var(--hero-primary-focus-border);
+    box-shadow:
+        var(--hero-primary-shadow),
+        0 0 0 1px var(--hero-bg),
+        0 0 0 4px var(--hero-primary-focus-ring);
 }
 
 /* Secondary CTA Button - Light/Dark Mode */
 .landing-container .hero-secondary-btn {
-    background: transparent;
-    color: var(--foreground-secondary);
-    border: 1px solid var(--border-default);
+    background: var(--hero-secondary-bg);
+    color: var(--hero-secondary-color);
+    border: 1px solid var(--hero-secondary-border);
+    box-shadow: var(--hero-secondary-shadow);
 }
 
 .landing-container .hero-secondary-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--border-strong);
-    color: var(--foreground-primary);
+    background: var(--hero-secondary-hover-bg);
+    border-color: var(--hero-secondary-hover-border);
+    color: var(--hero-secondary-hover-color);
+    box-shadow: var(--hero-secondary-hover-shadow);
 }
 
-/* Light mode secondary button */
-:root:not(.dark) .landing-container .hero-secondary-btn,
-.light .landing-container .hero-secondary-btn,
-html.light .landing-container .hero-secondary-btn {
-    background: transparent;
-    color: var(--foreground-secondary);
-    border: 1px solid var(--border-default);
-}
-
-:root:not(.dark) .landing-container .hero-secondary-btn:hover,
-.light .landing-container .hero-secondary-btn:hover,
-html.light .landing-container .hero-secondary-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: var(--border-strong);
-    color: var(--foreground-primary);
+.landing-container .hero-secondary-btn:focus-visible {
+    outline: none;
+    border-color: var(--hero-secondary-focus-border);
+    box-shadow:
+        var(--hero-secondary-shadow),
+        0 0 0 1px var(--hero-bg),
+        0 0 0 4px var(--hero-secondary-focus-ring);
 }
 
 /* Enhanced Responsive Design for Hero */
@@ -641,12 +701,6 @@ html.light .landing-container .hero-secondary-btn:hover {
     .landing-container .hero {
         min-height: 100vh;
         padding: var(--space-4) 0;
-    }
-
-    html:not(.dark) .landing-container .hero,
-    :root:not(.dark) .landing-container .hero {
-        background-color: #ffffff;
-        background: #ffffff;
     }
 
     .landing-container .hero-content {

@@ -32,6 +32,8 @@
     "ingest": "tsx scripts/run-ingestion.ts",
     "verify-find-similar": "tsx scripts/verify-find-similar-events-fix.ts",
     "check-retry-metadata": "tsx scripts/check-retry-metadata.ts",
+    "community:seed": "tsx scripts/seed-community-showcase.ts",
+    "community:clear": "tsx scripts/clear-community-showcase.ts",
     "backfill:hackathon-features": "tsx scripts/backfill-hackathon-recommendation-features.ts",
     "identify-earnings": "tsx scripts/identify-earnings-events.ts",
     "fix-techmeme-urls": "tsx scripts/fix-techmeme-urls.ts",

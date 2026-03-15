@@ -1,6 +1,7 @@
 import type { SupabaseClientType } from '@/types';
 import { SocialProfileService } from '@/services/socialProfileService';
 
+
 interface ProfileRow {
   id: string;
   full_name: string | null;
@@ -11,6 +12,24 @@ interface ProfileRow {
   show_attendance: boolean;
 }
 
+interface CareerProfileRow {
+  user_id: string;
+  current_role: string;
+  seniority: string;
+  industry: string;
+  company_size: string | null;
+  primary_skills: string[];
+  skills_to_learn: string[];
+  interests: string[];
+  career_goals: string[];
+  timeframe: string | null;
+  target_path: string | null;
+  learning_style: string[];
+  networking_goals: string[];
+  preferred_event_types: string[];
+  updated_at: string;
+}
+
 interface EventRow {
   id: string;
   slug: string;
@@ -19,12 +38,39 @@ interface EventRow {
   location: string | null;
 }
 
+
+
 export interface PublicProfileEvent {
   id: string;
   slug: string;
   title: string;
   startTime: string;
   location: string | null;
+}
+
+export interface PublicCareerProfile {
+  currentRole: string | null;
+  seniority: string | null;
+  industry: string | null;
+  companySize: string | null;
+  primarySkills: string[];
+  skillsToLearn: string[];
+  interests: string[];
+  careerGoals: string[];
+  timeframe: string | null;
+  targetPath: string | null;
+  learningStyle: string[];
+  networkingGoals: string[];
+  preferredEventTypes: string[];
+  lastUpdated: string;
+}
+
+export interface MutualConnection {
+  id: string;
+  fullName: string | null;
+  username: string;
+  avatarUrl: string | null;
+  headline: string | null;
 }
 
 export interface PublicProfileResult {
@@ -38,6 +84,9 @@ export interface PublicProfileResult {
   followerCount: number;
   followingCount: number;
   recentAttendingEvents: PublicProfileEvent[];
+  careerProfile: PublicCareerProfile | null;
+  mutualConnections: MutualConnection[];
+  mutualConnectionsCount: number;
 }
 
 export class PublicProfileService {
@@ -98,7 +147,12 @@ export class PublicProfileService {
       return null;
     }
 
-    const [{ data: stats, error: statsError }, recentAttendingEvents] = await Promise.all([
+    const [
+      statsResult,
+      recentAttendingEvents,
+      careerProfile,
+      mutualConnectionsResult,
+    ] = await Promise.all([
       readClient
         .from('user_social_stats')
         .select('follower_count, following_count')
@@ -109,9 +163,13 @@ export class PublicProfileService {
         userId: typedProfile.id,
         canViewAttendance: typedProfile.show_attendance || isViewerOwner,
       }),
+      this.getCareerProfile(readClient, typedProfile.id),
+      viewerId && !isViewerOwner
+        ? this.getMutualConnections(readClient, typedProfile.id, viewerId)
+        : Promise.resolve({ connections: [], count: 0 }),
     ]);
 
-    if (statsError) {
+    if (statsResult.error) {
       throw new Error('Failed to fetch public profile stats.');
     }
 
@@ -123,10 +181,117 @@ export class PublicProfileService {
       headline: typedProfile.headline,
       showAttendance: typedProfile.show_attendance,
       isViewerOwner,
-      followerCount: stats?.follower_count ?? 0,
-      followingCount: stats?.following_count ?? 0,
+      followerCount: statsResult.data?.follower_count ?? 0,
+      followingCount: statsResult.data?.following_count ?? 0,
       recentAttendingEvents,
+      careerProfile,
+      mutualConnections: mutualConnectionsResult.connections,
+      mutualConnectionsCount: mutualConnectionsResult.count,
     };
+  }
+
+  private static async getCareerProfile(
+    readClient: SupabaseClientType,
+    userId: string
+  ): Promise<PublicCareerProfile | null> {
+    const { data, error } = await readClient
+      .from('career_profiles')
+      .select(
+        'user_id, current_role, seniority, industry, company_size, primary_skills, skills_to_learn, interests, career_goals, timeframe, target_path, learning_style, networking_goals, preferred_event_types, updated_at'
+      )
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const row = data as CareerProfileRow;
+
+    return {
+      currentRole: row.current_role,
+      seniority: row.seniority,
+      industry: row.industry,
+      companySize: row.company_size,
+      primarySkills: Array.isArray(row.primary_skills) ? row.primary_skills : [],
+      skillsToLearn: Array.isArray(row.skills_to_learn) ? row.skills_to_learn : [],
+      interests: Array.isArray(row.interests) ? row.interests : [],
+      careerGoals: Array.isArray(row.career_goals) ? row.career_goals : [],
+      timeframe: row.timeframe,
+      targetPath: row.target_path,
+      learningStyle: Array.isArray(row.learning_style) ? row.learning_style : [],
+      networkingGoals: Array.isArray(row.networking_goals) ? row.networking_goals : [],
+      preferredEventTypes: Array.isArray(row.preferred_event_types) ? row.preferred_event_types : [],
+      lastUpdated: row.updated_at,
+    };
+  }
+
+  private static async getMutualConnections(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<{ connections: MutualConnection[]; count: number }> {
+    // Get people that both users follow
+    const { data: viewerFollowing, error: viewerError } = await readClient
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', viewerId);
+
+    if (viewerError || !viewerFollowing?.length) {
+      return { connections: [], count: 0 };
+    }
+
+    const viewerFollowingIds = viewerFollowing.map((f) => f.following_id);
+
+    const { data: profileFollowing, error: profileError } = await readClient
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', profileUserId);
+
+    if (profileError || !profileFollowing?.length) {
+      return { connections: [], count: 0 };
+    }
+
+    const profileFollowingIds = new Set(profileFollowing.map((f) => f.following_id));
+
+    // Find mutual follows (people both users follow)
+    const mutualIds = viewerFollowingIds.filter((id) => profileFollowingIds.has(id));
+
+    if (mutualIds.length === 0) {
+      return { connections: [], count: 0 };
+    }
+
+    // Fetch all mutual profiles to check visibility and username
+    const { data: allMutualProfiles, error: allProfilesError } = await readClient
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, headline, profile_visibility')
+      .in('id', mutualIds);
+
+    if (allProfilesError || !allMutualProfiles) {
+      return { connections: [], count: 0 };
+    }
+
+    // Filter to only public profiles with usernames (both required for display)
+    const validProfiles = allMutualProfiles.filter(
+      (p) => p.profile_visibility === 'public' && p.username
+    );
+
+    if (validProfiles.length === 0) {
+      return { connections: [], count: 0 };
+    }
+
+    // Take first 6 valid profiles for display
+    const displayProfiles = validProfiles.slice(0, 6);
+
+    const connections: MutualConnection[] = displayProfiles.map((p) => ({
+      id: p.id,
+      fullName: p.full_name,
+      username: p.username!,
+      avatarUrl: p.avatar_url,
+      headline: p.headline,
+    }));
+
+    return { connections, count: validProfiles.length };
   }
 
   private static async getRecentAttendingEvents({
@@ -142,40 +307,54 @@ export class PublicProfileService {
       return [];
     }
 
-    const { data: userEvents, error: userEventsError } = await readClient
-      .from('user_events')
-      .select('event_id')
-      .eq('user_id', userId)
-      .eq('status', 'attending')
-      .limit(20);
+    // Get upcoming events first (next 5), then past events if needed
+    // This uses a join with user_events to get only events the user is attending
+    const now = new Date().toISOString();
 
-    if (userEventsError) {
-      throw new Error('Failed to fetch attended events.');
-    }
-
-    const eventIds = Array.from(new Set((userEvents || []).map((row) => row.event_id)));
-    if (eventIds.length === 0) {
-      return [];
-    }
-
-    const { data: events, error: eventsError } = await readClient
+    // First try to get upcoming events
+    const { data: upcomingEvents, error: upcomingError } = await readClient
       .from('events')
-      .select('id, slug, title, start_time, location')
-      .in('id', eventIds)
-      .eq('status', 'confirmed');
+      .select('id, slug, title, start_time, location, user_events!inner(user_id)')
+      .eq('user_events.user_id', userId)
+      .eq('user_events.status', 'attending')
+      .eq('status', 'confirmed')
+      .gte('start_time', now)
+      .order('start_time', { ascending: true })
+      .limit(5);
 
-    if (eventsError) {
-      throw new Error('Failed to fetch attended event details.');
+    if (upcomingError) {
+      throw new Error('Failed to fetch upcoming events.');
     }
 
-    const sortedEvents = ((events || []) as EventRow[])
-      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    const upcoming = (upcomingEvents || []) as unknown as EventRow[];
 
-    const nowMs = Date.now();
-    const upcoming = sortedEvents.filter((event) => new Date(event.start_time).getTime() >= nowMs);
-    const selected = (upcoming.length > 0 ? upcoming : [...sortedEvents].reverse()).slice(0, 5);
+    // If we have upcoming events, return them
+    if (upcoming.length > 0) {
+      return upcoming.map((event) => ({
+        id: event.id,
+        slug: event.slug,
+        title: event.title || 'Untitled event',
+        startTime: event.start_time,
+        location: event.location,
+      }));
+    }
 
-    return selected.map((event) => ({
+    // Otherwise, get the most recent past events
+    const { data: pastEvents, error: pastError } = await readClient
+      .from('events')
+      .select('id, slug, title, start_time, location, user_events!inner(user_id)')
+      .eq('user_events.user_id', userId)
+      .eq('user_events.status', 'attending')
+      .eq('status', 'confirmed')
+      .lt('start_time', now)
+      .order('start_time', { ascending: false })
+      .limit(5);
+
+    if (pastError) {
+      throw new Error('Failed to fetch past events.');
+    }
+
+    return ((pastEvents || []) as unknown as EventRow[]).map((event) => ({
       id: event.id,
       slug: event.slug,
       title: event.title || 'Untitled event',

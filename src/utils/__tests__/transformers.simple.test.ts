@@ -51,6 +51,7 @@ describe('transformers', () => {
         expect(result).toMatchObject({
           id: '1',
           title: 'Test Event',
+          updatedAt: '2024-01-01T09:00:00Z',
           startTime: '2024-01-01T10:00:00Z',
           timezone: 'America/New_York',
           eventTypeId: 'type1',

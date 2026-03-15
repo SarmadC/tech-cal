@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { MagnifyingGlass, CaretDown, ChatCircle } from '@phosphor-icons/react';
 import CreatePost from './CreatePost';
-import PostFeedItem, { PostType } from './PostFeedItem';
+import PostFeedItem from './PostFeedItem';
+import type { CircleDiscussionPost } from '@/types/circleDiscussions';
 
 interface CircleDiscussionsProps {
     circleId: string;
@@ -14,7 +15,7 @@ interface CircleDiscussionsProps {
         fullName?: string | null;
         avatarUrl?: string | null;
     } | null;
-    posts: PostType[];
+    posts: CircleDiscussionPost[];
 }
 
 export default function CircleDiscussions({
@@ -129,6 +130,7 @@ export default function CircleDiscussions({
                             circleSlug={circleSlug}
                             currentUser={currentUser}
                             isJoined={isJoined}
+                            showPermalink={true}
                         />
                     ))}
                 </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { ChatCircle, CaretUp, CaretDown, DotsThree, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,45 +32,47 @@ import {
 import Avatar, { getDisplayName } from './Avatar';
 import VoteControls from './VoteControls';
 import CommentItem from './CommentItem';
-import type { CommentType } from './CommentItem';
-
-export type { CommentType };
-
-export interface PostType {
-    id: string;
-    content: string;
-    created_at: string;
-    author: {
-        id: string;
-        full_name: string | null;
-        avatar_url: string | null;
-    };
-    comments: CommentType[];
-    score?: number;
-    userVote?: number;
-}
+import type { CircleDiscussionComment, CircleDiscussionPost } from '@/types/circleDiscussions';
+import { buildCirclePostPath, parseCirclePostContent } from '@/utils/circlePosts';
 
 interface PostFeedItemProps {
-    post: PostType;
+    post: CircleDiscussionPost;
     circleSlug: string;
     currentUser: {
         id: string;
         avatarUrl?: string | null;
     } | null;
     isJoined: boolean;
+    initialExpanded?: boolean;
+    disableCollapse?: boolean;
+    permalinkHref?: string;
+    redirectOnDeleteHref?: string;
+    showPermalink?: boolean;
 }
 
 const MAX_VISIBLE_ROOT_COMMENTS = 2;
 
-function countComments(comments: CommentType[]): number {
+function countComments(comments: CircleDiscussionComment[]): number {
     return comments.reduce((total, comment) => {
         return total + 1 + countComments(comment.replies || []);
     }, 0);
 }
 
-export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }: PostFeedItemProps) {
-    const [isPostExpanded, setIsPostExpanded] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
+export default function PostFeedItem({
+    post,
+    circleSlug,
+    currentUser,
+    isJoined,
+    initialExpanded = false,
+    disableCollapse = false,
+    permalinkHref,
+    redirectOnDeleteHref,
+    showPermalink = false,
+}: PostFeedItemProps) {
+    const router = useRouter();
+    const resolvedPermalinkHref = permalinkHref || buildCirclePostPath(circleSlug, post.id);
+    const [isPostExpanded, setIsPostExpanded] = useState(initialExpanded);
+    const [isExpanded, setIsExpanded] = useState(initialExpanded);
     const [commentContent, setCommentContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCommentComposerExpanded, setIsCommentComposerExpanded] = useState(false);
@@ -94,24 +98,7 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
     const hiddenRootCommentCount = Math.max(0, comments.length - visibleRootComments.length);
     const shouldShowExpandedCommentComposer = isCommentComposerExpanded || Boolean(commentContent.trim());
 
-    const parsedPostContent = useMemo(() => {
-        const lines = (post.content ?? '')
-            .split('\n')
-            .map(line => line.trim())
-            .filter(Boolean);
-
-        if (lines.length > 1) {
-            return {
-                title: lines[0],
-                body: lines.slice(1).join('\n')
-            };
-        }
-
-        return {
-            title: '',
-            body: (post.content ?? '').trim()
-        };
-    }, [post.content]);
+    const parsedPostContent = useMemo(() => parseCirclePostContent(post.content ?? ''), [post.content]);
 
     const handleVote = async (voteValue: 1 | -1) => {
         if (!currentUser) {
@@ -157,6 +144,7 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
                 setCommentContent('');
                 setIsCommentComposerExpanded(false);
                 showSuccess('Comment added');
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to post comment');
             }
@@ -175,6 +163,7 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
             if (result.success) {
                 setIsEditing(false);
                 showSuccess('Post updated');
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to update post');
             }
@@ -192,6 +181,11 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
             if (result.success) {
                 showSuccess('Post deleted');
                 setShowDeleteConfirm(false);
+                if (redirectOnDeleteHref) {
+                    router.replace(redirectOnDeleteHref);
+                    return;
+                }
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to delete post');
             }
@@ -215,7 +209,7 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
     };
 
     const handleShare = async () => {
-        const url = `${window.location.origin}/circle/${circleSlug}?post=${post.id}`;
+        const url = `${window.location.origin}${resolvedPermalinkHref}`;
 
         try {
             if (navigator.share) {
@@ -235,7 +229,7 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
     };
 
     return (
-        <article id={`post-${post.id}`} className="group">
+        <article id={`post-${post.id}`} className="group scroll-mt-28 md:scroll-mt-36">
             <div className="px-0">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex items-start gap-3">
@@ -314,14 +308,16 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
                                 </Dialog>
                             </>
                         )}
-                        <button
-                            type="button"
-                            className="rounded p-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors opacity-60 hover:opacity-100 focus:opacity-100"
-                            onClick={() => setIsPostExpanded(!isPostExpanded)}
-                            aria-label={isPostExpanded ? "Collapse post" : "Expand post"}
-                        >
-                            {isPostExpanded ? <CaretUp size={16} weight="bold" /> : <CaretDown size={16} weight="bold" />}
-                        </button>
+                        {!disableCollapse && (
+                            <button
+                                type="button"
+                                className="rounded p-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors opacity-60 hover:opacity-100 focus:opacity-100"
+                                onClick={() => setIsPostExpanded(!isPostExpanded)}
+                                aria-label={isPostExpanded ? "Collapse post" : "Expand post"}
+                            >
+                                {isPostExpanded ? <CaretUp size={16} weight="bold" /> : <CaretDown size={16} weight="bold" />}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -360,22 +356,22 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
                         {parsedPostContent.title ? (
                             <>
                                 <h3
-                                    className={`text-[34px] leading-[1.2] font-semibold tracking-[-0.015em] text-zinc-900 dark:text-zinc-100 ${!isPostExpanded ? 'cursor-pointer' : ''}`}
-                                    onClick={() => !isPostExpanded && setIsPostExpanded(true)}
+                                    className={`text-[34px] leading-[1.2] font-semibold tracking-[-0.015em] text-zinc-900 dark:text-zinc-100 ${!isPostExpanded && !disableCollapse ? 'cursor-pointer' : ''}`}
+                                    onClick={() => !isPostExpanded && !disableCollapse && setIsPostExpanded(true)}
                                 >
                                     {parsedPostContent.title}
                                 </h3>
                                 <p
-                                    className={`mt-2 whitespace-pre-wrap text-[18px] leading-[1.55] text-zinc-600 dark:text-zinc-300 max-w-[70ch] ${!isPostExpanded ? 'line-clamp-3 cursor-pointer' : ''}`}
-                                    onClick={() => !isPostExpanded && setIsPostExpanded(true)}
+                                    className={`mt-2 whitespace-pre-wrap text-[18px] leading-[1.55] text-zinc-600 dark:text-zinc-300 max-w-[70ch] ${!isPostExpanded && !disableCollapse ? 'line-clamp-3 cursor-pointer' : ''}`}
+                                    onClick={() => !isPostExpanded && !disableCollapse && setIsPostExpanded(true)}
                                 >
                                     {parsedPostContent.body}
                                 </p>
                             </>
                         ) : (
                             <p
-                                className={`whitespace-pre-wrap text-[19px] font-medium leading-[1.5] text-zinc-800 dark:text-zinc-200 max-w-[70ch] ${!isPostExpanded ? 'line-clamp-3 cursor-pointer' : ''}`}
-                                onClick={() => !isPostExpanded && setIsPostExpanded(true)}
+                                className={`whitespace-pre-wrap text-[19px] font-medium leading-[1.5] text-zinc-800 dark:text-zinc-200 max-w-[70ch] ${!isPostExpanded && !disableCollapse ? 'line-clamp-3 cursor-pointer' : ''}`}
+                                onClick={() => !isPostExpanded && !disableCollapse && setIsPostExpanded(true)}
                             >
                                 {parsedPostContent.body}
                             </p>
@@ -405,6 +401,15 @@ export default function PostFeedItem({ post, circleSlug, currentUser, isJoined }
                         <ChatCircle size={16} />
                         Reply
                     </button>
+
+                    {showPermalink && (
+                        <Link
+                            href={resolvedPermalinkHref}
+                            className="inline-flex items-center gap-1.5 leading-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                        >
+                            Open thread
+                        </Link>
+                    )}
 
                     <button
                         type="button"

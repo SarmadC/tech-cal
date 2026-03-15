@@ -60,6 +60,7 @@ describe('eventTransformer', () => {
       expect(result).toEqual({
         id: '1',
         createdAt: '2024-01-01T09:00:00Z',
+        updatedAt: '2024-01-01T09:00:00Z',
         title: 'Test Event',
         description: 'Test Description',
         startTime: '2024-01-01T10:00:00Z',
@@ -112,6 +113,7 @@ describe('eventTransformer', () => {
       expect(result).toEqual({
         id: '1',
         createdAt: '2024-01-01T09:00:00Z',
+        updatedAt: '2024-01-01T09:00:00Z',
         title: 'Test Event',
         description: '',
         startTime: '2024-01-01T10:00:00Z',

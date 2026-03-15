@@ -6,6 +6,7 @@ import { MapPin, BookmarkSimple, DotsThree, Exclude, UserCheck } from '@phosphor
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
+import { getVersionedImageSrc } from '@/utils/imageUrl';
 import RecommendationContext from './RecommendationContext';
 import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
@@ -90,14 +91,15 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
-        if (event.eventImageUrl) {
-            sources.push(event.eventImageUrl);
+        const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
+        if (eventImageSrc) {
+            sources.push(eventImageSrc);
         }
         if (event.organization?.logo) {
             sources.push(event.organization.logo);
         }
         return sources;
-    }, [event.eventImageUrl, event.organization]);
+    }, [event.eventImageUrl, event.organization, event.updatedAt]);
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
     const [isActionMenuOpen, setIsActionMenuOpen] = React.useState(false);

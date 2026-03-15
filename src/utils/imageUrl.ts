@@ -25,3 +25,17 @@ export function getSafeImageSrc(src?: string | null): string | null {
 
   return null;
 }
+
+export function appendImageVersion(src: string, version?: string | null): string {
+  if (!version) return src;
+
+  const separator = src.includes('?') ? '&' : '?';
+  return `${src}${separator}v=${encodeURIComponent(version)}`;
+}
+
+export function getVersionedImageSrc(src?: string | null, version?: string | null): string | null {
+  const safeSrc = getSafeImageSrc(src);
+  if (!safeSrc) return null;
+
+  return appendImageVersion(safeSrc, version);
+}

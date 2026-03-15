@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -9,17 +9,13 @@ import {
     CalendarBlank,
     MapPin,
     Monitor,
-    CheckCircle,
     UsersThree,
-    Command,
 } from '@phosphor-icons/react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import FeedPostItem from '@/components/social/FeedPostItem';
 import CircleDiscoverCard from '@/components/social/CircleDiscoverCard';
-import MemberSuggestionRow from '@/components/social/MemberSuggestionRow';
 import { MaterialIcon, type IconName } from '@/components/ui/Icon';
-import Breadcrumbs from '@/components/common/Breadcrumbs';
-import type { CommunityHubData } from '@/types/community';
+import type { CommunityHubData, CommunityTab } from '@/types/community';
 
 // Derive a unique accent color from circle name (matches CircleDiscoverCard)
 const SIDEBAR_CIRCLE_COLORS = [
@@ -96,28 +92,13 @@ function formatEventDay(dateStr: string): { day: string; month: string } {
 
 interface CommunityHubProps {
     data: CommunityHubData;
+    activeTab: Exclude<CommunityTab, 'directory'>;
 }
 
-export default function CommunityHub({ data }: CommunityHubProps) {
+export default function CommunityHub({ data, activeTab }: CommunityHubProps) {
     const router = useRouter();
     const { showSuccess, showError } = useSnackbar();
-    const [searchQuery, setSearchQuery] = useState('');
     const [isJoiningCircle, setIsJoiningCircle] = useState<Record<string, boolean>>({});
-    const searchInputRef = useRef<HTMLInputElement>(null);
-    const discoverScrollRef = useRef<HTMLDivElement>(null);
-
-    // ── ⌘K keyboard shortcut ─────────────────────────────────────
-
-    useEffect(() => {
-        function handleKeyDown(e: KeyboardEvent) {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                searchInputRef.current?.focus();
-            }
-        }
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     // ── Circles ──────────────────────────────────────────────────
 
@@ -157,234 +138,379 @@ export default function CommunityHub({ data }: CommunityHubProps) {
     const totalCount = data.progress.tasks.length;
     const nextTask = data.progress.tasks.find((t) => !t.completed) || null;
     const progressPercent = data.progress.completionPercent;
-
-    // ── Search ───────────────────────────────────────────────────
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            router.push(`/community?q=${encodeURIComponent(searchQuery.trim())}`);
-        }
-    };
+    const leadPost = data.feed[0] ?? null;
+    const secondaryPosts = data.feed.slice(1, 5);
+    const remainingPosts = data.feed.slice(5);
 
     return (
-        <div className="max-w-[1280px] mx-auto px-6 py-8">
-            {/* ── Breadcrumbs ───────────────────────────────── */}
-            <Breadcrumbs trail={[{ label: 'Community', href: '/community' }]} />
-
-            {/* ── Header ──────────────────────────────────────── */}
-            <header className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
-                <h2 className="text-[22px] font-bold text-[var(--foreground-primary)] tracking-tight">
-                    Community
-                </h2>
-
-                {/* Header search bar */}
-                <form onSubmit={handleSearch} className="relative w-full sm:w-[400px]">
-                    <MagnifyingGlass
-                        size={18}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-tertiary)]"
-                    />
-                    <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search or jump to..."
-                        className="w-full h-10 pl-11 pr-16 rounded-xl bg-[var(--background-secondary)]/40 border border-[var(--border-default)]/10 text-sm text-[var(--foreground-primary)] placeholder:text-[var(--foreground-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 focus:bg-[var(--background-secondary)] transition-all duration-200"
-                    />
-                    {/* ⌘K badge */}
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-[var(--foreground-tertiary)] font-bold">
-                        <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded bg-[var(--background-tertiary)] border border-[var(--border-default)]/20 shadow-sm opacity-60">
-                            <Command size={10} />
-                        </kbd>
-                        <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded bg-[var(--background-tertiary)] border border-[var(--border-default)]/20 shadow-sm opacity-60">
-                            K
-                        </kbd>
-                    </div>
-                </form>
-            </header>
-
-            {/* ── Main Layout Grid ───────────────────────────── */}
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 items-start">
-
-                {/* ── Left Column: Feed + Discovery ─────────────── */}
-                <div className="lg:col-span-8 space-y-12">
-                    {/* ── FEED (FOR YOU) ────────────────────── */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4 px-1">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground-tertiary)]">
-                                For you
-                            </h3>
-                        </div>
-                        <div className="bg-[var(--background-primary)]">
-                            {data.feed.length > 0 ? (
-                                data.feed.map((post) => (
-                                    <FeedPostItem key={post.id} post={post} />
-                                ))
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-20 text-center px-6 border rounded-2xl border-dashed border-[var(--border-default)]/20">
-                                    <div className="h-14 w-14 rounded-2xl bg-[var(--background-tertiary)] flex items-center justify-center mb-5">
-                                        <UsersThree size={28} className="text-[var(--foreground-tertiary)]" />
-                                    </div>
-                                    <h4 className="text-base font-semibold text-[var(--foreground-secondary)] mb-2">
-                                        Your feed is quiet
-                                    </h4>
-                                    <p className="text-sm text-[var(--foreground-tertiary)] max-w-[280px] leading-relaxed">
-                                        Join more circles to see active discussions and trending topics.
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.9fr)_320px] lg:items-start lg:gap-12">
+            <div className="space-y-8">
+                {activeTab === 'feed' ? (
+                    <>
+                        <section>
+                            <div className="flex items-start justify-between gap-6 border-b border-[var(--border-default)]/70 pb-5">
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--foreground-tertiary)]">
+                                        Feed
+                                    </p>
+                                    <h2 className="mt-2 text-2xl font-semibold text-[var(--foreground-primary)]">
+                                        Conversations from your circles
+                                    </h2>
+                                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--foreground-secondary)]">
+                                        Lead with the biggest thread, skim the rest in cards, then drop into the full stream only when you want more context.
                                     </p>
                                 </div>
-                            )}
-                        </div>
-                    </section>
-
-                    {/* ── DISCOVER CIRCLES ─────────────────────── */}
-                    {discoverCircles.length > 0 && (
-                        <section className="pt-4 border-t border-[var(--border-default)]/10">
-                            <div className="flex items-center justify-between mb-5 px-1">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground-tertiary)]">
-                                    Discover circles
-                                </h3>
-                            </div>
-                            <div
-                                ref={discoverScrollRef}
-                                className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide"
-                            >
-                                {discoverCircles.map((circle) => (
-                                    <CircleDiscoverCard
-                                        key={circle.id}
-                                        circle={circle}
-                                        onToggle={handleCircleToggle}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                </div>
-
-                {/* ── Right Column: Sidebar Rail ───────────────── */}
-                <aside className="lg:col-span-4 space-y-10 lg:sticky lg:top-24">
-
-                    {/* ── NEXT UP ────────────────────────────── */}
-                    <section>
-                        <div className="flex items-center justify-between mb-3 px-1">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground-tertiary)]">
-                                Next up
-                            </h3>
-                        </div>
-                        <div className="rounded-2xl border border-[var(--border-default)]/20 bg-[var(--background-secondary)]/10 p-5 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[13px] font-medium text-[var(--foreground-secondary)]">Profile completion</span>
-                                <span className="text-[13px] font-bold text-[var(--foreground-primary)]">{completedCount}/{totalCount}</span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-[var(--background-tertiary)] overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-blue-500 transition-all duration-700 ease-out"
-                                    style={{ width: `${progressPercent}%` }}
-                                />
+                                <div className="hidden rounded-full border border-[var(--border-default)]/70 bg-[var(--background-secondary)]/45 px-3 py-1 text-xs font-medium text-[var(--foreground-secondary)] md:inline-flex">
+                                    {data.feed.length} recent posts
+                                </div>
                             </div>
 
-                            {nextTask && (
-                                <Link
-                                    href={nextTask.ctaHref}
-                                    className="flex items-center justify-between bg-[var(--background-primary)] p-4 rounded-xl border border-[var(--border-default)]/20 shadow-sm hover:shadow-md hover:border-[var(--border-default)]/40 transition-all duration-200 group"
-                                >
-                                    <div className="min-w-0">
-                                        <p className="text-[14px] font-bold text-[var(--foreground-primary)] leading-none mb-1.5">
-                                            {nextTask.title}
-                                        </p>
-                                        <p className="text-[12px] text-[var(--foreground-tertiary)] leading-snug">
-                                            {nextTask.description}
-                                        </p>
-                                    </div>
-                                    <CaretRight
-                                        size={18}
-                                        className="text-[var(--foreground-tertiary)] group-hover:text-[var(--foreground-primary)] group-hover:translate-x-1 transition-all duration-200"
-                                    />
-                                </Link>
-                            )}
-                        </div>
-                    </section>
+                            <div className="mt-6">
+                                {data.feed.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {leadPost && <FeedPostItem post={leadPost} variant="featured" />}
 
-                    {/* ── MY CIRCLES ────────────────────────── */}
-                    {myCircles.length > 0 && (
-                        <section>
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground-tertiary)] mb-4 px-1">
-                                My circles
-                            </h3>
-                            <div className="space-y-1">
-                                {myCircles.map((circle) => (
-                                    <Link
-                                        key={circle.id}
-                                        href={circle.href}
-                                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[var(--background-secondary)]/40 transition-all duration-200 group"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${getSidebarCircleColor(circle.name)}`}>
-                                                <MaterialIcon name={getCircleIcon(circle.name, circle.icon)} size={14} className="text-white" />
+                                        {secondaryPosts.length > 0 && (
+                                            <div>
+                                                <div className="mb-4 flex items-center justify-between">
+                                                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                                        Worth a skim
+                                                    </p>
+                                                    <p className="text-xs text-[var(--foreground-tertiary)]">
+                                                        {secondaryPosts.length} quick reads
+                                                    </p>
+                                                </div>
+                                                <div className="grid gap-4 md:grid-cols-2">
+                                                    {secondaryPosts.map((post) => (
+                                                        <FeedPostItem key={post.id} post={post} variant="card" />
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <span className="text-[14px] font-bold text-[var(--foreground-secondary)] group-hover:text-[var(--foreground-primary)] transition-colors">
-                                                {circle.name}
-                                            </span>
-                                        </div>
-                                        {/* Activity count mockup */}
-                                        <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-white shadow-sm tabular-nums">
-                                            {Math.floor(Math.random() * 15) + 1}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                                        )}
 
-                    {/* ── UPCOMING EVENTS ──────────────────── */}
-                    {data.upcomingEvents.length > 0 && (
-                        <section>
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground-tertiary)] mb-4 px-1">
-                                My upcoming events
-                            </h3>
-                            <div className="space-y-2">
-                                {data.upcomingEvents.map((event) => {
-                                    const { day, month } = formatEventDay(event.startTime);
-                                    return (
-                                        <Link
-                                            key={event.id}
-                                            href={`/events/${event.slug}`}
-                                            className="flex items-start gap-4 p-3 rounded-2xl hover:bg-[var(--background-secondary)]/40 hover:-translate-y-0.5 transition-all duration-200 group"
-                                        >
-                                            {/* Vertical date badge */}
-                                            <div className="flex flex-col items-center shrink-0 w-12 h-12 rounded-xl bg-[var(--background-secondary)]/40 border border-[var(--border-default)]/20 justify-center shadow-sm">
-                                                <span className="text-lg font-bold text-[var(--foreground-primary)] leading-none">
-                                                    {day}
-                                                </span>
-                                                <span className="text-[9px] font-black uppercase text-[var(--foreground-tertiary)] mt-0.5 tracking-tighter">
-                                                    {month}
-                                                </span>
-                                            </div>
-
-                                            {/* Event Info */}
-                                            <div className="min-w-0">
-                                                <p className="text-[14px] font-bold text-[var(--foreground-primary)] group-hover:text-[var(--accent-primary)] transition-colors mb-1.5 line-clamp-1">
-                                                    {event.title}
-                                                </p>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--foreground-tertiary)]">
-                                                        <CalendarBlank size={12} weight="bold" />
-                                                        <span>{formatEventTime(event.startTime)}</span>
+                                        {remainingPosts.length > 0 && (
+                                            <div className="border-t border-[var(--border-default)]/70 pt-6">
+                                                <div className="flex items-center justify-between pb-4">
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                                            Full stream
+                                                        </p>
+                                                        <h3 className="mt-1 text-lg font-semibold text-[var(--foreground-primary)]">
+                                                            More from your circles
+                                                        </h3>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--foreground-tertiary)]">
-                                                        {event.format === 'virtual' ? <Monitor size={12} weight="bold" /> : <MapPin size={12} weight="bold" />}
-                                                        <span className="truncate">{event.location || 'Virtual'}</span>
+                                                    <span className="rounded-full border border-[var(--border-default)]/70 bg-[var(--background-secondary)]/45 px-3 py-1 text-xs font-medium text-[var(--foreground-secondary)]">
+                                                        {remainingPosts.length} more
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    {remainingPosts.map((post) => (
+                                                        <FeedPostItem key={post.id} post={post} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                                        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--background-tertiary)]">
+                                            <UsersThree size={28} className="text-[var(--foreground-tertiary)]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-[var(--foreground-primary)]">
+                                            Your feed is quiet right now
+                                        </h3>
+                                        <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--foreground-secondary)]">
+                                            Join a few circles to pull more conversations, event chatter, and member updates into this feed.
+                                        </p>
+                                        <Link
+                                            href="/community?tab=circles"
+                                            className="mt-6 inline-flex items-center rounded-full bg-[var(--foreground-primary)] px-4 py-2 text-sm font-medium text-[var(--background-main)] transition-opacity hover:opacity-90"
+                                        >
+                                            Explore circles
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    </>
+                ) : (
+                    <section className="space-y-8">
+                        <div className="border-b border-[var(--border-default)]/70 pb-5">
+                            <p className="text-xs uppercase tracking-[0.22em] text-[var(--foreground-tertiary)]">
+                                Circles
+                            </p>
+                            <h2 className="mt-2 text-2xl font-semibold text-[var(--foreground-primary)]">
+                                Join communities that match how you build
+                            </h2>
+                            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--foreground-secondary)]">
+                                Keep your joined circles in one place, then branch into new ones when you want a different room for the conversation.
+                            </p>
+                        </div>
+
+                        <section className="border-t border-[var(--border-default)]/70 pt-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                        Joined
+                                    </p>
+                                    <h3 className="mt-2 text-xl font-semibold text-[var(--foreground-primary)]">
+                                        Your current circles
+                                    </h3>
+                                </div>
+                                <span className="rounded-full border border-[var(--border-default)] bg-[var(--background-main)] px-3 py-1 text-xs font-medium text-[var(--foreground-secondary)]">
+                                    {myCircles.length} joined
+                                </span>
+                            </div>
+
+                            {myCircles.length > 0 ? (
+                                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                    {myCircles.map((circle) => (
+                                        <div
+                                            key={circle.id}
+                                            className="rounded-[24px] bg-[var(--background-secondary)]/42 p-5 ring-1 ring-[var(--border-default)]/60"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex items-start gap-4">
+                                                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${getSidebarCircleColor(circle.name)}`}>
+                                                        <MaterialIcon name={getCircleIcon(circle.name, circle.icon)} size={18} className="text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-base font-semibold text-[var(--foreground-primary)]">
+                                                            {circle.name}
+                                                        </p>
+                                                        <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
+                                                            {circle.description || 'A community circle'}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+
+                                            <div className="mt-4 flex items-center justify-between">
+                                                <span className="text-xs uppercase tracking-[0.14em] text-[var(--foreground-tertiary)]">
+                                                    {new Intl.NumberFormat('en-US').format(circle.memberCount)} members
+                                                </span>
+                                                <Link
+                                                    href={circle.href}
+                                                    className="text-sm font-medium text-[var(--foreground-primary)] underline decoration-[var(--border-default)] underline-offset-4"
+                                                >
+                                                    Open circle
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--background-main)]/60 p-8 text-center">
+                                    <p className="text-base font-semibold text-[var(--foreground-primary)]">
+                                        You have not joined a circle yet.
+                                    </p>
+                                    <p className="mt-2 text-sm leading-6 text-[var(--foreground-secondary)]">
+                                        Start with a small set of communities that match your work, then let your feed fill in from there.
+                                    </p>
+                                </div>
+                            )}
                         </section>
-                    )}
-                </aside>
+
+                        {discoverCircles.length > 0 && (
+                            <section className="border-t border-[var(--border-default)]/70 pt-6">
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                        Discover
+                                    </p>
+                                    <h3 className="mt-2 text-xl font-semibold text-[var(--foreground-primary)]">
+                                        More circles to join
+                                    </h3>
+                                </div>
+
+                                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                    {discoverCircles.map((circle) => (
+                                        <CircleDiscoverCard
+                                            key={circle.id}
+                                            circle={circle}
+                                            onToggle={handleCircleToggle}
+                                        />
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                    </section>
+                )}
             </div>
+
+            <aside className="space-y-8 border-t border-[var(--border-default)]/70 pt-6 lg:sticky lg:top-24 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                {totalCount > 0 && completedCount < totalCount && (
+                    <section>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                    Next up
+                                </p>
+                                <h3 className="mt-2 text-lg font-semibold text-[var(--foreground-primary)]">
+                                    Profile momentum
+                                </h3>
+                            </div>
+                            <span className="text-sm font-semibold text-[var(--foreground-primary)]">
+                                {completedCount}/{totalCount}
+                            </span>
+                        </div>
+
+                        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[var(--background-tertiary)]">
+                            <div
+                                className="h-full rounded-full bg-blue-500 transition-all duration-700 ease-out"
+                                style={{ width: `${progressPercent}%` }}
+                            />
+                        </div>
+
+                        {nextTask && (
+                            <Link
+                                href={nextTask.ctaHref}
+                                className="group mt-5 flex items-center justify-between border-b border-[var(--border-default)]/55 pb-4 transition-transform duration-200 hover:translate-x-1"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-[var(--foreground-primary)]">
+                                        {nextTask.title}
+                                    </p>
+                                    <p className="mt-1 text-xs leading-5 text-[var(--foreground-secondary)]">
+                                        {nextTask.description}
+                                    </p>
+                                </div>
+                                <CaretRight
+                                    size={18}
+                                    className="text-[var(--foreground-tertiary)] transition-all duration-200 group-hover:translate-x-1 group-hover:text-[var(--foreground-primary)]"
+                                />
+                            </Link>
+                        )}
+                    </section>
+                )}
+
+                <section>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                        Events
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-[var(--foreground-primary)]">
+                        My upcoming events
+                    </h3>
+
+                    {data.upcomingEvents.length > 0 ? (
+                        <div className="mt-5 space-y-2">
+                            {data.upcomingEvents.map((event) => {
+                                const { day, month } = formatEventDay(event.startTime);
+                                return (
+                                    <Link
+                                        key={event.id}
+                                        href={`/events/${event.slug}`}
+                                        className="group flex items-start gap-4 border-b border-[var(--border-default)]/45 py-3 transition-all duration-200 hover:translate-x-1"
+                                    >
+                                        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--background-secondary)]/55 ring-1 ring-[var(--border-default)]/60">
+                                            <span className="text-lg font-bold leading-none text-[var(--foreground-primary)]">
+                                                {day}
+                                            </span>
+                                            <span className="mt-0.5 text-[9px] font-black uppercase tracking-tighter text-[var(--foreground-tertiary)]">
+                                                {month}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="mb-1.5 line-clamp-1 text-sm font-semibold text-[var(--foreground-primary)] transition-colors group-hover:text-[var(--accent-primary)]">
+                                                {event.title}
+                                            </p>
+                                            <div className="space-y-1 text-[11px] font-medium text-[var(--foreground-tertiary)]">
+                                                <div className="flex items-center gap-1.5">
+                                                    <CalendarBlank size={12} weight="bold" />
+                                                    <span>{formatEventTime(event.startTime)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {event.format === 'virtual' ? <Monitor size={12} weight="bold" /> : <MapPin size={12} weight="bold" />}
+                                                    <span className="truncate">{event.location || 'Virtual'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="mt-5 border-b border-dashed border-[var(--border-default)]/55 pb-4 text-sm leading-6 text-[var(--foreground-secondary)]">
+                            Bookmark an event to keep your next few plans visible here.
+                        </div>
+                    )}
+                </section>
+
+                {activeTab === 'feed' && myCircles.length > 0 && (
+                    <section>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-tertiary)]">
+                                    Circles
+                                </p>
+                                <h3 className="mt-2 text-lg font-semibold text-[var(--foreground-primary)]">
+                                    Keep your groups close
+                                </h3>
+                            </div>
+                            <Link
+                                href="/community?tab=circles"
+                                className="text-sm font-medium text-[var(--foreground-primary)] underline decoration-[var(--border-default)] underline-offset-4"
+                            >
+                                Manage
+                            </Link>
+                        </div>
+
+                        <div className="mt-5 space-y-3">
+                            {myCircles.slice(0, 4).map((circle) => (
+                                <Link
+                                    key={circle.id}
+                                    href={circle.href}
+                                    className="group flex items-center gap-4 border-b border-[var(--border-default)]/45 py-3 transition-transform duration-200 hover:translate-x-1"
+                                >
+                                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${getSidebarCircleColor(circle.name)}`}>
+                                        <MaterialIcon name={getCircleIcon(circle.name, circle.icon)} size={18} className="text-white" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-[var(--foreground-primary)]">
+                                            {circle.name}
+                                        </p>
+                                        <p className="mt-1 text-xs text-[var(--foreground-secondary)]">
+                                            {new Intl.NumberFormat('en-US').format(circle.memberCount)} members
+                                        </p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {activeTab === 'circles' && data.suggestedMembers.length > 0 && (
+                    <section>
+                        <div className="flex items-center gap-2 text-[var(--foreground-primary)]">
+                            <MagnifyingGlass size={16} />
+                            <h3 className="text-lg font-semibold">Suggested members</h3>
+                        </div>
+
+                        <div className="mt-5 space-y-3">
+                            {data.suggestedMembers.slice(0, 4).map((member) => (
+                                <Link
+                                    key={member.id}
+                                    href={member.username ? `/u/${member.username}` : '/community'}
+                                    className="block border-b border-[var(--border-default)]/45 py-3 transition-transform duration-200 hover:translate-x-1"
+                                >
+                                    <p className="text-sm font-semibold text-[var(--foreground-primary)]">
+                                        {member.fullName || (member.username ? `@${member.username}` : 'Community member')}
+                                    </p>
+                                    {member.username && (
+                                        <p className="mt-1 text-xs text-[var(--foreground-tertiary)]">
+                                            @{member.username}
+                                        </p>
+                                    )}
+                                    {member.headline && (
+                                        <p className="mt-2 text-xs leading-5 text-[var(--foreground-secondary)] line-clamp-2">
+                                            {member.headline}
+                                        </p>
+                                    )}
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
+            </aside>
         </div>
     );
 }

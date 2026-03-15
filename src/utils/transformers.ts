@@ -167,6 +167,7 @@ export const eventTransformer = {
         const result = {
             id: supabaseEvent.id,
             createdAt: supabaseEvent.created_at,
+            updatedAt: supabaseEvent.updated_at ?? null,
             title: supabaseEvent.title || 'Untitled Event',
             description: supabaseEvent.description || '',
             startTime: supabaseEvent.start_time || new Date().toISOString(),

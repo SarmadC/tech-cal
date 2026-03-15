@@ -23,10 +23,12 @@ describe('PublicProfileHeader count updates', () => {
         username="profile-user"
         fullName="Profile User"
         headline="ML Engineer"
+        avatarUrl={null}
         viewerId={viewerId}
         isViewerOwner={false}
         initialFollowerCount={12}
         initialFollowingCount={8}
+        careerProfile={null}
       />
     );
 

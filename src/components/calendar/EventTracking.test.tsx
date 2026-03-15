@@ -71,6 +71,13 @@ const mockEvent: Event = {
     eventTypeId: 'type-123'
 };
 
+function createEvent(overrides: Partial<Event> = {}): Event {
+    return {
+        ...mockEvent,
+        ...overrides,
+    };
+}
+
 describe('EventTracking Component', () => {
     const user = userEvent.setup();
     const mockUser = createMockUser();
@@ -107,6 +114,14 @@ describe('EventTracking Component', () => {
         expect(parentDiv).toHaveTextContent(/sign in to manage attendance/i);
     });
 
+    it('renders a disabled compact button when the user is logged out', () => {
+        render(<EventTracking event={mockEvent} variant="compact" />, { mockUser: null });
+
+        const compactButton = screen.getByRole('button', { name: /sign in to manage attendance/i });
+        expect(compactButton).toBeDisabled();
+        expect(compactButton).toHaveAttribute('title', 'Sign in to manage attendance');
+    });
+
     it('should show tracking options if the user is logged in and the event is not tracked', async () => {
         // Arrange: Mock getTrackedEvents to return empty array (event not tracked)
         vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
@@ -120,6 +135,83 @@ describe('EventTracking Component', () => {
         await screen.findByText(/not attending/i, {}, { timeout: 5000 });
         const attendanceButton = screen.getByRole('button', { name: /attending/i });
         expect(attendanceButton).toBeInTheDocument();
+    });
+
+    it('renders the compact neutral attendance state for untracked events', async () => {
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([]);
+
+        render(<EventTracking event={mockEvent} variant="compact" />, { mockUser });
+
+        const compactButton = await screen.findByRole('button', { name: /attendance status: not attending/i });
+        expect(compactButton).toHaveAttribute('title', 'Currently: Not attending. Click to mark as attending');
+        expect(compactButton).toHaveAttribute('aria-pressed', 'false');
+        expect(compactButton.className).toContain('bg-gray-100');
+    });
+
+    it('renders the compact attending state for tracked events', async () => {
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([{
+                trackingId: 'track-123',
+                userId: mockUser.id,
+                eventId: mockEvent.id,
+                isBookmarked: true,
+                bookmarkedAt: new Date().toISOString(),
+                status: 'attending',
+                notes: null,
+                trackedAt: new Date().toISOString(),
+                event: null
+            }]);
+
+        render(
+            <EventTracking
+                event={createEvent({ startTime: '2099-01-01T12:00:00.000Z' })}
+                variant="compact"
+            />,
+            { mockUser }
+        );
+
+        const compactButton = await screen.findByRole('button', { name: /attendance status: attending/i });
+        expect(compactButton).toHaveAttribute('aria-pressed', 'true');
+        expect(compactButton.className).toContain('bg-blue-600');
+    });
+
+    it('renders the compact attended state for past events', async () => {
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([{
+                trackingId: 'track-456',
+                userId: mockUser.id,
+                eventId: mockEvent.id,
+                isBookmarked: true,
+                bookmarkedAt: new Date().toISOString(),
+                status: 'attended',
+                notes: null,
+                trackedAt: new Date().toISOString(),
+                event: null
+            }]);
+
+        render(
+            <EventTracking
+                event={createEvent({ startTime: '2025-01-01T12:00:00.000Z' })}
+                variant="compact"
+            />,
+            { mockUser }
+        );
+
+        const compactButton = await screen.findByRole('button', { name: /attendance status: attended/i });
+        expect(compactButton).toHaveAttribute('aria-pressed', 'true');
+        expect(compactButton.className).toContain('bg-emerald-600');
+    });
+
+    it('renders a disabled compact loading state while attendance loads', () => {
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockImplementation(() => new Promise(() => {}));
+
+        render(<EventTracking event={mockEvent} variant="compact" />, { mockUser });
+
+        const compactButton = screen.getByRole('button', { name: /loading attendance status/i });
+        expect(compactButton).toBeDisabled();
+        expect(compactButton).toHaveAttribute('title', 'Loading attendance status');
     });
 
     it('should call setAttendanceStatus when the user clicks attendance button', async () => {

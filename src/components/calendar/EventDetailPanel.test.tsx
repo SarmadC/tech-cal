@@ -3,6 +3,7 @@ import { screen } from '@/utils/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@/utils/test-utils';
 import type { Event } from '@/types';
+import { EventService } from '@/services/eventServices';
 import EventDetailPanel from './EventDetailPanel';
 
 const mocks = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ vi.mock('./EventInfo', () => ({
 }));
 
 vi.mock('./EventTracking', () => ({
-    default: () => <div>mock-attendance-controls</div>,
+    default: ({ variant }: { variant?: 'full' | 'compact' }) => <div>{`mock-attendance-controls-${variant ?? 'full'}`}</div>,
 }));
 
 vi.mock('./AdaptiveTimeline', () => ({
@@ -88,11 +89,12 @@ function createEvent(overrides: Partial<Event> = {}): Event {
 describe('EventDetailPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(EventService.getEventWithAgenda).mockResolvedValue({ agenda: [] } as never);
         mocks.isBookmarked.mockReturnValue(false);
         mocks.getAttendanceStatus.mockReturnValue(null);
     });
 
-    it('renders the action section with attendance controls and keeps bookmark chrome', async () => {
+    it('renders compact attendance controls in the header and keeps bookmark chrome', async () => {
         render(
             <EventDetailPanel
                 event={createEvent()}
@@ -101,8 +103,29 @@ describe('EventDetailPanel', () => {
             />
         );
 
-        expect(await screen.findByText('Action')).toBeInTheDocument();
-        expect(screen.getByText('mock-attendance-controls')).toBeInTheDocument();
-        expect(screen.getByTitle('Bookmark')).toBeInTheDocument();
+        expect(await screen.findByText('Agenda')).toBeInTheDocument();
+        const bookmarkButton = screen.getByTitle('Bookmark');
+        const attendanceControl = screen.getByText('mock-attendance-controls-compact');
+        const openLink = screen.getByTitle('Open full event page');
+        const closeButton = screen.getByLabelText('Close event details');
+
+        expect(attendanceControl).toBeInTheDocument();
+        expect(screen.queryByText('Action')).not.toBeInTheDocument();
+        expect(bookmarkButton.compareDocumentPosition(attendanceControl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(attendanceControl.compareDocumentPosition(openLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(openLink.compareDocumentPosition(closeButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders an empty agenda state when no agenda data is available', async () => {
+        render(
+            <EventDetailPanel
+                event={createEvent()}
+                onClose={vi.fn()}
+                categories={[]}
+            />
+        );
+
+        expect(await screen.findByText('Agenda not published yet')).toBeInTheDocument();
+        expect(screen.getByText("We'll show session timing here as soon as the organizer shares it.")).toBeInTheDocument();
     });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { DotsThree, Trash, PencilSimple } from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -28,20 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import Avatar, { getDisplayName } from './Avatar';
 import VoteControls from './VoteControls';
-
-export interface CommentType {
-    id: string;
-    content: string;
-    created_at: string;
-    author: {
-        id: string;
-        full_name: string | null;
-        avatar_url: string | null;
-    };
-    score?: number;
-    userVote?: number;
-    replies?: CommentType[];
-}
+import type { CircleDiscussionComment } from '@/types/circleDiscussions';
 
 type CurrentUser = {
     id: string;
@@ -56,7 +44,7 @@ export default function CommentItem({
     isJoined,
     depth = 0
 }: {
-    comment: CommentType;
+    comment: CircleDiscussionComment;
     postId: string;
     circleSlug: string;
     currentUser: CurrentUser;
@@ -75,6 +63,7 @@ export default function CommentItem({
     const [isDeleting, setIsDeleting] = useState(false);
 
     const { showSuccess, showError } = useSnackbar();
+    const router = useRouter();
 
     // Optimistic Voting State
     const [localScore, setLocalScore] = useState(comment.score || 0);
@@ -92,6 +81,7 @@ export default function CommentItem({
                 setReplyContent('');
                 setIsReplying(false);
                 showSuccess('Reply added');
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to post reply');
             }
@@ -143,6 +133,7 @@ export default function CommentItem({
             if (result.success) {
                 setIsEditing(false);
                 showSuccess('Comment updated');
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to update comment');
             }
@@ -160,6 +151,7 @@ export default function CommentItem({
             if (result.success) {
                 showSuccess('Comment deleted');
                 setShowDeleteConfirm(false);
+                router.refresh();
             } else {
                 showError(result.error || 'Failed to delete comment');
             }

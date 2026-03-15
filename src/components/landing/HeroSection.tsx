@@ -10,23 +10,63 @@ import { OrbitingCircles } from './OrbitingCircles';
 import { CalendarIcon, ArrowClockwiseIcon, MicrophoneIcon, MegaphoneIcon, RocketIcon, TicketIcon } from '@phosphor-icons/react';
 
 const LightRays = dynamic(() => import('./LightRays'), { ssr: false });
+const HERO_THEME_PRESETS = {
+    dark: {
+        raysOrigin: 'top-center' as const,
+        raysColor: '#ffffff',
+        raysSpeed: 1.5,
+        lightSpread: 0.8,
+        rayLength: 1.2,
+        pulsating: false,
+        fadeDistance: 1.0,
+        saturation: 1.0,
+        followMouse: true,
+        mouseInfluence: 0.1,
+        noiseAmount: 0.1,
+        distortion: 0.05,
+    },
+    light: {
+        raysOrigin: 'top-center' as const,
+        raysColor: '#94a3b8',
+        raysSpeed: 1.35,
+        lightSpread: 0.74,
+        rayLength: 1.08,
+        pulsating: false,
+        fadeDistance: 0.92,
+        saturation: 0.78,
+        followMouse: true,
+        mouseInfluence: 0.05,
+        noiseAmount: 0.03,
+        distortion: 0.018,
+    },
+};
 
 export function HeroSection() {
     const orbitLayerRef = useRef<HTMLDivElement>(null);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
     const { isMobile, isTablet } = useDeviceDetection();
     const { theme, resolvedTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
     const posthog = usePostHog();
 
-    // Wait for hydration to avoid hydration mismatch on theme
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    const isDarkMode = mounted && (theme === 'dark' || resolvedTheme === 'dark');
-    // Dark rays for light mode (visible on white), White rays for dark mode (visible on black)
-    const raysColor = isDarkMode ? "#ffffff" : "#000103";
+    const rootThemeMode =
+        typeof document !== 'undefined'
+            ? document.documentElement.classList.contains('dark')
+                ? 'dark'
+                : document.documentElement.classList.contains('light')
+                    ? 'light'
+                    : undefined
+            : undefined;
+    const themeMode =
+        resolvedTheme === 'dark' || resolvedTheme === 'light'
+            ? resolvedTheme
+            : theme === 'dark' || theme === 'light'
+                ? theme
+                : rootThemeMode;
+    const heroThemePreset = themeMode === 'dark'
+        ? HERO_THEME_PRESETS.dark
+        : themeMode === 'light'
+            ? HERO_THEME_PRESETS.light
+            : null;
 
     useEffect(() => {
         if (typeof window === 'undefined' || !('matchMedia' in window)) return;
@@ -84,21 +124,12 @@ export function HeroSection() {
     return (
         <section className="hero">
             {/* Light Rays Effect */}
-            <LightRays
-                raysOrigin="top-center"
-                raysColor={raysColor}
-                raysSpeed={1.5}
-                lightSpread={0.8}
-                rayLength={1.2}
-                pulsating={false}
-                fadeDistance={1.0}
-                saturation={1.0}
-                followMouse={true}
-                mouseInfluence={0.1}
-                noiseAmount={0.1}
-                distortion={0.05}
-                className="hero-light-rays"
-            />
+            {heroThemePreset ? (
+                <LightRays
+                    {...heroThemePreset}
+                    className="hero-light-rays"
+                />
+            ) : null}
 
             {/* Orbiting Icons (masked to avoid overlapping hero text) */}
             <div ref={orbitLayerRef} className="hero-orbit-layer" aria-hidden="true">

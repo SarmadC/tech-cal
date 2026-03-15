@@ -19,6 +19,7 @@ import { useEventActions } from '@/hooks/useEventActions';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
+import { getVersionedImageSrc } from '@/utils/imageUrl';
 
 interface MobileEventDetailPanelProps {
     event: Event;
@@ -44,6 +45,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
 
     // Get the display event (with agenda if available)
     const displayEvent = eventWithAgenda;
+    const versionedEventImageSrc = getVersionedImageSrc(displayEvent.eventImageUrl, displayEvent.updatedAt);
 
     // Event actions hook - use displayEvent to ensure it updates with new events
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(displayEvent);
@@ -261,10 +263,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                     {/* Host */}
                     <PropertyRow label="HOST">
                         <div className="flex items-center gap-2">
-                            {displayEvent.organization?.logo || displayEvent.eventImageUrl ? (
+                            {displayEvent.organization?.logo || versionedEventImageSrc ? (
                                 <div className="w-6 h-6 overflow-hidden flex-shrink-0">
                                     <Image
-                                        src={displayEvent.organization?.logo || displayEvent.eventImageUrl || ''}
+                                        src={displayEvent.organization?.logo || versionedEventImageSrc || ''}
                                         alt="Host"
                                         width={24}
                                         height={24}

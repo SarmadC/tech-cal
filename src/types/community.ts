@@ -108,3 +108,5 @@ export interface CommunityHubData {
   upcomingEvents: CommunityUpcomingEvent[];
   suggestedMembers: CommunityLaunchpadMember[];
 }
+
+export type CommunityTab = 'directory' | 'feed' | 'circles';

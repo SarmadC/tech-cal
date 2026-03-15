@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
+import { getVersionedImageSrc } from '@/utils/imageUrl';
 
 interface HeroEventCardProps {
     event: Event & { careerImpact?: CareerImpactScore };
@@ -48,10 +49,11 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
     const locationDetails = locationParts.length > 1 ? locationParts.slice(1).join(', ') : 'Location details TBA';
     const imageSources = React.useMemo(() => {
         const sources: string[] = [];
-        if (event.eventImageUrl) sources.push(event.eventImageUrl);
+        const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
+        if (eventImageSrc) sources.push(eventImageSrc);
         if (event.organization?.logo) sources.push(event.organization.logo);
         return sources;
-    }, [event.eventImageUrl, event.organization]);
+    }, [event.eventImageUrl, event.organization, event.updatedAt]);
 
     const [activeImageSrc, setActiveImageSrc] = React.useState<string | null>(() => imageSources[0] ?? null);
 

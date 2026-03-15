@@ -49,7 +49,7 @@ export async function createCirclePost(circleId: string, content: string, circle
             return { success: false, error: 'Failed to create post. Please try again.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
@@ -96,7 +96,7 @@ export async function createCircleComment(postId: string, content: string, circl
             return { success: false, error: 'Failed to add comment. Please try again.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
@@ -148,7 +148,7 @@ export async function votePost(postId: string, voteType: 1 | -1 | 0, circleSlug:
             }
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true };
 
     } catch (error) {
@@ -200,7 +200,7 @@ export async function voteComment(commentId: string, voteType: 1 | -1 | 0, circl
             }
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true };
 
     } catch (error) {
@@ -241,7 +241,7 @@ export async function editCirclePost(postId: string, content: string, circleSlug
             return { success: false, error: 'Failed to edit post. You may not have permission.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
@@ -273,7 +273,7 @@ export async function deleteCirclePost(postId: string, circleSlug: string) {
             return { success: false, error: 'Failed to delete post. You may not have permission.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true };
 
     } catch (error) {
@@ -314,7 +314,7 @@ export async function editCircleComment(commentId: string, content: string, circ
             return { success: false, error: 'Failed to edit comment. You may not have permission.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
@@ -346,7 +346,7 @@ export async function deleteCircleComment(commentId: string, circleSlug: string)
             return { success: false, error: 'Failed to delete comment. You may not have permission.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`);
+        revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true };
 
     } catch (error) {
