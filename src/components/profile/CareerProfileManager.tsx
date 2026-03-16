@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { CareerProfile, CareerOnboardingData, CareerOptionalSectionStatus, CareerOptionalSectionSnoozes } from '@/types/career';
+import { CareerProfile, CareerOnboardingData, CareerOptionalSectionStatus } from '@/types/career';
 import { QuickEditSection } from './quick-edit/sections';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { useAuth } from '@/contexts';
@@ -12,7 +12,7 @@ import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCar
 import QuickEditModal from './quick-edit';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Button } from '@/components/ui/button';
-import { IdentificationCard, CheckCircle, PencilSimple, CaretRight } from '@phosphor-icons/react';
+import { IdentificationCard, CaretRight } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 
@@ -185,9 +185,8 @@ export default function CareerProfileManager({
     const queryClient = useQueryClient();
     const { showError } = useSnackbar();
     const [isEditing, setIsEditing] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [quickEditSection, setQuickEditSection] = useState<QuickEditSection | null>(null);
-    const [quickEditModalState, setQuickEditModalState] = useState<{
+    const [, setQuickEditModalState] = useState<{
         isDirty: boolean;
         isSaving: boolean;
         saveError?: string | null;
@@ -198,12 +197,8 @@ export default function CareerProfileManager({
     });
 
     // ... (Keep existing refs/effects logic)
-    const [dismissedPromptIds, setDismissedPromptIds] = useState<string[]>([]);
     const loggedShownPrompts = useRef<Set<string>>(new Set());
     const completedSectionsRef = useRef<Set<string>>(new Set());
-    const [saveFeedback, setSaveFeedback] = useState<{ section: string; timestamp: Date } | null>(null);
-
-    const isQuickEditDisabled = quickEditModalState.isSaving || quickEditSection !== null;
 
     const {
         careerProfile: currentCareerProfile,
@@ -212,11 +207,8 @@ export default function CareerProfileManager({
         error,
         saveCareerProfile: _saveCareerProfile,
         completeOnboarding,
-        refreshProfile,
         optionalSections,
-        optionalSectionSnoozes,
         markOptionalSectionComplete,
-        snoozeOptionalSection
     } = useCareerProfile();
 
     const sectionKeyMap: Record<QuickEditSection, keyof CareerOptionalSectionStatus> = {
@@ -251,7 +243,6 @@ export default function CareerProfileManager({
         data: CareerOnboardingData,
         options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }
     ) => {
-        setIsSubmitting(true);
         try {
             await completeOnboarding(data, options?.optionalSectionsCompleted);
             setIsEditing(false);
@@ -265,15 +256,12 @@ export default function CareerProfileManager({
         } catch (error) {
             console.error('Career profile update error:', error);
             showError('Failed to update career profile. Please try again.');
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
     const handleQuickEdit = (section: QuickEditSection) => {
         const optionalKey = sectionKeyMap[section];
         if (optionalKey) {
-            setDismissedPromptIds(prev => prev.filter(id => id !== optionalKey));
             loggedShownPrompts.current.delete(optionalKey);
         }
         setQuickEditSection(section);
@@ -287,7 +275,6 @@ export default function CareerProfileManager({
         const optionalKey = sectionKeyMap[section];
         if (optionalKey && !completedSectionsRef.current.has(optionalKey)) {
             void markOptionalSectionComplete(optionalKey);
-            setDismissedPromptIds(prev => prev.filter(id => id !== optionalKey));
             loggedShownPrompts.current.delete(optionalKey);
             logPromptEvent('prompt_completed', optionalKey, { completedAt: new Date().toISOString() });
             completedSectionsRef.current.add(optionalKey);
@@ -464,12 +451,6 @@ export default function CareerProfileManager({
                 title="Learning & Networking"
                 description="Your preferred learning styles and event formats."
             >
-                <SettingRow
-                    label="Learning Path"
-                    value={currentCareerProfile.targetPath}
-                    isEmpty={!currentCareerProfile.targetPath}
-                    onClick={() => handleQuickEdit('learning')}
-                />
                 <SettingRow
                     label="Learning Style"
                     value={<ChipsList items={currentCareerProfile.learningStyle?.map(s => formatLearningStyle(s)) || []} />}

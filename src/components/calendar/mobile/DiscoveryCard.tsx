@@ -20,7 +20,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
 import { QuickFitBadge } from '@/components/discovery/quickFitBadges';
-import { getVersionedImageSrc } from '@/utils/imageUrl';
+import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 
 export interface DiscoveryCardProps {
     event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
@@ -84,6 +84,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         ? isAttendanceUpdatingProp
         : internalIsAttendanceUpdating;
     const versionedEventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
 
     React.useEffect(() => {
         if (!hasTrackedView.current && onView) {
@@ -253,7 +254,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                     <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-[var(--background-tertiary)] border border-[var(--border-default)] flex items-center justify-center">
                             {(() => {
-                                const imageSrc = event.organization?.logo || versionedEventImageSrc;
+                                const imageSrc = organizationLogoSrc || versionedEventImageSrc;
                                 if (imageSrc) {
                                     return (
                                         <Image

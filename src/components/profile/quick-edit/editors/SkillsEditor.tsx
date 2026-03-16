@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { CareerProfile, INTEREST_AREAS } from '@/types/career';
+import { CareerProfile } from '@/types/career';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
 import { LinearFormField } from '../components/LinearInputs';
+import { useOnboardingTaxonomy } from '@/hooks/useOnboardingTaxonomy';
 
 // Editor prop interface
 export interface SkillsEditorProps {
@@ -13,12 +14,22 @@ export interface SkillsEditorProps {
 
 // Memoized SkillsEditor component
 const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdate }) => {
+    const { skillOptions, interestOptions } = useOnboardingTaxonomy();
+
     // Memoized form data to prevent unnecessary re-renders
     const formData = useMemo(() => ({
         primarySkills: profile.primarySkills || [],
         skillsToLearn: profile.skillsToLearn || [],
         interests: profile.interests || []
     }), [profile]);
+    const skillSuggestions = useMemo(
+        () => skillOptions.map((option) => option.value),
+        [skillOptions]
+    );
+    const interestSuggestions = useMemo(
+        () => interestOptions.map((option) => option.value),
+        [interestOptions]
+    );
 
     // Skill change handlers
     const handlePrimarySkillsChange = (skills: string[]) => {
@@ -45,6 +56,8 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
                     selectedSkills={formData.primarySkills}
                     onSkillsChange={handlePrimarySkillsChange}
                     placeholder="Add skills..."
+                    suggestions={skillSuggestions}
+                    suggestionHeaderLabel="Suggested Skills"
                 />
             </LinearFormField>
 
@@ -58,6 +71,8 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
                     selectedSkills={formData.skillsToLearn}
                     onSkillsChange={handleSkillsToLearnChange}
                     placeholder="Add learning goals..."
+                    suggestions={skillSuggestions}
+                    suggestionHeaderLabel="Suggested Skills"
                 />
             </LinearFormField>
 
@@ -71,7 +86,7 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
                     selectedSkills={formData.interests}
                     onSkillsChange={handleInterestsChange}
                     placeholder="Add interests..."
-                    suggestions={INTEREST_AREAS}
+                    suggestions={interestSuggestions}
                     suggestionHeaderLabel="Suggested Interests"
                     entityName="interests"
                 />

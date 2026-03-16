@@ -18,6 +18,7 @@ import {
   CareerOptionalSectionTimestamps
 } from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';
+import { deriveOptionalSectionStatus } from '@/utils/onboardingUtils';
 import * as Sentry from '@sentry/nextjs';
 import { CareerImpactService } from './careerImpactService';
 
@@ -50,6 +51,38 @@ interface CareerProfilePreferencesShape {
 }
 
 export class CareerProfileService {
+  private static getErrorInfo(error: unknown): Record<string, unknown> {
+    const info: Record<string, unknown> = {
+      errorType: error?.constructor?.name || typeof error,
+      errorString: String(error),
+    };
+
+    if (error instanceof Error) {
+      info.message = error.message;
+      info.name = error.name;
+      info.stack = error.stack;
+    }
+
+    if (error && typeof error === 'object') {
+      try {
+        const properties = Object.getOwnPropertyNames(error);
+        info.properties = properties;
+
+        for (const key of properties) {
+          try {
+            info[key] = (error as Record<string, unknown>)[key];
+          } catch {
+            // Skip properties that throw on access.
+          }
+        }
+      } catch {
+        // Ignore reflection failures and keep the base info.
+      }
+    }
+
+    return info;
+  }
+
   /**
    * Transform database row to CareerProfile
    */
@@ -325,9 +358,6 @@ export class CareerProfileService {
     supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {
-      console.log('[CareerProfileService] Saving career profile for userId:', userId);
-      console.log('[CareerProfileService] Supabase client available:', !!supabaseClient);
-      
       // Validate required fields
       if (!careerProfile.currentRole) {
         throw new Error('Current role is required');
@@ -340,10 +370,9 @@ export class CareerProfileService {
       }
       
       const rowData = this.transformCareerProfileToRow(careerProfile);
-      console.log('[CareerProfileService] Transformed row data:', rowData);
       
       // Upsert career profile
-      const { data, error } = await supabaseClient
+      const { error } = await supabaseClient
         .from('career_profiles')
         .upsert({
           user_id: userId,
@@ -353,43 +382,13 @@ export class CareerProfileService {
         })
         .select();
 
-      // Log raw error structure first to understand what we're dealing with
       if (error) {
-        console.error('[CareerProfileService] Raw error object:', error);
-        console.error('[CareerProfileService] Error type:', typeof error);
-        console.error('[CareerProfileService] Error constructor:', error?.constructor?.name);
-        console.error('[CareerProfileService] Error keys:', Object.keys(error || {}));
-        console.error('[CareerProfileService] Error stringified:', JSON.stringify(error, null, 2));
-        
-        // Try to extract error properties safely
-        let errorCode: string | undefined;
-        let errorMessage: string | undefined;
-        let errorDetails: string | undefined;
-        let errorHint: string | undefined;
-        
-        try {
-          // Try accessing properties directly
-          if (error && typeof error === 'object') {
-            errorCode = (error as unknown as Record<string, unknown>).code as string | undefined;
-            errorMessage = (error as unknown as Record<string, unknown>).message as string | undefined;
-            errorDetails = (error as unknown as Record<string, unknown>).details as string | undefined;
-            errorHint = (error as unknown as Record<string, unknown>).hint as string | undefined;
-          }
-        } catch (extractError) {
-          console.error('[CareerProfileService] Error extracting error properties:', extractError);
-        }
-        
-        console.log('[CareerProfileService] Upsert result:', { 
-          data, 
-          error: {
-            code: errorCode,
-            message: errorMessage,
-            details: errorDetails,
-            hint: errorHint,
-            raw: String(error)
-          }
-        });
-        
+        const errorInfo = this.getErrorInfo(error);
+        const errorCode = typeof errorInfo.code === 'string' ? errorInfo.code : undefined;
+        const errorMessage = typeof errorInfo.message === 'string' ? errorInfo.message : undefined;
+        const errorDetails = typeof errorInfo.details === 'string' ? errorInfo.details : undefined;
+        const errorHint = typeof errorInfo.hint === 'string' ? errorInfo.hint : undefined;
+
         // Create a more descriptive error with Supabase details
         const finalMessage = errorMessage || 'Unknown error';
         const finalCode = errorCode || 'UNKNOWN';
@@ -397,10 +396,9 @@ export class CareerProfileService {
         const enhancedError = new Error(
           `Failed to save career profile: ${finalMessage}${finalCode !== 'UNKNOWN' ? ` (${finalCode})` : ''}${errorDetails ? ` - ${errorDetails}` : ''}${errorHint ? ` Hint: ${errorHint}` : ''}`
         );
-        (enhancedError as { originalError?: unknown }).originalError = error;
+        (enhancedError as { originalError?: unknown; originalErrorInfo?: Record<string, unknown> }).originalError = error;
+        (enhancedError as { originalError?: unknown; originalErrorInfo?: Record<string, unknown> }).originalErrorInfo = errorInfo;
         throw enhancedError;
-      } else {
-        console.log('[CareerProfileService] Upsert successful:', { data });
       }
 
       await this.syncCareerProfilePreferences(userId, careerProfile, supabaseClient);
@@ -410,107 +408,22 @@ export class CareerProfileService {
         console.warn('Failed to invalidate career impact cache after profile update:', error);
       });
     } catch (error) {
-      // Enhanced error logging to capture Supabase error details
-      // Check if this is our enhanced error with originalError
       const originalError = (error as { originalError?: unknown })?.originalError;
+      const originalErrorInfo = (error as { originalErrorInfo?: Record<string, unknown> })?.originalErrorInfo;
       const errorToLog = originalError || error;
-      
-      const errorInfo: Record<string, unknown> = {
-        errorType: error?.constructor?.name || typeof error,
-        errorString: String(error),
-        isEnhancedError: !!originalError,
-      };
-
-      // If we have an enhanced error, log both
-      if (error instanceof Error) {
-        errorInfo.enhancedMessage = error.message;
-        errorInfo.enhancedName = error.name;
-        errorInfo.enhancedStack = error.stack;
-      }
-
-      // Extract Supabase PostgREST error properties from original error
-      if (errorToLog && typeof errorToLog === 'object') {
-        try {
-          const supabaseError = errorToLog as {
-            code?: string;
-            message?: string;
-            details?: string;
-            hint?: string;
-            [key: string]: unknown;
-          };
-          
-          errorInfo.code = supabaseError.code;
-          errorInfo.message = supabaseError.message;
-          errorInfo.details = supabaseError.details;
-          errorInfo.hint = supabaseError.hint;
-          
-          // Try to get all enumerable properties
-          for (const key in supabaseError) {
-            if (Object.prototype.hasOwnProperty.call(supabaseError, key)) {
-              try {
-                errorInfo[key] = supabaseError[key];
-              } catch {
-                // Skip properties that can't be accessed
-              }
-            }
-          }
-          
-          // Also try to get non-enumerable properties
-          try {
-            const errorKeys = Object.getOwnPropertyNames(supabaseError);
-            errorInfo.allPropertyNames = errorKeys;
-            for (const key of errorKeys) {
-              try {
-                errorInfo[`prop_${key}`] = (supabaseError as Record<string, unknown>)[key];
-              } catch {
-                // Skip properties that can't be accessed
-              }
-            }
-          } catch {
-            // Ignore if we can't get property names
-          }
-        } catch (extractError) {
-          errorInfo.extractionError = String(extractError);
-        }
-      } else if (errorToLog instanceof Error) {
-        errorInfo.message = errorToLog.message;
-        errorInfo.name = errorToLog.name;
-        errorInfo.stack = errorToLog.stack;
-      }
-
-      console.error('Error saving career profile to new table:', errorInfo);
+      const errorInfo = originalErrorInfo ?? this.getErrorInfo(errorToLog);
       
       // Fallback to legacy method if new table fails
       try {
-        console.log('[CareerProfileService] Falling back to legacy preferences method');
+        console.warn('[CareerProfileService] career_profiles save failed, falling back to preferences:', errorInfo);
         await this.saveCareerProfileToPreferences(userId, careerProfile, supabaseClient);
-        console.log('[CareerProfileService] Successfully saved to preferences');
         return;
       } catch (fallbackError) {
-        // Enhanced fallback error logging
-        console.error('Error saving career profile to preferences (fallback):', {
-          fallbackError,
-          fallbackErrorMessage: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-          fallbackErrorDetails: JSON.stringify(fallbackError, Object.getOwnPropertyNames(fallbackError))
-        });
-        
-        // Log detailed error information for both errors
-        console.error('Complete error details:', {
-          originalError: {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            name: error instanceof Error ? error.name : 'Unknown',
-            stack: error instanceof Error ? error.stack : undefined,
-            errorType: typeof error,
-            errorString: String(error),
-            errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error))
-          },
-          fallbackError: {
-            message: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
-            name: fallbackError instanceof Error ? fallbackError.name : 'Unknown',
-            stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
-            errorType: typeof fallbackError,
-            errorString: String(fallbackError)
-          },
+        const fallbackErrorInfo = this.getErrorInfo(fallbackError);
+
+        console.error('Failed to save career profile to both storage paths:', {
+          primaryError: errorInfo,
+          fallbackError: fallbackErrorInfo,
           userId,
           careerProfile: {
             currentRole: careerProfile?.currentRole,
@@ -524,7 +437,7 @@ export class CareerProfileService {
         });
         
         Sentry.captureException(error, { 
-          extra: { function: 'saveCareerProfile', userId, careerProfile, fallbackError } 
+          extra: { function: 'saveCareerProfile', userId, careerProfile, primaryError: errorInfo, fallbackError: fallbackErrorInfo } 
         });
         throw new Error('Failed to save career profile.');
       }
@@ -618,11 +531,7 @@ export class CareerProfileService {
       }
       
       // Mark onboarding as completed
-      const optionalStatus: CareerOptionalSectionStatus = {
-        learningPreferences: Boolean(onboardingData.step4_preferences?.learningStyle?.length),
-        networkingPreferences: Boolean(onboardingData.step5_networking?.networkingGoals?.length),
-        teamPreferences: Boolean(onboardingData.step6_teamBuilding?.teamGoals?.length)
-      };
+      const optionalStatus = deriveOptionalSectionStatus(onboardingData);
 
       await this.markOnboardingCompleted(userId, supabaseClient, optionalStatus);
       

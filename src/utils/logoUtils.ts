@@ -1,3 +1,5 @@
+import { getSafeImageSrc } from './imageUrl';
+
 /**
  * Centralized logo utility with multiple fallback sources
  * Handles Clearbit 403 errors by providing alternative logo services
@@ -136,7 +138,7 @@ export function getLogoUrlFromInput(
 
   // If it's already a full URL (starts with http), return as-is
   if (logoUrl.startsWith('http')) {
-    return logoUrl;
+    return getSafeImageSrc(logoUrl) ?? undefined;
   }
 
   // If it's a domain name (contains a dot but no file extension)
@@ -163,7 +165,6 @@ export function getLogoSourcesForClient(
 ): string[] {
   return getLogoSources(companyName, supabaseUrl);
 }
-
 
 
 

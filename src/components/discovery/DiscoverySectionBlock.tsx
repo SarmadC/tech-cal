@@ -99,7 +99,6 @@ const DiscoverySectionBlock: React.FC<DiscoverySectionBlockProps> = ({
                         isBookmarking={pendingBookmarkIds.has(event.id)}
                         isAttending={isAttending(event.id)}
                         isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
-                        showRecommendationContext
                         quickFitBadges={getQuickFitBadges?.(event) ?? []}
                         onFeedbackAction={onFeedbackAction}
                         onExplainRecommendation={onExplainRecommendation}

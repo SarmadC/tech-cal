@@ -3,8 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { TeamRole, TEAM_ROLE_CONFIGS, SkillTag } from '@/types/career';
 import { CheckCircle, Star, Users, Code, Palette, Database, Gear, Lightbulb } from '@phosphor-icons/react';
-import { ErrorAlert, Card, Badge, getRoleColor } from './shared/OnboardingUI';
-import { clsx } from 'clsx';
+import { ErrorAlert } from './shared/OnboardingUI';
 import { twMerge } from 'tailwind-merge';
 
 interface TeamRoleSelectorProps {
@@ -20,11 +19,8 @@ export const TeamRoleSelector: React.FC<TeamRoleSelectorProps> = ({
     skills,
     className = ''
 }) => {
-    const [selectedRole, setSelectedRole] = useState<TeamRole | null>(
-        currentRole as TeamRole || null
-    );
     const [error, setError] = useState<string | null>(null);
-    const [showSuggestions, setShowSuggestions] = useState(false);
+    const selectedRole = (currentRole as TeamRole) || null;
 
     // Calculate role suggestions based on skills
     const roleSuggestions = useMemo(() => {
@@ -69,7 +65,6 @@ export const TeamRoleSelector: React.FC<TeamRoleSelectorProps> = ({
 
     const handleRoleSelect = useCallback((role: TeamRole) => {
         try {
-            setSelectedRole(role);
             onRoleChange(role);
             setError(null);
         } catch (_error) {
@@ -105,8 +100,13 @@ export const TeamRoleSelector: React.FC<TeamRoleSelectorProps> = ({
         );
     }
 
+    const suggestedRole = roleSuggestions[0]?.role ?? selectedRole ?? 'flexible';
+    const suggestedConfig = TEAM_ROLE_CONFIGS[suggestedRole];
+    const suggestedReason = roleSuggestions[0]?.reason ?? 'Recommended based on the skills you have shared so far.';
+    const isSuggestedRoleSelected = selectedRole === suggestedRole;
+
     return (
-        <div className={twMerge("space-y-6", className)}>
+        <div className={twMerge("space-y-4", className)}>
             {error && (
                 <ErrorAlert
                     error={error}
@@ -114,103 +114,45 @@ export const TeamRoleSelector: React.FC<TeamRoleSelectorProps> = ({
                 />
             )}
 
-            {/* Role Suggestions */}
-            {roleSuggestions.length > 0 && (
-                <div className="bg-blue-500/5 dark:bg-blue-500/10 rounded-xl p-4 border border-blue-500/20 dark:border-blue-500/30">
-                    <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-blue-600 dark:text-blue-200 flex items-center">
-                            <Star size={16} className="mr-2 text-blue-500 dark:text-blue-400" weight="fill" />
-                            Suggested Roles based on your skills
-                        </h4>
-                        <button
-                            onClick={() => setShowSuggestions(!showSuggestions)}
-                            className="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-                            type="button"
-                        >
-                            {showSuggestions ? 'Hide' : 'Show'}
-                        </button>
-                    </div>
-
-                    {showSuggestions && (
-                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                            {roleSuggestions.map(suggestion => (
-                                <button
-                                    key={suggestion.role}
-                                    onClick={() => handleRoleSelect(suggestion.role)}
-                                    className="w-full text-left p-3 rounded-lg border border-blue-500/20 dark:border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors group"
-                                    type="button"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-2">
-                                            {getRoleIcon(suggestion.role)}
-                                            <span className="font-medium text-sm text-blue-700 dark:text-blue-100 group-hover:text-blue-800 dark:group-hover:text-white">{TEAM_ROLE_CONFIGS[suggestion.role].title}</span>
-                                        </div>
-                                        <div className="text-[10px] text-blue-600 dark:text-blue-300 bg-blue-500/10 dark:bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/20 dark:border-blue-500/30">
-                                            {suggestion.score} matches
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-blue-600/70 dark:text-blue-300/70 mt-1 pl-7">{suggestion.reason}</p>
-                                </button>
-                            ))}
-                        </div>
-                    )}
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                    <Star size={14} className="text-blue-400" weight="fill" />
+                    <h4 className="text-sm font-medium text-blue-100">Suggested role</h4>
                 </div>
-            )}
 
-            {/* Role Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.values(TEAM_ROLE_CONFIGS).map(config => (
-                    <Card
-                        key={config.role}
-                        onClick={() => handleRoleSelect(config.role)}
-                        selected={selectedRole === config.role}
-                        className={clsx(
-                            "text-left p-4 transition-all group h-full flex flex-col",
-                            selectedRole === config.role
-                                ? "bg-secondary ring-1 ring-border"
-                                : "bg-secondary/30 hover:bg-secondary/50 border-border/50"
+                <button
+                    type="button"
+                    onClick={() => handleRoleSelect(suggestedRole)}
+                    className="w-full rounded-lg border border-blue-500/20 bg-white/[0.03] p-4 text-left transition-colors hover:border-blue-500/30 hover:bg-white/[0.05]"
+                >
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-2">
+                                {getRoleIcon(suggestedRole)}
+                            </div>
+                            <div className="space-y-1">
+                                <div className="text-sm font-medium text-foreground">{suggestedConfig.title}</div>
+                                <p className="text-xs leading-5 text-muted-foreground/82">{suggestedConfig.description}</p>
+                                <p className="text-xs leading-5 text-blue-200/80">{suggestedReason}</p>
+                            </div>
+                        </div>
+
+                        {isSuggestedRoleSelected ? (
+                            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-300">
+                                Selected
+                            </span>
+                        ) : (
+                            <span className="shrink-0 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-200">
+                                Use suggestion
+                            </span>
                         )}
-                    >
-                        <div className="flex items-center space-x-3 mb-3">
-                            <div className="p-2 rounded-lg bg-secondary/50 border border-border/50">
-                                {getRoleIcon(config.role)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm text-foreground group-hover:text-foreground truncate">
-                                    {config.title}
-                                </h4>
-                            </div>
-                            {selectedRole === config.role && (
-                                <CheckCircle size={20} className="text-foreground flex-shrink-0" weight="fill" />
-                            )}
-                        </div>
-
-                        <p className="text-xs text-muted-foreground group-hover:text-muted-foreground/80 mb-4 line-clamp-2 flex-grow">
-                            {config.description}
-                        </p>
-
-                        <div className="mt-auto">
-                            <h5 className="text-[10px] font-medium text-muted-foreground mb-2 uppercase tracking-wide opacity-70">Key Responsibilities</h5>
-                            <div className="flex flex-wrap gap-1.5">
-                                {config.responsibilities.slice(0, 2).map((responsibility, index) => (
-                                    <Badge key={index} size="sm" variant="default" className="bg-secondary/50 border-border/50 text-xs text-muted-foreground">
-                                        {responsibility}
-                                    </Badge>
-                                ))}
-                                {config.responsibilities.length > 2 && (
-                                    <Badge size="sm" variant="default" className="bg-secondary/50 border-border/50 text-xs text-muted-foreground/70">
-                                        +{config.responsibilities.length - 2}
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
-                    </Card>
-                ))}
+                    </div>
+                </button>
             </div>
 
             {/* Selected Role Summary */}
             {selectedRole && TEAM_ROLE_CONFIGS[selectedRole] && (
-                <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="rounded-xl border border-border/50 bg-secondary/30 p-5">
                     <h4 className="font-medium text-foreground mb-3 flex items-center text-sm">
                         <CheckCircle size={16} className="mr-2 text-emerald-400" weight="fill" />
                         Selection Summary

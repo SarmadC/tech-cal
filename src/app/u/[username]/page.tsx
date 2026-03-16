@@ -105,7 +105,6 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                   companySize={publicProfile.careerProfile!.companySize}
                   careerGoals={publicProfile.careerProfile!.careerGoals}
                   timeframe={publicProfile.careerProfile!.timeframe}
-                  targetPath={publicProfile.careerProfile!.targetPath}
                 />
 
                 <ProfileSkills

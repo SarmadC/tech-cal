@@ -25,6 +25,7 @@ import Image from 'next/image';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { MOCK_EVENTS } from './MockData';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 import '@/app/styles/monthly-view.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -231,6 +232,7 @@ const CellSlot: React.FC<{
     const { event, continuationType } = item;
     const accent = getAccentColor(event);
     const showContent = continuationType === 'start' || continuationType === 'single';
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
 
     return (
         <button
@@ -252,10 +254,10 @@ const CellSlot: React.FC<{
                 aria-hidden="true"
             />
 
-            {showContent && event.organization?.logo && (
+            {showContent && organizationLogoSrc && (
                 <div className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded overflow-hidden bg-white/10" style={{ zIndex: 2 }}>
                     <Image
-                        src={event.organization.logo}
+                        src={organizationLogoSrc}
                         alt=""
                         width={16}
                         height={16}
@@ -266,7 +268,7 @@ const CellSlot: React.FC<{
             )}
 
             {showContent && (
-                <span className="month-event-card-label" style={{ zIndex: 2, paddingLeft: event.organization?.logo ? '0' : '2px' }}>
+                <span className="month-event-card-label" style={{ zIndex: 2, paddingLeft: organizationLogoSrc ? '0' : '2px' }}>
                     {event.title}
                 </span>
             )}
@@ -329,6 +331,7 @@ const OverflowPopover: React.FC<{
                 <div className="month-day-popover-events">
                     {events.map(ev => {
                         const accent = getAccentColor(ev);
+                        const organizationLogoSrc = getSafeImageSrc(ev.organization?.logo);
                         return (
                             <div key={ev.id} className="month-day-popover-event">
                                 <button
@@ -343,9 +346,9 @@ const OverflowPopover: React.FC<{
                                         aria-hidden="true"
                                     />
                                     <span className="month-inline-event-content" style={{ flex: 1, minWidth: 0, gap: '4px' }}>
-                                        {ev.organization?.logo && (
+                                        {organizationLogoSrc && (
                                             <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded overflow-hidden bg-white/10 flex-shrink-0">
-                                                <Image src={ev.organization.logo} alt="" width={14} height={14} className="object-contain"
+                                                <Image src={organizationLogoSrc} alt="" width={14} height={14} className="object-contain"
                                                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                                             </span>
                                         )}

@@ -1,6 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Sparkle, Target, Clock, Lock } from '@phosphor-icons/react';
+import { motion } from './shared/StaticMotion';
 
 const staggerContainer = {
     hidden: { opacity: 0 },
@@ -48,10 +48,10 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onStart, onSkip }) => 
 
                 <div className="space-y-3 max-w-lg mx-auto">
                     <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60">
-                        Let's personalize your experience
+                        Let&apos;s personalize your experience
                     </h1>
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                        We'll help you discover events tailored to your career goals.
+                        We&apos;ll help you discover events tailored to your career goals.
                     </p>
                 </div>
             </motion.div>
@@ -65,7 +65,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onStart, onSkip }) => 
                     { icon: Target, title: "Personalized", desc: "Events matched to goals" },
                     { icon: Clock, title: "2 minutes", desc: "Quick and easy setup" },
                     { icon: Lock, title: "Private", desc: "Your data stays secure" }
-                ].map((item, i) => (
+                ].map((item) => (
                     <motion.div
                         key={item.title}
                         whileHover={{ y: -2 }}
@@ -82,7 +82,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onStart, onSkip }) => 
             <motion.div variants={staggerItem} className="pt-4 space-y-4">
                 <button
                     onClick={onStart}
-                    className="px-10 py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-lg dark:shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-xl dark:hover:shadow-[0_0_25px_-5px_rgba(255,255,255,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-primary/90"
+                    className="rounded-xl bg-primary px-10 py-4 text-base font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 dark:shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
                 >
                     Get Started
                 </button>

@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Event } from '@/types';
 import { Users, Calendar, MapPin } from '@phosphor-icons/react';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 
 export interface TodayTaskCardProps {
   event: Event;
@@ -34,10 +35,11 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
   // Get participant avatars using real event data
   const getParticipantAvatars = () => {
     const avatars = [];
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
     
     // Add organization logo if available
-    if (event.organization?.logo) {
-      avatars.push(event.organization.logo);
+    if (organizationLogoSrc) {
+      avatars.push(organizationLogoSrc);
     }
     
     return avatars;

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TagSelector } from '../TagSelector';
+import { MaterialIcon } from '@/components/ui/Icon';
 
 import type { ClassificationSectionProps, EventFormatEnum } from '../types';
 
@@ -148,6 +149,48 @@ export function ClassificationSection({
         }
     };
 
+    // --- Series inline-create state ---
+    const [showCreateSeries, setShowCreateSeries] = useState(false);
+    const [newSeriesName, setNewSeriesName] = useState('');
+    const [newSeriesUrl, setNewSeriesUrl] = useState('');
+    const [seriesCreating, setSeriesCreating] = useState(false);
+    const [seriesError, setSeriesError] = useState<string | null>(null);
+    const [localSeries, setLocalSeries] = useState<Array<{ id: string; name: string }>>([]);
+
+    // Merge lookup series with locally created ones
+    const allSeries = React.useMemo(() => {
+        const map = new Map<string, { id: string; name: string }>();
+        (lookupData.eventSeries ?? []).forEach(s => map.set(s.id, s));
+        localSeries.forEach(s => map.set(s.id, s));
+        return Array.from(map.values());
+    }, [lookupData.eventSeries, localSeries]);
+
+    const createNewSeries = async () => {
+        const trimmedName = newSeriesName.trim();
+        if (!trimmedName) { setSeriesError('Series name is required'); return; }
+        setSeriesCreating(true);
+        setSeriesError(null);
+        try {
+            const response = await fetch('/api/admin/ingestion/enrichment/series', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: trimmedName, website_url: newSeriesUrl.trim() || undefined }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to create series');
+            const newEntry = { id: data.seriesId, name: data.seriesName };
+            setLocalSeries(prev => [...prev, newEntry]);
+            setRelationships(prev => ({ ...prev, series_id: data.seriesId }));
+            setShowCreateSeries(false);
+            setNewSeriesName('');
+            setNewSeriesUrl('');
+        } catch (err) {
+            setSeriesError(err instanceof Error ? err.message : 'Failed to create series');
+        } finally {
+            setSeriesCreating(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-default pb-2">
@@ -189,17 +232,58 @@ export function ClassificationSection({
                         </select>
                     </div>
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Series</label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Series</label>
+                            <button
+                                type="button"
+                                onClick={() => { setShowCreateSeries(v => !v); setSeriesError(null); }}
+                                className="flex items-center gap-1 text-xs text-accent-primary hover:opacity-70 transition-opacity"
+                                title={showCreateSeries ? 'Cancel' : 'Create new series'}
+                            >
+                                <MaterialIcon name={showCreateSeries ? 'close' : 'add'} size={14} />
+                                {showCreateSeries ? 'Cancel' : 'Create'}
+                            </button>
+                        </div>
                         <select
                             value={relationships.series_id || ''}
                             onChange={(e) => setRelationships(prev => ({ ...prev, series_id: e.target.value || null }))}
                             className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                         >
                             <option value="" className="bg-background-main">None</option>
-                            {lookupData.eventSeries?.map(series => (
+                            {allSeries.map(series => (
                                 <option key={series.id} value={series.id} className="bg-background-main">{series.name}</option>
                             ))}
                         </select>
+                        {showCreateSeries && (
+                            <div className="mt-1 p-3 rounded-lg border border-default bg-background-secondary space-y-2">
+                                <input
+                                    type="text"
+                                    placeholder="Series name *"
+                                    value={newSeriesName}
+                                    onChange={(e) => setNewSeriesName(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createNewSeries(); } }}
+                                    className="w-full bg-transparent border-b border-default px-2 py-1.5 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                    autoFocus
+                                />
+                                <input
+                                    type="url"
+                                    placeholder="Website URL (optional)"
+                                    value={newSeriesUrl}
+                                    onChange={(e) => setNewSeriesUrl(e.target.value)}
+                                    className="w-full bg-transparent border-b border-default px-2 py-1.5 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                />
+                                {seriesError && <p className="text-xs text-rose-500">{seriesError}</p>}
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={createNewSeries}
+                                    disabled={seriesCreating || !newSeriesName.trim()}
+                                    className="w-full"
+                                >
+                                    {seriesCreating ? 'Creating…' : 'Create Series'}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">

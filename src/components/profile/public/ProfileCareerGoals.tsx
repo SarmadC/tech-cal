@@ -1,6 +1,6 @@
 'use client';
 
-import { Briefcase, Building, Target, Clock, GraduationCap } from '@phosphor-icons/react';
+import { Briefcase, Building, Target, Clock } from '@phosphor-icons/react';
 
 interface ProfileCareerGoalsProps {
   currentRole: string | null;
@@ -9,7 +9,6 @@ interface ProfileCareerGoalsProps {
   companySize: string | null;
   careerGoals: string[];
   timeframe: string | null;
-  targetPath: string | null;
 }
 
 function formatLabel(value: string | null): string {
@@ -50,10 +49,9 @@ export default function ProfileCareerGoals({
   companySize,
   careerGoals,
   timeframe,
-  targetPath,
 }: ProfileCareerGoalsProps) {
   const hasCareerInfo = currentRole || seniority || industry || companySize;
-  const hasGoals = careerGoals.length > 0 || targetPath;
+  const hasGoals = careerGoals.length > 0;
 
   if (!hasCareerInfo && !hasGoals) {
     return (
@@ -119,13 +117,6 @@ export default function ProfileCareerGoals({
               Goals
             </h3>
           </div>
-
-          {targetPath && (
-            <div className="mb-3">
-              <p className="text-xs text-[var(--foreground-tertiary)]">Target Path</p>
-              <p className="text-sm text-[var(--foreground-primary)] font-medium">{targetPath}</p>
-            </div>
-          )}
 
           {careerGoals.length > 0 && (
             <div>

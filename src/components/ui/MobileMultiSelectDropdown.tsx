@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, X, MagnifyingGlass, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { Check, X, MagnifyingGlass, CaretLeft } from '@phosphor-icons/react';
 import { normalizeForComparison, validateSkillEntry } from '@/utils/skillSuggestions';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -35,7 +35,7 @@ export default function MobileMultiSelectDropdown({
     label,
     description,
     maxSelections,
-    searchable = true,
+    searchable: _searchable = true,
     className = '',
     disabled = false,
     suggestions,
@@ -47,6 +47,18 @@ export default function MobileMultiSelectDropdown({
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const selectedLookup = React.useMemo(
+        () => new Set(selectedValues.map(normalizeForComparison)),
+        [selectedValues]
+    );
+    const optionLookup = React.useMemo(() => {
+        const lookup = new Map<string, MultiSelectOption>();
+        options.forEach((option) => {
+            lookup.set(normalizeForComparison(option.value), option);
+            lookup.set(normalizeForComparison(option.label), option);
+        });
+        return lookup;
+    }, [options]);
 
     // Group options by category (Memoized)
     const groupedOptions = React.useMemo(() => options.reduce((acc, option) => {
@@ -83,10 +95,10 @@ export default function MobileMultiSelectDropdown({
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     // Suggestions logic
-    const filteredSuggestions = suggestions?.filter(
-        s => !selectedValues.map(normalizeForComparison).includes(normalizeForComparison(s)) &&
-            s.toLowerCase().includes(normalizedSearch)
-    ).slice(0, 5) || [];
+    const filteredSuggestions = (suggestions ?? [])
+        .filter((suggestion) => !selectedLookup.has(normalizeForComparison(suggestion)) && suggestion.toLowerCase().includes(normalizedSearch))
+        .map((suggestion) => optionLookup.get(normalizeForComparison(suggestion))?.value ?? suggestion)
+        .slice(0, 5);
 
     const handleToggle = () => {
         if (disabled) return;
@@ -99,20 +111,16 @@ export default function MobileMultiSelectDropdown({
     const handleSelect = (value: string) => {
         if (disabled) return;
 
-        // Check for duplicate
-        if (selectedValues.map(normalizeForComparison).includes(normalizeForComparison(value))) {
-            onDuplicateAttempt?.(value);
-            return;
-        }
-
-        const isSelected = selectedValues.includes(value);
+        const resolvedValue = optionLookup.get(normalizeForComparison(value))?.value ?? value;
+        const normalizedValue = normalizeForComparison(resolvedValue);
+        const isSelected = selectedLookup.has(normalizedValue);
         let newValues: string[];
 
         if (isSelected) {
-            newValues = selectedValues.filter(v => v !== value);
+            newValues = selectedValues.filter(v => normalizeForComparison(v) !== normalizedValue);
         } else {
             if (maxSelections && selectedValues.length >= maxSelections) return;
-            newValues = [...selectedValues, value];
+            newValues = [...selectedValues, resolvedValue];
         }
 
         onChange(newValues);
@@ -120,18 +128,24 @@ export default function MobileMultiSelectDropdown({
 
     const handleRemove = (value: string) => {
         if (disabled) return;
-        onChange(selectedValues.filter(v => v !== value));
+        const normalizedValue = normalizeForComparison(value);
+        onChange(selectedValues.filter(v => normalizeForComparison(v) !== normalizedValue));
     };
 
     const getLabel = (value: string) => {
-        const option = options.find(opt => opt.value === value);
-        return option?.label || value;
+        return optionLookup.get(normalizeForComparison(value))?.label || value;
     };
 
     const handleCustomEntry = () => {
         const validation = validateSkillEntry(searchTerm);
         if (validation.valid && validation.normalized) {
-            handleSelect(validation.normalized);
+            const normalizedValue = normalizeForComparison(validation.normalized);
+            if (selectedLookup.has(normalizedValue)) {
+                onDuplicateAttempt?.(validation.normalized);
+                return;
+            }
+
+            handleSelect(optionLookup.get(normalizeForComparison(validation.normalized))?.value ?? validation.normalized);
             setSearchTerm('');
         }
     };
@@ -198,6 +212,7 @@ export default function MobileMultiSelectDropdown({
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleRemove(value); }}
+                            aria-label={`Remove ${getLabel(value)}`}
                             className="text-white/50 hover:text-white rounded-sm flex items-center justify-center"
                         >
                             <X size={12} weight="regular" />
@@ -308,6 +323,7 @@ export default function MobileMultiSelectDropdown({
                                                 <span className="whitespace-nowrap">{getLabel(value)}</span>
                                                 <button
                                                     onClick={() => handleRemove(value)}
+                                                    aria-label={`Remove ${getLabel(value)}`}
                                                     className="text-[#8A8F98] hover:text-white p-0.5"
                                                 >
                                                     <X size={12} />
@@ -385,7 +401,7 @@ export default function MobileMultiSelectDropdown({
                                                         onClick={handleCustomEntry}
                                                         className="block mx-auto mt-4 text-[#5E6AD2] font-medium"
                                                     >
-                                                        Tap to add "{searchTerm}"
+                                                        Tap to add &quot;{searchTerm}&quot;
                                                     </button>
                                                 )}
                                             </div>

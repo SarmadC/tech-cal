@@ -14,6 +14,7 @@ export interface RoleKeywordMeta {
  */
 const ROLE_SYNONYM_MAP: Record<string, string[]> = {
   // Engineering roles
+  'Software Engineer': ['software engineer', 'software developer', 'application developer', 'programmer', 'developer'],
   'Frontend Engineer': ['frontend', 'frontend engineer', 'ui developer', 'frontend dev', 'client-side developer', 'web developer'],
   'Backend Engineer': ['backend', 'backend engineer', 'server developer', 'api developer', 'backend dev'],
   'Full Stack Engineer': ['full stack', 'fullstack', 'full-stack developer', 'fullstack developer', 'full stack dev'],
@@ -77,7 +78,7 @@ function buildRoleKeywords(role: string, manualSynonyms: string[]): string[] {
   });
 
   // Add automatic splits for common patterns
-  const parts = role.split(/[()\/-]/);
+  const parts = role.split(/[()/-]/);
   parts.forEach(part => {
     const trimmed = part.trim();
     if (trimmed && trimmed.length > 2) {

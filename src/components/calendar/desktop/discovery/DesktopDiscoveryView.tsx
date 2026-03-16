@@ -28,7 +28,6 @@ import { useDiscoverySections } from '@/hooks/useDiscoverySections';
 import { useDiscoveryUxMetrics } from '@/hooks/useDiscoveryUxMetrics';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { extractCareerProfile } from '@/utils/profileTypeGuards';
-import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
 
@@ -636,7 +635,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                             isBookmarking={pendingBookmarkIds.has(event.id)}
                             isAttending={isAttending(event.id)}
                             isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
-                            showRecommendationContext
                             quickFitBadges={getBadgesForEvent(event)}
                             onFeedbackAction={handleFeedbackAction}
                             onExplainRecommendation={setExplainEvent}

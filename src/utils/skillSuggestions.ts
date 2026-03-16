@@ -30,6 +30,16 @@ export function getSkillsForRole(role?: string): string[] {
 
   // Keyword-based mapping
   const roleMap: Record<string, string[]> = {
+    // UX/UI and design roles
+    'ux designer|ui designer|ux researcher|product designer|designer|design|researcher': [
+      'Figma',
+      'User Research',
+      'Wireframing',
+      'Prototyping',
+      'Design Systems',
+      'Accessibility',
+      'Usability Testing'
+    ],
     // Frontend roles
     'frontend|react|vue|angular|ui': [
       'React',
@@ -134,7 +144,12 @@ export function getSuggestedSkillsToLearn(
     docker: ['Kubernetes', 'CI/CD', 'Terraform', 'AWS', 'Monitoring'],
     aws: ['Terraform', 'Docker', 'Kubernetes', 'CloudFormation', 'Lambda'],
     typescript: ['React', 'Node.js', 'Next.js', 'GraphQL', 'Testing'],
-    git: ['GitHub Actions', 'CI/CD', 'GitLab CI', 'Code Review', 'DevOps']
+    git: ['GitHub Actions', 'CI/CD', 'GitLab CI', 'Code Review', 'DevOps'],
+    figma: ['Design Systems', 'Prototyping', 'Accessibility', 'User Research', 'Framer'],
+    'user research': ['Usability Testing', 'Information Architecture', 'Prototyping', 'Accessibility', 'Design Systems'],
+    wireframing: ['Prototyping', 'Information Architecture', 'Design Systems', 'Accessibility', 'User Research'],
+    prototyping: ['Figma', 'Framer', 'Design Systems', 'Accessibility', 'Usability Testing'],
+    accessibility: ['Design Systems', 'Usability Testing', 'Information Architecture', 'User Research', 'HTML/CSS']
   };
 
   const suggestions = new Set<string>();
@@ -250,10 +265,9 @@ export function validateSkillEntry(value: string): {
   }
 
   // Allow letters, numbers, spaces, and common tech punctuation: - . / + # ( )
-  if (!/^[\w\s\-\.\/\+\#\(\)]+$/.test(trimmed)) {
+  if (!/^[\w\s./+#()-]+$/.test(trimmed)) {
     return { valid: false, error: 'Invalid characters in skill name' };
   }
 
   return { valid: true, normalized: trimmed };
 }
-

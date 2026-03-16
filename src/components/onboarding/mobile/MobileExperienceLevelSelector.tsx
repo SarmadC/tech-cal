@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User, UsersThree, Check } from '@phosphor-icons/react';
 import { LEVELS_BY_TRACK, type ExperienceLevel } from '@/types/career';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '../shared/StaticMotion';
 
 interface MobileExperienceLevelSelectorProps {
     value: string;
@@ -20,19 +20,20 @@ export function MobileExperienceLevelSelector({
     error,
     className
 }: MobileExperienceLevelSelectorProps) {
-    const [track, setTrack] = useState<'ic' | 'management' | null>('ic');
+    const [track, setTrack] = useState<'ic' | 'management'>(() => {
+        if (!value) {
+            return 'ic';
+        }
+
+        const level = [...LEVELS_BY_TRACK.ic, ...LEVELS_BY_TRACK.management].find((entry) => entry.value === value);
+        if (!level) {
+            return 'ic';
+        }
+
+        return LEVELS_BY_TRACK.ic.includes(level) ? 'ic' : 'management';
+    });
 
     const visibleLevels = track ? LEVELS_BY_TRACK[track] : [];
-
-    useEffect(() => {
-        if (value) {
-            const level = [...LEVELS_BY_TRACK.ic, ...LEVELS_BY_TRACK.management].find(l => l.value === value);
-            if (level) {
-                const inferredTrack = LEVELS_BY_TRACK.ic.includes(level) ? 'ic' : 'management';
-                setTrack(inferredTrack);
-            }
-        }
-    }, [value]);
 
     const handleLevelChange = (levelValue: string) => {
         onChange(levelValue);

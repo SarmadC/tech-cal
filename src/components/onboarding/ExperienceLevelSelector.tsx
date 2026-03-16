@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, CheckCircle, User, UsersThree } from '@phosphor-icons/react';
+import { Check, User, UsersThree } from '@phosphor-icons/react';
 import { LEVELS_BY_TRACK, type ExperienceLevel } from '@/types/career';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from './shared/StaticMotion';
 
 interface ExperienceLevelSelectorProps {
     value: string;
@@ -70,7 +70,7 @@ export function ExperienceLevelSelector({
     };
 
     return (
-        <div className={twMerge("space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-backwards", className)}>
+        <div className={twMerge("space-y-4", className)}>
             <div className="space-y-3">
                 <label className="text-[11px] font-semibold uppercase tracking-wide text-[#8A8F98] flex items-center">
                     Experience Level <span className="text-red-500 ml-1">*</span>

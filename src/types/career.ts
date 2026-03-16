@@ -10,6 +10,7 @@ export const ROLE_CATEGORIES = {
 
 export const ROLE_TAXONOMY = {
   [ROLE_CATEGORIES.ENGINEERING]: [
+    'Software Engineer',
     'Frontend Engineer',
     'Backend Engineer',
     'Full Stack Engineer',
@@ -225,6 +226,19 @@ export const TECHNICAL_SKILLS = {
     'Looker',
     'Apache Kafka',
     'Apache Airflow'
+  ],
+  DESIGN_RESEARCH_TOOLS: [
+    'Figma',
+    'Adobe XD',
+    'Sketch',
+    'Framer',
+    'User Research',
+    'Wireframing',
+    'Prototyping',
+    'Design Systems',
+    'Accessibility',
+    'Usability Testing',
+    'Information Architecture'
   ],
   MOBILE_TECHNOLOGIES: [
     'React Native',
@@ -595,6 +609,21 @@ export type CareerEventType =
   | 'keynote'            // Inspirational talks
   | 'networking'         // Pure networking events
   | 'trade-show';        // Industry exhibitions
+
+export const CAREER_EVENT_TYPE_OPTIONS: Array<{ value: CareerEventType; label: string }> = [
+  { value: 'conference', label: 'Conference' },
+  { value: 'workshop', label: 'Workshop' },
+  { value: 'meetup', label: 'Meetup' },
+  { value: 'webinar', label: 'Webinar' },
+  { value: 'hackathon', label: 'Hackathon' },
+  { value: 'summit', label: 'Summit' },
+  { value: 'bootcamp', label: 'Bootcamp' },
+  { value: 'certification', label: 'Certification' },
+  { value: 'panel', label: 'Panel' },
+  { value: 'keynote', label: 'Keynote' },
+  { value: 'networking', label: 'Networking' },
+  { value: 'trade-show', label: 'Trade Show' }
+];
 
 // Team Building Types
 export type TeamRole = 

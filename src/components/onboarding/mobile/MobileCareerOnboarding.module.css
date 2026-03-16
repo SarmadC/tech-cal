@@ -276,6 +276,11 @@
     /* No border-bottom */
 }
 
+.selectableCardCompact {
+    gap: 0.875rem;
+    padding: 0.4375rem 0.5rem;
+}
+
 /* .selectableCard:last-child {
     border-bottom: none;
 } REMOVED */
@@ -288,6 +293,16 @@
     background-color: #2C2D31;
 }
 
+.selectableCard[data-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.selectableCard[data-disabled="true"]:hover,
+.selectableCard[data-disabled="true"]:active {
+    background-color: transparent;
+}
+
 .cardIcon {
     display: flex;
     height: 18px;
@@ -298,10 +313,6 @@
     border: 1.5px solid #48494D;
     transition: all 0.2s;
     background: transparent;
-}
-
-.cardIconRadio {
-    border-radius: 9999px;
 }
 
 .cardIconCheckbox {
@@ -335,6 +346,15 @@
 .cardDescription {
     font-size: 0.8125rem; /* 13px */
     color: #8A8F98;
+}
+
+.selectableCard[data-compact="true"] .cardLabel {
+    font-size: 0.8125rem;
+}
+
+.selectableCard[data-compact="true"] .cardDescription {
+    font-size: 0.75rem;
+    line-height: 1.05rem;
 }
 
 /* Action Bar */
@@ -422,6 +442,17 @@
     border-color: #5E6AD2;
     color: #E3E3E3;
     background-color: rgba(94, 106, 210, 0.1);
+}
+
+.optionalButtonDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.optionalButtonDisabled:active {
+    border-color: #48494D;
+    color: #8A8F98;
+    background-color: transparent;
 }
 
 /* Animations */

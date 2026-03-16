@@ -1,4 +1,5 @@
 import { 
+  CAREER_EVENT_TYPE_OPTIONS,
   LearningStyle, 
   AvailableTime, 
   BudgetRange, 
@@ -54,19 +55,14 @@ export const NETWORKING_GOAL_OPTIONS: Array<{ value: NetworkingGoal; label: stri
 ];
 
 // Career Event Type Options
-export const EVENT_TYPE_OPTIONS: Array<{ value: CareerEventType; label: string }> = [
-  { value: 'conference', label: 'Conferences' },
-  { value: 'workshop', label: 'Workshops' },
-  { value: 'meetup', label: 'Meetups' },
-  { value: 'webinar', label: 'Webinars' },
-  { value: 'summit', label: 'Summits' },
-  { value: 'networking', label: 'Networking Events' },
-  { value: 'bootcamp', label: 'Bootcamps' },
-  { value: 'hackathon', label: 'Hackathons' },
-  { value: 'panel', label: 'Panels' },
-  { value: 'keynote', label: 'Keynotes' },
-  { value: 'trade-show', label: 'Trade Shows' }
-];
+const EVENT_TYPE_LABEL_OVERRIDES: Partial<Record<CareerEventType, string>> = {
+  networking: 'Networking Events'
+};
+
+export const EVENT_TYPE_OPTIONS: Array<{ value: CareerEventType; label: string }> = CAREER_EVENT_TYPE_OPTIONS.map(option => ({
+  value: option.value,
+  label: EVENT_TYPE_LABEL_OVERRIDES[option.value] ?? (option.label.endsWith('s') ? option.label : `${option.label}s`)
+}));
 
 // Seniority Options
 export const SENIORITY_OPTIONS = [

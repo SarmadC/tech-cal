@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
-import { getVersionedImageSrc } from '@/utils/imageUrl';
+import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 
 interface HeroEventCardProps {
     event: Event & { careerImpact?: CareerImpactScore };
@@ -47,13 +47,14 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
     const locationParts = event.location ? event.location.split(',').map(s => s.trim()) : [];
     const venueName = locationParts.length > 0 ? locationParts[0] : 'Venue TBA';
     const locationDetails = locationParts.length > 1 ? locationParts.slice(1).join(', ') : 'Location details TBA';
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
     const imageSources = React.useMemo(() => {
         const sources: string[] = [];
         const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
         if (eventImageSrc) sources.push(eventImageSrc);
-        if (event.organization?.logo) sources.push(event.organization.logo);
+        if (organizationLogoSrc) sources.push(organizationLogoSrc);
         return sources;
-    }, [event.eventImageUrl, event.organization, event.updatedAt]);
+    }, [event.eventImageUrl, organizationLogoSrc, event.updatedAt]);
 
     const [activeImageSrc, setActiveImageSrc] = React.useState<string | null>(() => imageSources[0] ?? null);
 
@@ -68,7 +69,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
         setActiveImageSrc(nextSrc ?? null);
     }, [activeImageSrc, imageSources]);
 
-    const imageAltText = activeImageSrc === event.organization?.logo
+    const imageAltText = activeImageSrc === organizationLogoSrc
         ? `${event.organization?.name ?? 'Event organizer'} logo`
         : `${event.title} event image`;
 
@@ -109,7 +110,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                 <>
                     <div className="absolute inset-0 bg-black/40" />
                     {/* If using logo as fallback, apply letterboxing with blurred background */}
-                    {activeImageSrc === event.organization?.logo && (
+                    {activeImageSrc === organizationLogoSrc && (
                         <Image
                             src={activeImageSrc}
                             alt=""
@@ -121,7 +122,7 @@ const HeroEventCard: React.FC<HeroEventCardProps> = ({
                         src={activeImageSrc}
                         alt={imageAltText}
                         fill
-                        className={`transition-transform duration-700 group-hover:scale-105 ${activeImageSrc === event.organization?.logo ? 'object-contain p-12 opacity-80' : 'object-cover'}`}
+                        className={`transition-transform duration-700 group-hover:scale-105 ${activeImageSrc === organizationLogoSrc ? 'object-contain p-12 opacity-80' : 'object-cover'}`}
                         onError={handleImageError}
                     />
                 </>

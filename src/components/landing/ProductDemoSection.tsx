@@ -218,8 +218,6 @@ export default function ProductDemoSection() {
 
     const visibleEvents = sortedEvents;
 
-    const activeSelectedEvent = selectedEvent;
-
     const handleUpdateFilter: UpdateFilterHandler = (key, value) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
     };
@@ -421,7 +419,6 @@ export default function ProductDemoSection() {
                                                 whiteLogoBackgroundInDark
                                                 showActionControls
                                                 showShortlistAction={false}
-                                                showRecommendationContext
                                             />
                                         ))
                                     )}

@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import { getSafeImageSrc } from '@/utils/imageUrl';
 // Dynamically import event detail panel
 const EventDetailPanel = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
@@ -44,6 +45,7 @@ export function FocusHeroCard({
         upcomingEvents,
         careerProfile,
     });
+    const topRecommendedOrganizationLogoSrc = getSafeImageSrc(metrics.topRecommendedEvent?.event.organization?.logo);
 
     const handleBookmark = async (event: Event) => {
         try {
@@ -185,10 +187,10 @@ export function FocusHeroCard({
                                 <div className="pt-4 border-t border-zinc-100 dark:border-white/5 flex justify-between items-end mt-auto">
                                     <div className="flex items-center gap-2">
                                         {/* Avatar/Logo Logic */}
-                                        {metrics.topRecommendedEvent.event.organization?.logo ? (
+                                        {topRecommendedOrganizationLogoSrc ? (
                                             <div className="relative w-5 h-5 overflow-hidden">
                                                 <Image
-                                                    src={metrics.topRecommendedEvent.event.organization.logo}
+                                                    src={topRecommendedOrganizationLogoSrc}
                                                     alt={metrics.topRecommendedEvent.event.organizer || 'Organizer'}
                                                     fill
                                                     className="object-contain"

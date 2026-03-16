@@ -1311,7 +1311,7 @@ export class EventService {
                         track?: string;
                         topics?: string[] | null;
                         sort_order?: number;
-                        event_agenda_speakers?: Array<{
+                        agenda_speakers?: Array<{
                             speakers?: {
                                 id: string;
                                 name: string;
@@ -1325,8 +1325,8 @@ export class EventService {
                             };
                         }>;
                     }>).map(a => {
-                        const speakers = Array.isArray(a.event_agenda_speakers)
-                            ? a.event_agenda_speakers
+                        const speakers = Array.isArray(a.agenda_speakers)
+                            ? a.agenda_speakers
                                 .map((eas: { speakers?: unknown }) => eas?.speakers)
                                 .filter((sp): sp is {
                                     id: string;

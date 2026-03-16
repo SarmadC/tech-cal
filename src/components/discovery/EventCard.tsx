@@ -6,7 +6,7 @@ import { MapPin, BookmarkSimple, DotsThree, Exclude, UserCheck } from '@phosphor
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
-import { getVersionedImageSrc } from '@/utils/imageUrl';
+import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 import RecommendationContext from './RecommendationContext';
 import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
@@ -88,6 +88,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
             : 'On-Site';
     const networkAttendingCount = event.networkAttendingCount ?? 0;
     const networkSampleAvatars = event.networkSampleAvatars ?? [];
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
 
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
@@ -95,11 +96,11 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         if (eventImageSrc) {
             sources.push(eventImageSrc);
         }
-        if (event.organization?.logo) {
-            sources.push(event.organization.logo);
+        if (organizationLogoSrc) {
+            sources.push(organizationLogoSrc);
         }
         return sources;
-    }, [event.eventImageUrl, event.organization, event.updatedAt]);
+    }, [event.eventImageUrl, organizationLogoSrc, event.updatedAt]);
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
     const [isActionMenuOpen, setIsActionMenuOpen] = React.useState(false);
@@ -142,7 +143,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         setActiveLogoSrc(nextSrc ?? null);
     }, [activeLogoSrc, logoSources]);
 
-    const logoAltText = activeLogoSrc === event.organization?.logo
+    const logoAltText = activeLogoSrc === organizationLogoSrc
         ? `${event.organization?.name ?? 'Event organizer'} logo`
         : `${event.title} event image`;
 

@@ -6,7 +6,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Badge } from '@/components/ui/badge';
 import type { TrackedEvent, EventType } from '@/types';
 import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
-import { getVersionedImageSrc } from '@/utils/imageUrl';
+import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 
 interface MobileEventListCardProps {
     event: TrackedEvent;
@@ -20,15 +20,16 @@ interface MobileEventListCardProps {
  */
 export default function MobileEventListCard({ event, category, onClick }: MobileEventListCardProps) {
     const dateDisplay = formatDate(event.startTime, event.timezone);
+    const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
 
     // Fallback chain for logo: event image -> org logo -> first letter
     const logoSources = useMemo(() => {
         const sources: string[] = [];
         const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
         if (eventImageSrc) sources.push(eventImageSrc);
-        if (event.organization?.logo) sources.push(event.organization.logo);
+        if (organizationLogoSrc) sources.push(organizationLogoSrc);
         return sources;
-    }, [event.eventImageUrl, event.organization, event.updatedAt]);
+    }, [event.eventImageUrl, organizationLogoSrc, event.updatedAt]);
 
     const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
 

@@ -36,13 +36,13 @@ const RoleEditor: React.FC<RoleEditorProps> = React.memo(({ profile, onUpdate })
             {/* Current Role - Autocomplete Dropdown */}
             <LinearFormField
                 label="Current Role"
-                description="Search for your role or browse by category"
+                description="Choose your role from the browser dropdown"
                 required
             >
                 <RoleAutocomplete
                     id="current-role"
                     label="Current Role"
-                    hint="Search for your role or browse by category"
+                    hint="Choose your role from the list"
                     value={formData.currentRole}
                     onChange={(value) => handleFieldChange('currentRole', value)}
                     required

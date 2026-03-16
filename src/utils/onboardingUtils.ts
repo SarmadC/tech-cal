@@ -1,4 +1,4 @@
-import { CareerOnboardingData, SkillTag } from '@/types/career';
+import { CareerGoal, CareerOnboardingData, CareerOptionalSectionStatus, SkillTag } from '@/types/career';
 import {
   getSkillCategory as getCanonicalSkillCategory,
   mapSkillsToCanonical,
@@ -6,6 +6,21 @@ import {
   resolveCanonicalSkillName
 } from '@/utils/skillTaxonomy';
 import { normalizeForComparison } from '@/utils/skillSuggestions';
+
+export const MAX_CAREER_GOALS = 2;
+export const VISIBLE_ONBOARDING_STEP_COUNT = 3;
+
+export function normalizeCareerGoals(goals: CareerGoal[] = []): CareerGoal[] {
+  return Array.from(new Set(goals)).slice(0, MAX_CAREER_GOALS);
+}
+
+export function clampCareerOnboardingStep(step?: number): number {
+  if (!Number.isFinite(step)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(VISIBLE_ONBOARDING_STEP_COUNT, step as number));
+}
 
 /**
  * Validates that onboarding data is complete and properly formatted
@@ -59,17 +74,21 @@ export function validateOnboardingData(data: Partial<CareerOnboardingData>): {
   // No proficiency validation (removed)
 
   // Step 3: Goals
-  if (!data.step3_goals?.careerGoals?.length) {
+  const careerGoals = normalizeCareerGoals(data.step3_goals?.careerGoals ?? []);
+  if (!careerGoals.length) {
     errors.push('At least one career goal is required');
+  }
+  if ((data.step3_goals?.careerGoals?.length ?? 0) > MAX_CAREER_GOALS) {
+    errors.push('Choose up to 2 career goals');
+  }
+  if (!data.step3_goals?.timeframe) {
+    errors.push('Please choose a timeline');
   }
 
   // Step 6: Team building (optional but validate if present)
   if (data.step6_teamBuilding) {
     if (data.step6_teamBuilding.teamRole && !data.step6_teamBuilding.teamRole.trim()) {
       errors.push('Team role cannot be empty if specified');
-    }
-    if (data.step6_teamBuilding.teamGoals && data.step6_teamBuilding.teamGoals.length === 0) {
-      errors.push('At least one team goal is required');
     }
   }
 
@@ -79,10 +98,98 @@ export function validateOnboardingData(data: Partial<CareerOnboardingData>): {
   };
 }
 
+export function mergeSkillStepData(
+  previous: Partial<CareerOnboardingData['step2_skills']> = {},
+  incoming: Partial<CareerOnboardingData['step2_skills']> = {}
+): CareerOnboardingData['step2_skills'] {
+  const primarySkills = incoming.primarySkills
+    ? mapSkillsToCanonical(incoming.primarySkills)
+    : previous.primarySkills ?? [];
+  const skillsToLearn = incoming.skillsToLearn
+    ? mapSkillsToCanonical(incoming.skillsToLearn)
+    : previous.skillsToLearn ?? [];
+  const interests = incoming.interests ?? previous.interests ?? [];
+  const existingSkillTags = incoming.skillTags ?? previous.skillTags ?? [];
+
+  return {
+    primarySkills,
+    skillsToLearn,
+    interests,
+    skillTags: synchronizeSkillTags(primarySkills, existingSkillTags)
+  };
+}
+
+export function hasCompletedTeamPreferences(
+  teamBuilding?: Partial<CareerOnboardingData['step6_teamBuilding']>
+): boolean {
+  return Boolean(teamBuilding?.teamRole);
+}
+
+export function hasCompletedLearningPreferences(
+  preferences?: Partial<CareerOnboardingData['step4_preferences']>
+): boolean {
+  return (preferences?.learningStyle?.length ?? 0) > 0;
+}
+
+export function hasCompletedNetworkingPreferences(
+  networking?: Partial<CareerOnboardingData['step5_networking']>
+): boolean {
+  return Boolean(
+    (networking?.networkingGoals?.length ?? 0) > 0 ||
+    (networking?.preferredEventTypes?.length ?? 0) > 0
+  );
+}
+
+export function hasOptionalPreferencesProgress(
+  data: Partial<CareerOnboardingData>
+): boolean {
+  return Boolean(
+    hasCompletedLearningPreferences(data.step4_preferences) ||
+    hasCompletedNetworkingPreferences(data.step5_networking) ||
+    hasCompletedTeamPreferences(data.step6_teamBuilding)
+  );
+}
+
+export function deriveOptionalSectionStatus(
+  data: Partial<CareerOnboardingData>
+): CareerOptionalSectionStatus {
+  return {
+    learningPreferences: hasCompletedLearningPreferences(data.step4_preferences),
+    networkingPreferences: hasCompletedNetworkingPreferences(data.step5_networking),
+    teamPreferences: hasCompletedTeamPreferences(data.step6_teamBuilding)
+  };
+}
+
+export function hasCoreOnboardingProgress(data: Partial<CareerOnboardingData>): boolean {
+  return Boolean(
+    data.step1_role?.currentRole ||
+    (data.step2_skills?.primarySkills?.length ?? 0) > 0 ||
+    (data.step3_goals?.careerGoals?.length ?? 0) > 0 ||
+    data.step3_goals?.timeframe
+  );
+}
+
+export function normalizeOnboardingDraftData(
+  data: Partial<CareerOnboardingData>
+): Partial<CareerOnboardingData> {
+  return {
+    ...data,
+    step2_skills: data.step2_skills ? mergeSkillStepData(data.step2_skills, {}) : data.step2_skills,
+    step3_goals: data.step3_goals
+      ? {
+          ...data.step3_goals,
+          careerGoals: normalizeCareerGoals(data.step3_goals.careerGoals ?? [])
+        }
+      : data.step3_goals
+  };
+}
+
 /**
  * Sanitizes onboarding data by providing defaults and cleaning up values
  */
 export function sanitizeOnboardingData(data: Partial<CareerOnboardingData>): CareerOnboardingData {
+  const step2_skills = mergeSkillStepData({}, data.step2_skills);
+
   return {
     step1_role: {
       currentRole: data.step1_role?.currentRole || '',
@@ -91,11 +198,9 @@ export function sanitizeOnboardingData(data: Partial<CareerOnboardingData>): Car
       companySize: data.step1_role?.companySize || 'medium'
     },
     step2_skills: {
-      primarySkills: mapSkillsToCanonical(data.step2_skills?.primarySkills || []),
-      skillsToLearn: mapSkillsToCanonical(data.step2_skills?.skillsToLearn || []),
-      interests: data.step2_skills?.interests || [],
+      ...step2_skills,
       // Keep skillTags for backward compatibility, but don't require proficiency
-      skillTags: (data.step2_skills?.skillTags || [])
+      skillTags: (step2_skills.skillTags || [])
         .filter(tag => Boolean(tag?.skill))
         .map((tag, index) => {
           const canonicalSkill = resolveCanonicalSkillName(tag.skill);
@@ -109,10 +214,11 @@ export function sanitizeOnboardingData(data: Partial<CareerOnboardingData>): Car
         })
     },
     step3_goals: {
-      careerGoals: data.step3_goals?.careerGoals || [],
+      careerGoals: normalizeCareerGoals(data.step3_goals?.careerGoals || []),
       timeframe: data.step3_goals?.timeframe || 'medium-term'
     },
     step4_preferences: {
+      targetPath: data.step4_preferences?.targetPath,
       learningStyle: data.step4_preferences?.learningStyle || [],
       availableTime: data.step4_preferences?.availableTime || 'moderate',
       budget: data.step4_preferences?.budget || 'moderate'
