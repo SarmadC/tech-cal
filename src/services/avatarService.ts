@@ -30,17 +30,18 @@ export function generateAvatarUrl(
   const _initials = getInitials(name);
   
   // Clean the name for URL encoding
-  const encodedName = encodeURIComponent(name);
-  
+  const trimmedName = name.trim();
+
   // Build UI Avatars URL
   const baseUrl = 'https://ui-avatars.com/api/';
   const params = new URLSearchParams({
-    name: encodedName,
+    name: trimmedName,
     size: size.toString(),
     background: backgroundColor,
     color: color,
     bold: bold.toString(),
-    rounded: rounded.toString()
+    rounded: rounded.toString(),
+    format: 'png'
   });
 
   return `${baseUrl}?${params.toString()}`;

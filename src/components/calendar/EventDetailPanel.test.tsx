@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { screen } from '@/utils/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@/utils/test-utils';
-import type { Event } from '@/types';
+import type { Event, Speaker } from '@/types';
 import { EventService } from '@/services/eventServices';
 import EventDetailPanel from './EventDetailPanel';
 
@@ -127,5 +127,93 @@ describe('EventDetailPanel', () => {
 
         expect(await screen.findByText('Agenda not published yet')).toBeInTheDocument();
         expect(screen.getByText("We'll show session timing here as soon as the organizer shares it.")).toBeInTheDocument();
+    });
+
+    it('hydrates fetched agenda and speakers into the detail panel', async () => {
+        vi.mocked(EventService.getEventWithAgenda).mockResolvedValueOnce({
+            ...createEvent(),
+            agenda: [
+                {
+                    id: 'agenda-1',
+                    title: 'SQLBits Kickoff',
+                    startTime: '2026-04-22T20:00:00+00:00',
+                    endTime: '2026-04-22T21:00:00+00:00',
+                    type: 'session',
+                },
+            ],
+            speakerLineup: [
+                {
+                    name: 'Benni De Jagere',
+                    title: 'Principal Program Manager',
+                    company: 'Microsoft',
+                    photoUrl: 'https://sessionize.com/image/example.png',
+                } as Speaker,
+            ],
+        } as Event & { agenda?: AgendaItem[] });
+
+        render(
+            <EventDetailPanel
+                event={createEvent({
+                    title: 'SQLBits 2026',
+                    agenda: [],
+                    speakerLineup: [],
+                })}
+                onClose={vi.fn()}
+                categories={[]}
+            />
+        );
+
+        expect(await screen.findByText('Benni De Jagere')).toBeInTheDocument();
+        expect(await screen.findByText('mock-timeline')).toBeInTheDocument();
+        expect(screen.queryByText('Agenda not published yet')).not.toBeInTheDocument();
+    });
+
+    it('renders speaker lineups without key warnings when speaker ids are missing', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        render(
+            <EventDetailPanel
+                event={createEvent({
+                    speakerLineup: [
+                        {
+                            name: 'Jane Doe',
+                            title: 'Staff Engineer',
+                            company: 'Acme',
+                            linkedinUrl: 'https://linkedin.com/in/jane-doe',
+                        } as unknown as Speaker,
+                        {
+                            name: 'Jane Doe',
+                            title: 'Staff Engineer',
+                            company: 'Acme',
+                            linkedinUrl: 'https://linkedin.com/in/jane-doe',
+                        } as unknown as Speaker,
+                        {
+                            name: 'John Roe',
+                            title: 'CTO',
+                            company: 'Beta',
+                        } as unknown as Speaker,
+                    ],
+                })}
+                onClose={vi.fn()}
+                categories={[]}
+            />
+        );
+
+        expect(await screen.findByText('Speakers')).toBeInTheDocument();
+        expect(screen.getAllByText('Jane Doe')).toHaveLength(1);
+        expect(screen.getByText('John Roe')).toBeInTheDocument();
+        expect(screen.getByAltText('Jane Doe')).toHaveAttribute(
+            'src',
+            '/_next/image?url=https%3A%2F%2Funavatar.io%2Fhttps%253A%252F%252Flinkedin.com%252Fin%252Fjane-doe&w=96&q=75'
+        );
+
+        const keyWarningLogged = consoleErrorSpy.mock.calls.some((call) =>
+            call.some((arg) =>
+                typeof arg === 'string' && arg.includes('Each child in a list should have a unique "key" prop')
+            )
+        );
+
+        expect(keyWarningLogged).toBe(false);
+        consoleErrorSpy.mockRestore();
     });
 });

@@ -18,7 +18,6 @@ import {
     rankEventsByMode,
 } from '@/components/discovery/discoveryRanking';
 import { buildActiveFilterChips, DiscoveryFilterChip } from '@/components/discovery/discoveryFilterChips';
-import { getQuickFitBadges } from '@/components/discovery/quickFitBadges';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, FilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
@@ -30,6 +29,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { extractCareerProfile } from '@/utils/profileTypeGuards';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
+import { DESKTOP_DISCOVERY_RANKING_MODE_KEY } from '@/constants/discoveryPersistence';
 
 type EventWithImpact = Event & { careerImpact?: CareerImpactScore };
 
@@ -63,7 +63,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     events,
     categories,
     profile,
-    trackedEvents = [],
     onEventSelect,
     className = '',
     filters,
@@ -86,7 +85,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     const [feedbackHint, setFeedbackHint] = useState<string | null>(null);
     const [explainEvent, setExplainEvent] = useState<EventWithImpact | null>(null);
 
-    const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>('discovery-ranking-mode', 'best-match');
+    const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>(DESKTOP_DISCOVERY_RANKING_MODE_KEY, 'best-match');
     const [hiddenEventIds, setHiddenEventIds] = useLocalStorage<string[]>('discovery-hidden-events', []);
     const [categoryPenalty, setCategoryPenalty] = useLocalStorage<Record<string, number>>('discovery-category-penalty', {});
     const [shortlistIds, setShortlistIds] = useLocalStorage<string[]>('discovery-shortlist-ids', []);
@@ -387,16 +386,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         return diversifiedEvents.filter(e => !sectionEventIds.has(e.id));
     }, [diversifiedEvents, sectionEventIds, isPersonalizedHome]);
 
-    const getBadgesForEvent = useCallback((event: EventWithImpact) => {
-        return getQuickFitBadges(event, {
-            filters: {
-                budget: filters.budget,
-                cost: filters.cost,
-            },
-            scheduledEvents: trackedEvents as Event[],
-        });
-    }, [filters.budget, filters.cost, trackedEvents]);
-
     const handleSectionExpansionChange = useCallback((sectionId: string, expanded: boolean) => {
         setSectionExpansion((prev) => ({
             ...prev,
@@ -592,7 +581,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                                 pendingAttendanceIds={pendingAttendanceIds}
                                 expanded={sectionExpansion[section.id] ?? false}
                                 onExpandedChange={(expanded) => handleSectionExpansionChange(section.id, expanded)}
-                                getQuickFitBadges={getBadgesForEvent}
                                 onFeedbackAction={handleFeedbackAction}
                                 onExplainRecommendation={setExplainEvent}
                                 onShortlistToggle={handleShortlistToggle}
@@ -615,7 +603,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                                 defaultVisibleCount={6}
                                 expanded={sectionExpansion['more-events'] ?? false}
                                 onExpandedChange={(expanded) => handleSectionExpansionChange('more-events', expanded)}
-                                getQuickFitBadges={getBadgesForEvent}
                                 onFeedbackAction={handleFeedbackAction}
                                 onExplainRecommendation={setExplainEvent}
                                 onShortlistToggle={handleShortlistToggle}
@@ -635,7 +622,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                             isBookmarking={pendingBookmarkIds.has(event.id)}
                             isAttending={isAttending(event.id)}
                             isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
-                            quickFitBadges={getBadgesForEvent(event)}
                             onFeedbackAction={handleFeedbackAction}
                             onExplainRecommendation={setExplainEvent}
                             onShortlistToggle={handleShortlistToggle}

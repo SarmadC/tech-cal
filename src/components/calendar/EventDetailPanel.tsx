@@ -6,13 +6,14 @@ import { XIcon, ArrowSquareOutIcon, Bookmark } from '@phosphor-icons/react';
 import '@/app/styles/event-card.css';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
-import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
+import { Event, EventType, AgendaItem, MultiDayEventInstance, Speaker } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
 import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import { getSpeakerAvatarUrls } from '@/utils/timelineUtils';
+import { getBrowserSafeImageSrc } from '@/utils/imageUrl';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
 import { EventFeedbackForm } from '@/components/events/EventFeedbackForm';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
@@ -27,6 +28,58 @@ interface EventDetailPanelProps {
     categories: EventType[];
     variant?: 'sidebar' | 'modal';
 }
+
+const normalizeSpeakerIdentityPart = (value?: string | null): string | null => {
+    const normalized = value?.trim().toLowerCase();
+    return normalized ? normalized : null;
+};
+
+const getSpeakerIdentity = (speaker: Speaker, fallbackIndex?: number): string => {
+    const explicitId = normalizeSpeakerIdentityPart(speaker.id);
+    if (explicitId) {
+        return `id:${explicitId}`;
+    }
+
+    const linkedInIdentity = normalizeSpeakerIdentityPart(speaker.linkedinUrl);
+    if (linkedInIdentity) {
+        return `linkedin:${linkedInIdentity}`;
+    }
+
+    const profileIdentity = [
+        speaker.name,
+        speaker.company,
+        speaker.title,
+        speaker.photoUrl,
+    ]
+        .map(normalizeSpeakerIdentityPart)
+        .filter(Boolean)
+        .join('|');
+
+    if (profileIdentity) {
+        return `profile:${profileIdentity}`;
+    }
+
+    return `speaker:${fallbackIndex ?? 0}`;
+};
+
+const getAgendaSpeakers = (agenda: AgendaItem[] | undefined): Speaker[] => {
+    if (!Array.isArray(agenda) || agenda.length === 0) {
+        return [];
+    }
+
+    return agenda.flatMap((item) => [
+        ...(item.speakers ?? []),
+        ...(item.speaker ? [item.speaker] : []),
+    ]);
+};
+
+const hasSpeakerData = (event: Pick<Event, 'speakerLineup' | 'agenda'>): boolean => {
+    if (Array.isArray(event.speakerLineup) && event.speakerLineup.length > 0) {
+        return true;
+    }
+
+    return getAgendaSpeakers(event.agenda).length > 0;
+};
 
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories, variant = 'sidebar' }) => {
     const category = categories.find(c => c.id === event.eventTypeId);
@@ -43,6 +96,24 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const displayEvent = eventWithAgenda;
     const trackGroups = useMemo(() => groupAgendaByTrack(displayEvent.agenda || []), [displayEvent.agenda]);
     const hasTrackAgenda = trackGroups.length > 0;
+    const uniqueSpeakers = useMemo(() => {
+        const seenSpeakerIdentities = new Set<string>();
+        const speakerCandidates = [
+            ...(displayEvent.speakerLineup ?? []),
+            ...getAgendaSpeakers(displayEvent.agenda),
+        ];
+
+        return speakerCandidates.filter((speaker, index) => {
+            const speakerIdentity = getSpeakerIdentity(speaker, index);
+
+            if (seenSpeakerIdentities.has(speakerIdentity)) {
+                return false;
+            }
+
+            seenSpeakerIdentities.add(speakerIdentity);
+            return true;
+        });
+    }, [displayEvent.agenda, displayEvent.speakerLineup]);
 
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
@@ -85,8 +156,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         let transitionTimeoutId: NodeJS.Timeout;
 
         const fetchEventWithAgenda = async () => {
-            // If event already has agenda, no need to fetch
-            if (event.agenda && event.agenda.length > 0) {
+            const alreadyHasAgenda = Array.isArray(event.agenda) && event.agenda.length > 0;
+            if (alreadyHasAgenda && hasSpeakerData(event)) {
                 setIsLoading(false);
                 return;
             }
@@ -113,11 +184,12 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 clearTimeout(timeoutId);
 
                 if (isMounted) {
-                    // Only merge in the agenda, keep original event data (including tags) to prevent flash
-                    if (fullEvent.agenda && fullEvent.agenda.length > 0) {
+                    const fetchedSpeakerLineup = Array.isArray(fullEvent.speakerLineup) ? fullEvent.speakerLineup : [];
+                    if ((fullEvent.agenda && fullEvent.agenda.length > 0) || fetchedSpeakerLineup.length > 0) {
                         setEventWithAgenda(prev => ({
                             ...prev,
-                            agenda: fullEvent.agenda
+                            ...(fullEvent.agenda && fullEvent.agenda.length > 0 ? { agenda: fullEvent.agenda } : {}),
+                            ...(fetchedSpeakerLineup.length > 0 ? { speakerLineup: fetchedSpeakerLineup } : {}),
                         }));
                     }
 
@@ -317,7 +389,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         agendaView === 'tracks' && hasTrackAgenda ? (
                             <TrackAgendaView tracks={trackGroups} timezone={displayEvent.timezone} />
                         ) : (
-                            <AdaptiveTimeline event={displayEvent} />
+                            <AdaptiveTimeline key={displayEvent.id} event={displayEvent} />
                         )
                     ) : (
                         <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-5 dark:border-white/10 dark:bg-white/[0.03]">
@@ -332,26 +404,30 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </div>
 
                 {/* Speakers Section */}
-                {displayEvent.speakerLineup && displayEvent.speakerLineup.length > 0 && (
+                {uniqueSpeakers.length > 0 && (
                     <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
                         <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300 mb-4">
                             Speakers
                         </h3>
                         <div className="space-y-4">
-                            {displayEvent.speakerLineup.map((speaker) => {
+                            {uniqueSpeakers.map((speaker, index) => {
                                 const { primary: avatarSrc, fallback: fallbackSrc } = getSpeakerAvatarUrls(speaker, 40);
+                                const proxiedAvatarSrc = getBrowserSafeImageSrc(avatarSrc, { width: 80 }) ?? avatarSrc;
+                                const proxiedFallbackSrc = getBrowserSafeImageSrc(fallbackSrc, { width: 80 }) ?? fallbackSrc;
+                                const speakerIdentity = getSpeakerIdentity(speaker, index);
 
                                 return (
-                                    <div key={speaker.id} className="flex items-center gap-3">
+                                    <div key={speakerIdentity} className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-white/10 overflow-hidden shrink-0">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
-                                                src={avatarSrc}
+                                                src={proxiedAvatarSrc}
                                                 alt={speaker.name}
                                                 className="w-full h-full object-cover"
+                                                referrerPolicy="no-referrer"
                                                 onError={(e) => {
-                                                    if (e.currentTarget.src !== fallbackSrc) {
-                                                        e.currentTarget.src = fallbackSrc;
+                                                    if (e.currentTarget.src !== proxiedFallbackSrc) {
+                                                        e.currentTarget.src = proxiedFallbackSrc;
                                                     }
                                                 }}
                                             />

@@ -13,8 +13,11 @@ import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 import { logger } from '@/utils/logger';
 import { extractCityFromLocation, extractCountryFromLocation } from '@/utils/locationUtils';
 import {
+  type BestMatchCandidateCounts,
   type FilteredRecommendationCandidates,
+  type HybridBestMatchRecommendationCandidates,
   fetchFilteredRecommendationCandidates,
+  fetchHybridBestMatchCandidates,
   rankEventsWithRecommendationPipeline,
 } from '@/services/recommendations/recommendationPipeline';
 
@@ -94,6 +97,9 @@ interface ProfileLocationContext {
 }
 
 interface RecommendedCandidateWindow extends FilteredRecommendationCandidates {
+  retrievalStrategy: 'filtered-only' | 'hybrid-best-match-v1';
+  candidateCounts: BestMatchCandidateCounts;
+  supplemented: boolean;
   fetchedAllCandidates: boolean;
 }
 
@@ -116,6 +122,7 @@ async function fetchRecommendedCandidateWindow({
   skipColdStart,
   page,
   pageSize,
+  useHybridBestMatch,
 }: {
   filters: EventFilters;
   supabase: SupabaseClientType;
@@ -125,6 +132,7 @@ async function fetchRecommendedCandidateWindow({
   skipColdStart: boolean;
   page: number;
   pageSize: number;
+  useHybridBestMatch: boolean;
 }): Promise<RecommendedCandidateWindow> {
   const initialScanSize = Math.min(
     Math.max(page * pageSize * 5, pageSize, MIN_RECOMMENDED_CANDIDATE_SCAN),
@@ -134,16 +142,43 @@ async function fetchRecommendedCandidateWindow({
   const fetchWindow = async (
     requestedPageSize: number,
     telemetryContext?: RecommendationTelemetryContext
-  ) => fetchFilteredRecommendationCandidates({
-    filters,
-    supabaseClient: supabase,
-    careerProfile,
-    userId,
-    page: 1,
-    pageSize: requestedPageSize,
-    telemetry: telemetryContext,
-    skipColdStart,
-  });
+  ): Promise<HybridBestMatchRecommendationCandidates> => {
+    if (useHybridBestMatch) {
+      return fetchHybridBestMatchCandidates({
+        filters,
+        supabaseClient: supabase,
+        careerProfile,
+        userId,
+        page: 1,
+        pageSize: requestedPageSize,
+        telemetry: telemetryContext,
+        skipColdStart,
+      });
+    }
+
+    const result = await fetchFilteredRecommendationCandidates({
+      filters,
+      supabaseClient: supabase,
+      careerProfile,
+      userId,
+      page: 1,
+      pageSize: requestedPageSize,
+      telemetry: telemetryContext,
+      skipColdStart,
+    });
+
+    return {
+      ...result,
+      retrievalStrategy: 'filtered-only',
+      candidateCounts: {
+        broad: result.events.length,
+        personalizedRaw: 0,
+        personalizedFiltered: 0,
+        merged: result.events.length,
+      },
+      supplemented: false,
+    };
+  };
 
   let result = await fetchWindow(initialScanSize, telemetry);
 
@@ -274,6 +309,12 @@ export async function loadFilteredEventsData({
   }
 
   const isCareerImpactSort = request.sortBy === 'career-impact';
+  const shouldUseHybridBestMatch = Boolean(
+    (isCareerImpactSort || request.recommended)
+    && !request.fastSearch
+    && careerProfile
+    && userId
+  );
   const fetchWindowMultiplier = isCareerImpactSort ? Math.min(Math.max(5, request.page), 20) : 1;
   const fetchPageSize = request.pageSize * fetchWindowMultiplier;
   const fetchPage = isCareerImpactSort ? 1 : request.page;
@@ -423,6 +464,14 @@ export async function loadFilteredEventsData({
   let isColdStart;
   let candidateSources;
   let fetchedAllRecommendedCandidates = true;
+  let retrievalStrategy: 'filtered-only' | 'hybrid-best-match-v1' = 'filtered-only';
+  let candidateCounts: BestMatchCandidateCounts = {
+    broad: 0,
+    personalizedRaw: 0,
+    personalizedFiltered: 0,
+    merged: 0,
+  };
+  let supplemented = false;
   try {
     if (request.recommended) {
       const result = await fetchRecommendedCandidateWindow({
@@ -434,6 +483,7 @@ export async function loadFilteredEventsData({
         skipColdStart,
         page: request.page,
         pageSize: request.pageSize,
+        useHybridBestMatch: shouldUseHybridBestMatch,
       });
 
       filteredEvents = result.events;
@@ -441,6 +491,29 @@ export async function loadFilteredEventsData({
       isColdStart = result.isColdStart;
       candidateSources = result.candidateSources;
       fetchedAllRecommendedCandidates = result.fetchedAllCandidates;
+      retrievalStrategy = result.retrievalStrategy;
+      candidateCounts = result.candidateCounts;
+      supplemented = result.supplemented;
+    } else if (shouldUseHybridBestMatch) {
+      const result = await fetchHybridBestMatchCandidates({
+        filters: eventFilters,
+        supabaseClient: supabase,
+        careerProfile,
+        userId,
+        page: fetchPage,
+        pageSize: fetchPageSize,
+        telemetry,
+        skipColdStart,
+      });
+
+      filteredEvents = result.events;
+      totalEvents = result.totalCount;
+      isColdStart = result.isColdStart;
+      candidateSources = result.candidateSources;
+      fetchedAllRecommendedCandidates = true;
+      retrievalStrategy = result.retrievalStrategy;
+      candidateCounts = result.candidateCounts;
+      supplemented = result.supplemented;
     } else {
       const result = await fetchFilteredRecommendationCandidates({
         filters: eventFilters,
@@ -458,6 +531,14 @@ export async function loadFilteredEventsData({
       isColdStart = result.isColdStart;
       candidateSources = result.candidateSources;
       fetchedAllRecommendedCandidates = true;
+      retrievalStrategy = 'filtered-only';
+      candidateCounts = {
+        broad: result.events.length,
+        personalizedRaw: 0,
+        personalizedFiltered: 0,
+        merged: result.events.length,
+      };
+      supplemented = false;
     }
   } catch (error) {
     console.error('[FilteredEventsService] All event fetching methods failed:', error);
@@ -584,6 +665,9 @@ export async function loadFilteredEventsData({
     requestId,
     processingTimeMs: processingTime,
     fastSearch: request.fastSearch,
+    retrievalStrategy,
+    candidateCounts,
+    supplemented,
     filtersApplied: {
       hasSearch: Boolean(request.rawSearchTerm),
       categoriesCount: request.categories.length,

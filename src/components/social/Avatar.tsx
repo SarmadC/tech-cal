@@ -1,6 +1,7 @@
 'use client';
 
 import { User } from '@phosphor-icons/react';
+import { getBrowserSafeImageSrc } from '@/utils/imageUrl';
 
 export function getDisplayName(name: string | null | undefined) {
     if (!name) return 'Anonymous';
@@ -19,14 +20,18 @@ export default function Avatar({
 }) {
     const sizeClasses = size === 'md' ? 'h-8 w-8 text-[11px]' : 'h-6 w-6 text-[10px]';
     const initial = getDisplayName(name).charAt(0).toUpperCase();
+    const resolvedAvatarUrl = getBrowserSafeImageSrc(avatarUrl, {
+        width: size === 'md' ? 96 : 64,
+    });
 
-    if (avatarUrl) {
+    if (resolvedAvatarUrl) {
         return (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-                src={avatarUrl}
+                src={resolvedAvatarUrl}
                 alt={getDisplayName(name)}
                 className={`${sizeClasses} rounded-full object-cover border border-zinc-200 dark:border-zinc-700/80`}
+                referrerPolicy="no-referrer"
             />
         );
     }

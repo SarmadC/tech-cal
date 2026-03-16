@@ -3,6 +3,7 @@ import { AgendaItem } from '@/types';
 import { XIcon, MapPinIcon, ClockIcon } from '@phosphor-icons/react';
 import { formatTimeRange } from '@/utils/dateUtils';
 import { getSpeakerAvatarUrls } from '@/utils/timelineUtils';
+import { getBrowserSafeImageSrc } from '@/utils/imageUrl';
 
 interface TimelineDetailPanelProps {
     event: AgendaItem;
@@ -79,17 +80,20 @@ export const TimelineDetailPanel: FC<TimelineDetailPanelProps> = ({ event, event
                         <div className="space-y-4">
                             {event.speakers.map((speaker) => {
                                 const { primary: avatarSrc, fallback: fallbackSrc } = getSpeakerAvatarUrls(speaker, 40);
+                                const proxiedAvatarSrc = getBrowserSafeImageSrc(avatarSrc, { width: 80 }) ?? avatarSrc;
+                                const proxiedFallbackSrc = getBrowserSafeImageSrc(fallbackSrc, { width: 80 }) ?? fallbackSrc;
 
                                 return (
                                     <div key={speaker.id} className="flex items-center gap-3">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={avatarSrc}
+                                            src={proxiedAvatarSrc}
                                             alt={speaker.name}
                                             className="w-10 h-10 rounded-full object-cover border border-border-subtle bg-background-tertiary/60"
+                                            referrerPolicy="no-referrer"
                                             onError={(e) => {
-                                                if (e.currentTarget.src !== fallbackSrc) {
-                                                    e.currentTarget.src = fallbackSrc;
+                                                if (e.currentTarget.src !== proxiedFallbackSrc) {
+                                                    e.currentTarget.src = proxiedFallbackSrc;
                                                 }
                                             }}
                                         />

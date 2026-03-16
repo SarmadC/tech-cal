@@ -5,7 +5,7 @@ import { MapPinIcon, UsersIcon, CaretDown, CaretUp } from '@phosphor-icons/react
 
 import { AgendaItem } from '@/types';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
-import { formatTrackName } from '@/utils/timelineUtils';
+import { buildAgendaDayGroups, formatTrackName, getAgendaItemIdentity } from '@/utils/timelineUtils';
 
 export type TrackGroup = {
     track: string;
@@ -168,8 +168,15 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
         itemsByTrack: Record<string, AgendaItem[]>;
     };
 
-    const timeSlots: TimeSlot[] = useMemo(() => {
-        const slots: Record<string, TimeSlot> = {};
+    type DaySection = {
+        key: string;
+        label: string;
+        timeSlots: TimeSlot[];
+    };
+
+    const daySections: DaySection[] = useMemo(() => {
+        const filteredAgenda = orderedTracks.flatMap(({ items }) => items);
+        const dayGroups = buildAgendaDayGroups(filteredAgenda, eventTimezone);
 
         const toMinutesAndLabel = (timeString: string): { minutes: number; label: string } => {
             if (!timeString) {
@@ -192,31 +199,45 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
             return { minutes: hours * 60 + minutes, label };
         };
 
-        orderedTracks.forEach(({ track, items }) => {
-            items.forEach(item => {
-                const { minutes, label } = toMinutesAndLabel(item.startTime);
-                if (!label) return;
+        return dayGroups.map((dayGroup) => {
+            const dayItemIdentities = new Set(dayGroup.items.map((item, index) => getAgendaItemIdentity(item, index)));
+            const slots: Record<string, TimeSlot> = {};
 
-                const key = label;
-                if (!slots[key]) {
-                    slots[key] = {
-                        key,
-                        label,
-                        minutes,
-                        itemsByTrack: {}
-                    };
-                }
+            orderedTracks.forEach(({ track, items }) => {
+                items.forEach((item, index) => {
+                    const itemIdentity = getAgendaItemIdentity(item, index);
+                    if (!dayItemIdentities.has(itemIdentity)) {
+                        return;
+                    }
 
-                if (!slots[key].itemsByTrack[track]) {
-                    slots[key].itemsByTrack[track] = [];
-                }
+                    const { minutes, label } = toMinutesAndLabel(item.startTime);
+                    if (!label) return;
 
-                slots[key].itemsByTrack[track].push(item);
+                    const key = `${dayGroup.key}-${label}`;
+                    if (!slots[key]) {
+                        slots[key] = {
+                            key,
+                            label,
+                            minutes,
+                            itemsByTrack: {}
+                        };
+                    }
+
+                    if (!slots[key].itemsByTrack[track]) {
+                        slots[key].itemsByTrack[track] = [];
+                    }
+
+                    slots[key].itemsByTrack[track].push(item);
+                });
             });
-        });
 
-        return Object.values(slots).sort((a, b) => a.minutes - b.minutes);
-    }, [orderedTracks]);
+            return {
+                key: dayGroup.key,
+                label: dayGroup.label,
+                timeSlots: Object.values(slots).sort((a, b) => a.minutes - b.minutes)
+            };
+        }).filter((section) => section.timeSlots.length > 0);
+    }, [orderedTracks, eventTimezone]);
 
     const gridTemplateColumns = useMemo(() => {
         const trackColumns = visibleTrackNames.length
@@ -392,103 +413,110 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
                         </div>
 
                         {/* Time rows */}
-                        <div className="space-y-3">
-                            {timeSlots.map(slot => (
-                                <div
-                                    key={slot.key}
-                                    className="grid items-stretch gap-3"
-                                    data-testid={`time-row-${slot.key}`}
-                                    style={{ gridTemplateColumns }}
-                                >
-                                    {/* Time rail */}
-                                    <div className="flex items-start justify-center">
-                                        <div className="inline-flex items-center justify-center rounded-md bg-yellow-400/95 text-black text-[12px] font-semibold px-2 py-1 shadow-sm tracking-tight w-[60px]">
-                                            {slot.label}
-                                        </div>
+                        <div className="space-y-6">
+                            {daySections.map((section) => (
+                                <div key={section.key} className="space-y-3">
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <div className={`h-px flex-1 ${subtleBorderSoft}`} />
+                                        <h5 className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${textMuted}`}>
+                                            {section.label}
+                                        </h5>
+                                        <div className={`h-px flex-1 ${subtleBorderSoft}`} />
                                     </div>
 
-                                    {/* Track cells */}
-                                    {visibleTrackNames.map(track => {
-                                        const items = slot.itemsByTrack[track] || [];
-
-                                        if (items.length === 0) {
-                                            return (
-                                                <div
-                                                    key={track}
-                                                    data-testid={`cell-${slot.key}-${track}`}
-                                                    className={`min-h-[3.5rem] rounded-2xl border border-dashed ${subtleBorderSoft}`}
-                                                />
-                                            );
-                                        }
-
-                                        return (
-                                            <div
-                                                key={track}
-                                                data-testid={`cell-${slot.key}-${track}`}
-                                                className="space-y-3"
-                                            >
-                                                {items.map(item => {
-                                                    const timeDisplay = item.endTime
-                                                        ? formatEventTimeRange(item.startTime, item.endTime, eventTimezone)
-                                                        : `${formatEventTimeRange(item.startTime, undefined, eventTimezone)} – TBD`;
-                                                    const sessionType = item.type || 'Session';
-
-                                                    return (
-                                                        <article
-                                                            key={`${track}-${item.id}-${item.startTime}`}
-                                                            className={`rounded-xl border p-3 transition-all duration-200 shadow-sm ${bgElevated} ${borderLight} ${hoverBorder} ${hoverCard}`}
-                                                        >
-                                                            <div className="flex flex-col gap-2">
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <p className={`text-[10px] font-bold tracking-wide ${textMuted}`}>
-                                                                            {sessionType}
-                                                                        </p>
-                                                                        <span className={`text-[11px] font-medium whitespace-nowrap ${textMuted}`}>
-                                                                            {timeDisplay}
-                                                                        </span>
-                                                                    </div>
-                                                                    <h5 className={`text-[13px] font-semibold leading-snug ${textPrimary} line-clamp-3`} title={item.title}>
-                                                                        {item.title}
-                                                                    </h5>
-                                                                </div>
-
-                                                                {item.description && (
-                                                                    <p className={`text-[11px] leading-relaxed ${textSecondary} line-clamp-2`}>
-                                                                        {item.description}
-                                                                    </p>
-                                                                )}
-
-                                                                <div className={`pt-2 border-t flex flex-wrap items-center gap-2 text-[10px] ${subtleBorder}`}>
-                                                                    {item.location && (
-                                                                        <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
-                                                                            <MapPinIcon className="w-3 h-3" />
-                                                                            <span className="truncate max-w-[80px]">{item.location}</span>
-                                                                        </span>
-                                                                    )}
-                                                                    {(() => {
-                                                                        const speakerCount = item.speakers?.length || (item.speaker ? 1 : 0);
-                                                                        if (!speakerCount) return null;
-                                                                        return (
-                                                                            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
-                                                                                <UsersIcon className="w-3 h-3" />
-                                                                                {speakerCount}
-                                                                            </span>
-                                                                        );
-                                                                    })()}
-                                                                    {item.dayNumber && (
-                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${ghostSurface} ${textMuted}`}>
-                                                                            Day {item.dayNumber}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </article>
-                                                    );
-                                                })}
+                                    {section.timeSlots.map((slot) => (
+                                        <div
+                                            key={slot.key}
+                                            className="grid items-stretch gap-3"
+                                            data-testid={`time-row-${slot.key}`}
+                                            style={{ gridTemplateColumns }}
+                                        >
+                                            {/* Time rail */}
+                                            <div className="flex items-start justify-center">
+                                                <div className="inline-flex items-center justify-center rounded-md bg-yellow-400/95 text-black text-[12px] font-semibold px-2 py-1 shadow-sm tracking-tight w-[60px]">
+                                                    {slot.label}
+                                                </div>
                                             </div>
-                                        );
-                                    })}
+
+                                            {/* Track cells */}
+                                            {visibleTrackNames.map(track => {
+                                                const items = slot.itemsByTrack[track] || [];
+
+                                                if (items.length === 0) {
+                                                    return (
+                                                        <div
+                                                            key={track}
+                                                            data-testid={`cell-${slot.key}-${track}`}
+                                                            className={`min-h-[3.5rem] rounded-2xl border border-dashed ${subtleBorderSoft}`}
+                                                        />
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div
+                                                        key={track}
+                                                        data-testid={`cell-${slot.key}-${track}`}
+                                                        className="space-y-3"
+                                                    >
+                                                        {items.map((item, itemIndex) => {
+                                                            const timeDisplay = item.endTime
+                                                                ? formatEventTimeRange(item.startTime, item.endTime, eventTimezone)
+                                                                : `${formatEventTimeRange(item.startTime, undefined, eventTimezone)} - TBD`;
+                                                            const sessionType = item.type || 'Session';
+
+                                                            return (
+                                                                <article
+                                                                    key={`${track}-${getAgendaItemIdentity(item, itemIndex)}`}
+                                                                    className={`rounded-xl border p-3 transition-all duration-200 shadow-sm ${bgElevated} ${borderLight} ${hoverBorder} ${hoverCard}`}
+                                                                >
+                                                                    <div className="flex flex-col gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <p className={`text-[10px] font-bold tracking-wide ${textMuted}`}>
+                                                                                    {sessionType}
+                                                                                </p>
+                                                                                <span className={`text-[11px] font-medium whitespace-nowrap ${textMuted}`}>
+                                                                                    {timeDisplay}
+                                                                                </span>
+                                                                            </div>
+                                                                            <h5 className={`text-[13px] font-semibold leading-snug ${textPrimary} line-clamp-3`} title={item.title}>
+                                                                                {item.title}
+                                                                            </h5>
+                                                                        </div>
+
+                                                                        {item.description && (
+                                                                            <p className={`text-[11px] leading-relaxed ${textSecondary} line-clamp-2`}>
+                                                                                {item.description}
+                                                                            </p>
+                                                                        )}
+
+                                                                        <div className={`pt-2 border-t flex flex-wrap items-center gap-2 text-[10px] ${subtleBorder}`}>
+                                                                            {item.location && (
+                                                                                <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
+                                                                                    <MapPinIcon className="w-3 h-3" />
+                                                                                    <span className="truncate max-w-[80px]">{item.location}</span>
+                                                                                </span>
+                                                                            )}
+                                                                            {(() => {
+                                                                                const speakerCount = item.speakers?.length || (item.speaker ? 1 : 0);
+                                                                                if (!speakerCount) return null;
+                                                                                return (
+                                                                                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${ghostSurface} ${textMuted}`}>
+                                                                                        <UsersIcon className="w-3 h-3" />
+                                                                                        {speakerCount}
+                                                                                    </span>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+                                                                </article>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
                                 </div>
                             ))}
                         </div>

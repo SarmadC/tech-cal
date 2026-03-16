@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       fastSearch: normalizedRequest.fastSearch,
     };
 
-    const cacheKey = `fe4:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
+    const cacheKey = `fe5:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
 
     // Attempt to serve from cache for a short TTL window
     try {

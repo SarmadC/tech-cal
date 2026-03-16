@@ -61,6 +61,27 @@ export interface FilteredRecommendationCandidates {
   candidateSources: Map<string, RecommendationCandidateSource[]>;
 }
 
+export interface BestMatchCandidateCounts {
+  broad: number;
+  personalizedRaw: number;
+  personalizedFiltered: number;
+  merged: number;
+}
+
+export interface HybridBestMatchCandidateOptions extends FilteredRecommendationCandidateOptions {
+  personalizedLimit?: number;
+}
+
+export interface HybridBestMatchRecommendationCandidates extends FilteredRecommendationCandidates {
+  retrievalStrategy: 'filtered-only' | 'hybrid-best-match-v1';
+  candidateCounts: BestMatchCandidateCounts;
+  supplemented: boolean;
+}
+
+const MIN_PERSONALIZED_SUPPLEMENT_LIMIT = 100;
+const MAX_PERSONALIZED_SUPPLEMENT_LIMIT = 200;
+const PERSONALIZED_SUPPLEMENT_MULTIPLIER = 3;
+
 const SOURCE_REASON_LABELS: Record<RecommendationCandidateSource, string> = {
   filtered: 'Eligible in the filtered event set',
   'tag-based': 'Retrieved from tag and profile affinity',
@@ -114,6 +135,24 @@ function dedupeStrings(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))];
 }
 
+function mergeCandidateSourceMaps(
+  ...maps: Array<Map<string, RecommendationCandidateSource[]> | undefined>
+): Map<string, RecommendationCandidateSource[]> {
+  const merged = new Map<string, RecommendationCandidateSource[]>();
+
+  maps.forEach((sourceMap) => {
+    sourceMap?.forEach((sources, eventId) => {
+      const existing = merged.get(eventId) || [];
+      merged.set(
+        eventId,
+        dedupeStrings([...existing, ...sources]) as RecommendationCandidateSource[]
+      );
+    });
+  });
+
+  return merged;
+}
+
 function buildCandidateSourceMap(
   events: Event[],
   defaultSource: RecommendationCandidateSource
@@ -143,6 +182,48 @@ function extractMatchedTagsFromEvents(events: Event[]): string[] {
       return event.tags?.map((tag) => tag.name) || [];
     })
   );
+}
+
+function calculatePersonalizedSupplementLimit(page: number, pageSize: number): number {
+  return Math.min(
+    Math.max(page * pageSize * PERSONALIZED_SUPPLEMENT_MULTIPLIER, MIN_PERSONALIZED_SUPPLEMENT_LIMIT),
+    MAX_PERSONALIZED_SUPPLEMENT_LIMIT
+  );
+}
+
+function mergeRecommendationEvent(primaryEvent: Event, secondaryEvent?: Event): Event {
+  if (!secondaryEvent) {
+    return primaryEvent;
+  }
+
+  const mergedSources = dedupeStrings([
+    ...(primaryEvent.recommendationProvenance || []),
+    ...(secondaryEvent.recommendationProvenance || []),
+  ]) as RecommendationCandidateSource[];
+
+  return {
+    ...secondaryEvent,
+    ...primaryEvent,
+    recommendationMetadata: primaryEvent.recommendationMetadata ?? secondaryEvent.recommendationMetadata,
+    recommendationProvenance: mergedSources.length > 0 ? mergedSources : undefined,
+  };
+}
+
+function createFilteredOnlyCandidateResult(
+  result: FilteredRecommendationCandidates,
+  counts?: Partial<BestMatchCandidateCounts>
+): HybridBestMatchRecommendationCandidates {
+  return {
+    ...result,
+    retrievalStrategy: 'filtered-only',
+    candidateCounts: {
+      broad: result.events.length,
+      personalizedRaw: counts?.personalizedRaw ?? 0,
+      personalizedFiltered: counts?.personalizedFiltered ?? 0,
+      merged: result.events.length,
+    },
+    supplemented: false,
+  };
 }
 
 function mergeHydratedEvent(originalEvent: Event, hydratedEvent: Event): Event {
@@ -255,6 +336,148 @@ export async function fetchFilteredRecommendationCandidates({
   return {
     ...result,
     candidateSources: buildCandidateSourceMap(result.events, result.isColdStart ? 'cold-start' : 'filtered'),
+  };
+}
+
+export async function fetchHybridBestMatchCandidates({
+  filters = {},
+  supabaseClient,
+  careerProfile,
+  userId,
+  page = 1,
+  pageSize = 100,
+  telemetry,
+  skipColdStart = false,
+  personalizedLimit,
+}: HybridBestMatchCandidateOptions): Promise<HybridBestMatchRecommendationCandidates> {
+  const broadPromise = fetchFilteredRecommendationCandidates({
+    filters,
+    supabaseClient,
+    careerProfile,
+    userId,
+    page,
+    pageSize,
+    telemetry,
+    skipColdStart,
+  });
+
+  if (!userId || !careerProfile) {
+    return createFilteredOnlyCandidateResult(await broadPromise);
+  }
+
+  const settledPersonalizedPromise = fetchPersonalizedRecommendationCandidates({
+    supabaseClient,
+    userId,
+    careerProfile,
+    limit: personalizedLimit ?? calculatePersonalizedSupplementLimit(page, pageSize),
+  }).then(
+    (value) => ({ status: 'fulfilled' as const, value }),
+    (reason) => ({ status: 'rejected' as const, reason }),
+  );
+
+  const broadResult = await broadPromise;
+  if (broadResult.isColdStart) {
+    await settledPersonalizedPromise;
+    return createFilteredOnlyCandidateResult(broadResult);
+  }
+
+  const personalizedResult = await settledPersonalizedPromise;
+  if (personalizedResult.status === 'rejected') {
+    console.warn('[RecommendationPipeline] Personalized supplement fetch failed; falling back to filtered candidates', personalizedResult.reason);
+    return createFilteredOnlyCandidateResult(broadResult);
+  }
+
+  const personalizedRawEvents = personalizedResult.value.events;
+  if (personalizedRawEvents.length === 0) {
+    return {
+      ...broadResult,
+      retrievalStrategy: 'hybrid-best-match-v1',
+      candidateCounts: {
+        broad: broadResult.events.length,
+        personalizedRaw: 0,
+        personalizedFiltered: 0,
+        merged: broadResult.events.length,
+      },
+      supplemented: false,
+    };
+  }
+
+  const personalizedEventIds = [...new Set(personalizedRawEvents.map((event) => event.id).filter(Boolean))];
+  const existingEventIds = filters.eventIds || [];
+  const filteredPersonalizedEventIds = existingEventIds.length > 0
+    ? existingEventIds.filter((eventId) => personalizedEventIds.includes(eventId))
+    : personalizedEventIds;
+
+  if (filteredPersonalizedEventIds.length === 0) {
+    return {
+      ...broadResult,
+      retrievalStrategy: 'hybrid-best-match-v1',
+      candidateCounts: {
+        broad: broadResult.events.length,
+        personalizedRaw: personalizedRawEvents.length,
+        personalizedFiltered: 0,
+        merged: broadResult.events.length,
+      },
+      supplemented: false,
+    };
+  }
+
+  let personalizedFilteredResult: FilteredRecommendationCandidates;
+  try {
+    personalizedFilteredResult = await fetchFilteredRecommendationCandidates({
+      filters: {
+        ...filters,
+        eventIds: filteredPersonalizedEventIds,
+      },
+      supabaseClient,
+      careerProfile,
+      userId,
+      page: 1,
+      pageSize: filteredPersonalizedEventIds.length,
+      skipColdStart: true,
+    });
+  } catch (error) {
+    console.warn('[RecommendationPipeline] Personalized supplement re-filter failed; falling back to filtered candidates', error);
+    return createFilteredOnlyCandidateResult(broadResult, {
+      personalizedRaw: personalizedRawEvents.length,
+    });
+  }
+
+  const personalizedRawById = new Map(personalizedRawEvents.map((event) => [event.id, event]));
+  const personalizedSupplementEvents = personalizedFilteredResult.events.map((event) =>
+    mergeRecommendationEvent(event, personalizedRawById.get(event.id))
+  );
+  const personalizedSupplementMap = new Map(personalizedSupplementEvents.map((event) => [event.id, event]));
+  const mergedEvents = broadResult.events.map((event) => {
+    const supplementEvent = personalizedSupplementMap.get(event.id);
+    if (supplementEvent) {
+      personalizedSupplementMap.delete(event.id);
+      return mergeRecommendationEvent(event, supplementEvent);
+    }
+    return event;
+  });
+
+  personalizedSupplementMap.forEach((event) => {
+    mergedEvents.push(event);
+  });
+
+  return {
+    events: mergedEvents,
+    totalCount: broadResult.totalCount,
+    isColdStart: false,
+    candidateSources: mergeCandidateSourceMaps(
+      broadResult.candidateSources,
+      personalizedResult.value.candidateSources,
+      personalizedFilteredResult.candidateSources,
+    ),
+    retrievalStrategy: 'hybrid-best-match-v1',
+    candidateCounts: {
+      broad: broadResult.events.length,
+      personalizedRaw: personalizedRawEvents.length,
+      personalizedFiltered: personalizedFilteredResult.events.length,
+      merged: mergedEvents.length,
+    },
+    supplemented: mergedEvents.length > broadResult.events.length,
   };
 }
 

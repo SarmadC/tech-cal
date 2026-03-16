@@ -41,7 +41,8 @@ const {
   mockGetFilterCounts,
   mockGetEventIdsByTags,
   mockGetEventIdsByTagSearch,
-  mockGetEventIdsByOrganizerSearch
+  mockGetEventIdsByOrganizerSearch,
+  mockGetRecommendedEventsByTags,
 } = vi.hoisted(() => ({
   mockGetEventsWithColdStartHandling: vi.fn(),
   mockEnrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events),
@@ -52,7 +53,8 @@ const {
   })),
   mockGetEventIdsByTags: vi.fn(),
   mockGetEventIdsByTagSearch: vi.fn(),
-  mockGetEventIdsByOrganizerSearch: vi.fn()
+  mockGetEventIdsByOrganizerSearch: vi.fn(),
+  mockGetRecommendedEventsByTags: vi.fn(),
 }));
 
 vi.mock('@/services/eventServices', () => ({
@@ -62,7 +64,8 @@ vi.mock('@/services/eventServices', () => ({
     getFilterCounts: mockGetFilterCounts,
     getEventIdsByTags: mockGetEventIdsByTags,
     getEventIdsByTagSearch: mockGetEventIdsByTagSearch,
-    getEventIdsByOrganizerSearch: mockGetEventIdsByOrganizerSearch
+    getEventIdsByOrganizerSearch: mockGetEventIdsByOrganizerSearch,
+    getRecommendedEventsByTags: mockGetRecommendedEventsByTags,
   }
 }));
 
@@ -114,6 +117,28 @@ function buildRequest(body: unknown) {
 describe('POST /api/events/filtered - budget and USD gating', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetEventsWithColdStartHandling.mockReset();
+    mockEnrichEventsWithCareerImpact.mockReset();
+    mockGetFilterCounts.mockReset();
+    mockGetEventIdsByTags.mockReset();
+    mockGetEventIdsByTagSearch.mockReset();
+    mockGetEventIdsByOrganizerSearch.mockReset();
+    mockGetRecommendedEventsByTags.mockReset();
+    mockGetCareerProfile.mockReset();
+    mockRequireOnboardedApi.mockReset();
+
+    mockEnrichEventsWithCareerImpact.mockImplementation(async (events: unknown[]) => events);
+    mockGetFilterCounts.mockResolvedValue({
+      format: { virtual: 0, 'in-person': 0, hybrid: 0 },
+      cost: { free: 0, paid: 0 },
+      categories: {}
+    });
+    mockGetEventIdsByTags.mockResolvedValue([]);
+    mockGetEventIdsByTagSearch.mockResolvedValue([]);
+    mockGetEventIdsByOrganizerSearch.mockResolvedValue([]);
+    mockGetRecommendedEventsByTags.mockResolvedValue([]);
+    mockGetCareerProfile.mockResolvedValue(null);
+    mockRequireOnboardedApi.mockResolvedValue(undefined);
   });
 
   it('passes budget and implies USD gating via RPC (currency handled server-side)', async () => {
@@ -269,6 +294,71 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     expect(data.data.pagination.hasMore).toBe(true);
   });
 
+  it('surfaces a personalized supplement event for career-impact sort when it is outside the broad candidate window', async () => {
+    const configEventId = 'e6f98ab0-720a-4d2b-8ee6-5646146f51bc';
+    const broadEvents = Array.from({ length: 10 }, (_, index) => ({
+      id: `broad-${index + 1}`,
+      title: `Broad ${index + 1}`,
+      startTime: `2026-01-${String(index + 1).padStart(2, '0')}T10:00:00Z`,
+      description: '',
+    }));
+    const configEvent = {
+      id: configEventId,
+      title: 'Config 2026',
+      startTime: '2026-02-20T10:00:00Z',
+      description: '',
+    };
+
+    mockGetCareerProfile.mockResolvedValueOnce({
+      currentRole: 'UX Designer',
+      seniority: 'junior',
+      industry: 'technology',
+      primarySkills: ['Figma', 'Wireframing'],
+      skillsToLearn: ['Framer'],
+      interests: ['UI/UX Design'],
+      careerGoals: ['skill-development'],
+      learningStyle: ['hands-on'],
+      networkingGoals: ['find-peers'],
+      preferredEventTypes: ['networking'],
+    });
+    mockGetEventsWithColdStartHandling.mockImplementation(async (filters: { eventIds?: string[] }) => {
+      if (filters.eventIds) {
+        return {
+          events: [configEvent],
+          totalCount: 1,
+          isColdStart: false,
+        };
+      }
+
+      return {
+        events: broadEvents,
+        totalCount: 964,
+        isColdStart: false,
+      };
+    });
+    mockGetRecommendedEventsByTags.mockResolvedValueOnce([configEvent]);
+    mockEnrichEventsWithCareerImpact.mockImplementationOnce(async (events: Array<{ id: string }>) => (
+      events.map((event, index) => ({
+        ...event,
+        careerImpact: {
+          overall: event.id === configEventId ? 99 : 80 - index,
+        },
+      }))
+    ));
+
+    const req = buildRequest({ sortBy: 'career-impact', sortDirection: 'desc', page: 1, pageSize: 2 });
+    const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const data = await res.json();
+
+    expect(res.ok).toBe(true);
+    expect(data.success).toBe(true);
+    expect(mockGetRecommendedEventsByTags).toHaveBeenCalledTimes(1);
+    expect(mockGetEventsWithColdStartHandling).toHaveBeenCalledTimes(2);
+    expect(mockGetEventsWithColdStartHandling.mock.calls[1][0].eventIds).toEqual([configEventId]);
+    expect(data.data.events.map((e: { id: string }) => e.id)).toEqual([configEventId, 'broad-1']);
+    expect(data.data.pagination.total).toBe(964);
+  });
+
   it('changes the filtered-route cache key when the career profile fingerprint changes', async () => {
     mockGetEventsWithColdStartHandling.mockResolvedValue({ events: [], totalCount: 0, isColdStart: false });
     mockEnrichEventsWithCareerImpact.mockResolvedValue([]);
@@ -297,6 +387,7 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     const firstResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     const secondResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
+    expect(firstResponse.headers.get('X-Cache-Key')).toMatch(/^fe5:/);
     expect(firstResponse.headers.get('X-Cache-Key')).not.toBe(secondResponse.headers.get('X-Cache-Key'));
   });
 
@@ -318,7 +409,40 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
       pageSize: 10
     }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
+    expect(fastSearchResponse.headers.get('X-Cache-Key')).toMatch(/^fe5:/);
     expect(fastSearchResponse.headers.get('X-Cache-Key')).not.toBe(standardResponse.headers.get('X-Cache-Key'));
+  });
+
+  it('does not use the personalized supplement path during fastSearch requests', async () => {
+    mockGetCareerProfile.mockResolvedValueOnce({
+      currentRole: 'UX Designer',
+      seniority: 'junior',
+      industry: 'technology',
+      primarySkills: ['Figma'],
+      skillsToLearn: ['Framer'],
+      interests: ['UI/UX Design'],
+      careerGoals: ['skill-development'],
+      learningStyle: ['hands-on'],
+      networkingGoals: ['find-peers'],
+      preferredEventTypes: ['networking'],
+    });
+    mockGetEventsWithColdStartHandling.mockResolvedValueOnce({
+      events: [],
+      totalCount: 0,
+      isColdStart: false,
+    });
+
+    const response = await POST(buildRequest({
+      searchTerm: 'figma',
+      sortBy: 'career-impact',
+      fastSearch: true,
+      page: 1,
+      pageSize: 10,
+    }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    expect(response.ok).toBe(true);
+    expect(mockGetRecommendedEventsByTags).not.toHaveBeenCalled();
+    expect(mockGetEventsWithColdStartHandling).toHaveBeenCalledTimes(1);
   });
 
   it('keeps advanced reranked order for descending career-impact sort', async () => {

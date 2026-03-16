@@ -77,5 +77,31 @@ describe('TrackAgendaView', () => {
         expect(screen.getByText('Opening Keynote')).toBeInTheDocument();
         expect(screen.getByText('AI Lab')).toBeInTheDocument();
     });
-});
 
+    it('separates identical times that fall on different days', () => {
+        const grouped = groupAgendaByTrack([
+            {
+                id: 'day-1',
+                title: 'Opening Remarks',
+                startTime: '2024-03-01T18:00:00Z',
+                endTime: '2024-03-01T18:30:00Z',
+                type: 'talk',
+                track: 'Main',
+            },
+            {
+                id: 'day-2',
+                title: 'Opening Remarks',
+                startTime: '2024-03-02T18:00:00Z',
+                endTime: '2024-03-02T18:30:00Z',
+                type: 'talk',
+                track: 'Main',
+            },
+        ]);
+
+        render(<TrackAgendaView tracks={grouped} timezone="UTC" />);
+
+        expect(screen.getByText(/Day 1 -/i)).toBeInTheDocument();
+        expect(screen.getByText(/Day 2 -/i)).toBeInTheDocument();
+        expect(screen.getAllByText('11:00')).toHaveLength(2);
+    });
+});

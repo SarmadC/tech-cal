@@ -39,3 +39,39 @@ export function getVersionedImageSrc(src?: string | null, version?: string | nul
 
   return appendImageVersion(safeSrc, version);
 }
+
+type BrowserSafeImageOptions = {
+  width?: number;
+  quality?: number;
+};
+
+const NEXT_ALLOWED_IMAGE_WIDTHS = [
+  16, 32, 48, 64, 96, 128, 256, 384,
+  640, 750, 828, 1080, 1200, 1920, 2048, 3840,
+] as const;
+
+function normalizeNextImageWidth(width: number): number {
+  const requestedWidth = Math.max(16, Math.round(width));
+  return NEXT_ALLOWED_IMAGE_WIDTHS.find((candidate) => candidate >= requestedWidth)
+    ?? NEXT_ALLOWED_IMAGE_WIDTHS[NEXT_ALLOWED_IMAGE_WIDTHS.length - 1];
+}
+
+/**
+ * Route remote images through Next's same-origin optimizer so browsers like Chrome
+ * do not hotlink external avatar URLs directly.
+ */
+export function getBrowserSafeImageSrc(
+  src?: string | null,
+  { width = 96, quality = 75 }: BrowserSafeImageOptions = {}
+): string | null {
+  const safeSrc = getSafeImageSrc(src);
+  if (!safeSrc) return null;
+
+  if (safeSrc.startsWith('/')) {
+    return safeSrc;
+  }
+
+  const normalizedWidth = normalizeNextImageWidth(width);
+  const normalizedQuality = Math.min(100, Math.max(1, Math.round(quality)));
+  return `/_next/image?url=${encodeURIComponent(safeSrc)}&w=${normalizedWidth}&q=${normalizedQuality}`;
+}

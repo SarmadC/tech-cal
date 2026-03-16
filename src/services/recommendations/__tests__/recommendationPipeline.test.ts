@@ -28,6 +28,7 @@ import {
   rankEventsWithRecommendationPipeline,
   fetchPersonalizedRecommendationCandidates,
   fetchFilteredRecommendationCandidates,
+  fetchHybridBestMatchCandidates,
 } from '../recommendationPipeline';
 
 const supabaseStub = {} as SupabaseClientType;
@@ -85,8 +86,15 @@ function makeEventWithScore(id: string, score: number): Event {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetEventsWithAgenda.mockReset();
+  mockEnrichEventsWithCareerImpact.mockReset();
+  mockGetEventsWithColdStartHandling.mockReset();
+  mockSearchEventsByTags.mockReset();
+  mockGetRecommendedEventsByTags.mockReset();
   mockGetEventsWithAgenda.mockResolvedValue([]);
   mockEnrichEventsWithCareerImpact.mockImplementation((events: Event[]) => events);
+  mockSearchEventsByTags.mockResolvedValue([]);
+  mockGetRecommendedEventsByTags.mockResolvedValue([]);
 });
 
 describe('rankEventsWithRecommendationPipeline', () => {
@@ -258,5 +266,155 @@ describe('fetchFilteredRecommendationCandidates', () => {
     });
 
     expect(result.candidateSources.get('e1')).toContain('cold-start');
+  });
+});
+
+describe('fetchHybridBestMatchCandidates', () => {
+  it('merges broad and personalized-filtered candidates and unions provenance', async () => {
+    const configEventId = 'e6f98ab0-720a-4d2b-8ee6-5646146f51bc';
+    const broadEvents = [makeEvent('broad-1'), makeEvent('broad-2')];
+    const configEvent = makeEvent(configEventId, {
+      title: 'Config 2026',
+      recommendationProvenance: ['tag-based'],
+    });
+
+    mockGetEventsWithColdStartHandling.mockImplementation(async (filters: { eventIds?: string[] }) => {
+      if (filters.eventIds) {
+        return {
+          events: [configEvent],
+          totalCount: 1,
+          isColdStart: false,
+        };
+      }
+
+      return {
+        events: broadEvents,
+        totalCount: 300,
+        isColdStart: false,
+      };
+    });
+    mockGetRecommendedEventsByTags.mockResolvedValue([configEvent]);
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: baseProfile,
+      userId: 'u1',
+      page: 1,
+      pageSize: 50,
+      filters: { status: ['confirmed'] },
+    });
+
+    expect(result.retrievalStrategy).toBe('hybrid-best-match-v1');
+    expect(result.supplemented).toBe(true);
+    expect(result.events.map((event) => event.id)).toEqual(['broad-1', 'broad-2', configEventId]);
+    expect(result.candidateSources.get(configEventId)).toEqual(expect.arrayContaining(['filtered', 'tag-based']));
+    expect(result.totalCount).toBe(300);
+    expect(result.candidateCounts).toEqual({
+      broad: 2,
+      personalizedRaw: 1,
+      personalizedFiltered: 1,
+      merged: 3,
+    });
+  });
+
+  it('excludes personalized candidates that do not survive the current hard filters', async () => {
+    const broadEvents = [makeEvent('broad-1')];
+    const configEvent = makeEvent('e6f98ab0-720a-4d2b-8ee6-5646146f51bc');
+
+    mockGetEventsWithColdStartHandling.mockResolvedValue({
+      events: broadEvents,
+      totalCount: 1,
+      isColdStart: false,
+    });
+    mockGetRecommendedEventsByTags.mockResolvedValue([configEvent]);
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: baseProfile,
+      userId: 'u1',
+      filters: { eventIds: ['broad-1'] },
+    });
+
+    expect(result.retrievalStrategy).toBe('hybrid-best-match-v1');
+    expect(result.supplemented).toBe(false);
+    expect(result.events.map((event) => event.id)).toEqual(['broad-1']);
+    expect(result.candidateCounts.personalizedRaw).toBe(1);
+    expect(result.candidateCounts.personalizedFiltered).toBe(0);
+  });
+
+  it('returns filtered-only retrieval for cold-start candidate pools', async () => {
+    mockGetEventsWithColdStartHandling.mockResolvedValue({
+      events: [makeEvent('cold-1')],
+      totalCount: 1,
+      isColdStart: true,
+    });
+    mockGetRecommendedEventsByTags.mockResolvedValue([makeEvent('supplement')]);
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: baseProfile,
+      userId: 'u1',
+    });
+
+    expect(result.retrievalStrategy).toBe('filtered-only');
+    expect(result.supplemented).toBe(false);
+    expect(result.events.map((event) => event.id)).toEqual(['cold-1']);
+  });
+
+  it('skips supplement retrieval when the user is missing profile context', async () => {
+    mockGetEventsWithColdStartHandling.mockResolvedValue({
+      events: [makeEvent('broad-1')],
+      totalCount: 1,
+      isColdStart: false,
+    });
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: null,
+      userId: 'u1',
+    });
+
+    expect(result.retrievalStrategy).toBe('filtered-only');
+    expect(mockGetRecommendedEventsByTags).not.toHaveBeenCalled();
+  });
+
+  it('falls back cleanly when supplement re-filtering fails', async () => {
+    mockGetEventsWithColdStartHandling
+      .mockResolvedValueOnce({
+        events: [makeEvent('broad-1')],
+        totalCount: 10,
+        isColdStart: false,
+      })
+      .mockRejectedValueOnce(new Error('supplement refilter failed'));
+    mockGetRecommendedEventsByTags.mockResolvedValue([makeEvent('supplement')]);
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: baseProfile,
+      userId: 'u1',
+    });
+
+    expect(result.retrievalStrategy).toBe('filtered-only');
+    expect(result.supplemented).toBe(false);
+    expect(result.events.map((event) => event.id)).toEqual(['broad-1']);
+  });
+
+  it('falls back cleanly when the personalized supplement fetch fails', async () => {
+    mockGetEventsWithColdStartHandling.mockResolvedValue({
+      events: [makeEvent('broad-1')],
+      totalCount: 10,
+      isColdStart: false,
+    });
+    mockGetRecommendedEventsByTags.mockRejectedValue(new Error('personalized fetch failed'));
+
+    const result = await fetchHybridBestMatchCandidates({
+      supabaseClient: supabaseStub,
+      careerProfile: baseProfile,
+      userId: 'u1',
+    });
+
+    expect(result.retrievalStrategy).toBe('filtered-only');
+    expect(result.supplemented).toBe(false);
+    expect(result.events.map((event) => event.id)).toEqual(['broad-1']);
   });
 });

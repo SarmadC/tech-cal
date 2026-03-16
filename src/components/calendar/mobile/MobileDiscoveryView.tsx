@@ -18,7 +18,6 @@ import {
 } from '@/components/discovery/discoveryRanking';
 import { buildActiveFilterChips, DiscoveryFilterChip } from '@/components/discovery/discoveryFilterChips';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
-import { getQuickFitBadges } from '@/components/discovery/quickFitBadges';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
@@ -27,6 +26,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { cn } from '@/lib/utils';
+import { MOBILE_DISCOVERY_RANKING_MODE_KEY } from '@/constants/discoveryPersistence';
 
 type EventWithImpact = Event & { careerImpact?: CareerImpactScore };
 
@@ -101,7 +101,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const [explainEvent, setExplainEvent] = useState<EventWithImpact | null>(null);
     const filterDialogRef = useRef<HTMLDivElement | null>(null);
 
-    const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>('mobile-discovery-ranking-mode', 'best-match');
+    const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>(MOBILE_DISCOVERY_RANKING_MODE_KEY, 'best-match');
     const [hiddenEventIds, setHiddenEventIds] = useLocalStorage<string[]>('mobile-discovery-hidden-events', []);
     const [categoryPenalty, setCategoryPenalty] = useLocalStorage<Record<string, number>>('mobile-discovery-category-penalty', {});
     const [shortlistIds, setShortlistIds] = useLocalStorage<string[]>('mobile-discovery-shortlist-ids', []);
@@ -110,7 +110,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const hiddenEventIdSet = useMemo(() => new Set(hiddenEventIds), [hiddenEventIds]);
     const shortlistIdSet = useMemo(() => new Set(shortlistIds), [shortlistIds]);
 
-    const { trackedEvents, getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
+    const { getAttendanceStatus, setAttendanceStatus } = useEventEngagement();
     const { showInfo, showError } = useSnackbar();
     const [pendingAttendanceIds, setPendingAttendanceIds] = useState<Set<string>>(new Set());
 
@@ -208,22 +208,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const counts = useMemo(() => {
         return countsFromServer ?? calculateFilterCounts(events, categories);
     }, [countsFromServer, events, categories]);
-
-    const scheduledEvents = useMemo(() => {
-        return trackedEvents
-            .map((trackedEvent) => trackedEvent.event)
-            .filter((trackedEvent): trackedEvent is Event => Boolean(trackedEvent));
-    }, [trackedEvents]);
-
-    const getBadgesForEvent = useCallback((event: EventWithImpact) => {
-        return getQuickFitBadges(event, {
-            filters: {
-                budget: filters.budget,
-                cost: filters.cost,
-            },
-            scheduledEvents,
-        });
-    }, [filters.budget, filters.cost, scheduledEvents]);
 
     const handleFeedbackAction = useCallback((event: EventWithImpact, action: DiscoveryFeedbackAction) => {
         metrics.trackFeedbackAction(event.id, action);
@@ -717,7 +701,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                 onEventSelect?.(event);
                             }}
                             className="w-full"
-                            quickFitBadges={getBadgesForEvent(event)}
                             onFeedbackAction={handleFeedbackAction}
                             onExplainRecommendation={setExplainEvent}
                             onShortlistToggle={handleShortlistToggle}

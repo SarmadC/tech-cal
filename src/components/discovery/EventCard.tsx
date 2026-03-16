@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 import RecommendationContext from './RecommendationContext';
-import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
 import ManagerJustificationModal, { prefetchManagerJustification } from '@/components/calendar/ManagerJustificationModal';
 import NetworkAttendingBadge from '@/components/social/NetworkAttendingBadge';
@@ -23,7 +22,6 @@ interface EventCardProps {
     isAttending?: boolean;
     isAttendanceUpdating?: boolean;
     showRecommendationContext?: boolean;
-    quickFitBadges?: QuickFitBadge[];
     onFeedbackAction?: (event: Event, action: DiscoveryFeedbackAction) => void;
     onExplainRecommendation?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
     onShortlistToggle?: (event: Event & { careerImpact?: CareerImpactScore }) => void;
@@ -54,7 +52,6 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
     isAttending = false,
     isAttendanceUpdating = false,
     showRecommendationContext = false,
-    quickFitBadges = [],
     onFeedbackAction,
     onExplainRecommendation,
     onShortlistToggle,
@@ -92,12 +89,12 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
 
     const logoSources = React.useMemo(() => {
         const sources: string[] = [];
+        if (organizationLogoSrc) {
+            sources.push(organizationLogoSrc);
+        }
         const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
         if (eventImageSrc) {
             sources.push(eventImageSrc);
-        }
-        if (organizationLogoSrc) {
-            sources.push(organizationLogoSrc);
         }
         return sources;
     }, [event.eventImageUrl, organizationLogoSrc, event.updatedAt]);
@@ -374,21 +371,6 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
                 </div>
             )}
 
-            {quickFitBadges.length > 0 && (
-                <div className="mb-3 flex flex-wrap items-center gap-1.5">
-                    {quickFitBadges.map((badge) => (
-                        <span
-                            key={`${event.id}-${badge.id}`}
-                            className={badge.id === 'schedule-conflict'
-                                ? 'inline-flex items-center rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300'
-                                : 'inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300'}
-                        >
-                            {badge.label}
-                        </span>
-                    ))}
-                </div>
-            )}
-
             {networkAttendingCount > 0 && (
                 <NetworkAttendingBadge
                     eventId={event.id}
@@ -425,11 +407,6 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         </div>
     );
 }, (prevProps, nextProps) => {
-    const prevBadges = prevProps.quickFitBadges ?? [];
-    const nextBadges = nextProps.quickFitBadges ?? [];
-    const badgesEqual = prevBadges.length === nextBadges.length &&
-        prevBadges.every((badge, index) => badge.id === nextBadges[index]?.id);
-
     return (
         prevProps.event === nextProps.event &&
         prevProps.isAttending === nextProps.isAttending &&
@@ -443,7 +420,6 @@ const EventCard: React.FC<EventCardProps> = React.memo(({
         prevProps.showActionControls === nextProps.showActionControls &&
         prevProps.showHoverMetaChips === nextProps.showHoverMetaChips &&
         prevProps.showShortlistAction === nextProps.showShortlistAction &&
-        badgesEqual &&
         prevProps.onFeedbackAction === nextProps.onFeedbackAction &&
         prevProps.onExplainRecommendation === nextProps.onExplainRecommendation &&
         prevProps.onShortlistToggle === nextProps.onShortlistToggle

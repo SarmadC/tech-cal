@@ -20,6 +20,7 @@ import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getDiscoverDefaultSort } from '@/utils/discoverDefaults';
+import { DISCOVERY_RESUME_STATE_KEY } from '@/constants/discoveryPersistence';
 
 // IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
 const MobileDiscoveryViewDynamic = dynamic(
@@ -44,8 +45,6 @@ interface DiscoverClientViewProps {
     /** Pre-fetched events from the server page for LCP optimization */
     initialQueryData?: { success: true; data: FilteredEventsData };
 }
-
-const DISCOVERY_RESUME_STATE_KEY = 'discover-resume-state-v1';
 
 type SerializableFilters = Omit<UnifiedFilterOptions, 'dateRange'> & {
     dateRange: {

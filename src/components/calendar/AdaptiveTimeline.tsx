@@ -52,7 +52,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event }) => {
             </div>
             
             {/* Timeline view - always use the enhanced timeline */}
-            <TimelineView event={event} />
+            <TimelineView key={`${event.id}-${event.agenda?.length ?? 0}`} event={event} />
         </div>
     );
 };

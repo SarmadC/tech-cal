@@ -6,7 +6,6 @@ import {
     MapPin,
     BookmarkSimple,
     Calendar,
-    Exclude,
     DotsThree,
     UserCheck,
 } from '@phosphor-icons/react';
@@ -19,7 +18,6 @@ import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
-import { QuickFitBadge } from '@/components/discovery/quickFitBadges';
 import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 
 export interface DiscoveryCardProps {
@@ -32,7 +30,6 @@ export interface DiscoveryCardProps {
     showCareerImpact?: boolean;
     showLearnMore?: boolean;
     badges?: React.ReactNode;
-    quickFitBadges?: QuickFitBadge[];
     onFeedbackAction?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }, action: DiscoveryFeedbackAction) => void;
     onExplainRecommendation?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => void;
     onShortlistToggle?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => void;
@@ -55,7 +52,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     showCareerImpact: _showCareerImpact = true,
     showLearnMore: _showLearnMore = false,
     badges: _badges,
-    quickFitBadges = [],
     onFeedbackAction,
     onExplainRecommendation,
     onShortlistToggle,
@@ -347,21 +343,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                             />
                         </div>
                     </div>
-
-                    {quickFitBadges.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                            {quickFitBadges.map((badge) => (
-                                <span
-                                    key={`${event.id}-${badge.id}`}
-                                    className={badge.id === 'schedule-conflict'
-                                        ? 'inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300'
-                                        : 'inline-flex items-center rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300'}
-                                >
-                                    {badge.label}
-                                </span>
-                            ))}
-                        </div>
-                    )}
 
                     <div className="mt-3 flex items-center gap-3 text-[12px] text-[var(--foreground-tertiary)] font-mono whitespace-nowrap overflow-hidden">
                         <div className="flex items-center gap-1.5 flex-shrink-0">

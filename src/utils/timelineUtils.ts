@@ -1,4 +1,5 @@
 import { AgendaItem } from '@/types';
+import { formatDate } from '@/utils/dateUtils';
 
 /**
  * Centralized utilities for timeline components
@@ -69,25 +70,133 @@ export function formatTrackName(track: string): string {
     return track.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
+const AGENDA_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}/;
+
+const hasCalendarDate = (value?: string | null): boolean => {
+    return Boolean(value && AGENDA_DATE_PATTERN.test(value.trim()));
+};
+
+const toMinutes = (timeString: string): number => {
+    if (!timeString) return 0;
+    if (timeString.includes('T') || timeString.includes(' ')) {
+        const date = new Date(timeString);
+        return date.getHours() * 60 + date.getMinutes();
+    }
+    const [hours, minutes] = timeString.split(':');
+    return parseInt(hours || '0', 10) * 60 + parseInt(minutes || '0', 10);
+};
+
+export function getAgendaItemIdentity(item: AgendaItem, fallbackIndex?: number): string {
+    const baseIdentity = [
+        item.id,
+        item.startTime,
+        item.endTime,
+        item.title,
+        item.track,
+        item.location,
+        item.dayNumber,
+    ]
+        .filter((value) => value !== undefined && value !== null && value !== '')
+        .join('|');
+
+    if (baseIdentity) {
+        return baseIdentity;
+    }
+
+    return `agenda-item-${fallbackIndex ?? 0}`;
+}
+
+export function getAgendaItemSortValue(item: AgendaItem): number {
+    if (hasCalendarDate(item.startTime)) {
+        const timestamp = new Date(item.startTime).getTime();
+        if (!Number.isNaN(timestamp)) {
+            return timestamp;
+        }
+    }
+
+    return toMinutes(item.startTime);
+}
+
+export type AgendaDayGroup = {
+    key: string;
+    label: string;
+    sortValue: number;
+    items: AgendaItem[];
+};
+
+export function buildAgendaDayGroups(
+    agenda: AgendaItem[] = [],
+    eventTimezone?: string | null
+): AgendaDayGroup[] {
+    const groups = new Map<string, { sortValue: number; items: AgendaItem[]; dateLabel?: string }>();
+
+    agenda.forEach((item) => {
+        const sortValue = getAgendaItemSortValue(item);
+        const dateLabel = hasCalendarDate(item.startTime)
+            ? formatDate(item.startTime, eventTimezone)
+            : undefined;
+        const key = dateLabel ? `date:${dateLabel}` : `day:${item.dayNumber ?? 1}`;
+        const existingGroup = groups.get(key);
+
+        if (existingGroup) {
+            existingGroup.sortValue = Math.min(existingGroup.sortValue, sortValue);
+            existingGroup.items.push(item);
+            return;
+        }
+
+        groups.set(key, {
+            sortValue,
+            items: [item],
+            dateLabel,
+        });
+    });
+
+    const sortedGroups = Array.from(groups.entries())
+        .map(([key, group]) => ({
+            key,
+            sortValue: group.sortValue,
+            dateLabel: group.dateLabel,
+            items: [...group.items].sort((left, right) => getAgendaItemSortValue(left) - getAgendaItemSortValue(right)),
+        }))
+        .sort((left, right) => left.sortValue - right.sortValue);
+
+    return sortedGroups.map((group, index) => {
+        const dateSuffix = group.dateLabel ? ` - ${group.dateLabel}` : '';
+
+        return {
+            key: group.key,
+            label: `Day ${index + 1}${dateSuffix}`,
+            sortValue: group.sortValue,
+            items: group.items,
+        };
+    });
+}
+
 /**
  * Check if two events overlap in time
  */
 export function eventsOverlap(event1: AgendaItem, event2: AgendaItem): boolean {
-    const toMinutes = (timeString: string): number => {
-        if (!timeString) return 0;
-        if (timeString.includes('T') || timeString.includes(' ')) {
-            const d = new Date(timeString);
-            return d.getHours() * 60 + d.getMinutes();
+    if (
+        hasCalendarDate(event1.startTime) &&
+        hasCalendarDate(event1.endTime) &&
+        hasCalendarDate(event2.startTime) &&
+        hasCalendarDate(event2.endTime)
+    ) {
+        const start1 = new Date(event1.startTime).getTime();
+        const end1 = new Date(event1.endTime).getTime();
+        const start2 = new Date(event2.startTime).getTime();
+        const end2 = new Date(event2.endTime).getTime();
+
+        if (![start1, end1, start2, end2].some((value) => Number.isNaN(value))) {
+            return start1 < end2 && start2 < end1;
         }
-        const [h, m] = timeString.split(':');
-        return parseInt(h || '0', 10) * 60 + parseInt(m || '0', 10);
-    };
-    
+    }
+
     const start1 = toMinutes(event1.startTime);
     const end1 = toMinutes(event1.endTime);
     const start2 = toMinutes(event2.startTime);
     const end2 = toMinutes(event2.endTime);
-    
+
     return start1 < end2 && start2 < end1;
 }
 
@@ -102,10 +211,45 @@ type SpeakerAvatarInput = {
     socialLinks?: { linkedin?: string };
 };
 
+const normalizeAvatarUrl = (value?: string | null): string | null => {
+    const normalized = value?.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    if (normalized.startsWith('//')) {
+        return `https:${normalized}`;
+    }
+
+    if (/^https?:\/\//i.test(normalized)) {
+        return normalized;
+    }
+
+    return null;
+};
+
+const normalizeLinkedInProfileUrl = (value?: string | null): string | null => {
+    const normalized = value?.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    if (/^https?:\/\//i.test(normalized)) {
+        return normalized;
+    }
+
+    if (/^(www\.)?linkedin\.com\//i.test(normalized)) {
+        return `https://${normalized.replace(/^https?:\/\//i, '')}`;
+    }
+
+    return null;
+};
+
 export function getSpeakerAvatarUrls(speaker: SpeakerAvatarInput, size: number = 40): { primary: string; fallback: string } {
-    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&size=${size}&background=random`;
-    const linkedin = speaker.linkedinUrl || speaker.socialLinks?.linkedin;
-    const primary = speaker.photoUrl || speaker.avatar || (linkedin ? `https://unavatar.io/${linkedin}` : fallback);
+    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&size=${size}&background=random&format=png`;
+    const preferredPhoto = normalizeAvatarUrl(speaker.photoUrl) || normalizeAvatarUrl(speaker.avatar);
+    const linkedInProfile = normalizeLinkedInProfileUrl(speaker.linkedinUrl || speaker.socialLinks?.linkedin);
+    const primary = preferredPhoto || (linkedInProfile ? `https://unavatar.io/${encodeURIComponent(linkedInProfile)}` : fallback);
 
     return { primary, fallback };
 }

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Event, CareerImpactScore } from '@/types';
 import { CaretRight } from '@phosphor-icons/react';
 import EventCard from './EventCard';
-import { QuickFitBadge } from './quickFitBadges';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
 
 type EventWithImpact = Event & { careerImpact?: CareerImpactScore };
@@ -24,7 +23,6 @@ interface DiscoverySectionBlockProps {
     defaultVisibleCount?: number;
     expanded?: boolean;
     onExpandedChange?: (expanded: boolean) => void;
-    getQuickFitBadges?: (event: EventWithImpact) => QuickFitBadge[];
     onFeedbackAction?: (event: EventWithImpact, action: DiscoveryFeedbackAction) => void;
     onExplainRecommendation?: (event: EventWithImpact) => void;
     onShortlistToggle?: (event: EventWithImpact) => void;
@@ -45,7 +43,6 @@ const DiscoverySectionBlock: React.FC<DiscoverySectionBlockProps> = ({
     defaultVisibleCount = 3,
     expanded,
     onExpandedChange,
-    getQuickFitBadges,
     onFeedbackAction,
     onExplainRecommendation,
     onShortlistToggle,
@@ -99,7 +96,6 @@ const DiscoverySectionBlock: React.FC<DiscoverySectionBlockProps> = ({
                         isBookmarking={pendingBookmarkIds.has(event.id)}
                         isAttending={isAttending(event.id)}
                         isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
-                        quickFitBadges={getQuickFitBadges?.(event) ?? []}
                         onFeedbackAction={onFeedbackAction}
                         onExplainRecommendation={onExplainRecommendation}
                         onShortlistToggle={onShortlistToggle}

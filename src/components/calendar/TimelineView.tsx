@@ -1,10 +1,10 @@
 'use client';
 
-import { FC, useState } from 'react';
+import { FC, useState, useMemo } from 'react';
 import { CalendarIcon, CaretRightIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
-import { eventsOverlap } from '@/utils/timelineUtils';
+import { buildAgendaDayGroups, eventsOverlap, getAgendaItemIdentity, getAgendaItemSortValue } from '@/utils/timelineUtils';
 
 import { TimelineEventCard } from './TimelineEventCard';
 import { TimelineDetailPanel } from './TimelineDetailPanel';
@@ -13,48 +13,35 @@ interface TimelineViewProps {
     event: Event;
 }
 
+const EMPTY_AGENDA: AgendaItem[] = [];
+
 const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     // Get agenda from event
-    const agenda = event.agenda || [];
-
-    // State for expanded days (default closed)
-    // Initialize state with lazy initializers to avoid render-cycle issues
-    const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(() => {
-        if (!agenda.length) return null;
-        // Find the first event (sorted by day and time)
-        const sortedAgenda = [...agenda].sort((a, b) => {
-            if ((a.dayNumber || 1) !== (b.dayNumber || 1)) {
-                return (a.dayNumber || 1) - (b.dayNumber || 1);
-            }
-            return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-        });
-        return sortedAgenda.length > 0 ? sortedAgenda[0] : null;
-    });
-
-    const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>(() => {
-        // Expand the first day by default
-        if (!agenda.length) return {};
-        const days = agenda.map(item => item.dayNumber || 1);
-        const firstDay = Math.min(...days);
-        return { [firstDay]: true };
-    });
-
-    const toggleDay = (day: number) => {
-        setExpandedDays(prev => ({
-            ...prev,
-            [day]: !prev[day]
-        }));
-    };
-
-    if (agenda.length === 0) {
-        return (
-            <div className="text-center py-8">
-                <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
-                <p className="text-sm text-foreground-tertiary">No schedule available.</p>
-            </div>
-        );
-    }
+    const agenda = event.agenda ?? EMPTY_AGENDA;
     const eventTimezone = event.timezone || 'UTC';
+    const agendaDayGroups = useMemo(
+        () => buildAgendaDayGroups(agenda, eventTimezone),
+        [agenda, eventTimezone]
+    );
+
+    const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(() => {
+        return agendaDayGroups[0]?.items[0] ?? null;
+    });
+    const [collapsedDays, setCollapsedDays] = useState<Set<string>>(() => new Set());
+
+    const toggleDay = (dayKey: string) => {
+        setCollapsedDays((previous) => {
+            const next = new Set(previous);
+
+            if (next.has(dayKey)) {
+                next.delete(dayKey);
+            } else {
+                next.add(dayKey);
+            }
+
+            return next;
+        });
+    };
 
     // Helper function to convert time string to minutes
     const toMinutes = (timeString: string): number => {
@@ -67,70 +54,70 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
         return parseInt(h || '0', 10) * 60 + parseInt(m || '0', 10);
     };
 
-    // Group agenda items by day and create timeline clusters
-    const groupedByDay = agenda.reduce((acc, item) => {
-        const day = item.dayNumber || 1;
-        if (!acc[day]) acc[day] = [];
-        acc[day].push(item);
-        return acc;
-    }, {} as Record<number, AgendaItem[]>);
+    const timelineClusters = useMemo(() => {
+        return agendaDayGroups.map((group) => {
+            const sortedItems = [...group.items].sort((a, b) => getAgendaItemSortValue(a) - getAgendaItemSortValue(b));
 
-    // Create timeline clusters for each day (handling overlapping events)
-    const timelineClusters = Object.entries(groupedByDay).reduce((acc, [day, dayItems]) => {
-        // Sort items by start time
-        const sortedItems = dayItems.sort((a, b) => {
-            const timeA = toMinutes(a.startTime);
-            const timeB = toMinutes(b.startTime);
-            return timeA - timeB;
-        });
+            const clusters: Array<{
+                timeSlot: string;
+                startMinutes: number;
+                endMinutes: number;
+                items: AgendaItem[];
+            }> = [];
 
-        const clusters: Array<{
-            timeSlot: string;
-            startMinutes: number;
-            endMinutes: number;
-            items: AgendaItem[];
-        }> = [];
+            sortedItems.forEach((item) => {
+                const itemStart = toMinutes(item.startTime);
+                const itemEnd = toMinutes(item.endTime);
 
-        for (const item of sortedItems) {
-            const itemStart = toMinutes(item.startTime);
-            const itemEnd = toMinutes(item.endTime);
+                let addedToCluster = false;
+                for (const cluster of clusters) {
+                    const overlapsWithCluster = cluster.items.some((clusterItem) =>
+                        eventsOverlap(item, clusterItem)
+                    );
 
-            // Find if this item overlaps with any existing cluster
-            let addedToCluster = false;
-            for (const cluster of clusters) {
-                // Check if item overlaps with any item in this cluster
-                const overlapsWithCluster = cluster.items.some(clusterItem =>
-                    eventsOverlap(item, clusterItem)
-                );
-
-                if (overlapsWithCluster) {
-                    cluster.items.push(item);
-                    cluster.startMinutes = Math.min(cluster.startMinutes, itemStart);
-                    cluster.endMinutes = Math.max(cluster.endMinutes, itemEnd);
-                    addedToCluster = true;
-                    break;
+                    if (overlapsWithCluster) {
+                        cluster.items.push(item);
+                        cluster.startMinutes = Math.min(cluster.startMinutes, itemStart);
+                        cluster.endMinutes = Math.max(cluster.endMinutes, itemEnd);
+                        addedToCluster = true;
+                        break;
+                    }
                 }
-            }
 
-            if (!addedToCluster) {
-                // Create new cluster
-                clusters.push({
-                    timeSlot: formatEventTimeRange(item.startTime, item.endTime, eventTimezone),
-                    startMinutes: itemStart,
-                    endMinutes: itemEnd,
-                    items: [item]
-                });
-            }
+                if (!addedToCluster) {
+                    clusters.push({
+                        timeSlot: formatEventTimeRange(item.startTime, item.endTime, eventTimezone),
+                        startMinutes: itemStart,
+                        endMinutes: itemEnd,
+                        items: [item]
+                    });
+                }
+            });
+
+            return {
+                key: group.key,
+                label: group.label,
+                clusters,
+            };
+        });
+    }, [agendaDayGroups, eventTimezone]);
+
+    if (agenda.length === 0) {
+        return (
+            <div className="text-center py-8">
+                <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-foreground-muted" />
+                <p className="text-sm text-foreground-tertiary">No schedule available.</p>
+            </div>
+        );
+    }
+
+    const isSelectedAgendaItem = (item: AgendaItem) => {
+        if (!selectedEvent) {
+            return false;
         }
 
-        acc[parseInt(day)] = clusters;
-        return acc;
-    }, {} as Record<number, Array<{
-        timeSlot: string;
-        startMinutes: number;
-        endMinutes: number;
-        items: AgendaItem[];
-    }>>);
+        return getAgendaItemIdentity(selectedEvent) === getAgendaItemIdentity(item);
+    };
 
     // renderEventCard has been refactored into TimelineEventCard component
 
@@ -143,18 +130,15 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                     {/* Continuous Vertical Line */}
                     <div className="absolute left-[0px] top-4 bottom-0 w-[2px] bg-border-subtle z-0" />
 
-                    {Object.entries(timelineClusters)
-                        .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                        .map(([dayStr, clusters]) => {
-                            const day = parseInt(dayStr);
-                            const isExpanded = expandedDays[day];
+                    {timelineClusters.map((dayGroup) => {
+                            const isExpanded = !collapsedDays.has(dayGroup.key);
 
                             return (
-                                <div key={day} className="relative mb-8 z-10">
+                                <div key={dayGroup.key} className="relative mb-8 z-10">
                                     {/* Accordion Header - Anchored to spine */}
                                     <div
                                         className="relative -ml-[33px] mb-4 flex items-center cursor-pointer group"
-                                        onClick={() => toggleDay(day)}
+                                        onClick={() => toggleDay(dayGroup.key)}
                                     >
                                         <div className="w-4 h-4 rounded-full border-2 border-border-default bg-background-main flex items-center justify-center transition-colors z-20 group-hover:border-border-strong">
                                             {isExpanded ? (
@@ -164,14 +148,14 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                             )}
                                         </div>
                                         <div className="ml-4 text-xs font-bold uppercase tracking-wider text-foreground-tertiary group-hover:text-foreground-secondary">
-                                            Day {day}
+                                            {dayGroup.label}
                                         </div>
                                     </div>
 
                                     {/* Content - Collapsible */}
                                     <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'block opacity-100' : 'hidden opacity-0'}`}>
                                         <div className="space-y-4">
-                                            {clusters.map((cluster, clusterIndex) => {
+                                            {dayGroup.clusters.map((cluster, clusterIndex) => {
                                                 return (
                                                     <div key={clusterIndex} className="relative">
                                                         {/* Timeline Node - Anchored to spine */}
@@ -189,7 +173,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                                         item={cluster.items[0]}
                                                                         showIndividualTime={true}
                                                                         eventTimezone={eventTimezone}
-                                                                        isSelected={selectedEvent?.id === cluster.items[0].id}
+                                                                        isSelected={isSelectedAgendaItem(cluster.items[0])}
                                                                         onClick={() => setSelectedEvent(cluster.items[0])}
                                                                     />
                                                                 </div>
@@ -198,7 +182,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                                 <div className="relative">
                                                                     {cluster.items.map((item, itemIndex) => (
                                                                         <div
-                                                                            key={item.id || itemIndex}
+                                                                            key={getAgendaItemIdentity(item, itemIndex)}
                                                                             className="relative mb-2 last:mb-0 transition-transform hover:-translate-y-1"
                                                                             style={{
                                                                                 zIndex: cluster.items.length - itemIndex
@@ -208,7 +192,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                                                 item={item}
                                                                                 showIndividualTime={true}
                                                                                 eventTimezone={eventTimezone}
-                                                                                isSelected={selectedEvent?.id === item.id}
+                                                                                isSelected={isSelectedAgendaItem(item)}
                                                                                 onClick={() => setSelectedEvent(item)}
                                                                             />
                                                                         </div>
