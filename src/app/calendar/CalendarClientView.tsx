@@ -16,7 +16,7 @@ import { useUnifiedServerFiltering, type UnifiedFilterOptions } from '@/hooks/us
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
-import { CalendarProvider } from '@/contexts';
+import { CalendarProvider, useAuth } from '@/contexts';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 
 const DEFAULT_REGION_FILTER_SESSION_KEY = 'calendar-default-region-filter:v1';
@@ -345,14 +345,16 @@ export default function CalendarClientView({
     const searchParams = useSearchParams();
     const router = useRouter();
     const isMobile = useIsMobile();
+    const { profile: authProfile } = useAuth();
+    const activeProfile = authProfile ?? profile;
     const defaultRegionalLocation = useMemo(
-        () => getDefaultRegionalLocation(profile?.preferences ?? null, profile?.timezone ?? null),
-        [profile?.preferences, profile?.timezone]
+        () => getDefaultRegionalLocation(activeProfile?.preferences ?? null, activeProfile?.timezone ?? null),
+        [activeProfile?.preferences, activeProfile?.timezone]
     );
 
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
-    const eventData = useEventData(profile, initialFilters);
+    const eventData = useEventData(activeProfile, initialFilters);
     const activeLocationCount = eventData.filters.locations.length;
     const updateEventFilter = eventData.updateFilter;
     const { countsByEventId } = useNetworkEventCounts(eventData.enrichedEvents.map((event) => event.id));
@@ -534,7 +536,7 @@ export default function CalendarClientView({
                     dayEvents={dayEvents}
                     initialDate={context.date}
                     categories={initialCategories}
-                    profile={profile}
+                    profile={activeProfile}
                     trackedEvents={enrichedEventsWithNetwork.filter(e => e.isTracked)}
                     onEventSelect={handleSelectEvent}
                     onEventClick={handleEventClick}
@@ -558,7 +560,7 @@ export default function CalendarClientView({
                     currentDate={currentDate}
                     events={enrichedEventsWithNetwork}
                     categories={initialCategories}
-                    profile={profile}
+                    profile={activeProfile}
                     onDateSelect={handleDateSelect}
                     onEventSelect={handleSelectEvent}
                     onCloseEventDetail={actions.closeEventDetail}
@@ -581,7 +583,7 @@ export default function CalendarClientView({
                         }}
                         events={enrichedEventsWithNetwork}
                         categories={initialCategories}
-                        profile={profile}
+                        profile={activeProfile}
                         renderContent={(context) => (
                             <div className="flex h-full relative">
                                 <h1 className="sr-only">Tech events calendar</h1>

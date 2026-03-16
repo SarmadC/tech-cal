@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 import { createClient } from '@/utils/supabase/server';
-import { EventService } from '@/services/eventServices';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
-import { Event } from '@/types';
+import { Event, EventWithCareerImpact, RecommendationCandidateSource, RecommendationMetadata } from '@/types';
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
-import { rankEventsWithCanonicalPipeline } from '@/services/recommendations/canonicalRankingService';
+import {
+  rankEventsWithRecommendationPipeline as rankEventsWithCanonicalPipeline,
+  fetchPersonalizedRecommendationCandidates,
+} from '@/services/recommendations/recommendationPipeline';
+import { UserLocation } from '@/services/locationScoringService';
+import { extractCityFromLocation, extractCountryFromLocation } from '@/utils/locationUtils';
 
 // Rate limiter for recommendations
 const ratelimit = new Ratelimit({
@@ -27,30 +31,6 @@ interface RecommendationResponse {
   };
   error?: string;
 }
-
-type RecommendationMetadata = {
-  matchedTags: string[];
-  matchExplanation?: string;
-  matchScore: number;
-  impactScore: number;
-  profileBoost: number;
-  recencyBoost: number;
-  popularityBoost: number;
-  totalScore: number;
-  reasons: string[];
-  tagRank?: number;
-  [key: string]: unknown;
-};
-
-type EventWithCareerImpact = Event & {
-  careerImpact?: {
-    overall?: number | null;
-    confidence?: number | null;
-    components?: unknown;
-    explanation?: { reasons?: string[] };
-    metadata?: { algorithmVersion?: string };
-  };
-};
 
 const DEFAULT_MATCHING_TELEMETRY_SAMPLE_RATE = 0.01; // 1%
 
@@ -124,9 +104,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
 
     const startTime = Date.now();
 
-    // Get user profile and career profile
-    // Use user.id directly for the career profile lookup to avoid any profile ID mismatch
-    await CareerProfileService.getUserProfile(user.id, supabase);
+    // Get career profile
     const careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
 
     if (!careerProfile) {
@@ -163,30 +141,69 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
         }
       : careerProfile;
 
-    const { data: consentRow } = await supabase
+    const { data: profileRow } = await supabase
       .from('profiles')
-      .select('analytics_consent')
+      .select('analytics_consent, preferences, timezone, location')
       .eq('id', user.id)
       .single();
-    const hasTelemetryConsent = Boolean(consentRow?.analytics_consent);
+    const hasTelemetryConsent = Boolean(profileRow?.analytics_consent);
+    const preferences = profileRow?.preferences as Record<string, unknown> | null;
+    const profileLocation = preferences?.location as Record<string, string> | null;
+    const userLocation: UserLocation | null = profileRow
+      ? {
+          city: profileLocation?.city || (profileRow.location ? extractCityFromLocation(profileRow.location) : undefined),
+          country: profileLocation?.country || (profileRow.location ? extractCountryFromLocation(profileRow.location) : undefined),
+          timezone: profileRow.timezone || request.headers.get('x-timezone') || undefined,
+        }
+      : null;
 
     let events: Event[] = [];
     let matchedTags: string[] = [];
     let tau: number | null = null;
     let divergenceCount: number | null = null;
+    let candidateSources = new Map<string, RecommendationCandidateSource[]>();
 
     if (tags.length > 0) {
-      // Search by specific tags
-      events = await EventService.searchEventsByTags(tags, supabase, limit);
-      matchedTags = tags;
+      const personalizedCandidates = await fetchPersonalizedRecommendationCandidates({
+        supabaseClient: supabase,
+        userId: user.id,
+        careerProfile: enrichedCareerProfile,
+        limit,
+        tags,
+      });
+
+      events = personalizedCandidates.events;
+      matchedTags = personalizedCandidates.matchedTags;
+      candidateSources = personalizedCandidates.candidateSources;
+
+      if (events.length > 0) {
+        try {
+          events = await rankEventsWithCanonicalPipeline({
+            events,
+            careerProfile: enrichedCareerProfile,
+            supabaseClient: supabase,
+            userId: user.id,
+            userLocation,
+            applyDiversityEnhancement: false,
+            allowRerank: false,
+            sortByCareerImpact: true,
+            careerImpactSortDirection: 'desc',
+            candidateSources
+          });
+        } catch (enrichmentError) {
+          console.warn('Failed to enrich tag-search recommendations with canonical ranking:', enrichmentError);
+        }
+      }
     } else {
-      // Get tag-based recommendations
-      events = await EventService.getRecommendedEventsByTags(
-        user.id,
-        enrichedCareerProfile,
-        supabase,
-        limit
-      );
+      const personalizedCandidates = await fetchPersonalizedRecommendationCandidates({
+        supabaseClient: supabase,
+        userId: user.id,
+        careerProfile: enrichedCareerProfile,
+        limit,
+      });
+
+      events = personalizedCandidates.events;
+      candidateSources = personalizedCandidates.candidateSources;
 
       if (events.length > 0) {
         const matchingTelemetryEnabled = process.env.MATCHING_TELEMETRY_ENABLED === 'true';
@@ -212,8 +229,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
             careerProfile: enrichedCareerProfile,
             supabaseClient: supabase,
             userId: user.id,
+            userLocation,
             applyDiversityEnhancement: true,
-            allowRerank: true
+            allowRerank: true,
+            sortByCareerImpact: true,
+            careerImpactSortDirection: 'desc',
+            candidateSources
           });
 
           events = enrichedEvents.map((event, index) => {
@@ -223,8 +244,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
             if (metadata) {
               const alignmentScore = eventWithImpact.careerImpact?.overall ?? null;
               const alignmentComponents = eventWithImpact.careerImpact?.components ?? null;
-              const strategyVersion = eventWithImpact.careerImpact?.metadata?.algorithmVersion ?? 'alignment-core-v1';
-
+              const strategyVersion = eventWithImpact.careerImpact?.metadata?.algorithmVersion ?? 'alignment-core-v2';
               const updatedMetadata: RecommendationMetadata = {
                 ...metadata,
                 alignmentScore,
@@ -251,8 +271,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
                 careerProfile: enrichedCareerProfile,
                 supabaseClient: supabase,
                 userId: user.id,
+                userLocation,
                 applyDiversityEnhancement: false,
-                allowRerank: false
+                allowRerank: false,
+                candidateSources
               });
 
               const advancedSortedIds = [...advancedScoredForTelemetry]
@@ -307,7 +329,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
       }
       
       // Extract matched tags from events
-      const allTags = events.flatMap(event => event.tags?.map((tag) => tag.name) || []);
+      const allTags = events.flatMap((event) => {
+        const metadataTags = (event as { recommendationMetadata?: RecommendationMetadata }).recommendationMetadata?.matchedTags;
+        if (Array.isArray(metadataTags) && metadataTags.length > 0) {
+          return metadataTags;
+        }
+        return event.tags?.map((tag) => tag.name) || [];
+      });
       matchedTags = [...new Set(allTags)];
     }
 

@@ -15,13 +15,14 @@ import { motion } from 'framer-motion';
 import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCareerOnboarding';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { usePostHog } from 'posthog-js/react';
+import { filteredEventKeys } from '@/lib/queryKeys';
 
 function CareerOnboardingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
     const { showSuccess, showError, showInfo } = useSnackbar();
-    const { user, profile } = useAuth();
+    const { user, profile, refreshProfile: refreshAuthProfile } = useAuth();
     const { supabase, isReady } = useSupabaseSafe();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCreatingProfile, setIsCreatingProfile] = useState(false);
@@ -96,8 +97,10 @@ function CareerOnboardingContent() {
 
         try {
             await completeOnboarding(data, options?.optionalSectionsCompleted);
+            await refreshAuthProfile();
             await queryClient.invalidateQueries({ queryKey: ['profile'] });
             await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+            await queryClient.invalidateQueries({ queryKey: filteredEventKeys.all });
             window.dispatchEvent(new CustomEvent('profile-updated'));
             posthog?.capture('onboarding_completed', { device: isMobile ? 'mobile' : 'desktop' });
             showSuccess('Career profile completed! Discovering personalized events...');

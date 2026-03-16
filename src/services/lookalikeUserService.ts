@@ -4,15 +4,13 @@
  * Service for handling cold start users and lookalike recommendations
  */
 
-import type { Event, SupabaseClientType, RecommendationTelemetryContext } from '@/types';
+import type { Event, RecommendationMetadata, SupabaseClientType, RecommendationTelemetryContext } from '@/types';
 import type { Database } from '@/types/supabase';
 import type { CareerProfile } from '@/types/career';
 import { isColdStartUser } from '@/utils/behavioralBoostUtils';
 import { eventDetailedTransformer } from '@/utils/transformers';
-import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { DiversityEnhancementService } from '@/services/diversityEnhancementService';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { CareerImpactService } from '@/services/careerImpactService';
 
 const SUPABASE_SENIORITY_LEVELS = new Set<Database['public']['Enums']['seniority_level']>([
   'student',
@@ -73,57 +71,56 @@ export class LookalikeUserService {
       }
 
       const uniqueEvents = new Map<string, Event>();
+      const eventSupport = new Map<string, number>();
       candidateEvents.forEach(event => {
+        eventSupport.set(event.id, (eventSupport.get(event.id) ?? 0) + 1);
         if (!uniqueEvents.has(event.id)) {
           uniqueEvents.set(event.id, event);
         }
       });
 
-      const tagged = await TagBasedMatchingService.getRecommendedEventsByTags(
-        userId,
-        userProfile,
-        supabaseClient,
-        limit * 5
-      );
+      const rankedCandidates = Array.from(uniqueEvents.values()).sort((a, b) => {
+        const supportDelta = (eventSupport.get(b.id) ?? 0) - (eventSupport.get(a.id) ?? 0);
+        if (supportDelta !== 0) {
+          return supportDelta;
+        }
 
-      const tagScoreMap = new Map<string, number>();
-      tagged.forEach(result => {
-        tagScoreMap.set(result.event.id, result.totalScore);
+        const attendeeDelta = (b.attendeeCount ?? 0) - (a.attendeeCount ?? 0);
+        if (attendeeDelta !== 0) {
+          return attendeeDelta;
+        }
+
+        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
       });
 
-      const scoredEvents = await Promise.all(
-        Array.from(uniqueEvents.values()).map(async (event) => {
-          const tagScore = tagScoreMap.get(event.id) ?? 0;
-          try {
-            const impactScore = await CareerImpactService.getCareerImpactScoreLiteAsync(
-              { event, careerProfile: userProfile },
-              { userId, supabaseClient }
-            );
-            return {
-              event,
-              tagScore,
-              careerImpactScore: impactScore.overall
-            };
-          } catch (error) {
-            console.warn('[Lookalike] Failed to compute impact score, skipping event', { eventId: event.id, error });
-            return null;
-          }
-        })
-      );
-
-      const filtered = scoredEvents
-        .filter((item): item is { event: Event; tagScore: number; careerImpactScore: number } => !!item)
-        .sort((a, b) => (b.careerImpactScore + b.tagScore * 0.3) - (a.careerImpactScore + a.tagScore * 0.3))
+      const filtered = rankedCandidates
         .slice(0, limit * 2)
-        .map(item => ({
-          ...item.event,
-          recommendationMetadata: {
+        .map(event => {
+          const lookalikeSupport = eventSupport.get(event.id) ?? 1;
+          const primaryReason = lookalikeSupport > 1
+            ? `Popular with ${lookalikeSupport} similar professionals`
+            : 'Retrieved from similar professionals';
+          const recommendationMetadata: RecommendationMetadata = {
+            matchedTags: [],
+            matchScore: lookalikeSupport,
+            impactScore: 0,
+            profileBoost: 0,
+            recencyBoost: 0,
+            popularityBoost: 0,
+            totalScore: lookalikeSupport,
+            reasons: [primaryReason],
+            candidateSources: ['lookalike', 'cold-start'],
             source: 'lookalike',
-            lookalikeTagScore: item.tagScore,
-            lookalikeCareerImpactScore: item.careerImpactScore,
+            lookalikeSupport,
             lookalikeCohortSize: similarProfiles.length // Actual number of similar users
-          }
-        }) as Event);
+          };
+
+          return {
+            ...event,
+            recommendationMetadata,
+            recommendationProvenance: ['lookalike', 'cold-start']
+          } as Event;
+        });
 
       if (!filtered.length) {
         return await this.getPopularFallback(supabaseClient, limit, telemetry, 'filtered_empty');

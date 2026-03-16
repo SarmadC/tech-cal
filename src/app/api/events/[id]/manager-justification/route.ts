@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/server';
 import { requireOnboardedApi } from '@/utils/onboarding';
 import { eventDetailedTransformer } from '@/utils/transformers';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { rankEventsWithCanonicalPipeline } from '@/services/recommendations/canonicalRankingService';
+import { rankEventsWithRecommendationPipeline as rankEventsWithCanonicalPipeline } from '@/services/recommendations/recommendationPipeline';
 import { calculateBaseScore, getAlignmentCategory } from '@/lib/recommendation/baseScorer';
 import type { CareerProfile } from '@/types/career';
 import type { Event, EventWithCareerImpact } from '@/types';

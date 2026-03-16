@@ -32,6 +32,7 @@ import '@/app/styles/discovery-sidebar.css';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
 import { useRemoteSearchSuggestions } from '@/hooks/useRemoteSearchSuggestions';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
+import { useAuth } from '@/contexts';
 
 interface EventListViewProps {
     initialCategories: EventType[];
@@ -71,6 +72,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
     const isDark = theme === 'dark';
     const posthog = usePostHog();
     const searchParams = useSearchParams();
+    const { profile: authProfile } = useAuth();
+    const activeProfile = authProfile ?? profile;
 
     const startOfToday = useMemo(() => {
         const date = new Date();
@@ -161,7 +164,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
         counts: countsFromServer,
         isDetectingLocation,
         isBackgroundRefetch,
-    } = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
+    } = useUnifiedServerFiltering(activeProfile, initialFilters, { surface: 'discover' });
     const { countsByEventId } = useNetworkEventCounts(filteredEvents.map((event) => event.id));
 
     const eventsWithNetwork = useMemo(() => {

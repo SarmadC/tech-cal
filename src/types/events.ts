@@ -18,6 +18,7 @@ export interface CareerImpactScore {
   explanation: {
     reasons: string[];
     matchedSkills: string[];
+    matchedTags?: string[];
     speakerHighlights: string[];
     careerImpactCategory: 'transformative' | 'high' | 'moderate' | 'low';
     confidenceFactors: string[];
@@ -30,6 +31,9 @@ export interface CareerImpactScore {
     careerProfileHash: string;
     eventDataHash: string;
     scoringTriggers?: string[]; // Triggers that affected this score (e.g., 'type_pref_gate', 'beginner_boost')
+    candidateSources?: RecommendationCandidateSource[];
+    tagAffinityScore?: number;
+    tagAffinityContribution?: number;
     appliedAdjustments?: {
       typePreferenceGate?: number; // Multiplier applied (e.g., 0.75)
       beginnerBoost?: number; // Points added for beginner-friendly content
@@ -39,6 +43,47 @@ export interface CareerImpactScore {
       behavioralSimilarEvents?: string[]; // Event IDs that influenced the behavioral boost
     };
   };
+}
+
+export type RecommendationCandidateSource =
+  | 'filtered'
+  | 'tag-based'
+  | 'tag-search'
+  | 'text-search'
+  | 'discover'
+  | 'lookalike'
+  | 'cold-start'
+  | 'compatibility';
+
+export interface RecommendationReason {
+  type: AlignmentReason['type'] | 'tag-affinity' | 'source';
+  reason: string;
+  contribution: number;
+  source: 'career-impact' | RecommendationCandidateSource;
+}
+
+export interface RecommendationMetadata {
+  matchedTags: string[];
+  matchExplanation?: string;
+  matchScore: number;
+  impactScore: number;
+  profileBoost: number;
+  recencyBoost: number;
+  popularityBoost: number;
+  totalScore: number;
+  reasons: string[];
+  tagRank?: number;
+  alignmentScore?: number | null;
+  alignmentConfidence?: number | null;
+  alignmentComponents?: CareerImpactScore['components'] | null;
+  alignmentStrategyVersion?: string;
+  alignmentExplanation?: string[];
+  candidateSources?: RecommendationCandidateSource[];
+  explanation?: RecommendationReason[];
+  alignmentRank?: number;
+  source?: string;
+  lookalikeSupport?: number;
+  lookalikeCohortSize?: number;
 }
 
 
@@ -129,6 +174,10 @@ export interface Event {
     
     // Agenda information for multi-day events
     agenda?: AgendaItem[];
+
+    // Personalized recommendation metadata
+    recommendationMetadata?: RecommendationMetadata;
+    recommendationProvenance?: RecommendationCandidateSource[];
 }
 
 // ============================================

@@ -1435,11 +1435,26 @@ export class EventService {
 
             return events;
         } catch (error) {
-            console.error('Error fetching events with agenda:', error);
+            const message = error instanceof Error
+                ? error.message
+                : typeof error === 'string'
+                    ? error
+                    : JSON.stringify(error);
+            const stack = error instanceof Error ? error.stack : undefined;
+
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('getEventsWithAgenda failed; continuing without agenda hydration', {
+                    message,
+                    stack,
+                    filters,
+                    page,
+                    pageSize,
+                });
+            }
             Sentry.captureException(error, {
-                extra: { function: 'getEventsWithAgenda', filters }
+                extra: { function: 'getEventsWithAgenda', filters, message, stack, page, pageSize }
             });
-            throw new Error('Failed to fetch events with agenda.');
+            return [];
         }
     }
 
@@ -1817,8 +1832,10 @@ export class EventService {
                         popularityBoost: recommendation.popularityBoost,
                         totalScore: recommendation.totalScore,
                         reasons: recommendation.reasons,
-                        tagRank: index + 1
-                    }
+                        tagRank: index + 1,
+                        candidateSources: ['tag-based']
+                    },
+                    recommendationProvenance: ['tag-based']
                 } as Event & { recommendationMetadata: Record<string, unknown> };
             });
         } catch (error) {
@@ -1874,7 +1891,10 @@ export class EventService {
             if (error) throw error;
 
             // Tags are now included in the query via relational join, so extractEventTags will handle them
-            return (events || []).map(event => eventTransformer.toApp(event));
+            return (events || []).map(event => ({
+                ...eventTransformer.toApp(event),
+                recommendationProvenance: ['tag-search']
+            }));
 
         } catch (error) {
             console.error('Error searching events by tags:', error);
@@ -2066,13 +2086,10 @@ export class EventService {
                 return await this.getFallbackPopularEvents(supabaseClient, page, pageSize, fallbackTelemetry);
             }
 
-            // LookalikeRecommendations already have metadata attached, just need to attach tags
+            // Lookalike recommendations already have metadata attached and arrive in retrieval order.
             const appEvents = await this.transformEventsWithLookalikeMetadata(lookalikeRecommendations as any[], lookalikeRecommendations as any[], supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-            // Sort by popularity score and apply diversity enhancement
-            const sortedEvents = this.sortEventsByPopularity(appEvents);
-            const diverseEvents = this.applyDiversityEnhancement(sortedEvents, pageSize * 2);
-            const paginatedEvents = this.paginateEvents(diverseEvents, page, pageSize);
+            const paginatedEvents = this.paginateEvents(appEvents, page, pageSize);
 
             if (telemetry?.hasConsent && telemetry.userId) {
                 await logTelemetryEvent(supabaseClient, {
@@ -2090,7 +2107,7 @@ export class EventService {
                     metadata: {
                         requestedPageSize: pageSize,
                         returnedCount: paginatedEvents.length,
-                        totalCandidates: sortedEvents.length,
+                        totalCandidates: appEvents.length,
                         page,
                         topEventIds: paginatedEvents.slice(0, 5).map(event => event.id)
                     }
@@ -2099,7 +2116,7 @@ export class EventService {
 
             return {
                 events: paginatedEvents,
-                totalCount: sortedEvents.length,
+                totalCount: appEvents.length,
                 isColdStart: true
             };
         } catch (error) {
@@ -2215,23 +2232,14 @@ export class EventService {
                 const cohortSize = metadata.lookalikeCohortSize || 0;
                 (appEvent as any).coldStartMetadata = { // eslint-disable-line @typescript-eslint/no-explicit-any
                     reason: cohortSize > 0 ? `Recommended by ${cohortSize} similar professionals` : 'Matched via lookalike recommendations',
-                    popularityScore: metadata.lookalikeTagScore || 0,
+                    popularityScore: metadata.lookalikeSupport || 0,
                     lookalikeUsers: cohortSize
                 };
             }
+
+            (appEvent as any).recommendationProvenance = ['lookalike', 'cold-start']; // eslint-disable-line @typescript-eslint/no-explicit-any
             
             return appEvent;
-        });
-    }
-
-    /**
-     * Sort events by popularity score (DRY helper)
-     */
-    private static sortEventsByPopularity(events: Event[]): Event[] {
-        return events.sort((a, b) => {
-            const aScore = (a as any).coldStartMetadata?.popularityScore || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
-            const bScore = (b as any).coldStartMetadata?.popularityScore || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
-            return bScore - aScore;
         });
     }
 
@@ -2262,7 +2270,7 @@ export class EventService {
         userLocation?: UserLocation | null,
         enrichmentOptions: { allowRerank?: boolean } = {}
     ): Promise<Event[]> {
-        if (!careerProfile || events.length === 0) {
+        if (events.length === 0) {
             return events;
         }
 

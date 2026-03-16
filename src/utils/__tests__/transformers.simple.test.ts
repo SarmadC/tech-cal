@@ -91,6 +91,66 @@ describe('transformers', () => {
         expect(result.sourceUrl).toBe('#');
         expect(result.timezone).toBeNull();
       });
+
+      it('should preserve rich recommendation-scoring fields and aliased tags', () => {
+        const supabaseEvent = {
+          id: '1',
+          title: 'Figma Config',
+          description: 'Hands-on design conference',
+          start_time: '2024-01-01T10:00:00Z',
+          end_time: null,
+          timezone: 'UTC',
+          location: 'San Francisco, CA, USA',
+          status: 'confirmed',
+          source_url: 'https://example.com/config',
+          livestream_url: null,
+          registration_url: 'https://example.com/register',
+          event_type_id: 'conference',
+          organizer_id: 'org1',
+          created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:00:00Z',
+          agenda_url: 'https://example.com/agenda',
+          price_min: 199,
+          event_format: 'In-person',
+          target_audience: 'UX designers',
+          prerequisites: 'Basic Figma knowledge',
+          speaker_lineup: [{ id: 'speaker-1', name: 'Jane Doe' }],
+          organizer: {
+            id: 'org1',
+            name: 'Figma',
+          },
+          tags: [
+            {
+              event_tags: {
+                id: 'tag-1',
+                event_tag: 'Figma',
+                category: 'Design',
+              },
+            },
+          ],
+          event_agenda: [
+            {
+              id: 'agenda-1',
+              title: 'Prototype Lab',
+              description: 'Hands-on prototyping workshop',
+              start_time: '2024-01-01T10:00:00Z',
+              end_time: '2024-01-01T11:00:00Z',
+              agenda_type: 'workshop',
+            },
+          ],
+        };
+
+        const result = eventTransformer.toApp(supabaseEvent as never);
+
+        expect(result.registrationUrl).toBe('https://example.com/register');
+        expect(result.priceMin).toBe(199);
+        expect(result.eventFormat).toBe('In-person');
+        expect(result.targetAudience).toBe('UX designers');
+        expect(result.prerequisites).toBe('Basic Figma knowledge');
+        expect(result.speakerLineup).toEqual([{ id: 'speaker-1', name: 'Jane Doe' }]);
+        expect(result.tags?.map((tag) => tag.name)).toEqual(['Figma']);
+        expect(result.agenda?.[0]?.title).toBe('Prototype Lab');
+      });
     });
 
     describe('toSupabase', () => {

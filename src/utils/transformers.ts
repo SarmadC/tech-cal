@@ -40,6 +40,29 @@ export const extractEventTags = (
     rawData: unknown
 ): EventTag[] => {
     const eventTags: EventTag[] = [];
+    const seen = new Set<string>();
+
+    const pushTag = (tag: {
+        id?: string | null;
+        name?: string | null;
+        color?: string | null;
+        category?: string | null;
+        event_tag?: string | null;
+    }) => {
+        const name = tag.name ?? tag.event_tag;
+        if (!name) return;
+
+        const key = `${String(tag.id || name).toLowerCase()}::${name.toLowerCase()}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        eventTags.push({
+            id: String(tag.id || name),
+            name,
+            color: tag.color || '#3B82F6',
+            category: tag.category || 'general'
+        });
+    };
     
     // Handle nested event_tag_relations structure (from Supabase joins)
     const dataWithRelations = rawData as {
@@ -56,29 +79,56 @@ export const extractEventTags = (
     if (dataWithRelations.event_tag_relations && Array.isArray(dataWithRelations.event_tag_relations)) {
         dataWithRelations.event_tag_relations.forEach(relation => {
             if (relation.event_tags) {
-                eventTags.push({
+                pushTag({
                     id: relation.event_tags.id,
-                    name: relation.event_tags.event_tag,
-                    color: '#3B82F6', // Default color since color column was removed from event_tags
-                    category: relation.event_tags.category || 'general'
+                    event_tag: relation.event_tags.event_tag,
+                    category: relation.event_tags.category,
+                    color: '#3B82F6'
                 });
             }
         });
     }
     
     // Handle pre-aggregated tags array (from materialized views)
-    const dataWithTags = rawData as { tags?: Array<string | EventTag> };
+    const dataWithTags = rawData as {
+        tags?: Array<
+            string |
+            EventTag |
+            {
+                id?: string | null;
+                name?: string | null;
+                color?: string | null;
+                category?: string | null;
+                event_tags?: {
+                    id?: string | null;
+                    event_tag?: string | null;
+                    color?: string | null;
+                    category?: string | null;
+                } | null;
+            }
+        >;
+    };
     if (dataWithTags.tags && Array.isArray(dataWithTags.tags)) {
         dataWithTags.tags.forEach(tag => {
             if (typeof tag === 'string') {
-                eventTags.push({
+                pushTag({
                     id: tag,
                     name: tag,
                     color: '#3B82F6',
                     category: 'general'
                 });
             } else if (tag && typeof tag === 'object' && 'name' in tag) {
-                eventTags.push(tag as EventTag);
+                pushTag(tag as EventTag);
+            } else if (tag && typeof tag === 'object' && 'event_tags' in tag) {
+                const nestedTag = tag.event_tags;
+                if (nestedTag) {
+                    pushTag({
+                        id: nestedTag.id,
+                        event_tag: nestedTag.event_tag,
+                        color: nestedTag.color,
+                        category: nestedTag.category
+                    });
+                }
             }
         });
     }
@@ -152,6 +202,7 @@ export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         // Check both 'organizer' (singular, from named joins) and 'organizers' (plural, from FK joins)
         const eventWithDetails = supabaseEvent as SupabaseEventWithDetails;
+        const rawRecord = supabaseEvent as Record<string, unknown>;
         const organizerData = eventWithDetails.organizer || eventWithDetails.organizers;
         const organizerName = organizerData?.name || 'Unknown Organizer';
         const rawLogoUrl = organizerData?.logo_url ?? undefined;
@@ -178,9 +229,22 @@ export const eventTransformer = {
             status: supabaseEvent.status || 'confirmed',
             sourceUrl: supabaseEvent.source_url || '#',
             livestreamUrl: supabaseEvent.livestream_url,
+            registrationUrl: (rawRecord.registration_url as string | null | undefined) ?? null,
             eventImageUrl: supabaseEvent.event_image_url ?? undefined,
             eventTypeId: supabaseEvent.event_type_id || '',
+            priceRange: (rawRecord.price_range as string | null | undefined) ?? null,
+            priceMin: (rawRecord.price_min as number | null | undefined) ?? null,
+            capacity: (rawRecord.capacity as number | null | undefined) ?? null,
+            attendeeCount: (rawRecord.attendee_count as number | null | undefined) ?? null,
+            difficulty: (rawRecord.difficulty_level as Event['difficulty'] | undefined) ?? null,
+            eventFormat: (rawRecord.event_format as Event['eventFormat'] | undefined) ?? null,
+            targetAudience: (rawRecord.target_audience as string | null | undefined) ?? null,
+            prerequisites: (rawRecord.prerequisites as string | null | undefined) ?? null,
             agendaUrl: (supabaseEvent as Record<string, unknown>).agenda_url as string | null,
+            speakerLineup: (rawRecord.speaker_lineup as Event['speakerLineup'] | undefined) ?? null,
+            ...(Array.isArray(rawRecord.event_agenda) && rawRecord.event_agenda.length > 0
+                ? { agenda: transformAgendaItemsToApp(rawRecord.event_agenda as unknown[]) }
+                : {}),
             ...(eventTags.length > 0 && { tags: eventTags }),
             ...(eventType && eventType.name && {
                 category: {

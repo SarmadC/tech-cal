@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { usePostHog } from 'posthog-js/react';
-import { Event, EventType, AppProfile } from '@/types';
-import { isProfileEmpty, extractCareerProfile } from '@/utils/profileTypeGuards';
-import { useUnifiedServerFiltering, UnifiedFilterOptions, FilteredEventsData } from '@/hooks/useUnifiedServerFiltering';
+import { Event, EventType, AppProfile, FilteredEventsData } from '@/types';
+import { extractCareerProfile } from '@/utils/profileTypeGuards';
+import { useUnifiedServerFiltering, UnifiedFilterOptions } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 
 import { CalendarProvider } from '@/contexts/CalendarContext';
+import { useAuth } from '@/contexts';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
@@ -18,6 +19,7 @@ import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { getDiscoverDefaultSort } from '@/utils/discoverDefaults';
 
 // IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
 const MobileDiscoveryViewDynamic = dynamic(
@@ -87,31 +89,19 @@ export default function DiscoverClientView({
     const nav = useNavigation(router);
     const posthog = usePostHog();
     const { isMobile, isReady: isDeviceReady } = useDeviceDetection();
+    const { profile: authProfile } = useAuth();
+    const activeProfile = authProfile ?? profile;
 
-    const initialFilters = useMemo(() => {
-        const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
+    const discoverDefaultSort = useMemo(() => getDiscoverDefaultSort(activeProfile), [activeProfile]);
+    const initialFilters = useMemo(
+        () => ({
+            sortBy: discoverDefaultSort.sortBy,
+            sortDirection: discoverDefaultSort.sortDirection,
+        }),
+        [discoverDefaultSort]
+    );
 
-        try {
-            // Safely extract career profile using the shared utility
-            // This handles the correct path: profile.preferences.careerProfile
-            // Note: We deliberately do NOT set the budget filter here anymore.
-            // Users should start with "All Budgets" and apply filters manually if desired.
-            // This prevents the "No events found for budget tier" message on initial load.
-        } catch {
-            // no-op
-        }
-
-        // Set default sort to career-impact for users with profiles (not empty)
-        // This ensures best recommendations appear first in discovery view
-        if (profile && !isProfileEmpty(profile)) {
-            filters.sortBy = 'career-impact';
-            filters.sortDirection = 'desc'; // Highest scores first
-        }
-
-        return filters;
-    }, [profile]);
-
-    const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover', initialQueryData });
+    const eventData = useUnifiedServerFiltering(activeProfile, initialFilters, { surface: 'discover', initialQueryData });
     const { showInfo } = useSnackbar();
 
     // Calendar state for CalendarProvider
@@ -121,10 +111,33 @@ export default function DiscoverClientView({
     const currentDate = new Date();
     const hasRestoredResumeRef = useRef(false);
     const filtersRef = useRef(eventData.filters);
+    const previousDefaultSortRef = useRef(discoverDefaultSort);
 
     useEffect(() => {
         filtersRef.current = eventData.filters;
     }, [eventData.filters]);
+
+    useEffect(() => {
+        const previousDefaultSort = previousDefaultSortRef.current;
+        const currentSortMatchesPreviousDefault =
+            eventData.filters.sortBy === previousDefaultSort.sortBy &&
+            eventData.filters.sortDirection === previousDefaultSort.sortDirection;
+        const defaultSortChanged =
+            discoverDefaultSort.sortBy !== previousDefaultSort.sortBy ||
+            discoverDefaultSort.sortDirection !== previousDefaultSort.sortDirection;
+
+        if (currentSortMatchesPreviousDefault && defaultSortChanged) {
+            eventData.updateFilter('sortBy', discoverDefaultSort.sortBy);
+            eventData.updateFilter('sortDirection', discoverDefaultSort.sortDirection);
+        }
+
+        previousDefaultSortRef.current = discoverDefaultSort;
+    }, [
+        discoverDefaultSort,
+        eventData.filters.sortBy,
+        eventData.filters.sortDirection,
+        eventData.updateFilter,
+    ]);
 
     const persistResumeState = useCallback((scrollY?: number) => {
         if (typeof window === 'undefined') {
@@ -276,7 +289,7 @@ export default function DiscoverClientView({
     useEffect(() => {
         try {
             const hintEnabled = process.env.NEXT_PUBLIC_SHOW_BUDGET_HINT === 'true';
-            const careerProfile = extractCareerProfile(profile);
+            const careerProfile = extractCareerProfile(activeProfile);
             const hasBudgetPreference = Boolean(careerProfile?.budget);
             const alreadyShown = typeof window !== 'undefined' && sessionStorage.getItem('usd-budget-hint-shown') === '1';
 
@@ -287,7 +300,7 @@ export default function DiscoverClientView({
         } catch {
             // no-op
         }
-    }, [profile, showInfo]);
+    }, [activeProfile, showInfo]);
 
     // Loading skeleton for initial page load only
     const loadingSkeleton = <EventsLoadingSkeleton />;
@@ -297,7 +310,7 @@ export default function DiscoverClientView({
         <MobileDiscoveryViewDynamic
             events={eventData.filteredEvents}
             categories={initialCategories}
-            profile={profile}
+            profile={activeProfile}
             onEventSelect={handleEventSelect}
             filters={eventData.filters}
             onUpdateFilter={handleUpdateFilter}
@@ -314,7 +327,7 @@ export default function DiscoverClientView({
         <DesktopDiscoveryView
             events={eventData.filteredEvents}
             categories={initialCategories}
-            profile={profile}
+            profile={activeProfile}
             trackedEvents={eventData.filteredEvents.filter(e => e.isTracked)}
             onEventSelect={handleEventSelect}
             filters={eventData.filters}
@@ -336,7 +349,7 @@ export default function DiscoverClientView({
             currentDate={currentDate}
             events={eventData.filteredEvents}
             categories={initialCategories}
-            profile={profile}
+            profile={activeProfile}
             onDateSelect={handleDateSelect}
             onEventSelect={handleEventSelectForContext}
             onCloseEventDetail={handleCloseEventDetail}

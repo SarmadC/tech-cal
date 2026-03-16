@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { IdentificationCard, CaretRight } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
+import { filteredEventKeys } from '@/lib/queryKeys';
 
 // --- Shared Components (Refined Linear Style) ---
 
@@ -179,7 +180,7 @@ export default function CareerProfileManager({
     onProfileUpdate
 }: CareerProfileManagerProps) {
     // ... (Hooks and state remain the same)
-    const { user } = useAuth();
+    const { user, refreshProfile: refreshAuthProfile } = useAuth();
     const isMobile = useIsMobile();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -249,9 +250,10 @@ export default function CareerProfileManager({
             if (onProfileUpdate && currentCareerProfile) {
                 onProfileUpdate(currentCareerProfile);
             }
+            await refreshAuthProfile();
             await queryClient.invalidateQueries({ queryKey: ['profile'] });
             await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-            await queryClient.invalidateQueries({ queryKey: ['filtered-events'] });
+            await queryClient.invalidateQueries({ queryKey: filteredEventKeys.all });
             window.dispatchEvent(new CustomEvent('profile-updated'));
         } catch (error) {
             console.error('Career profile update error:', error);

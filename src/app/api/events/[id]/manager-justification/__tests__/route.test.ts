@@ -73,8 +73,8 @@ vi.mock('@/services/careerProfileService', () => ({
   },
 }));
 
-vi.mock('@/services/recommendations/canonicalRankingService', () => ({
-  rankEventsWithCanonicalPipeline: (...args: unknown[]) => mockRankEvents(...args),
+vi.mock('@/services/recommendations/recommendationPipeline', () => ({
+  rankEventsWithRecommendationPipeline: (...args: unknown[]) => mockRankEvents(...args),
 }));
 
 vi.mock('@/utils/transformers', () => ({

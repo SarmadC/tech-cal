@@ -18,9 +18,14 @@ import { calculateBaseScore, getAlignmentCategory } from '@/lib/recommendation/b
 import { EnhancedScoringService } from './enhancedScoringService';
 import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
 import { LocationScoringService, UserLocation } from './locationScoringService';
+import { TagBasedMatchingService } from './tagBasedMatchingService';
+import {
+  buildCareerProfileFingerprint,
+  buildEventFingerprint,
+  buildLocationFingerprint,
+} from '@/services/recommendations/recommendationFingerprint';
 import * as Sentry from '@sentry/nextjs';
 import { envConfig } from '@/utils/envConfig';
-import { createHash } from 'crypto';
 
 // Safe KV client - only initialize if KV is configured
 // @vercel/kv throws an error if env vars are missing, so we need to catch during import
@@ -89,7 +94,9 @@ interface ScoringTelemetry {
  * Cache configuration
  */
 const CACHE_TTL_SECONDS = 3600; // 1 hour
-const CACHE_PREFIX = 'career-impact:v2';
+const ALIGNMENT_CORE_VERSION = 'alignment-core-v2';
+const ALIGNMENT_CORE_COLDSTART_VERSION = `${ALIGNMENT_CORE_VERSION}-coldstart`;
+const CACHE_PREFIX = 'career-impact:v3';
 const LOCATION_NEUTRAL_SCORE = 0.8;
 
 interface CacheScope {
@@ -99,51 +106,7 @@ interface CacheScope {
 }
 
 function getStrategyFingerprint(strategy: ScoringStrategy): string {
-  return strategy === 'legacy' ? 'legacy' : 'alignment-core-v1';
-}
-
-function getProfileFingerprint(careerProfile: CareerProfile | null): string {
-  if (!careerProfile) return 'cold-start';
-
-  const payload = JSON.stringify({
-    role: careerProfile.currentRole || '',
-    seniority: careerProfile.seniority || '',
-    industry: careerProfile.industry || '',
-    primarySkills: (careerProfile.primarySkills || []).slice(0, 8),
-    skillsToLearn: (careerProfile.skillsToLearn || []).slice(0, 8),
-    interests: (careerProfile.interests || []).slice(0, 8),
-    goals: (careerProfile.careerGoals || []).slice(0, 6),
-    learningStyle: (careerProfile.learningStyle || []).slice(0, 6),
-    networkingGoals: (careerProfile.networkingGoals || []).slice(0, 6),
-    preferredEventTypes: (careerProfile.preferredEventTypes || []).slice(0, 6),
-  });
-
-  return createHash('sha1').update(payload).digest('hex').slice(0, 16);
-}
-
-function getLocationFingerprint(userLocation?: UserLocation | null): string {
-  if (!userLocation) return 'none';
-
-  const normalize = (value?: string) => value?.trim().toLowerCase() || '';
-  const payload = JSON.stringify({
-    city: normalize(userLocation.city),
-    country: normalize(userLocation.country),
-    timezone: normalize(userLocation.timezone),
-  });
-
-  return createHash('sha1').update(payload).digest('hex').slice(0, 12);
-}
-
-function getEventFingerprint(event: Event): string {
-  const payload = JSON.stringify({
-    id: event.id,
-    title: event.title,
-    startTime: event.startTime,
-    endTime: event.endTime,
-    eventTypeId: event.eventTypeId,
-  });
-
-  return createHash('sha1').update(payload).digest('hex').slice(0, 12);
+  return strategy === 'legacy' ? 'legacy' : ALIGNMENT_CORE_VERSION;
 }
 
 /**
@@ -190,11 +153,11 @@ export async function enrichEventsWithCareerImpact(
   const rerank = getRerankStrategy();
   const isColdStart = !careerProfile;
   const allowRerank = options.allowRerank ?? false;
-  const profileFingerprint = getProfileFingerprint(careerProfile);
+  const profileFingerprint = buildCareerProfileFingerprint(careerProfile);
   const cacheScope: CacheScope = {
     strategyFingerprint: getStrategyFingerprint(strategy),
     profileFingerprint,
-    locationFingerprint: getLocationFingerprint(userLocation),
+    locationFingerprint: buildLocationFingerprint(userLocation),
   };
   
   // Track cache stats
@@ -285,6 +248,9 @@ export async function enrichEventsWithCareerImpact(
             confidenceFactors: Array.isArray(currentExplanation['confidenceFactors'])
               ? (currentExplanation['confidenceFactors'] as string[])
               : [],
+            matchedTags: Array.isArray(currentExplanation['matchedTags'])
+              ? (currentExplanation['matchedTags'] as string[])
+              : [],
             ...(Array.isArray(currentExplanation['alignmentReasons'])
               ? { alignmentReasons: currentExplanation['alignmentReasons'] }
               : {}),
@@ -295,7 +261,7 @@ export async function enrichEventsWithCareerImpact(
           metadata: {
             ...(scoredEvent.careerImpact.metadata ?? {}),
             careerProfileHash: profileFingerprint,
-            eventDataHash: getEventFingerprint(scoredEvent)
+            eventDataHash: buildEventFingerprint(scoredEvent)
           }
         },
       };
@@ -304,31 +270,51 @@ export async function enrichEventsWithCareerImpact(
     const scoreWithAlignmentCore = (event: Event): EventWithCareerImpact => {
       try {
         const alignment = calculateBaseScore(event, careerProfile);
+        const tagMatch = careerProfile
+          ? TagBasedMatchingService.calculateTagSimilarity(event, careerProfile)
+          : null;
+        const tagAffinityScore = tagMatch?.score ?? 0;
+        const tagAffinityContribution = Math.min(20, Math.round(tagAffinityScore * 0.2));
+        const matchedTags = tagMatch?.matchedTags ?? [];
+        const overallScore = Math.min(100, alignment.overall + tagAffinityContribution);
+        const skillContribution = Math.round(tagAffinityContribution * 0.7);
+        const industryContribution = tagAffinityContribution - skillContribution;
+        const reasons = alignment.alignmentReasons.map(r => r.reason);
+
+        if (matchedTags.length > 0) {
+          reasons.push(`Matched tags: ${matchedTags.slice(0, 3).join(', ')}`);
+        }
 
         const baseScoredEvent: EventWithCareerImpact = {
           ...event,
           careerImpact: {
-            overall: alignment.overall,
+            overall: overallScore,
             confidence: isColdStart ? 0.6 : 1.0,
             components: {
               ...alignment.components,
+              skillRelevance: alignment.components.skillRelevance + skillContribution,
+              industryRelevance: alignment.components.industryRelevance + industryContribution,
             },
             explanation: {
-              reasons: alignment.alignmentReasons.map(r => r.reason),
+              reasons,
               alignmentReasons: alignment.alignmentReasons,
               matchedSkills: alignment.matchedSkills,
               matchedGoals: alignment.matchedGoals,
+              matchedTags,
               speakerHighlights: [],
-              careerImpactCategory: getAlignmentCategory(alignment.overall),
+              careerImpactCategory: getAlignmentCategory(overallScore),
               confidenceFactors: isColdStart
                 ? ['Cold start scoring - complete your profile for better recommendations']
-                : ['Alignment core v1.0'],
+                : ['Alignment core v2.0'],
             },
             metadata: {
-              algorithmVersion: isColdStart ? 'alignment-core-v1-coldstart' : 'alignment-core-v1',
+              algorithmVersion: isColdStart ? ALIGNMENT_CORE_COLDSTART_VERSION : ALIGNMENT_CORE_VERSION,
               calculatedAt: new Date().toISOString(),
               careerProfileHash: profileFingerprint,
-              eventDataHash: getEventFingerprint(event)
+              eventDataHash: buildEventFingerprint(event),
+              tagAffinityScore,
+              tagAffinityContribution,
+              ...(tagAffinityContribution > 0 ? { scoringTriggers: ['tag-affinity'] } : {}),
             }
           },
           isCareerScored: true
@@ -362,7 +348,7 @@ export async function enrichEventsWithCareerImpact(
               algorithmVersion: 'error',
               calculatedAt: new Date().toISOString(),
               careerProfileHash: profileFingerprint,
-              eventDataHash: getEventFingerprint(event)
+              eventDataHash: buildEventFingerprint(event)
             }
           },
           isCareerScored: false
@@ -429,7 +415,7 @@ export async function enrichEventsWithCareerImpact(
                   algorithmVersion: event.careerImpact?.metadata?.algorithmVersion || 'legacy-v2.0.0',
                   calculatedAt: new Date().toISOString(),
                   careerProfileHash: profileFingerprint,
-                  eventDataHash: getEventFingerprint(event)
+                  eventDataHash: buildEventFingerprint(event)
                 }
               },
               isCareerScored: true

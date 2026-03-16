@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@/utils/test-utils';
+import { act, renderHook, waitFor } from '@/utils/test-utils';
 import { useUnifiedServerFiltering } from '../useUnifiedServerFiltering';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
+import { AuthContext, type AuthContextType } from '@/contexts/AuthContext';
 
 // Mock dependencies
 vi.mock('../useTrackedEventsUnified', () => ({
@@ -39,7 +40,22 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <AuthContext.Provider value={{
+        user: { id: 'user-1' } as AuthContextType['user'],
+        session: null,
+        profile: null,
+        loading: false,
+        initialized: true,
+        signIn: vi.fn(),
+        signUp: vi.fn(),
+        signInWithOAuth: vi.fn(),
+        signOut: vi.fn(),
+        resetPassword: vi.fn(),
+        updateProfile: vi.fn(),
+        refreshProfile: vi.fn(),
+      }}>
+        {children}
+      </AuthContext.Provider>
     </QueryClientProvider>
   );
 
@@ -68,12 +84,16 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
     vi.useFakeTimers();
 
     // Trigger a filter change (which should trigger rate limiting)
-    result.current.updateFilter('searchTerm', 'test');
+    act(() => {
+      result.current.updateFilter('searchTerm', 'test');
+    });
     
     // Wait a bit for the request to start, then trigger another change quickly
     // to trigger rate limiting (requests within RATE_LIMIT_INTERVAL_MS)
     vi.advanceTimersByTime(50);
-    result.current.updateFilter('searchTerm', 'test2');
+    act(() => {
+      result.current.updateFilter('searchTerm', 'test2');
+    });
 
     // Advance timers slightly (less than RATE_LIMIT_INTERVAL_MS)
     vi.advanceTimersByTime(100);
@@ -112,7 +132,9 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
     vi.useFakeTimers();
 
     // Trigger filter change
-    result.current.updateFilter('searchTerm', 'test');
+    act(() => {
+      result.current.updateFilter('searchTerm', 'test');
+    });
 
     // Advance timers past RATE_LIMIT_INTERVAL_MS
     vi.advanceTimersByTime(FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS + 100);
@@ -150,7 +172,9 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
     vi.useFakeTimers();
 
     // Set rateLimitWaitMs by triggering a filter change
-    result.current.updateFilter('searchTerm', 'test');
+    act(() => {
+      result.current.updateFilter('searchTerm', 'test');
+    });
 
     // Unmount the hook
     unmount();

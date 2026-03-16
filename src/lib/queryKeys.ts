@@ -123,6 +123,36 @@ export const discoveryKeys = {
 } as const;
 
 /**
+ * Filtered event query keys
+ * Used by Discover, Calendar, and list surfaces backed by /api/events/filtered.
+ */
+export const filteredEventKeys = {
+  all: ['filtered-events'] as const,
+  paged: (
+    personalizationKey: string,
+    filterSignature: string,
+    surface: string,
+    fastSearch: boolean
+  ) => [
+    ...filteredEventKeys.all,
+    'v4',
+    'paged',
+    { personalizationKey, signature: filterSignature, surface, fastSearch },
+  ] as const,
+  infinite: (
+    personalizationKey: string,
+    filterSignature: string,
+    surface: string,
+    fastSearch: boolean
+  ) => [
+    ...filteredEventKeys.all,
+    'v4',
+    'infinite',
+    { personalizationKey, signature: filterSignature, surface, fastSearch },
+  ] as const,
+} as const;
+
+/**
  * Type helper to extract query key type
  * Usage: QueryKey<typeof careerImpactKeys.score>
  */

@@ -208,6 +208,117 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     expect(data.success).toBe(true);
     expect(mockEnrichEventsWithCareerImpact).not.toHaveBeenCalled();
     expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['at-threshold', 'above-threshold']);
+    expect(data.data.pagination.total).toBe(2);
+    const [filters] = mockGetEventsWithColdStartHandling.mock.calls[0];
+    expect(filters.recommended).toBeUndefined();
+  });
+
+  it('paginates recommended results after thresholding instead of before', async () => {
+    const baseEvents = [
+      {
+        id: 'low-1',
+        title: 'Low 1',
+        startTime: '2026-01-01T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED - 5 }
+      },
+      {
+        id: 'high-1',
+        title: 'High 1',
+        startTime: '2026-01-02T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED + 3 }
+      },
+      {
+        id: 'low-2',
+        title: 'Low 2',
+        startTime: '2026-01-03T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED - 2 }
+      },
+      {
+        id: 'high-2',
+        title: 'High 2',
+        startTime: '2026-01-04T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED + 6 }
+      },
+      {
+        id: 'high-3',
+        title: 'High 3',
+        startTime: '2026-01-05T10:00:00Z',
+        description: '',
+        careerImpact: { overall: RECOMMENDATION_THRESHOLDS.RECOMMENDED + 9 }
+      }
+    ] as unknown[];
+
+    mockGetEventsWithColdStartHandling.mockResolvedValueOnce({
+      events: baseEvents,
+      totalCount: baseEvents.length,
+      isColdStart: false
+    });
+
+    const req = buildRequest({ recommended: true, page: 1, pageSize: 2 });
+    const res = await POST(req as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const data = await res.json();
+
+    expect(res.ok).toBe(true);
+    expect(data.success).toBe(true);
+    expect(data.data.events.map((e: { id: string }) => e.id)).toEqual(['high-1', 'high-2']);
+    expect(data.data.pagination.total).toBe(3);
+    expect(data.data.pagination.hasMore).toBe(true);
+  });
+
+  it('changes the filtered-route cache key when the career profile fingerprint changes', async () => {
+    mockGetEventsWithColdStartHandling.mockResolvedValue({ events: [], totalCount: 0, isColdStart: false });
+    mockEnrichEventsWithCareerImpact.mockResolvedValue([]);
+    mockGetCareerProfile
+      .mockResolvedValueOnce({
+        currentRole: 'Designer',
+        primarySkills: ['Figma'],
+        skillsToLearn: [],
+        interests: [],
+        careerGoals: [],
+        learningStyle: [],
+        networkingGoals: [],
+        preferredEventTypes: [],
+      })
+      .mockResolvedValueOnce({
+        currentRole: 'Designer',
+        primarySkills: ['Framer'],
+        skillsToLearn: [],
+        interests: [],
+        careerGoals: [],
+        learningStyle: [],
+        networkingGoals: [],
+        preferredEventTypes: [],
+      });
+
+    const firstResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const secondResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    expect(firstResponse.headers.get('X-Cache-Key')).not.toBe(secondResponse.headers.get('X-Cache-Key'));
+  });
+
+  it('changes the filtered-route cache key when fastSearch changes', async () => {
+    mockGetEventsWithColdStartHandling.mockResolvedValue({ events: [], totalCount: 0, isColdStart: false });
+    mockEnrichEventsWithCareerImpact.mockResolvedValue([]);
+
+    const fastSearchResponse = await POST(buildRequest({
+      searchTerm: 'figma',
+      fastSearch: true,
+      page: 1,
+      pageSize: 10
+    }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    const standardResponse = await POST(buildRequest({
+      searchTerm: 'figma',
+      fastSearch: false,
+      page: 1,
+      pageSize: 10
+    }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    expect(fastSearchResponse.headers.get('X-Cache-Key')).not.toBe(standardResponse.headers.get('X-Cache-Key'));
   });
 
   it('keeps advanced reranked order for descending career-impact sort', async () => {

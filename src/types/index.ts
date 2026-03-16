@@ -16,6 +16,7 @@ export * from './eventImport';
 export * from './componentProps';
 export * from './telemetry';
 export * from './enrichment';
+export * from './filteredEvents';
 
 // ============================================
 // NON-EVENT-RELATED TYPES

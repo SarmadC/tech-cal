@@ -2,55 +2,71 @@
 import { createClient } from '@/utils/supabase/server';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
-import { EventService } from '@/services/eventServices';
+import { CareerProfileService } from '@/services/careerProfileService';
 import DiscoverClientView from '../../discover/DiscoverClientView';
-import type { FilteredEventsData } from '@/hooks/useUnifiedServerFiltering';
-import type { Event } from '@/types';
+import type { FilteredEventsData } from '@/types';
+import {
+    buildUserLocationFromProfileContext,
+    loadFilteredEventsData,
+    normalizeFilteredEventsRequest,
+} from '@/services/filteredEventsService';
+import { getDiscoverDefaultSort } from '@/utils/discoverDefaults';
 
 export default async function DiscoverPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     try {
-        // Fetch categories and profile in parallel
-        const [categories, profile] = await Promise.all([
+        const [categories, profile, profileContext, careerProfile] = await Promise.all([
             EventTypeService.getEventTypes(supabase),
             user?.id
                 ? ProfileService.getProfile(user.id, supabase).catch(() => null)
                 : Promise.resolve(null),
+            user?.id
+                ? (async () => {
+                    try {
+                        const { data } = await supabase
+                            .from('profiles')
+                            .select('preferences, timezone, location')
+                            .eq('id', user.id)
+                            .single();
+                        return data;
+                    } catch {
+                        return null;
+                    }
+                })()
+                : Promise.resolve(null),
+            user?.id
+                ? CareerProfileService.getCareerProfile(user.id, supabase).catch(() => null)
+                : Promise.resolve(null),
         ]);
 
-        // Pre-fetch first page of events server-side to eliminate the initial client-side
-        // round-trip and dramatically improve LCP. Uses stale-while-revalidate on the client.
+        const discoverDefaultSort = getDiscoverDefaultSort(profile);
         let initialQueryData: { success: true; data: FilteredEventsData } | undefined;
-        try {
-            const now = new Date();
-            const events = await EventService.getEventsWithMultiDay(
-                { startDate: now, status: ['approved'] },
-                supabase,
-                1,
-                50
-            );
-            initialQueryData = {
-                success: true,
-                data: {
-                    events: events as Event[],
-                    pagination: {
-                        page: 1,
-                        pageSize: 50,
-                        total: events.length,
-                        hasMore: events.length === 50,
-                    },
-                    stats: {
-                        processingTimeMs: 0,
-                        filteredCount: events.length,
-                        totalCount: events.length,
-                    },
-                    isColdStart: false,
-                },
-            };
-        } catch {
-            // Non-fatal: client will fetch on its own
+
+        if (user?.id) {
+            try {
+                const normalizedRequest = normalizeFilteredEventsRequest({
+                    ...discoverDefaultSort,
+                    page: 1,
+                    pageSize: 50,
+                    surface: 'discover',
+                });
+
+                const data = await loadFilteredEventsData({
+                    request: normalizedRequest,
+                    supabase,
+                    userId: user.id,
+                    careerProfile,
+                    userLocation: buildUserLocationFromProfileContext(profileContext),
+                    requestId: 'discover-ssr',
+                    skipColdStart: false,
+                });
+
+                initialQueryData = { success: true, data };
+            } catch {
+                // Non-fatal: client will fetch on its own
+            }
         }
 
         return (

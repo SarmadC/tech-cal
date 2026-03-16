@@ -186,4 +186,79 @@ describe('careerImpactEnrichmentService', () => {
       }
     );
   });
+
+  it('folds tag affinity into the canonical career impact score for design events', async () => {
+    const designProfile: CareerProfile = {
+      userId: 'u-design',
+      profileId: 'p-design',
+      lastUpdated: new Date().toISOString(),
+      currentRole: 'UX Designer',
+      seniority: 'junior',
+      industry: 'technology',
+      companySize: 'medium',
+      primarySkills: ['Figma', 'Prototyping', 'Wireframing'],
+      skillsToLearn: ['Framer', 'Information Architecture'],
+      interests: ['UI/UX Design'],
+      careerGoals: ['skill-development', 'networking'],
+      timeframe: 'short-term',
+      learningStyle: ['hands-on', 'networking'],
+      availableTime: 'moderate',
+      budget: 'moderate',
+      networkingGoals: ['find-peers', 'find-mentors'],
+      preferredEventTypes: ['conference', 'meetup']
+    };
+
+    const figmaEvent: Event = {
+      ...event,
+      id: 'config-2026',
+      title: 'Figma Config 2026',
+      description: 'Annual Figma conference for designers and builders.',
+      organizer: 'Figma',
+      organization: {
+        id: 'org-figma',
+        name: 'Figma',
+      },
+      eventTypeId: 'conference',
+      category: {
+        id: 'conference',
+        name: 'Conference',
+        color: '#000000',
+        description: null
+      },
+      tags: [
+        { id: 'tag-1', name: 'Figma', color: '#000000', category: 'Tools' },
+        { id: 'tag-2', name: 'Wireframing', color: '#000000', category: 'Design' },
+        { id: 'tag-3', name: 'UI/UX Design', color: '#000000', category: 'Design' },
+      ],
+      agenda: [
+        {
+          id: 'agenda-1',
+          title: 'Hands-on prototyping workshop',
+          startTime: new Date(Date.now() + 86400000).toISOString(),
+          endTime: new Date(Date.now() + 90000000).toISOString(),
+          type: 'workshop',
+          description: 'Build better design systems and network with peers.'
+        }
+      ]
+    };
+
+    await withEnv(
+      {
+        DISCOVERY_SCORING: 'server',
+        DISCOVERY_RERANK: 'off',
+      },
+      async () => {
+        const enriched = await enrichEventsWithCareerImpact(
+          [figmaEvent],
+          designProfile,
+          {} as SupabaseClientType
+        );
+
+        expect(enriched[0].careerImpact?.overall).toBeGreaterThanOrEqual(50);
+        expect(enriched[0].careerImpact?.metadata?.algorithmVersion).toBe('alignment-core-v2');
+        expect(enriched[0].careerImpact?.metadata?.tagAffinityContribution).toBeGreaterThan(0);
+        expect(enriched[0].careerImpact?.explanation?.matchedTags).toContain('Figma');
+      }
+    );
+  });
 });

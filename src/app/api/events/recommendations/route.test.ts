@@ -56,8 +56,17 @@ const mockSupabase = {
         }))
       };
     }
+    if (table === 'circle_members') {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ data: [], error: null })
+        }))
+      };
+    }
     return {
-      select: vi.fn()
+      select: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: [], error: null })
+      }))
     };
   })
 };
@@ -276,7 +285,7 @@ describe('GET /api/events/recommendations telemetry behavior', () => {
     expect(telemetryPayload.metadata.divergences).toBe(1);
   });
 
-  it('does not run enrichment/divergence in tag-search mode and keeps divergence fields null', async () => {
+  it('uses canonical ranking for tag-search mode while keeping divergence fields null', async () => {
     mockSearchEventsByTags.mockResolvedValueOnce([buildEvent('tag-search-event', 1)]);
 
     await withEnv(
@@ -291,11 +300,55 @@ describe('GET /api/events/recommendations telemetry behavior', () => {
     );
 
     expect(mockGetRecommendedEventsByTags).not.toHaveBeenCalled();
-    expect(mockEnrichEventsWithCareerImpact).not.toHaveBeenCalled();
+    expect(mockEnrichEventsWithCareerImpact).toHaveBeenCalledTimes(1);
     expect(mockLogTelemetryEvent).toHaveBeenCalledTimes(1);
 
     const telemetryPayload = mockLogTelemetryEvent.mock.calls[0][1];
     expect(telemetryPayload.metadata.tau).toBeNull();
     expect(telemetryPayload.metadata.divergences).toBeNull();
+  });
+
+  it('orders personalized recommendations by canonical career impact score', async () => {
+    mockGetRecommendedEventsByTags.mockResolvedValueOnce(baseEvents);
+    mockEnrichEventsWithCareerImpact.mockImplementationOnce(async (events: Event[]) =>
+      events.map((event) => {
+        const scoreMap: Record<string, number> = {
+          'event-1': 70,
+          'event-2': 95,
+          'event-3': 60,
+        };
+
+        return {
+          ...event,
+          isCareerScored: true,
+          careerImpact: {
+            overall: scoreMap[event.id] ?? 0,
+            confidence: 0.9,
+            components: {},
+            explanation: { reasons: ['alignment'] },
+            metadata: { algorithmVersion: 'alignment-core-v2' }
+          }
+        };
+      })
+    );
+
+    await withEnv(
+      {
+        DISCOVERY_RERANK: 'off',
+      },
+      async () => {
+        const response = await GET(new Request('http://localhost/api/events/recommendations?limit=3') as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+        expect(response.status).toBe(200);
+
+        const payload = await response.json();
+        expect(payload.data.events.map((event: { id: string }) => event.id)).toEqual([
+          'event-2',
+          'event-1',
+          'event-3',
+        ]);
+      }
+    );
+
+    expect(mockEnrichEventsWithCareerImpact).toHaveBeenCalledTimes(1);
   });
 });

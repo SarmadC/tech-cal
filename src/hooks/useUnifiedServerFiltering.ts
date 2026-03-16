@@ -4,10 +4,13 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
+import { Event, AppProfile, TrackedEvent, enrichWithTracking, FilteredEventsData } from '@/types';
 import { useTrackedEventIds } from './useTrackedEventsUnified';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
 import { FilterCounts } from '@/utils/filterCountUtils';
+import { useAuth } from '@/contexts';
+import { filteredEventKeys } from '@/lib/queryKeys';
+import { extractCareerProfile } from '@/utils/profileTypeGuards';
 
 export interface UnifiedFilterOptions {
   // Basic filters
@@ -40,23 +43,6 @@ export interface UnifiedFilterOptions {
   pageSize: number;
 }
 
-export interface FilteredEventsData {
-  events: Event[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    hasMore: boolean;
-  };
-  stats: {
-    processingTimeMs: number;
-    filteredCount: number;
-    totalCount: number;
-  };
-  isColdStart?: boolean;
-  counts?: FilterCounts;
-}
-
 type FilterSurface = 'calendar' | 'discover' | 'default';
 
 interface UnifiedFilteringOptions {
@@ -67,6 +53,30 @@ interface UnifiedFilteringOptions {
 }
 
 export type UpdateFilterHandler = <K extends keyof UnifiedFilterOptions>(key: K, value: UnifiedFilterOptions[K]) => void;
+
+export function buildPersonalizationKey(userId: string | null | undefined, profile: AppProfile | null): string {
+  const careerProfile = extractCareerProfile(profile);
+  const stableArrays = {
+    primarySkills: [...(careerProfile?.primarySkills || [])].toSorted().slice(0, 8),
+    skillsToLearn: [...(careerProfile?.skillsToLearn || [])].toSorted().slice(0, 8),
+    interests: [...(careerProfile?.interests || [])].toSorted().slice(0, 8),
+    careerGoals: [...(careerProfile?.careerGoals || [])].toSorted().slice(0, 6),
+    learningStyle: [...(careerProfile?.learningStyle || [])].toSorted().slice(0, 6),
+    networkingGoals: [...(careerProfile?.networkingGoals || [])].toSorted().slice(0, 6),
+    preferredEventTypes: [...(careerProfile?.preferredEventTypes || [])].toSorted().slice(0, 6),
+  };
+
+  const effectiveUserId = userId ?? profile?.id ?? 'anon';
+
+  return JSON.stringify({
+    userId: effectiveUserId,
+    updatedAt: profile?.updatedAt || '',
+    role: careerProfile?.currentRole || '',
+    seniority: careerProfile?.seniority || '',
+    industry: careerProfile?.industry || '',
+    ...stableArrays,
+  });
+}
 
 interface UseUnifiedServerFilteringResult {
   // Data
@@ -144,10 +154,11 @@ export const createDefaultUnifiedFilters = (
  * Handles all filtering logic on the server with pagination
  */
 export function useUnifiedServerFiltering(
-  _userProfile: AppProfile | null,
+  userProfile: AppProfile | null,
   initialFilters: Partial<UnifiedFilterOptions> = {},
   options: UnifiedFilteringOptions = {}
 ): UseUnifiedServerFilteringResult {
+  const { user } = useAuth();
   const surface: FilterSurface = options.surface ?? 'discover';
   const autoLoadAllPages = options.autoLoadAllPages ?? false;
   const isPagedMode = !autoLoadAllPages;
@@ -220,6 +231,7 @@ export function useUnifiedServerFiltering(
   );
 
   // Final filters for API call
+  const fastSearch = isTyping && Boolean(filters.searchTerm);
   const fetchFilters = useMemo(() => ({
     ...stableFilters,
     tags: filters.tags, // Explicitly include tags to ensure they are passed correctly
@@ -228,33 +240,23 @@ export function useUnifiedServerFiltering(
     sessionId: sessionIdRef.current ?? 'filters_fallback',
     surface,
     // Fast search mode: skip enrichment when user is actively typing
-    fastSearch: isTyping && Boolean(filters.searchTerm),
-  }), [stableFilters, filters.tags, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]);
+    fastSearch,
+  }), [stableFilters, filters.tags, filters.page, filters.pageSize, surface, fastSearch]);
 
   // React Query: paged query for filtered events
   // In development, use shorter staleTime to see changes immediately
   const isDevelopment = process.env.NODE_ENV === 'development';
-
-  // Query key factory for deterministic, consistent cache keys
-  // Ensures arrays are sorted and properties are in consistent order
-  const queryKeyVersion = 'v3'; // Bumped for query key factory changes
-  const createFilterQueryKey = useCallback(
-    (mode: 'paged' | 'infinite') => {
-      // Create a deterministic key by sorting arrays and using consistent property order
-      // Use the debounced signature for the main content to ensure consistency
-      const stableKey = {
-        // The signature already captures the debounced filter state
-        signature: debouncedSignature,
-        // These are not part of the signature but affect the query
-        page: filters.page,
-        pageSize: filters.pageSize,
-        surface,
-        fastSearch: isTyping && Boolean(filters.searchTerm),
-      };
-      return ['filtered-events', queryKeyVersion, mode, stableKey] as const;
-    },
-    [debouncedSignature, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]
+  const personalizationKey = useMemo(
+    () => buildPersonalizationKey(user?.id, userProfile),
+    [user?.id, userProfile]
   );
+  const personalizationContextKey = `${surface}:${personalizationKey}`;
+  const previousPersonalizationContextRef = useRef(personalizationContextKey);
+  const shouldReusePlaceholderData = previousPersonalizationContextRef.current === personalizationContextKey;
+
+  useEffect(() => {
+    previousPersonalizationContextRef.current = personalizationContextKey;
+  }, [personalizationContextKey]);
 
   const {
     data: pagedData,
@@ -264,9 +266,9 @@ export function useUnifiedServerFiltering(
     error: pagedError,
     refetch: pagedRefetch,
   } = useQuery<{ success: true; data: FilteredEventsData }>({
-    queryKey: createFilterQueryKey('paged'),
+    queryKey: filteredEventKeys.paged(personalizationKey, debouncedSignature, surface, fastSearch),
     enabled: isPagedMode,
-    placeholderData: (previousData) => previousData,
+    placeholderData: shouldReusePlaceholderData ? (previousData) => previousData : undefined,
     // Server-provided initial data shown immediately (stale at 0 → refetches in background)
     initialData: options.initialQueryData,
     initialDataUpdatedAt: options.initialQueryData ? 0 : undefined,
@@ -320,10 +322,10 @@ export function useUnifiedServerFiltering(
     fetchNextPage,
     hasNextPage,
   } = useInfiniteQuery<{ success: true; data: FilteredEventsData }>({
-    queryKey: createFilterQueryKey('infinite'),
+    queryKey: filteredEventKeys.infinite(personalizationKey, debouncedSignature, surface, fastSearch),
     enabled: autoLoadAllPages,
     initialPageParam: 1,
-    placeholderData: (previousData) => previousData,
+    placeholderData: shouldReusePlaceholderData ? (previousData) => previousData : undefined,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false,
