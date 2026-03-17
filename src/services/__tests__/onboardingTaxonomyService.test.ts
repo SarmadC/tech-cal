@@ -107,4 +107,27 @@ describe('onboardingTaxonomyService', () => {
       'Framer',
     ]);
   });
+
+  it('returns the expanded founder fallback suggestions from the bundled taxonomy', () => {
+    const taxonomy = getFallbackOnboardingTaxonomy();
+
+    expect(getCurrentSkillSuggestionsForRole(taxonomy, 'co-founder')).toEqual([
+      'Product Strategy',
+      'Customer Discovery',
+      'Go-to-Market',
+      'Fundraising',
+      'Business Operations',
+      'Strategic Planning',
+      'Partnerships',
+    ]);
+
+    expect(getLearningSkillSuggestionsForRole(taxonomy, ['Go-to-Market'], 'Founder')).toEqual([
+      'Product Strategy',
+      'Customer Discovery',
+      'Fundraising',
+      'Business Operations',
+      'Strategic Planning',
+      'Partnerships',
+    ]);
+  });
 });

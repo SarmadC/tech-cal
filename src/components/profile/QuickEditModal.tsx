@@ -23,6 +23,7 @@ import { X } from '@phosphor-icons/react';
 import { CareerProfile, LearningStyle, AvailableTime, BudgetRange, NetworkingGoal, CareerEventType } from '@/types/career';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
+import { useOnboardingTaxonomy } from '@/hooks/useOnboardingTaxonomy';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
 
 interface QuickEditModalProps {
@@ -78,7 +79,7 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
           value={formData.currentRole}
           onChange={(e) => handleFieldChange('currentRole', e.target.value)}
           className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
-          placeholder="e.g., Frontend Engineer"
+          placeholder="e.g., Frontend Engineer or Founder"
         />
       </div>
 
@@ -148,6 +149,7 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
 
 // Skills Editor
 const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
+  const { skillOptions, interestOptions } = useOnboardingTaxonomy();
   const [formData, setFormData] = useState({
     primarySkills: profile.primarySkills,
     skillsToLearn: profile.skillsToLearn,
@@ -161,6 +163,15 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
       interests: profile.interests
     });
   }, [profile]);
+
+  const skillSuggestions = useMemo(
+    () => skillOptions.map((option) => option.value),
+    [skillOptions]
+  );
+  const interestSuggestions = useMemo(
+    () => interestOptions.map((option) => option.value),
+    [interestOptions]
+  );
 
   const syncUpdates = (next: typeof formData) => {
     onUpdate({
@@ -203,9 +214,9 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
     description: string;
     children: React.ReactNode;
   }) => (
-    <div className="rounded-3xl border border-border-color bg-background-secondary/70 p-6 shadow-sm">
+    <div className="rounded-2xl border border-border-color/70 bg-background-secondary/40 p-5 shadow-sm">
       <div className="mb-4 space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">{title}</h3>
+        <h3 className="text-sm font-semibold text-foreground-secondary">{title}</h3>
         <p className="text-sm text-foreground-muted">{description}</p>
       </div>
       {children}
@@ -216,34 +227,41 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
     <div className="flex flex-col gap-6">
       <SectionCard
         title="Current Skills"
-        description="Select the skills you actively use and feel confident about."
+        description="Select the skills, disciplines, or tools you actively use and feel confident about."
       >
         <SkillsDropdown
           selectedSkills={formData.primarySkills}
           onSkillsChange={handlePrimarySkillsChange}
-          placeholder="Search skills you actively use..."
+          placeholder="Select a skill..."
+          suggestions={skillSuggestions}
+          suggestionHeaderLabel="Suggested Skills"
         />
       </SectionCard>
 
       <SectionCard
         title="Skills to Learn"
-        description="Choose skills you want to improve or explore next."
+        description="Choose the skills, disciplines, or tools you want to improve or explore next."
       >
         <SkillsDropdown
           selectedSkills={formData.skillsToLearn}
           onSkillsChange={handleSkillsToLearnChange}
-          placeholder="Search skills you want to learn..."
+          placeholder="Select a learning goal..."
+          suggestions={skillSuggestions}
+          suggestionHeaderLabel="Suggested Skills"
         />
       </SectionCard>
 
       <SectionCard
         title="Areas of Interest"
-        description="Highlight topics and technologies that inspire you."
+        description="Highlight topics, industries, and domains that inspire you."
       >
         <SkillsDropdown
           selectedSkills={formData.interests}
           onSkillsChange={handleInterestsChange}
-          placeholder="Search interests and technologies..."
+          placeholder="Select an interest..."
+          suggestions={interestSuggestions}
+          suggestionHeaderLabel="Suggested Interests"
+          entityName="interests"
         />
       </SectionCard>
     </div>

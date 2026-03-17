@@ -20,6 +20,8 @@ describe('RoleAutocomplete', () => {
     );
 
     const select = screen.getByLabelText('Role');
+    expect(screen.getByRole('option', { name: 'Founder' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Community Manager' })).toBeInTheDocument();
     await user.selectOptions(select, 'Software Engineer');
 
     expect(onChange).toHaveBeenCalledWith('Software Engineer');

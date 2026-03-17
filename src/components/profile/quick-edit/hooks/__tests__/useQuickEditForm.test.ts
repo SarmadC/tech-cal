@@ -168,4 +168,32 @@ describe('useQuickEditForm', () => {
     expect(result.current.saveError).toBe('Validation failed. Please check your inputs.');
     expect(result.current.isDirty).toBe(true);
   });
+
+  it('should save the latest draft when save is triggered immediately after a change', async () => {
+    const mockOnSave = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() =>
+      useQuickEditForm({
+        initialProfile: mockProfile,
+        section: 'networking',
+        validate: () => true,
+        onSave: mockOnSave
+      })
+    );
+
+    let saveResult;
+    await act(async () => {
+      result.current.updateDraft({
+        networkingGoals: ['find-mentors'],
+        preferredEventTypes: ['workshop']
+      });
+      saveResult = await result.current.saveDraft();
+    });
+
+    expect(saveResult).toBe(true);
+    expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
+      networkingGoals: ['find-mentors'],
+      preferredEventTypes: ['workshop']
+    }));
+  });
 });

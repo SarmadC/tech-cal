@@ -50,6 +50,18 @@ describe('roleTaxonomy', () => {
       expect(keywords).toContain('product lead');
     });
 
+    it('should resolve new founder and business role synonyms', () => {
+      expect(getRoleKeywords('Founder')).toEqual(
+        expect.arrayContaining(['startup founder', 'cofounder'])
+      );
+      expect(getRoleKeywords('Business Operations Manager')).toEqual(
+        expect.arrayContaining(['bizops', 'strategy and ops'])
+      );
+      expect(getRoleKeywords('Solutions Engineer')).toEqual(
+        expect.arrayContaining(['sales engineer', 'solution consultant'])
+      );
+    });
+
     it('should return empty array for invalid role', () => {
       const keywords = getRoleKeywords('Invalid Role');
       expect(keywords).toEqual(['Invalid Role']);
@@ -80,6 +92,14 @@ describe('roleTaxonomy', () => {
       const meta = getRoleMeta('');
       expect(meta).toBeNull();
     });
+
+    it('should map new role aliases to their canonical roles', () => {
+      expect(getRoleMeta('co-founder')?.role).toBe('Founder');
+      expect(getRoleMeta('sales engineer')?.role).toBe('Solutions Engineer');
+      expect(getRoleMeta('pmm')?.role).toBe('Product Marketing Manager');
+      expect(getRoleMeta('tpm')?.role).toBe('Technical Program Manager');
+      expect(getRoleMeta('bizops')?.role).toBe('Business Operations Manager');
+    });
   });
 
   describe('isValidRole', () => {
@@ -88,6 +108,8 @@ describe('roleTaxonomy', () => {
       expect(isValidRole('Data Scientist')).toBe(true);
       expect(isValidRole('Product Manager')).toBe(true);
       expect(isValidRole('Engineering Manager')).toBe(true);
+      expect(isValidRole('Founder')).toBe(true);
+      expect(isValidRole('Community Manager')).toBe(true);
     });
 
     it('should return false for invalid roles', () => {
@@ -113,6 +135,33 @@ describe('roleTaxonomy', () => {
       expect(roles).toContain('Data Scientist');
       expect(roles).toContain('Data Analyst');
       expect(roles).toContain('ML Engineer');
+      expect(roles).toContain('AI Engineer');
+      expect(roles).toContain('Analytics Engineer');
+    });
+
+    it('should include new cross-functional roles in the existing categories', () => {
+      expect(getRolesByCategory(ROLE_CATEGORIES.ENGINEERING)).toEqual(
+        expect.arrayContaining(['Platform Engineer', 'Solutions Engineer'])
+      );
+      expect(getRolesByCategory(ROLE_CATEGORIES.PRODUCT_DESIGN)).toEqual(
+        expect.arrayContaining([
+          'Product Designer',
+          'Technical Program Manager',
+          'Program Manager',
+          'Product Marketing Manager',
+          'Growth Marketer',
+        ])
+      );
+      expect(getRolesByCategory(ROLE_CATEGORIES.LEADERSHIP)).toEqual(
+        expect.arrayContaining([
+          'Founder',
+          'Entrepreneur / Startup Operator',
+          'Business Operations Manager',
+          'Developer Relations Manager',
+          'Community Manager',
+          'Customer Success Manager',
+        ])
+      );
     });
 
     it('should return empty array for invalid category', () => {
@@ -129,6 +178,8 @@ describe('roleTaxonomy', () => {
       expect(allRoles).toContain('Data Scientist');
       expect(allRoles).toContain('Product Manager');
       expect(allRoles).toContain('Engineering Manager');
+      expect(allRoles).toContain('Founder');
+      expect(allRoles).toContain('Product Marketing Manager');
     });
   });
 

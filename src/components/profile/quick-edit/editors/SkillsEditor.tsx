@@ -49,13 +49,13 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
             {/* Core Skills */}
             <LinearFormField
                 label="Core Skills"
-                description="Stack and tools you are proficient in (e.g. React, Python)"
+                description="Skills, disciplines, or tools you are proficient in (e.g. React, Product Strategy)"
                 className="w-full"
             >
                 <SkillsDropdown
                     selectedSkills={formData.primarySkills}
                     onSkillsChange={handlePrimarySkillsChange}
-                    placeholder="Add skills..."
+                    placeholder="Select a skill..."
                     suggestions={skillSuggestions}
                     suggestionHeaderLabel="Suggested Skills"
                 />
@@ -64,13 +64,13 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
             {/* Learning Goals */}
             <LinearFormField
                 label="Learning Goals"
-                description="Technologies or skills you are actively learning"
+                description="Skills, disciplines, or tools you are actively learning"
                 className="w-full"
             >
                 <SkillsDropdown
                     selectedSkills={formData.skillsToLearn}
                     onSkillsChange={handleSkillsToLearnChange}
-                    placeholder="Add learning goals..."
+                    placeholder="Select a learning goal..."
                     suggestions={skillSuggestions}
                     suggestionHeaderLabel="Suggested Skills"
                 />
@@ -79,13 +79,13 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
             {/* Interests */}
             <LinearFormField
                 label="Interests"
-                description="Broader topics or industries you are curious about"
+                description="Broader topics, industries, or domains you are curious about"
                 className="w-full"
             >
                 <SkillsDropdown
                     selectedSkills={formData.interests}
                     onSkillsChange={handleInterestsChange}
-                    placeholder="Add interests..."
+                    placeholder="Select an interest..."
                     suggestions={interestSuggestions}
                     suggestionHeaderLabel="Suggested Interests"
                     entityName="interests"

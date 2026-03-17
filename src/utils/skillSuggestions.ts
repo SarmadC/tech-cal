@@ -12,12 +12,275 @@ export function normalizeForComparison(skill: string): string {
 const DEFAULT_SKILLS = [
   'JavaScript',
   'Python',
-  'React',
-  'Node.js',
-  'Git',
+  'Product Strategy',
+  'Leadership',
   'SQL',
-  'Docker'
+  'Public Speaking',
+  'Business Operations'
 ];
+
+interface RoleSuggestionRule {
+  patterns: string[];
+  skills: string[];
+}
+
+const CURRENT_ROLE_SKILL_RULES: RoleSuggestionRule[] = [
+  {
+    patterns: ['founder', 'cofounder', 'co-founder', 'entrepreneur', 'startup operator'],
+    skills: [
+      'Product Strategy',
+      'Customer Discovery',
+      'Go-to-Market',
+      'Fundraising',
+      'Business Operations',
+      'Strategic Planning',
+      'Partnerships'
+    ]
+  },
+  {
+    patterns: ['product marketing manager', 'product marketing', 'pmm', 'growth marketer', 'growth marketing', 'growth lead'],
+    skills: [
+      'Go-to-Market',
+      'Pricing & Packaging',
+      'Content Strategy',
+      'Growth Marketing',
+      'Experiment Design',
+      'Competitive Analysis',
+      'Stakeholder Management'
+    ]
+  },
+  {
+    patterns: ['developer relations manager', 'devrel manager', 'community manager', 'community lead', 'customer success manager', 'customer success'],
+    skills: [
+      'Community Strategy',
+      'Program Design',
+      'Event Programming',
+      'Public Speaking',
+      'Partnerships',
+      'Customer Success',
+      'Stakeholder Management'
+    ]
+  },
+  {
+    patterns: ['technical program manager', 'technical pgm', 'program manager', 'pgm', 'business operations manager', 'bizops', 'business ops'],
+    skills: [
+      'Program Management',
+      'Roadmapping',
+      'Stakeholder Management',
+      'Executive Communication',
+      'Facilitation',
+      'Business Operations',
+      'Strategic Planning'
+    ]
+  },
+  {
+    patterns: ['ai engineer', 'applied ai engineer', 'genai engineer', 'analytics engineer', 'dbt developer'],
+    skills: [
+      'Python',
+      'SQL',
+      'TensorFlow',
+      'PyTorch',
+      'Experiment Design',
+      'Tableau',
+      'Power BI'
+    ]
+  },
+  {
+    patterns: ['platform engineer', 'developer platform engineer', 'solutions engineer', 'sales engineer', 'solution consultant'],
+    skills: [
+      'Docker',
+      'Kubernetes',
+      'AWS',
+      'Terraform',
+      'Technical Writing',
+      'Stakeholder Management',
+      'Public Speaking'
+    ]
+  },
+  {
+    patterns: ['ux designer', 'ui designer', 'ux researcher', 'product designer', 'designer', 'design', 'researcher'],
+    skills: [
+      'Figma',
+      'User Research',
+      'Wireframing',
+      'Prototyping',
+      'Design Systems',
+      'Accessibility',
+      'Usability Testing'
+    ]
+  },
+  {
+    patterns: ['frontend', 'react', 'vue', 'angular', 'ui developer'],
+    skills: [
+      'React',
+      'TypeScript',
+      'Next.js',
+      'Tailwind CSS',
+      'HTML/CSS',
+      'Vue.js',
+      'JavaScript'
+    ]
+  },
+  {
+    patterns: ['backend', 'api', 'server', 'node'],
+    skills: [
+      'Node.js',
+      'Python',
+      'PostgreSQL',
+      'REST APIs',
+      'Docker',
+      'Redis',
+      'Express.js'
+    ]
+  },
+  {
+    patterns: ['fullstack', 'full stack', 'full-stack'],
+    skills: [
+      'React',
+      'Node.js',
+      'TypeScript',
+      'PostgreSQL',
+      'Next.js',
+      'Docker',
+      'REST APIs'
+    ]
+  },
+  {
+    patterns: ['mobile', 'ios', 'android', 'flutter', 'react native'],
+    skills: [
+      'React Native',
+      'Swift',
+      'Kotlin',
+      'Flutter',
+      'Firebase',
+      'TypeScript',
+      'iOS Development'
+    ]
+  },
+  {
+    patterns: ['data scientist', 'data analyst', 'data engineer', 'ml engineer', 'machine learning', 'ai research scientist'],
+    skills: [
+      'Python',
+      'SQL',
+      'Pandas',
+      'TensorFlow',
+      'Jupyter',
+      'Scikit-learn',
+      'PyTorch'
+    ]
+  },
+  {
+    patterns: ['devops', 'sre', 'infrastructure', 'cloud'],
+    skills: [
+      'Docker',
+      'Kubernetes',
+      'AWS',
+      'Terraform',
+      'GitHub Actions',
+      'Prometheus',
+      'Grafana'
+    ]
+  },
+  {
+    patterns: ['product manager', 'product owner', 'technical product manager'],
+    skills: [
+      'Product Strategy',
+      'Roadmapping',
+      'Prioritization',
+      'User Research',
+      'Stakeholder Management',
+      'Competitive Analysis',
+      'Go-to-Market'
+    ]
+  }
+];
+
+const LEARNING_ROLE_SKILL_RULES: RoleSuggestionRule[] = [
+  {
+    patterns: ['founder', 'cofounder', 'co-founder', 'entrepreneur', 'startup operator'],
+    skills: [
+      'Product Strategy',
+      'Customer Discovery',
+      'Go-to-Market',
+      'Fundraising',
+      'Business Operations',
+      'Strategic Planning',
+      'Partnerships'
+    ]
+  },
+  {
+    patterns: ['product marketing manager', 'product marketing', 'pmm', 'growth marketer', 'growth marketing', 'growth lead'],
+    skills: [
+      'Go-to-Market',
+      'Pricing & Packaging',
+      'Content Strategy',
+      'Growth Marketing',
+      'Experiment Design',
+      'Competitive Analysis',
+      'Stakeholder Management'
+    ]
+  },
+  {
+    patterns: ['developer relations manager', 'devrel manager', 'community manager', 'community lead', 'customer success manager', 'customer success'],
+    skills: [
+      'Community Strategy',
+      'Program Design',
+      'Event Programming',
+      'Public Speaking',
+      'Partnerships',
+      'Customer Success',
+      'Stakeholder Management'
+    ]
+  },
+  {
+    patterns: ['technical program manager', 'technical pgm', 'program manager', 'pgm', 'business operations manager', 'bizops', 'business ops'],
+    skills: [
+      'Program Management',
+      'Roadmapping',
+      'Stakeholder Management',
+      'Executive Communication',
+      'Facilitation',
+      'Business Operations',
+      'Strategic Planning'
+    ]
+  },
+  {
+    patterns: ['ai engineer', 'applied ai engineer', 'genai engineer', 'analytics engineer', 'dbt developer'],
+    skills: [
+      'Python',
+      'SQL',
+      'TensorFlow',
+      'PyTorch',
+      'Experiment Design',
+      'Tableau',
+      'Power BI'
+    ]
+  },
+  {
+    patterns: ['platform engineer', 'developer platform engineer', 'solutions engineer', 'sales engineer', 'solution consultant'],
+    skills: [
+      'Docker',
+      'Kubernetes',
+      'AWS',
+      'Terraform',
+      'Technical Writing',
+      'Stakeholder Management',
+      'Public Speaking'
+    ]
+  }
+];
+
+function getRoleMatchedSkills(role: string, rules: RoleSuggestionRule[]): string[] | null {
+  const normalizedRole = normalizeForComparison(role);
+
+  for (const rule of rules) {
+    if (rule.patterns.some((pattern) => normalizedRole.includes(pattern))) {
+      return rule.skills;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Get 5-7 skills for a role with fallback to DEFAULT_SKILLS
@@ -26,101 +289,7 @@ const DEFAULT_SKILLS = [
 export function getSkillsForRole(role?: string): string[] {
   if (!role) return DEFAULT_SKILLS;
 
-  const normalized = normalizeForComparison(role);
-
-  // Keyword-based mapping
-  const roleMap: Record<string, string[]> = {
-    // UX/UI and design roles
-    'ux designer|ui designer|ux researcher|product designer|designer|design|researcher': [
-      'Figma',
-      'User Research',
-      'Wireframing',
-      'Prototyping',
-      'Design Systems',
-      'Accessibility',
-      'Usability Testing'
-    ],
-    // Frontend roles
-    'frontend|react|vue|angular|ui': [
-      'React',
-      'TypeScript',
-      'Next.js',
-      'Tailwind CSS',
-      'HTML/CSS',
-      'Vue.js',
-      'JavaScript'
-    ],
-    // Backend roles
-    'backend|api|server|node': [
-      'Node.js',
-      'Python',
-      'PostgreSQL',
-      'REST APIs',
-      'Docker',
-      'Redis',
-      'Express.js'
-    ],
-    // Full stack
-    'fullstack|full stack|full-stack': [
-      'React',
-      'Node.js',
-      'TypeScript',
-      'PostgreSQL',
-      'Next.js',
-      'Docker',
-      'REST APIs'
-    ],
-    // Mobile
-    'mobile|ios|android|flutter|react native': [
-      'React Native',
-      'Swift',
-      'Kotlin',
-      'Flutter',
-      'Firebase',
-      'TypeScript',
-      'Mobile UI'
-    ],
-    // Data/ML
-    'data|ml|machine learning|ai|scientist|analyst': [
-      'Python',
-      'SQL',
-      'Pandas',
-      'TensorFlow',
-      'Jupyter',
-      'Scikit-learn',
-      'PyTorch'
-    ],
-    // DevOps
-    'devops|sre|infrastructure|cloud|platform': [
-      'Docker',
-      'Kubernetes',
-      'AWS',
-      'Terraform',
-      'Jenkins',
-      'Linux',
-      'Prometheus'
-    ],
-    // Product/PM
-    'product|pm|manager|owner': [
-      'SQL',
-      'Analytics',
-      'Figma',
-      'JIRA',
-      'User Research',
-      'A/B Testing',
-      'Product Strategy'
-    ]
-  };
-
-  // Find first matching pattern
-  for (const [pattern, skills] of Object.entries(roleMap)) {
-    const keywords = pattern.split('|');
-    if (keywords.some((kw) => normalized.includes(kw))) {
-      return skills.slice(0, 7); // Return max 7
-    }
-  }
-
-  return DEFAULT_SKILLS; // Fallback if no match
+  return getRoleMatchedSkills(role, CURRENT_ROLE_SKILL_RULES)?.slice(0, 7) ?? DEFAULT_SKILLS;
 }
 
 /**
@@ -134,22 +303,38 @@ export function getSuggestedSkillsToLearn(
   const normalized = currentSkills.map(normalizeForComparison);
   const normalizedCurrentSet = new Set(normalized);
 
+  if (role) {
+    const roleSuggestions = getRoleMatchedSkills(role, LEARNING_ROLE_SKILL_RULES);
+    if (roleSuggestions) {
+      return roleSuggestions
+        .filter((skill) => !normalizedCurrentSet.has(normalizeForComparison(skill)))
+        .slice(0, 7);
+    }
+  }
+
   // Complementary skill map
   const complementary: Record<string, string[]> = {
-    react: ['Next.js', 'TypeScript', 'React Native', 'Redux', 'GraphQL'],
-    javascript: ['TypeScript', 'Node.js', 'React', 'Vue.js', 'Testing'],
+    react: ['Next.js', 'TypeScript', 'React Native', 'GraphQL', 'Design Systems'],
+    javascript: ['TypeScript', 'Node.js', 'React', 'Vue.js', 'Next.js'],
     python: ['Django', 'Flask', 'FastAPI', 'Pandas', 'TensorFlow'],
-    node: ['Express.js', 'NestJS', 'GraphQL', 'MongoDB', 'PostgreSQL'],
-    sql: ['PostgreSQL', 'MongoDB', 'Redis', 'Data Modeling', 'ETL'],
-    docker: ['Kubernetes', 'CI/CD', 'Terraform', 'AWS', 'Monitoring'],
-    aws: ['Terraform', 'Docker', 'Kubernetes', 'CloudFormation', 'Lambda'],
-    typescript: ['React', 'Node.js', 'Next.js', 'GraphQL', 'Testing'],
-    git: ['GitHub Actions', 'CI/CD', 'GitLab CI', 'Code Review', 'DevOps'],
+    node: ['Express.js', 'GraphQL', 'MongoDB', 'PostgreSQL', 'Docker'],
+    sql: ['PostgreSQL', 'MongoDB', 'Redis', 'Tableau', 'Power BI'],
+    docker: ['Kubernetes', 'GitHub Actions', 'Terraform', 'AWS', 'Grafana'],
+    aws: ['Terraform', 'Docker', 'Kubernetes', 'Serverless', 'Cloudflare'],
+    typescript: ['React', 'Node.js', 'Next.js', 'GraphQL', 'React Native'],
+    git: ['GitHub Actions', 'GitLab CI/CD', 'Docker', 'Terraform', 'GitHub'],
     figma: ['Design Systems', 'Prototyping', 'Accessibility', 'User Research', 'Framer'],
     'user research': ['Usability Testing', 'Information Architecture', 'Prototyping', 'Accessibility', 'Design Systems'],
     wireframing: ['Prototyping', 'Information Architecture', 'Design Systems', 'Accessibility', 'User Research'],
     prototyping: ['Figma', 'Framer', 'Design Systems', 'Accessibility', 'Usability Testing'],
-    accessibility: ['Design Systems', 'Usability Testing', 'Information Architecture', 'User Research', 'HTML/CSS']
+    accessibility: ['Design Systems', 'Usability Testing', 'Information Architecture', 'User Research', 'HTML/CSS'],
+    'product strategy': ['Roadmapping', 'Prioritization', 'Customer Discovery', 'Competitive Analysis', 'Go-to-Market'],
+    'customer discovery': ['User Interviews', 'Product Strategy', 'Go-to-Market', 'Competitive Analysis', 'Pricing & Packaging'],
+    'go to market': ['Pricing & Packaging', 'Content Strategy', 'Growth Marketing', 'Partnerships', 'Competitive Analysis'],
+    leadership: ['Stakeholder Management', 'Executive Communication', 'Team Management', 'Mentoring', 'Negotiation'],
+    'community strategy': ['Program Design', 'Event Programming', 'Partnerships', 'Customer Success', 'Content Strategy'],
+    partnerships: ['Business Development', 'Community Strategy', 'Customer Success', 'Strategic Planning', 'Executive Communication'],
+    'business operations': ['Strategic Planning', 'Program Management', 'Stakeholder Management', 'Facilitation', 'Business Development']
   };
 
   const suggestions = new Set<string>();

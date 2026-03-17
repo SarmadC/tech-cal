@@ -426,7 +426,7 @@ export const MobileCareerOnboarding: React.FC<MobileCareerOnboardingProps> = ({
                     selectedValues={data.step2_skills?.primarySkills || []}
                     onChange={(values) => updateData('step2_skills', { primarySkills: values })}
                     label="Current Skills"
-                    description="Core strengths"
+                    description="Skills, disciplines, or tools you use confidently"
                     placeholder="Add skill..."
                     suggestions={getCurrentSkillSuggestions(data.step1_role?.currentRole)}
                     suggestionLabel="Suggested"
@@ -439,7 +439,7 @@ export const MobileCareerOnboarding: React.FC<MobileCareerOnboardingProps> = ({
                     selectedValues={data.step2_skills?.skillsToLearn || []}
                     onChange={(values) => updateData('step2_skills', { skillsToLearn: values })}
                     label="To Learn"
-                    description="Future goals"
+                    description="Skills, disciplines, or tools you want to build next"
                     placeholder="Add skill..."
                     suggestions={getLearningSkillSuggestions(data.step2_skills?.primarySkills || [], data.step1_role?.currentRole)}
                     suggestionLabel="Suggested"
@@ -452,7 +452,8 @@ export const MobileCareerOnboarding: React.FC<MobileCareerOnboardingProps> = ({
                     selectedValues={data.step2_skills?.interests || []}
                     onChange={(values) => updateData('step2_skills', { interests: values })}
                     label="Interests"
-                    placeholder="Add topic..."
+                    description="Topics, industries, and domains you want more of"
+                    placeholder="Add interest..."
                     maxSelections={5}
                     allowCustom
                     variant="linear"

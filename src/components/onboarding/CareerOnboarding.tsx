@@ -592,7 +592,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     selectedValues={data.step2_skills?.primarySkills || []}
                     onChange={(values) => updateData('step2_skills', { primarySkills: values })}
                     label="Current Skills"
-                    description="The skills you already use with confidence."
+                    description="The skills, disciplines, or tools you already use with confidence."
                     statusText={
                         (data.step2_skills?.primarySkills?.length ?? 0) < 2
                             ? (data.step2_skills?.primarySkills?.length ?? 0) === 1
@@ -613,7 +613,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     selectedValues={data.step2_skills?.skillsToLearn || []}
                     onChange={(values) => updateData('step2_skills', { skillsToLearn: values })}
                     label="Learning Next"
-                    description="The skills you want to build next."
+                    description="The skills, disciplines, or tools you want to build next."
                     statusText={`You can add ${10 - (data.step2_skills?.skillsToLearn?.length ?? 0)} more.`}
                     placeholder="Search future skills..."
                     suggestions={getLearningSkillSuggestions(data.step2_skills?.primarySkills || [], data.step1_role?.currentRole)}

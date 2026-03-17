@@ -5,6 +5,22 @@ import { render, screen } from '@/utils/test-utils';
 
 import CareerOnboarding from './CareerOnboarding';
 
+const taxonomyMock = {
+  skillOptions: [
+    { value: 'React', label: 'React', category: 'FRONTEND_TECHNOLOGIES' },
+    { value: 'Product Strategy', label: 'Product Strategy', category: 'PRODUCT_STRATEGY' },
+    { value: 'Go-to-Market', label: 'Go-to-Market', category: 'PRODUCT_STRATEGY' },
+    { value: 'Fundraising', label: 'Fundraising', category: 'BUSINESS_OPERATIONS' },
+  ],
+  interestOptions: [
+    { value: 'Startup & Entrepreneurship', label: 'Startup & Entrepreneurship' },
+  ],
+  source: 'fallback',
+  isLoading: false,
+  getCurrentSkillSuggestions: () => ['Product Strategy', 'Go-to-Market'],
+  getLearningSkillSuggestions: () => ['Fundraising', 'Business Operations'],
+};
+
 vi.mock('@/contexts/SnackbarContext', () => ({
   SnackbarProvider: ({ children }: { children: unknown }) => children,
   useSnackbar: () => ({
@@ -21,14 +37,7 @@ vi.mock('@/contexts/SnackbarContext', () => ({
 }));
 
 vi.mock('@/hooks/useOnboardingTaxonomy', () => ({
-  useOnboardingTaxonomy: () => ({
-    skillOptions: [],
-    interestOptions: [],
-    source: 'fallback',
-    isLoading: false,
-    getCurrentSkillSuggestions: () => [],
-    getLearningSkillSuggestions: () => [],
-  }),
+  useOnboardingTaxonomy: () => taxonomyMock,
 }));
 
 const baseDraft = {
@@ -94,6 +103,39 @@ describe('CareerOnboarding', () => {
     await user.click(completeButton);
 
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes the new founder role in the onboarding role picker', () => {
+    localStorage.setItem('career-onboarding-step', '1');
+
+    render(<CareerOnboarding onComplete={vi.fn()} />);
+
+    expect(screen.getByRole('option', { name: 'Founder' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Business Operations Manager' })).toBeInTheDocument();
+  });
+
+  it('shows non-technical suggestions in the onboarding skill selector', async () => {
+    const user = userEvent.setup();
+
+    localStorage.setItem('career-onboarding-step', '2');
+    localStorage.setItem('career-onboarding-data', JSON.stringify({
+      step1_role: {
+        currentRole: 'Founder',
+        seniority: 'founder',
+      },
+      step2_skills: {
+        primarySkills: [],
+        skillsToLearn: [],
+        interests: [],
+      },
+    }));
+
+    render(<CareerOnboarding onComplete={vi.fn()} />);
+
+    await user.click(screen.getByPlaceholderText('Search current skills...'));
+
+    expect(screen.getByText('Product Strategy')).toBeInTheDocument();
+    expect(screen.getByText('Go-to-Market')).toBeInTheDocument();
   });
 
   it('rehydrates legacy optional-step drafts into step 3 with inline preferences open', () => {

@@ -148,15 +148,34 @@ export class CareerProfileService {
     preferences: Json | null | undefined,
   ): CareerProfile {
     const typedPreferences = (preferences ?? {}) as CareerProfilePreferencesShape;
-    const preferenceProfile = typedPreferences.careerProfile;
+    const preferenceProfile = typedPreferences.careerProfile as CareerProfile | undefined;
 
     if (!preferenceProfile) {
       return careerProfile;
     }
 
+    // If preferences were saved more recently than the career_profiles row (e.g. upsert
+    // fell back to preferences due to an RLS or network issue), prefer the preferences
+    // values for the multi-select optional fields that are empty in the structured row.
+    const prefUpdatedAt = (typedPreferences as Record<string, unknown>).careerProfileUpdatedAt as string | undefined;
+    const rowUpdatedAt = careerProfile.lastUpdated;
+    const prefIsNewer = prefUpdatedAt && rowUpdatedAt && prefUpdatedAt > rowUpdatedAt;
+
     return {
       ...careerProfile,
       targetPath: careerProfile.targetPath ?? (preferenceProfile.targetPath as LearningPathTrack | string | undefined),
+      // When preferences are newer (upsert may have fallen back to preferences storage),
+      // always prefer the preferences values for the optional multi-select fields so that
+      // a partial/stale career_profiles row doesn't mask newly-saved selections.
+      learningStyle: prefIsNewer
+        ? ((preferenceProfile.learningStyle as LearningStyle[] | undefined) ?? careerProfile.learningStyle)
+        : careerProfile.learningStyle,
+      networkingGoals: prefIsNewer
+        ? ((preferenceProfile.networkingGoals as NetworkingGoal[] | undefined) ?? careerProfile.networkingGoals)
+        : careerProfile.networkingGoals,
+      preferredEventTypes: prefIsNewer
+        ? ((preferenceProfile.preferredEventTypes as CareerEventType[] | undefined) ?? careerProfile.preferredEventTypes)
+        : careerProfile.preferredEventTypes,
     };
   }
 

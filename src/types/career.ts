@@ -15,6 +15,8 @@ export const ROLE_TAXONOMY = {
     'Backend Engineer',
     'Full Stack Engineer',
     'Mobile Engineer (iOS/Android)',
+    'Platform Engineer',
+    'Solutions Engineer',
     'DevOps Engineer',
     'Site Reliability Engineer',
     'QA Engineer',
@@ -24,24 +26,37 @@ export const ROLE_TAXONOMY = {
     'Data Scientist',
     'Data Analyst',
     'Data Engineer',
+    'AI Engineer',
+    'Analytics Engineer',
     'ML Engineer',
     'AI Research Scientist'
   ],
   [ROLE_CATEGORIES.PRODUCT_DESIGN]: [
     'Product Manager',
+    'Product Designer',
     'Product Owner',
     'UX Designer',
     'UI Designer',
     'UX Researcher',
-    'Technical Product Manager'
+    'Technical Product Manager',
+    'Technical Program Manager',
+    'Program Manager',
+    'Product Marketing Manager',
+    'Growth Marketer'
   ],
   [ROLE_CATEGORIES.LEADERSHIP]: [
+    'Founder',
+    'Entrepreneur / Startup Operator',
     'Engineering Manager',
     'Technical Lead',
     'Product Director',
     'VP of Engineering',
     'CTO',
     'Solutions Architect',
+    'Business Operations Manager',
+    'Developer Relations Manager',
+    'Community Manager',
+    'Customer Success Manager',
     'Developer Relations',
     'Technical Writer'
   ]
@@ -253,6 +268,53 @@ export const TECHNICAL_SKILLS = {
 
 // Flattened skills list for easy access
 export const ALL_TECHNICAL_SKILLS = Object.values(TECHNICAL_SKILLS).flat();
+
+// Expanded onboarding taxonomy that combines technical and cross-functional skills.
+export const ONBOARDING_SKILLS = {
+  ...TECHNICAL_SKILLS,
+  PRODUCT_STRATEGY: [
+    'Product Strategy',
+    'Roadmapping',
+    'Prioritization',
+    'Customer Discovery',
+    'User Interviews',
+    'Competitive Analysis',
+    'Go-to-Market',
+    'Pricing & Packaging'
+  ],
+  LEADERSHIP_COMMUNICATION: [
+    'Leadership',
+    'Stakeholder Management',
+    'Executive Communication',
+    'Team Management',
+    'Hiring',
+    'Mentoring',
+    'Public Speaking',
+    'Negotiation'
+  ],
+  GROWTH_COMMUNITY: [
+    'Growth Marketing',
+    'Content Strategy',
+    'Community Strategy',
+    'Partnerships',
+    'Customer Success',
+    'Program Design',
+    'Event Programming',
+    'Developer Marketing'
+  ],
+  BUSINESS_OPERATIONS: [
+    'Business Operations',
+    'Strategic Planning',
+    'Fundraising',
+    'Business Development',
+    'Program Management',
+    'Facilitation',
+    'Conflict Resolution',
+    'Experiment Design'
+  ]
+} as const;
+
+export const ALL_ONBOARDING_SKILLS = Object.values(ONBOARDING_SKILLS).flat();
 
 // Skill Proficiency Types
 export type SkillProficiency = 

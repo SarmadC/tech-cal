@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { CareerProfile } from '@/types/career';
 
 // Import type-safe section definition
@@ -68,17 +68,21 @@ export function useQuickEditForm({
 
   // State for draft updates with reset on profile/section change
   const [draft, setDraft] = useState<DraftUpdate>(initialDraft);
+  const draftRef = useRef<DraftUpdate>(initialDraft);
+  const isDirtyRef = useRef(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // React to changes in initial profile or section
   useEffect(() => {
+    if (isDirtyRef.current) return;  // don't clobber user's edits
     const newDraft = {
       ...DEFAULT_VALUES[section],
       ...(initialProfile || {})
     };
     
+    draftRef.current = newDraft;
     setDraft(newDraft);
     setIsDirty(false);
     setSaveError(null);
@@ -86,7 +90,10 @@ export function useQuickEditForm({
 
   // Immediate update function for controlled inputs
   const updateDraft = useCallback((updates: DraftUpdate) => {
-    setDraft(prev => ({ ...prev, ...updates }));
+    const nextDraft = { ...draftRef.current, ...updates };
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    isDirtyRef.current = true;
     setIsDirty(true);
     setSaveError(null);
   }, []);
@@ -96,18 +103,20 @@ export function useQuickEditForm({
     try {
       setIsSaving(true);
       setSaveError(null);
+      const latestDraft = draftRef.current;
       
       // Validate draft
-      if (!validate(draft)) {
+      if (!validate(latestDraft)) {
         setSaveError('Validation failed. Please check your inputs.');
         return false;
       }
 
       // Perform immediate save without debounce
       if (onSave) {
-        await onSave(draft);
+        await onSave(latestDraft);
       }
 
+      isDirtyRef.current = false;
       setIsDirty(false);
       return true;
     } catch (error) {
@@ -119,11 +128,13 @@ export function useQuickEditForm({
     } finally {
       setIsSaving(false);
     }
-  }, [draft, validate, onSave]);
+  }, [validate, onSave]);
 
   // Reset draft to initial state
   const resetDraft = useCallback(() => {
+    draftRef.current = initialDraft;
     setDraft(initialDraft);
+    isDirtyRef.current = false;
     setIsDirty(false);
     setSaveError(null);
   }, [initialDraft]);

@@ -1,4 +1,4 @@
-import { TECHNICAL_SKILLS } from '@/types/career';
+import { ONBOARDING_SKILLS } from '@/types/career';
 
 export interface CanonicalSkillMeta {
   name: string;
@@ -10,7 +10,7 @@ export interface CanonicalSkillMeta {
 
 /**
  * Manual synonym clusters for canonical skills.
- * Keys must match the canonical skill labels defined in TECHNICAL_SKILLS.
+ * Keys must match the canonical skill labels defined in ONBOARDING_SKILLS.
  */
 const MANUAL_SYNONYM_SOURCE: Record<string, string[]> = {
   'JavaScript/TypeScript': ['JavaScript', 'TypeScript', 'JS', 'TS', 'ECMAScript'],
@@ -115,7 +115,39 @@ const MANUAL_SYNONYM_SOURCE: Record<string, string[]> = {
   'iOS Development': ['iOS', 'iOS Apps'],
   'Android Development': ['Android', 'Android Apps'],
   'Xamarin': ['Xamarin Forms'],
-  'Cordova/PhoneGap': ['Cordova', 'PhoneGap']
+  'Cordova/PhoneGap': ['Cordova', 'PhoneGap'],
+  'Product Strategy': ['Product Planning'],
+  'Roadmapping': ['Roadmap Planning', 'Product Roadmap'],
+  'Prioritization': ['Prioritisation'],
+  'Customer Discovery': ['Customer Validation'],
+  'User Interviews': ['User Interviewing'],
+  'Competitive Analysis': ['Competitor Analysis'],
+  'Go-to-Market': ['GTM', 'Go To Market'],
+  'Pricing & Packaging': ['Pricing', 'Packaging'],
+  'Stakeholder Management': ['Stakeholder Alignment'],
+  'Executive Communication': ['Exec Communication', 'Executive Presence'],
+  'Leadership': ['Leadership Development'],
+  'Team Management': ['People Management'],
+  'Hiring': ['Recruiting', 'Talent Hiring'],
+  'Mentoring': ['Mentorship'],
+  'Public Speaking': ['Speaking'],
+  'Negotiation': ['Negotiating'],
+  'Growth Marketing': ['Growth', 'Growth Strategy'],
+  'Content Strategy': ['Content Marketing'],
+  'Community Strategy': ['Community Building'],
+  'Partnerships': ['Partner Strategy'],
+  'Customer Success': ['CSM', 'Client Success'],
+  'Program Design': ['Program Development'],
+  'Event Programming': ['Event Curation', 'Programming'],
+  'Developer Marketing': ['Dev Marketing'],
+  'Business Operations': ['BizOps', 'Biz Ops'],
+  'Strategic Planning': ['Strategy'],
+  'Fundraising': ['Capital Raising'],
+  'Business Development': ['BizDev'],
+  'Program Management': ['PgM'],
+  'Facilitation': ['Workshop Facilitation'],
+  'Conflict Resolution': ['Conflict Management'],
+  'Experiment Design': ['Testing Strategy']
 };
 
 const canonicalSkills: CanonicalSkillMeta[] = [];
@@ -140,10 +172,6 @@ export function normalizeSkillName(value: string): string {
 /**
  * Lightweight title case helper for fallback canonical labels.
  */
-// Placeholder replacement to satisfy tool requirements, but I will actually view the file first in the next step.
-// To avoid wasting a turn, I'll add a specific replace for 'Sql' in toTitleCase if I can.
-// But wait, `toTitleCase` is in `skillTaxonomy.ts` lines 132-139.
-// I can make it smarter.
 function toTitleCase(value: string): string {
   // Handle specific acronyms
   if (value.toLowerCase() === 'sql') return 'SQL';
@@ -181,7 +209,7 @@ function buildKeywords(label: string, manualSynonyms: string[]): string[] {
 }
 
 // Build canonical skill taxonomy with synonym lookups
-Object.entries(TECHNICAL_SKILLS).forEach(([category, skills]) => {
+Object.entries(ONBOARDING_SKILLS).forEach(([category, skills]) => {
   skills.forEach((skill) => {
     const normalized = normalizeSkillName(skill);
     const manualSynonyms = MANUAL_SYNONYM_SOURCE[skill] ?? [];

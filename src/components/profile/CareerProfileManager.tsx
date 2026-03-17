@@ -16,6 +16,7 @@ import { IdentificationCard, CaretRight } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { filteredEventKeys } from '@/lib/queryKeys';
+import { NETWORKING_GOAL_OPTIONS, EVENT_TYPE_OPTIONS } from './quick-edit/config';
 
 // --- Shared Components (Refined Linear Style) ---
 
@@ -67,7 +68,7 @@ const SettingRow = ({
             {isEmpty ? (
                 <span className="text-[var(--foreground-tertiary)] opacity-60 transition-colors">Not set</span>
             ) : (
-                <div className="truncate flex justify-end w-full">
+                <div className="min-w-0 flex flex-wrap justify-end w-full">
                     {value}
                 </div>
             )}
@@ -126,6 +127,13 @@ const formatLearningStyle = (style: string): string => {
     };
     return labels[style] || style;
 };
+
+const NETWORKING_GOAL_LABEL: Record<string, string> = Object.fromEntries(
+    NETWORKING_GOAL_OPTIONS.map(o => [o.value, o.label])
+);
+const EVENT_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+    EVENT_TYPE_OPTIONS.map(o => [o.value, o.label])
+);
 
 // --- Types & Constants ---
 
@@ -208,6 +216,7 @@ export default function CareerProfileManager({
         error,
         saveCareerProfile: _saveCareerProfile,
         completeOnboarding,
+        refreshProfile,
         optionalSections,
         markOptionalSectionComplete,
     } = useCareerProfile();
@@ -272,6 +281,15 @@ export default function CareerProfileManager({
     const handleQuickEditClose = () => {
         setQuickEditSection(null);
     };
+
+    const handleQuickEditSaved = useCallback(async (updatedProfile: CareerProfile) => {
+        await refreshProfile();
+        onProfileUpdate?.(updatedProfile);
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        await queryClient.invalidateQueries({ queryKey: filteredEventKeys.all });
+        window.dispatchEvent(new CustomEvent('profile-updated'));
+    }, [onProfileUpdate, queryClient, refreshProfile]);
 
     const handleOptionalSectionCompleted = (section: QuickEditSection) => {
         const optionalKey = sectionKeyMap[section];
@@ -461,13 +479,13 @@ export default function CareerProfileManager({
                 />
                 <SettingRow
                     label="Networking Goals"
-                    value={<ChipsList items={currentCareerProfile.networkingGoals?.map(g => g.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
+                    value={<ChipsList items={currentCareerProfile.networkingGoals?.map(g => NETWORKING_GOAL_LABEL[g] ?? g.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
                     isEmpty={!currentCareerProfile.networkingGoals?.length}
                     onClick={() => handleQuickEdit('networking')}
                 />
                 <SettingRow
                     label="Event Formats"
-                    value={<ChipsList items={currentCareerProfile.preferredEventTypes?.map(t => t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
+                    value={<ChipsList items={currentCareerProfile.preferredEventTypes?.map(t => EVENT_TYPE_LABEL[t] ?? t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) || []} />}
                     isEmpty={!currentCareerProfile.preferredEventTypes?.length}
                     onClick={() => handleQuickEdit('networking')}
                 />
@@ -480,7 +498,9 @@ export default function CareerProfileManager({
                     onClose={handleQuickEditClose}
                     section={quickEditSection || 'role'}
                     currentProfile={currentCareerProfile}
+                    onSaveProfile={_saveCareerProfile}
                     onSectionCompleted={handleOptionalSectionCompleted}
+                    onProfileSaved={handleQuickEditSaved}
                     onStateChange={setQuickEditModalState}
                 />
             )}

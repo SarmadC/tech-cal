@@ -3,8 +3,6 @@
 import React from 'react';
 import { X } from '@phosphor-icons/react';
 import { CareerProfile } from '@/types/career';
-import { useCareerProfile } from '@/hooks/useCareerProfile';
-import { useAuth } from '@/contexts';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useQuickEditForm } from './hooks/useQuickEditForm';
 
@@ -29,7 +27,9 @@ interface QuickEditModalProps {
     onClose: () => void;
     section: QuickEditSection;
     currentProfile?: CareerProfile;
+    onSaveProfile: (profile: CareerProfile) => Promise<void>;
     onSectionCompleted?: (section: QuickEditSection) => void;
+    onProfileSaved?: (profile: CareerProfile) => Promise<void> | void;
     onStateChange?: (state: {
         isDirty: boolean;
         isSaving: boolean;
@@ -72,23 +72,17 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
     isOpen,
     onClose,
     section,
-    currentProfile: _currentProfile,
+    currentProfile,
+    onSaveProfile,
     onSectionCompleted,
+    onProfileSaved,
     onStateChange
 }) => {
-    // Use career profile hook for latest profile
-    const { careerProfile, saveCareerProfile, refreshProfile, isLoading } = useCareerProfile();
     const { showSuccess, showError } = useSnackbar();
-
-    // Prefer profile from hook, fallback to passed profile
-    const currentProfile = careerProfile || _currentProfile;
 
     // Select the appropriate editor and validator
     const Editor = SECTION_EDITORS[section];
     const validateSection = SECTION_VALIDATORS[section];
-
-    // Get auth context refresh function
-    const { refreshProfile: refreshAuthProfile } = useAuth();
 
     // Use the quick edit form hook - MUST be called before any early returns
     const {
@@ -110,16 +104,14 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
             } as CareerProfile;
 
             // Save updated profile
-            await saveCareerProfile(updatedProfile);
+            await onSaveProfile(updatedProfile);
 
             // Call section completed callback if provided
             if (onSectionCompleted) {
                 onSectionCompleted(section);
             }
 
-            // Refresh both career profile and auth context profile to get latest data
-            await refreshProfile();
-            await refreshAuthProfile();
+            await onProfileSaved?.(updatedProfile);
         }
     });
 
@@ -155,7 +147,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
     if (!isOpen) return null;
 
     // Loading state when profile is not available
-    if (isLoading || !currentProfile) {
+    if (!currentProfile) {
         return (
             <div
                 className="fixed inset-0 z-50 flex items-end sm:items-stretch sm:justify-end bg-black/40 transition-opacity duration-200"
