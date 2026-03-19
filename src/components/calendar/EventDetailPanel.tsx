@@ -6,7 +6,7 @@ import { XIcon, ArrowSquareOutIcon, Bookmark } from '@phosphor-icons/react';
 import '@/app/styles/event-card.css';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
-import { Event, EventType, AgendaItem, MultiDayEventInstance, Speaker } from '@/types';
+import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
@@ -20,6 +20,7 @@ import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
 import { generateEventSlug } from '@/utils/slugUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { dedupeSpeakersFromEvent, getSpeakerIdentity, hasSpeakerData } from './eventDetailShared';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
@@ -28,58 +29,6 @@ interface EventDetailPanelProps {
     categories: EventType[];
     variant?: 'sidebar' | 'modal';
 }
-
-const normalizeSpeakerIdentityPart = (value?: string | null): string | null => {
-    const normalized = value?.trim().toLowerCase();
-    return normalized ? normalized : null;
-};
-
-const getSpeakerIdentity = (speaker: Speaker, fallbackIndex?: number): string => {
-    const explicitId = normalizeSpeakerIdentityPart(speaker.id);
-    if (explicitId) {
-        return `id:${explicitId}`;
-    }
-
-    const linkedInIdentity = normalizeSpeakerIdentityPart(speaker.linkedinUrl);
-    if (linkedInIdentity) {
-        return `linkedin:${linkedInIdentity}`;
-    }
-
-    const profileIdentity = [
-        speaker.name,
-        speaker.company,
-        speaker.title,
-        speaker.photoUrl,
-    ]
-        .map(normalizeSpeakerIdentityPart)
-        .filter(Boolean)
-        .join('|');
-
-    if (profileIdentity) {
-        return `profile:${profileIdentity}`;
-    }
-
-    return `speaker:${fallbackIndex ?? 0}`;
-};
-
-const getAgendaSpeakers = (agenda: AgendaItem[] | undefined): Speaker[] => {
-    if (!Array.isArray(agenda) || agenda.length === 0) {
-        return [];
-    }
-
-    return agenda.flatMap((item) => [
-        ...(item.speakers ?? []),
-        ...(item.speaker ? [item.speaker] : []),
-    ]);
-};
-
-const hasSpeakerData = (event: Pick<Event, 'speakerLineup' | 'agenda'>): boolean => {
-    if (Array.isArray(event.speakerLineup) && event.speakerLineup.length > 0) {
-        return true;
-    }
-
-    return getAgendaSpeakers(event.agenda).length > 0;
-};
 
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories, variant = 'sidebar' }) => {
     const category = categories.find(c => c.id === event.eventTypeId);
@@ -97,23 +46,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const trackGroups = useMemo(() => groupAgendaByTrack(displayEvent.agenda || []), [displayEvent.agenda]);
     const hasTrackAgenda = trackGroups.length > 0;
     const uniqueSpeakers = useMemo(() => {
-        const seenSpeakerIdentities = new Set<string>();
-        const speakerCandidates = [
-            ...(displayEvent.speakerLineup ?? []),
-            ...getAgendaSpeakers(displayEvent.agenda),
-        ];
-
-        return speakerCandidates.filter((speaker, index) => {
-            const speakerIdentity = getSpeakerIdentity(speaker, index);
-
-            if (seenSpeakerIdentities.has(speakerIdentity)) {
-                return false;
-            }
-
-            seenSpeakerIdentities.add(speakerIdentity);
-            return true;
-        });
-    }, [displayEvent.agenda, displayEvent.speakerLineup]);
+        return dedupeSpeakersFromEvent(displayEvent);
+    }, [displayEvent]);
 
     // Update eventWithAgenda when event prop changes
     useEffect(() => {

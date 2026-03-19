@@ -416,6 +416,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={true}
                 className="bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-xl border-b border-border/40"
+                variant="app"
             />
             {isMobile && <MobileBottomNav />}
             <div className="flex h-screen bg-white dark:bg-[#08090a]">

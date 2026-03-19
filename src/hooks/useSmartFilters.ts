@@ -20,9 +20,71 @@ function getCareerImpactScore(event: Event | TrackedEvent): number {
            ?? 0;
 }
 
+function getDifficultyFromEvent(event: Event): 'beginner' | 'intermediate' | 'advanced' {
+    const title = event.title.toLowerCase();
+    const description = (event.description || '').toLowerCase();
+    if (title.includes('beginner') || title.includes('intro') || title.includes('101')) return 'beginner';
+    if (title.includes('advanced') || title.includes('expert') || description.includes('prerequisite')) return 'advanced';
+    return 'intermediate';
+}
+
+function checkForConflicts(event: Event, calendar: CalendarEventData[]): boolean {
+    const eventStart = new Date(event.startTime);
+    const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
+    return calendar.some((calEvent) => {
+        const calStart = new Date(calEvent.start);
+        const calEnd = calEvent.end ? new Date(calEvent.end) : new Date(calStart.getTime() + 2 * 60 * 60 * 1000);
+        return eventStart < calEnd && eventEnd > calStart;
+    });
+}
+
+function getEventPopularity(event: Event): 'trending' | 'high-attendance' | 'niche' {
+    const attendeeCount = event.attendeeCount || 0;
+    const hasRegistration = Boolean(event.registrationUrl);
+    const isRecentlyCreated = event.createdAt
+        ? (new Date().getTime() - new Date(event.createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 7
+        : false;
+
+    let popularityScore = 0;
+    if (attendeeCount > 500) popularityScore += 0.4;
+    else if (attendeeCount > 100) popularityScore += 0.2;
+
+    if (hasRegistration) popularityScore += 0.2;
+    if (isRecentlyCreated) popularityScore += 0.2;
+
+    const orgName = event.organization?.name?.toLowerCase() || '';
+    const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple'];
+    if (majorOrgs.some((org) => orgName.includes(org))) {
+        popularityScore += 0.3;
+    }
+
+    if (popularityScore >= 0.6) return 'trending';
+    if (popularityScore >= 0.3) return 'high-attendance';
+    return 'niche';
+}
+
+function getEventDuration(event: Event): DurationCategory {
+    return UnifiedEventUtils.getDurationAs(event, 'category') as DurationCategory;
+}
+
+function hasNetworkConnections(event: Event): boolean {
+    const eventType = event.category?.name?.toLowerCase() || '';
+    const attendeeCount = event.attendeeCount || 0;
+
+    if (eventType.includes('networking') || eventType.includes('meetup')) return true;
+    if (eventType.includes('conference') && attendeeCount > 200) return true;
+    if (eventType.includes('summit') && attendeeCount > 100) return true;
+    if (attendeeCount > 500) return true;
+    if (eventType.includes('workshop') && attendeeCount > 50) return true;
+
+    return false;
+}
+
 export interface SmartFilterOptions {
     // ... (interface remains the same)
     categories: string[];
+    tags: string[];
+    locations: string[];
     searchTerm: string;
     dateRange: { start: Date | null; end: Date | null; };
     format: 'all' | 'virtual' | 'in-person' | 'hybrid';
@@ -40,6 +102,8 @@ export interface SmartFilterOptions {
 const defaultFilters: SmartFilterOptions = {
     // ... (defaults remain the same)
     categories: [],
+    tags: [],
+    locations: [],
     searchTerm: '',
     dateRange: { start: null, end: null },
     format: 'all',
@@ -70,6 +134,20 @@ export function useSmartFilters(
             // Basic filters (no change needed here)
             if (filters.categories.length > 0 && !filters.categories.includes(event.eventTypeId)) {
                 return false;
+            }
+            if (filters.tags.length > 0) {
+                const eventTagNames = (event.tags || []).map((tag) => tag.name.trim().toLowerCase());
+                const hasSelectedTag = filters.tags.some((tag) => eventTagNames.includes(tag.trim().toLowerCase()));
+                if (!hasSelectedTag) {
+                    return false;
+                }
+            }
+            if (filters.locations.length > 0) {
+                const eventLocation = (event.location || '').trim().toLowerCase();
+                const matchesLocation = filters.locations.some((location) => eventLocation.includes(location.trim().toLowerCase()));
+                if (!matchesLocation) {
+                    return false;
+                }
             }
             if (filters.searchTerm && !event.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
                 !(event.description || '').toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
@@ -123,22 +201,20 @@ export function useSmartFilters(
             switch (filters.sortBy) {
                 case 'date':
                     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                case 'popularity':
-                    // Simple popularity sorting based on attendee count
+                case 'popularity': {
                     const aAttendees = a.attendeeCount || 0;
                     const bAttendees = b.attendeeCount || 0;
                     return bAttendees - aAttendees;
-                case 'career-impact':
-                    // Career impact sorting using pre-computed scores
+                }
+                case 'career-impact': {
                     const aCareerScore = getCareerImpactScore(a);
                     const bCareerScore = getCareerImpactScore(b);
                     if (aCareerScore !== bCareerScore) {
-                        return bCareerScore - aCareerScore; // Higher scores first
+                        return bCareerScore - aCareerScore;
                     }
-                    // Fallback to date sorting
                     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                }
                 default:
-                    // Default sorting by date
                     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
             }
         });
@@ -146,73 +222,6 @@ export function useSmartFilters(
         // Smart filters completed
         return sorted;
     }, [events, filters, userCalendar]);
-
-    // 4. UPDATE HELPER SIGNATURES: All helpers now accept the base `Event` type.
-    const getDifficultyFromEvent = (event: Event): 'beginner' | 'intermediate' | 'advanced' => {
-        const title = event.title.toLowerCase();
-        const description = (event.description || '').toLowerCase();
-        if (title.includes('beginner') || title.includes('intro') || title.includes('101')) return 'beginner';
-        if (title.includes('advanced') || title.includes('expert') || description.includes('prerequisite')) return 'advanced';
-        return 'intermediate';
-    };
-
-    const checkForConflicts = (event: Event, calendar: CalendarEventData[]): boolean => {
-        const eventStart = new Date(event.startTime);
-        const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
-        return calendar.some(calEvent => {
-            const calStart = new Date(calEvent.start);
-            const calEnd = calEvent.end ? new Date(calEvent.end) : new Date(calStart.getTime() + 2 * 60 * 60 * 1000);
-            return (eventStart < calEnd && eventEnd > calStart);
-        });
-    };
-
-    const getEventPopularity = (event: Event): 'trending' | 'high-attendance' | 'niche' => {
-        // Base popularity on actual event metrics
-        const attendeeCount = event.attendeeCount || 0;
-        const hasRegistration = Boolean(event.registrationUrl);
-        const isRecentlyCreated = event.createdAt ? 
-          (new Date().getTime() - new Date(event.createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
-        
-        // Calculate popularity score
-        let popularityScore = 0;
-        if (attendeeCount > 500) popularityScore += 0.4;
-        else if (attendeeCount > 100) popularityScore += 0.2;
-        
-        if (hasRegistration) popularityScore += 0.2;
-        if (isRecentlyCreated) popularityScore += 0.2;
-        
-        // Major organizers boost
-        const orgName = event.organization?.name?.toLowerCase() || '';
-        const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple'];
-        if (majorOrgs.some(org => orgName.includes(org))) {
-          popularityScore += 0.3;
-        }
-        
-        if (popularityScore >= 0.6) return 'trending';
-        if (popularityScore >= 0.3) return 'high-attendance';
-        return 'niche';
-    };
-
-    const getEventDuration = (event: Event): DurationCategory => {
-        return UnifiedEventUtils.getDurationAs(event, 'category') as DurationCategory;
-    };
-
-    const hasNetworkConnections = (event: Event): boolean => {
-        // Check if event has networking potential based on type and size
-        const eventType = event.category?.name?.toLowerCase() || '';
-        const attendeeCount = event.attendeeCount || 0;
-        
-        // High networking potential events
-        if (eventType.includes('networking') || eventType.includes('meetup')) return true;
-        if (eventType.includes('conference') && attendeeCount > 200) return true;
-        if (eventType.includes('summit') && attendeeCount > 100) return true;
-        
-        // Medium networking potential
-        if (attendeeCount > 500) return true;
-        if (eventType.includes('workshop') && attendeeCount > 50) return true;
-        
-        return false;
-    };
 
     // Filter actions
     const updateFilter = useCallback(<K extends keyof SmartFilterOptions>(
@@ -228,7 +237,7 @@ export function useSmartFilters(
 
     const applyQuickFilter = useCallback((filterType: string) => {
         switch (filterType) {
-            case 'this-week':
+            case 'this-week': {
                 const weekStart = new Date();
                 weekStart.setDate(weekStart.getDate() - weekStart.getDay());
                 const weekEnd = new Date(weekStart);
@@ -238,6 +247,7 @@ export function useSmartFilters(
                     dateRange: { start: weekStart, end: weekEnd }
                 }));
                 break;
+            }
 
             case 'free-events':
                 setFilters(prev => ({ ...prev, cost: 'free' }));
@@ -266,6 +276,8 @@ export function useSmartFilters(
     const activeFilterCount = useMemo(() => {
         let count = 0;
         if (filters.categories.length > 0) count++;
+        if (filters.tags.length > 0) count++;
+        if (filters.locations.length > 0) count++;
         if (filters.searchTerm) count++;
         if (filters.dateRange.start || filters.dateRange.end) count++;
         if (filters.format !== 'all') count++;

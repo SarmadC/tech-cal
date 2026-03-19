@@ -98,6 +98,7 @@ export default function MobileDashboardView({
             <UnifiedMobileNavbar
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={true}
+                variant="app"
             />
 
             <div className="mobile-dashboard-page pb-28 pt-20">

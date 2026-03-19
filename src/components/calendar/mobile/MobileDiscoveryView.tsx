@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CaretRight, MagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react';
 import { Event, EventType, AppProfile, CareerImpactScore } from '@/types';
 import DiscoveryCard from './DiscoveryCard';
+import MobileQuickDatePicker from './MobileQuickDatePicker';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { FilterCounts } from '@/utils/filterCountUtils';
-import { MagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
-import ActiveFilterRail from '@/components/discovery/ActiveFilterRail';
-import RecommendationExplainDrawer from '@/components/discovery/RecommendationExplainDrawer';
 import ShortlistCompareTray from '@/components/discovery/ShortlistCompareTray';
 import {
     DiscoveryRankingMode,
@@ -19,13 +18,15 @@ import {
 import { buildActiveFilterChips, DiscoveryFilterChip } from '@/components/discovery/discoveryFilterChips';
 import { DiscoveryFeedbackAction } from '@/components/discovery/discoveryFeedback';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
-import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
-import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
+import MobileAppShell from '@/components/common/mobile/MobileAppShell';
+import MobileHeader from '@/components/common/mobile/MobileHeader';
+import MobileSectionHeader from '@/components/common/mobile/MobileSectionHeader';
+import MobileSheet from '@/components/common/mobile/MobileSheet';
+import MobileSurfaceCard from '@/components/common/mobile/MobileSurfaceCard';
 import { useDiscoveryUxMetrics } from '@/hooks/useDiscoveryUxMetrics';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { cn } from '@/lib/utils';
 import { MOBILE_DISCOVERY_RANKING_MODE_KEY } from '@/constants/discoveryPersistence';
 
 type EventWithImpact = Event & { careerImpact?: CareerImpactScore };
@@ -54,31 +55,48 @@ function appendUnique(values: string[], value: string): string[] {
     return [...values, value].slice(-150);
 }
 
-function toDateInputValue(date: Date | null): string {
-    if (!date) {
-        return '';
+function formatDateRangeLabel(range: { start: Date | null; end: Date | null }): string {
+    if (!range.start && !range.end) {
+        return 'Any date';
     }
 
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
+    const formatDate = (date: Date) => date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+    });
 
-function parseDateInputValue(value: string, endOfDay = false): Date | null {
-    if (!value) {
-        return null;
+    if (range.start && range.end) {
+        const sameYear = range.start.getFullYear() === range.end.getFullYear();
+        const sameMonth = sameYear && range.start.getMonth() === range.end.getMonth();
+
+        if (sameMonth) {
+            return `${range.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${range.end.getDate()}, ${range.end.getFullYear()}`;
+        }
+
+        return `${formatDate(range.start)} - ${formatDate(range.end)}`;
     }
 
-    const [year, month, day] = value.split('-').map(Number);
-    const parsed = endOfDay
-        ? new Date(year, month - 1, day, 23, 59, 59, 999)
-        : new Date(year, month - 1, day, 0, 0, 0, 0);
+    if (range.start) {
+        return `From ${formatDate(range.start)}`;
+    }
 
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    return `Until ${formatDate(range.end as Date)}`;
 }
 
-const MOBILE_PAGE_GUTTER = 'px-4';
+function getScrollableParent(node: HTMLElement | null): HTMLElement | Window {
+    let current = node?.parentElement ?? null;
+
+    while (current) {
+        const { overflowY } = window.getComputedStyle(current);
+        if (overflowY.includes('auto') || overflowY.includes('scroll') || overflowY.includes('overlay')) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+
+    return window;
+}
 
 const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     events,
@@ -88,18 +106,18 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     filters,
     onUpdateFilter,
     onSearch,
-    totalCount: _totalCount,
+    totalCount,
     onResetFilters,
     activeFilterCount,
     countsFromServer,
     onNearMeClick,
-    isDetectingLocation: _isDetectingLocation,
-    isSearching: _isSearching
+    isDetectingLocation = false,
+    isSearching: _isSearching = false,
 }) => {
+    const rootRef = useRef<HTMLDivElement | null>(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [feedbackHint, setFeedbackHint] = useState<string | null>(null);
-    const [explainEvent, setExplainEvent] = useState<EventWithImpact | null>(null);
-    const filterDialogRef = useRef<HTMLDivElement | null>(null);
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [isHeaderCompact, setIsHeaderCompact] = useState(false);
 
     const [rankingMode, setRankingMode] = useLocalStorage<DiscoveryRankingMode>(MOBILE_DISCOVERY_RANKING_MODE_KEY, 'best-match');
     const [hiddenEventIds, setHiddenEventIds] = useLocalStorage<string[]>('mobile-discovery-hidden-events', []);
@@ -181,6 +199,25 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         applyRankingMode(rankingMode, false, false);
     }, [applyRankingMode, rankingMode]);
 
+    useEffect(() => {
+        if (!rootRef.current || typeof window === 'undefined') {
+            return;
+        }
+
+        const scrollParent = getScrollableParent(rootRef.current);
+        const readScroll = () => {
+            const nextScrollTop = scrollParent instanceof Window ? window.scrollY : scrollParent.scrollTop;
+            setIsHeaderCompact(nextScrollTop > 28);
+        };
+
+        readScroll();
+        scrollParent.addEventListener('scroll', readScroll, { passive: true });
+
+        return () => {
+            scrollParent.removeEventListener('scroll', readScroll);
+        };
+    }, []);
+
     const typedEvents = useMemo(() => events as EventWithImpact[], [events]);
 
     const rankedEvents = useMemo(() => {
@@ -214,7 +251,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
 
         if (action === 'hide') {
             setHiddenEventIds((prev) => appendUnique(prev, event.id));
-            setFeedbackHint('Hidden events are removed immediately from your feed.');
             return;
         }
 
@@ -226,7 +262,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                     [event.eventTypeId]: Math.min(75, (prev[event.eventTypeId] ?? 0) + 30),
                 }));
             }
-            setFeedbackHint('We are reducing similar recommendations.');
             return;
         }
 
@@ -236,7 +271,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                 [event.eventTypeId]: Math.min(60, (prev[event.eventTypeId] ?? 0) + 18),
             }));
         }
-        setFeedbackHint('Preference updated. You will see fewer related events.');
     }, [metrics, setCategoryPenalty, setHiddenEventIds]);
 
     const isAttending = useCallback((eventId: string) => {
@@ -297,12 +331,12 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const clearShortlist = useCallback(() => {
         setShortlistIds([]);
         metrics.trackShortlistAction('clear', 0);
-    }, [metrics, setShortlistIds]);
+        setShortlistMode(false);
+    }, [metrics, setShortlistIds, setShortlistMode]);
 
     const resetPersonalization = useCallback(() => {
         setHiddenEventIds([]);
         setCategoryPenalty({});
-        setFeedbackHint(null);
         metrics.trackFilterChange({ activeFilterCount, changedFilter: 'reset-personalization' });
         showInfo('Discovery personalization reset.');
     }, [activeFilterCount, metrics, setCategoryPenalty, setHiddenEventIds, showInfo]);
@@ -318,7 +352,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         onUpdateFilter('sortDirection', 'desc');
         setHiddenEventIds([]);
         setCategoryPenalty({});
-        setFeedbackHint(null);
         metrics.trackFilterChange({ activeFilterCount: 0, changedFilter: 'reset-all' });
     }, [metrics, onResetFilters, onUpdateFilter, rankingMode, setCategoryPenalty, setHiddenEventIds, setRankingMode]);
 
@@ -381,200 +414,266 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         }));
     }, [filterChips, removeFilterChip]);
 
+    const visibleResultCount = shortlistMode ? shortlistEvents.length : totalCount || eventsForFeed.length;
     const locationValue = filters.locations[0] ?? '';
     const hiddenCategoryCount = Object.keys(categoryPenalty).length;
     const hasPersonalizationOverrides = hiddenEventIds.length > 0 || hiddenCategoryCount > 0;
+    const hasActiveFilters = filterRailChips.length > 0;
+    const dateRangeLabel = useMemo(() => formatDateRangeLabel(filters.dateRange), [filters.dateRange]);
+    const datePickerCurrentDate = filters.dateRange.start ?? filters.dateRange.end ?? new Date();
 
-    const handleDateFilterChange = useCallback((boundary: 'start' | 'end', value: string) => {
-        const parsed = parseDateInputValue(value, boundary === 'end');
-        const currentStart = filters.dateRange.start;
-        const currentEnd = filters.dateRange.end;
+    const searchSurface = (
+        <div className="mobile-discovery-searchCard">
+            <div className="mobile-discovery-searchRow">
+                <div className="mobile-discovery-searchField">
+                    <MagnifyingGlass className="mobile-discovery-searchIcon" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search events, topics, or teams"
+                        maxLength={200}
+                        value={filters.searchTerm}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onBlur={(e) => updateFilterTracked('searchTerm', e.target.value.trim())}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                updateFilterTracked('searchTerm', filters.searchTerm.trim());
+                                onSearch();
+                            }
+                        }}
+                        className="mobile-discovery-searchInput"
+                    />
+                </div>
 
-        if (boundary === 'start') {
-            if (parsed && currentEnd && parsed > currentEnd) {
-                updateFilterTracked('dateRange', { start: parsed, end: parsed });
-                return;
-            }
-            updateFilterTracked('dateRange', { start: parsed, end: currentEnd });
-            return;
-        }
+                <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(true)}
+                    aria-label="Open filters"
+                    className="mobile-discovery-filterButton"
+                    data-active={activeFilterCount > 0}
+                >
+                    <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
+                    {activeFilterCount > 0 ? (
+                        <span className="mobile-discovery-filterBadge">{Math.min(activeFilterCount, 9)}</span>
+                    ) : null}
+                </button>
+            </div>
 
-        if (parsed && currentStart && parsed < currentStart) {
-            updateFilterTracked('dateRange', { start: parsed, end: parsed });
-            return;
-        }
-
-        updateFilterTracked('dateRange', { start: currentStart, end: parsed });
-    }, [filters.dateRange.end, filters.dateRange.start, updateFilterTracked]);
-
-    useEffect(() => {
-        if (!isFilterOpen || typeof document === 'undefined') {
-            return;
-        }
-
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-
-        const frameId = window.requestAnimationFrame(() => {
-            filterDialogRef.current?.focus();
-        });
-
-        const handleEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                setIsFilterOpen(false);
-            }
-        };
-
-        window.addEventListener('keydown', handleEscape);
-
-        return () => {
-            window.cancelAnimationFrame(frameId);
-            window.removeEventListener('keydown', handleEscape);
-            document.body.style.overflow = previousOverflow;
-        };
-    }, [isFilterOpen]);
+            {hasActiveFilters ? (
+                <div className="mt-3 border-t border-[var(--mobile-app-divider)] pt-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mobile-app-muted)]">
+                            Active filters
+                        </p>
+                        <button
+                            type="button"
+                            onClick={resetFiltersTracked}
+                            className="text-[11px] font-semibold text-[var(--mobile-app-muted)] transition-colors hover:text-[var(--mobile-app-muted-strong)]"
+                        >
+                            Clear all
+                        </button>
+                    </div>
+                    <div className="mobile-discovery-chipRail">
+                        {filterRailChips.map((chip) => (
+                            <button
+                                key={chip.key}
+                                type="button"
+                                onClick={chip.onRemove}
+                                className="mobile-discovery-chipButton"
+                                aria-label={`Remove ${chip.label} filter`}
+                            >
+                                {chip.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-[var(--background-main)] pb-24 mobile-discovery-view">
-            <UnifiedMobileNavbar
-                navItems={APP_MOBILE_NAV_ITEMS}
-                fixed={false}
-                className="sticky top-0 z-40 bg-[var(--background-main)]/95 backdrop-blur-md"
-            />
+        <div ref={rootRef} className="mobile-discovery-view min-h-screen">
+            <MobileAppShell
+                headerClassName="mobile-discovery-shellHeader"
+                contentClassName="mobile-discovery-shellContent"
+                header={(
+                    <MobileHeader
+                        className="mobile-discovery-header"
+                        isCompact={isHeaderCompact}
+                        data-testid="mobile-discovery-header"
+                    >
+                        {searchSurface}
 
-            <div className={cn('sticky top-[56px] z-30 bg-[var(--background-main)]/95 backdrop-blur-md pt-3 pb-3 space-y-4', MOBILE_PAGE_GUTTER)}>
-                <div className="flex items-center gap-3">
-                    <div className="relative flex-1 group">
-                        <MagnifyingGlass
-                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-tertiary)] group-focus-within:text-[var(--foreground-primary)] transition-colors"
-                            size={18}
+                        {shortlistMode ? (
+                            <MobileSurfaceCard className="px-4 py-3">
+                                <MobileSectionHeader
+                                    eyebrow="Focused mode"
+                                    title="Only your saved comparisons"
+                                    subtitle="Exit shortlist mode to jump back into the live discovery feed."
+                                    action={(
+                                        <button
+                                            type="button"
+                                            onClick={() => setShortlistMode(false)}
+                                            className="mobile-header__metaButton"
+                                        >
+                                            Return
+                                        </button>
+                                    )}
+                                />
+                            </MobileSurfaceCard>
+                        ) : (
+                            <div className="mobile-discovery-rankingRail" role="tablist" aria-label="Discovery ranking">
+                                {DISCOVERY_RANKING_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => applyRankingMode(option.id)}
+                                        className="mobile-discovery-rankingPill"
+                                        data-active={rankingMode === option.id}
+                                        role="tab"
+                                        aria-selected={rankingMode === option.id}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </MobileHeader>
+                )}
+            >
+                {eventsForFeed.length === 0 ? (
+                    <MobileSurfaceCard className="mobile-discovery-emptyCard">
+                        <div className="mobile-discovery-emptyCardIcon mb-4">
+                            <MagnifyingGlass size={24} />
+                        </div>
+                        <MobileSectionHeader
+                            eyebrow={shortlistMode ? 'Shortlist' : 'No matches'}
+                            title={shortlistMode ? 'Your shortlist is empty here' : 'Adjust the feed and try again'}
+                            subtitle={shortlistMode
+                                ? 'Save a few events, then switch shortlist mode back on when you are ready to compare.'
+                                : 'Broaden your search, clear a few filters, or change the ranking mode to surface more options.'
+                            }
                         />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            maxLength={200}
-                            value={filters.searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            onBlur={(e) => updateFilterTracked('searchTerm', e.target.value.trim())}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    updateFilterTracked('searchTerm', filters.searchTerm.trim());
-                                    onSearch();
-                                }
+                        <div className="mt-5 flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={shortlistMode ? () => setShortlistMode(false) : resetFiltersTracked}
+                                className="mobile-header__metaButton"
+                            >
+                                {shortlistMode ? 'Back to live feed' : 'Clear all filters'}
+                            </button>
+                            {!shortlistMode ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFilterOpen(true)}
+                                    className="mobile-header__metaButton"
+                                >
+                                    Open filters
+                                </button>
+                            ) : null}
+                        </div>
+                    </MobileSurfaceCard>
+                ) : (
+                    <div className="mobile-discovery-feed">
+                        {eventsForFeed.map((event, index) => (
+                            <div key={event.id} className="mobile-discovery-feedItem">
+                                <DiscoveryCard
+                                    event={event}
+                                    onClick={() => {
+                                        metrics.trackCardClick({
+                                            eventId: event.id,
+                                            position: index,
+                                            section: shortlistMode ? 'shortlist' : 'mobile-feed',
+                                        });
+                                        onEventSelect?.(event);
+                                    }}
+                                    className="w-full mb-0"
+                                    onFeedbackAction={handleFeedbackAction}
+                                    onShortlistToggle={handleShortlistToggle}
+                                    isInShortlist={shortlistIdSet.has(event.id)}
+                                    onSaved={(savedEvent, source) => {
+                                        metrics.trackSave({ eventId: savedEvent.id, source });
+                                        if (source === 'swipe') {
+                                            showInfo('Saved with swipe.');
+                                        }
+                                    }}
+                                    isAttending={isAttending(event.id)}
+                                    isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
+                                    onAttendanceToggle={handleAttendanceToggle}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </MobileAppShell>
+
+            <MobileSheet
+                open={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                title="Refine your feed"
+                subtitle="Keep discovery focused without losing momentum."
+                showHeader={false}
+                footer={(
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={resetFiltersTracked}
+                            className="min-h-12 rounded-[1rem] border border-[var(--mobile-app-surface-border)] bg-transparent px-4 text-sm font-semibold text-[var(--mobile-app-muted-strong)] transition-colors hover:bg-[var(--mobile-app-pill-bg)]"
+                        >
+                            Reset all
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsFilterOpen(false)}
+                            className="min-h-12 rounded-[1rem] bg-[var(--mobile-app-pill-active-text)] px-4 text-sm font-semibold text-[var(--mono-bg-main)] shadow-[0_14px_24px_rgba(2,6,23,0.18)] transition-opacity hover:opacity-90"
+                        >
+                            Show {visibleResultCount}
+                        </button>
+                    </div>
+                )}
+            >
+                <div className="space-y-4">
+                    <div className="space-y-4">
+                        <MobileSectionHeader
+                            title="Categories and format"
+                            className="mb-4"
+                        />
+                        <DiscoverySidebar
+                            filters={{
+                                format: filters.format,
+                                cost: filters.cost,
+                                categories: filters.categories || [],
+                                tags: filters.tags || [],
                             }}
-                            className="w-full bg-[var(--background-elevated)]/50 rounded-xl py-2.5 pl-10 pr-4 text-[15px] text-[var(--foreground-primary)] placeholder:text-[var(--foreground-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--border-strong)] transition-all h-[44px]"
+                            onUpdateFilter={updateFilterTracked}
+                            categories={categories}
+                            events={events}
+                            counts={counts}
+                            mobileMode={true}
                         />
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setIsFilterOpen(true)}
-                        aria-label="Open filters"
-                        className={cn(
-                            'h-[44px] w-[44px] rounded-xl inline-flex items-center justify-center transition-colors',
-                            activeFilterCount > 0
-                                ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
-                                : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]'
-                        )}
-                    >
-                        <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
-                    </button>
-                </div>
+                    <div className="space-y-4">
+                        <MobileSectionHeader
+                            title="Location and timing"
+                            className="mb-4"
+                        />
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 pl-0 [scrollbar-width:thin]">
-                    {DISCOVERY_RANKING_OPTIONS.map((option) => (
-                        <button
-                            key={option.id}
-                            type="button"
-                            onClick={() => applyRankingMode(option.id)}
-                            className={cn(
-                                'h-8 px-3 text-xs whitespace-nowrap inline-flex items-center transition-colors',
-                                rankingMode === option.id
-                                    ? 'border-b-2 border-[var(--border-strong)] text-[var(--foreground-primary)]'
-                                    : 'border-b-0 text-[#999999] hover:text-[var(--foreground-primary)]'
-                            )}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-
-                <ActiveFilterRail
-                    chips={filterRailChips}
-                    onClearAll={resetFiltersTracked}
-                    className={cn('top-[120px]', MOBILE_PAGE_GUTTER)}
-                />
-
-            </div>
-
-            {isFilterOpen && (
-                <div className="fixed inset-0 z-[140] flex flex-col justify-end isolate">
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-                        onClick={() => setIsFilterOpen(false)}
-                    />
-
-                    <div
-                        ref={filterDialogRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="mobile-discovery-filters-title"
-                        tabIndex={-1}
-                        className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300"
-                    >
-                        <div className={cn('flex items-center justify-between py-4 border-b border-border', MOBILE_PAGE_GUTTER)}>
-                            <h2 id="mobile-discovery-filters-title" className="text-xl font-semibold text-foreground">Filters</h2>
+                        {hasPersonalizationOverrides ? (
                             <button
                                 type="button"
-                                onClick={() => setIsFilterOpen(false)}
-                                className="p-2 -mr-2 text-muted-foreground hover:text-foreground"
+                                onClick={resetPersonalization}
+                                className="mobile-header__metaButton mb-4"
                             >
-                                <span className="sr-only">Close</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                Reset hidden and tuned categories ({hiddenEventIds.length + hiddenCategoryCount})
                             </button>
-                        </div>
+                        ) : null}
 
-                        <div className={cn('flex-1 overflow-y-auto py-4', MOBILE_PAGE_GUTTER)}>
-                            <DiscoverySidebar
-                                filters={{
-                                    format: filters.format,
-                                    cost: filters.cost,
-                                    categories: filters.categories || [],
-                                    tags: filters.tags || []
-                                }}
-                                onUpdateFilter={updateFilterTracked}
-                                categories={categories}
-                                events={events}
-                                counts={counts}
-                                mobileMode={true}
-                            />
-
-                            <div className="mt-6 space-y-4">
-                                <div>
-                                    <h3 className="text-sm font-semibold text-foreground">Advanced filters</h3>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Manage restored location, date, and preference filters.
-                                    </p>
-                                </div>
-
-                                {hasPersonalizationOverrides && (
-                                    <button
-                                        type="button"
-                                        onClick={resetPersonalization}
-                                        className="w-full rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-left text-xs text-foreground hover:bg-muted/50 transition-colors"
-                                    >
-                                        Reset hidden and recommendation tuning
-                                        <span className="ml-1 text-muted-foreground">
-                                            ({hiddenEventIds.length} hidden, {hiddenCategoryCount} tuned categories)
-                                        </span>
-                                    </button>
-                                )}
-
-                                <div className="space-y-1.5">
-                                    <label htmlFor="mobile-discovery-location" className="text-xs font-medium text-muted-foreground">Location</label>
+                        <div className="space-y-3.5">
+                            <div className="space-y-1.5">
+                                <label htmlFor="mobile-discovery-location" className="mobile-discovery-filterLabel">
+                                    Location
+                                </label>
+                                <label htmlFor="mobile-discovery-location" className="mobile-discovery-filterField">
                                     <input
                                         id="mobile-discovery-location"
                                         type="text"
@@ -584,148 +683,53 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                             const trimmed = e.target.value.trim();
                                             updateFilterTracked('locations', trimmed ? [trimmed] : []);
                                         }}
-                                        placeholder="City or region"
+                                        placeholder={isDetectingLocation ? 'Finding nearby events...' : 'City or region'}
                                         maxLength={100}
-                                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border-strong"
+                                        className="mobile-discovery-filterInput"
                                     />
-                                </div>
+                                </label>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-start-date" className="text-xs font-medium text-muted-foreground">Start date</label>
-                                        <input
-                                            id="mobile-discovery-start-date"
-                                            type="date"
-                                            value={toDateInputValue(filters.dateRange.start)}
-                                            onChange={(e) => handleDateFilterChange('start', e.target.value)}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label htmlFor="mobile-discovery-end-date" className="text-xs font-medium text-muted-foreground">End date</label>
-                                        <input
-                                            id="mobile-discovery-end-date"
-                                            type="date"
-                                            value={toDateInputValue(filters.dateRange.end)}
-                                            onChange={(e) => handleDateFilterChange('end', e.target.value)}
-                                            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:border-border-strong"
-                                        />
-                                    </div>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onNearMeClick?.()}
+                                    className="mobile-discovery-inlineAction"
+                                    disabled={isDetectingLocation}
+                                >
+                                    {isDetectingLocation ? 'Detecting location...' : 'Use current location'}
+                                </button>
+                            </div>
 
-                                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
-                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
-                                        <span>Recommended only</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={filters.recommended}
-                                            onChange={(e) => updateFilterTracked('recommended', e.target.checked)}
-                                            className="h-4 w-4 rounded border-border"
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
-                                        <span>Tracked events only</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={filters.myTracked}
-                                            onChange={(e) => updateFilterTracked('myTracked', e.target.checked)}
-                                            className="h-4 w-4 rounded border-border"
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between gap-3 text-sm text-foreground">
-                                        <span>My network only</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={filters.myNetwork}
-                                            onChange={(e) => updateFilterTracked('myNetwork', e.target.checked)}
-                                            className="h-4 w-4 rounded border-border"
-                                        />
-                                    </label>
-                                </div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="mobile-discovery-date-range" className="mobile-discovery-filterLabel">
+                                    Date range
+                                </label>
+                                <button
+                                    id="mobile-discovery-date-range"
+                                    type="button"
+                                    onClick={() => setIsDatePickerOpen(true)}
+                                    className="mobile-discovery-filterField"
+                                    aria-label="Select date range"
+                                    data-empty={dateRangeLabel === 'Any date'}
+                                >
+                                    <span className="mobile-discovery-filterFieldValue">{dateRangeLabel}</span>
+                                    <CaretRight size={14} className="mobile-discovery-filterFieldChevron" />
+                                </button>
                             </div>
                         </div>
-
-                        <div className="p-4 border-t border-border bg-card pb-8 flex gap-3">
-                            <button
-                                type="button"
-                                onClick={resetFiltersTracked}
-                                className="flex-1 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-muted transition-colors"
-                            >
-                                Reset
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsFilterOpen(false)}
-                                className="flex-1 py-3 rounded-xl bg-black text-white font-bold hover:bg-black/90 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg transition-colors"
-                            >
-                                Show Results
-                            </button>
-                        </div>
                     </div>
+
                 </div>
-            )}
+            </MobileSheet>
 
-            <div className={cn('py-4 space-y-4', MOBILE_PAGE_GUTTER)}>
-                {eventsForFeed.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[var(--background-elevated)] flex items-center justify-center mb-4">
-                            <MagnifyingGlass size={32} className="text-[var(--foreground-tertiary)]" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-[var(--foreground-primary)] mb-2">
-                            {shortlistMode ? 'No shortlisted events in current results' : 'No events found'}
-                        </h3>
-                        <p className="text-[var(--foreground-secondary)] max-w-xs">
-                            {shortlistMode
-                                ? 'Add events to your shortlist, then enable compare mode to see them here.'
-                                : 'Try adjusting your filters or search terms to find what you\'re looking for.'}
-                        </p>
-                        <button
-                            type="button"
-                            onClick={shortlistMode ? () => setShortlistMode(false) : resetFiltersTracked}
-                            className="mt-6 px-6 py-2 rounded-full bg-[var(--accent-primary)] text-[var(--accent-primary-foreground)] font-semibold text-sm hover:opacity-90"
-                        >
-                            {shortlistMode ? 'Exit shortlist mode' : 'Clear all filters'}
-                        </button>
-                    </div>
-                ) : (
-                    eventsForFeed.map((event, index) => (
-                        <DiscoveryCard
-                            key={event.id}
-                            event={event}
-                            onClick={() => {
-                                metrics.trackCardClick({
-                                    eventId: event.id,
-                                    position: index,
-                                    section: shortlistMode ? 'shortlist' : 'mobile-feed',
-                                });
-                                onEventSelect?.(event);
-                            }}
-                            className="w-full"
-                            onFeedbackAction={handleFeedbackAction}
-                            onExplainRecommendation={setExplainEvent}
-                            onShortlistToggle={handleShortlistToggle}
-                            isInShortlist={shortlistIdSet.has(event.id)}
-                            onSaved={(savedEvent, source) => {
-                                metrics.trackSave({ eventId: savedEvent.id, source });
-                                if (source === 'swipe') {
-                                    showInfo('Saved with swipe.');
-                                }
-                            }}
-                            isAttending={isAttending(event.id)}
-                            isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
-                            onAttendanceToggle={handleAttendanceToggle}
-                        />
-                    ))
-                )}
-            </div>
-
-            <RecommendationExplainDrawer
-                open={Boolean(explainEvent)}
-                event={explainEvent}
-                rankingMode={rankingMode}
-                activeFilterCount={activeFilterCount}
-                feedbackHint={feedbackHint}
-                onClose={() => setExplainEvent(null)}
+            <MobileQuickDatePicker
+                currentDate={datePickerCurrentDate}
+                onDateChange={() => { }}
+                view="month"
+                isOpen={isDatePickerOpen}
+                onClose={() => setIsDatePickerOpen(false)}
+                mode="range"
+                dateRange={filters.dateRange}
+                onDateRangeChange={(range) => updateFilterTracked('dateRange', range)}
             />
 
             <ShortlistCompareTray

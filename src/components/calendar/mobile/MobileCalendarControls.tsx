@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { SlidersHorizontal } from '@phosphor-icons/react';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/badge';
 import MobileQuickDatePicker from './MobileQuickDatePicker';
@@ -109,9 +110,9 @@ const MobileCalendarControls: React.FC<MobileCalendarControlsProps> = ({
                         <button
                             onClick={onToggleSearchFilter}
                             className="mobile-search-filter-button"
-                            aria-label="Open search and filters"
+                            aria-label="Open filters"
                         >
-                            <MaterialIcon name="search" size={20} />
+                            <SlidersHorizontal size={20} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
                             {activeFilterCount > 0 && (
                                 <Badge variant="secondary" className="mobile-filter-count-badge">
                                     {activeFilterCount}
@@ -137,4 +138,3 @@ const MobileCalendarControls: React.FC<MobileCalendarControlsProps> = ({
 };
 
 export default MobileCalendarControls;
-

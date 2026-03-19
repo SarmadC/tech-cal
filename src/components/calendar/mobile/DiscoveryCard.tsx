@@ -2,17 +2,16 @@
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
+import { format } from 'date-fns';
 import {
     MapPin,
     BookmarkSimple,
-    Calendar,
     DotsThree,
     UserCheck,
 } from '@phosphor-icons/react';
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { cn } from '@/lib/utils';
-import { formatDate } from '@/utils/dateUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -24,14 +23,8 @@ export interface DiscoveryCardProps {
     event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onView?: () => void;
-    onLearnMore?: () => void;
     className?: string;
-    variant?: 'default' | 'featured' | 'compact';
-    showCareerImpact?: boolean;
-    showLearnMore?: boolean;
-    badges?: React.ReactNode;
     onFeedbackAction?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }, action: DiscoveryFeedbackAction) => void;
-    onExplainRecommendation?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => void;
     onShortlistToggle?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }) => void;
     isInShortlist?: boolean;
     onSaved?: (event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore }, source: 'bookmark' | 'swipe') => void;
@@ -46,14 +39,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     event,
     onClick,
     onView,
-    onLearnMore: _onLearnMore,
     className = '',
-    variant: _variant = 'default',
-    showCareerImpact: _showCareerImpact = true,
-    showLearnMore: _showLearnMore = false,
-    badges: _badges,
     onFeedbackAction,
-    onExplainRecommendation,
     onShortlistToggle,
     isInShortlist = false,
     onSaved,
@@ -79,8 +66,10 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     const isAttendanceUpdating = typeof isAttendanceUpdatingProp === 'boolean'
         ? isAttendanceUpdatingProp
         : internalIsAttendanceUpdating;
-    const versionedEventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
     const organizationLogoSrc = getSafeImageSrc(event.organization?.logo);
+    const startDate = new Date(event.startTime);
+    const dateLabel = format(startDate, 'EEE, MMM d');
+    const timeLabel = format(startDate, 'h:mm a');
 
     React.useEffect(() => {
         if (!hasTrackedView.current && onView) {
@@ -89,13 +78,52 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         }
     }, [onView]);
 
-    const displayScore = React.useMemo(() => {
-        const raw = event.careerImpact?.overall ?? event.careerImpactLite?.overall ?? 0;
-        return Math.min(100, Math.max(0, raw <= 1 ? raw * 100 : raw));
-    }, [event.careerImpact?.overall, event.careerImpactLite?.overall]);
-
     const isFree = isEventFree(event);
+    const priceDisplay = isFree
+        ? 'Free'
+        : typeof event.priceMin === 'number'
+            ? `$${event.priceMin}`
+            : event.priceRange || 'Paid';
     const eventFormat = getEventFormat(event);
+    const formatDisplay = eventFormat === 'virtual'
+        ? 'Remote'
+        : eventFormat === 'hybrid'
+            ? 'Hybrid'
+            : 'On-Site';
+
+    const logoSources = React.useMemo(() => {
+        const sources: string[] = [];
+        if (organizationLogoSrc) {
+            sources.push(organizationLogoSrc);
+        }
+
+        const eventImageSrc = getVersionedImageSrc(event.eventImageUrl, event.updatedAt);
+        if (eventImageSrc) {
+            sources.push(eventImageSrc);
+        }
+
+        return sources;
+    }, [event.eventImageUrl, event.updatedAt, organizationLogoSrc]);
+
+    const [activeLogoSrc, setActiveLogoSrc] = React.useState<string | null>(() => logoSources[0] ?? null);
+
+    React.useEffect(() => {
+        setActiveLogoSrc(logoSources[0] ?? null);
+    }, [event.id, logoSources]);
+
+    const handleLogoError = React.useCallback(() => {
+        if (!activeLogoSrc) {
+            return;
+        }
+
+        const currentIndex = logoSources.indexOf(activeLogoSrc);
+        const nextSrc = currentIndex >= 0 ? logoSources[currentIndex + 1] : undefined;
+        setActiveLogoSrc(nextSrc ?? null);
+    }, [activeLogoSrc, logoSources]);
+
+    const logoAltText = activeLogoSrc === organizationLogoSrc
+        ? `${event.organization?.name ?? 'Event organizer'} logo`
+        : `${event.title} event image`;
 
     const performBookmarkToggle = React.useCallback(async (
         options: { forceSaveOnly?: boolean; source: 'bookmark' | 'swipe' }
@@ -241,46 +269,42 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                 }}
             >
                 <div
-                    className="rounded-[12px] p-4 relative overflow-hidden bg-transparent border border-[var(--border-default)] transition-colors group"
+                    className="mobile-surface-card mobile-surface-card--interactive group/event-card relative flex flex-col p-[1.125rem] text-foreground"
                     style={{
                         transform: `translateX(${translateX}px)`,
                         transition: swipeState.isActive ? 'none' : 'transform 180ms ease',
                     }}
                 >
                     <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-[var(--background-tertiary)] border border-[var(--border-default)] flex items-center justify-center">
-                            {(() => {
-                                const imageSrc = organizationLogoSrc || versionedEventImageSrc;
-                                if (imageSrc) {
-                                    return (
-                                        <Image
-                                            src={imageSrc}
-                                            alt={event.title}
-                                            width={32}
-                                            height={32}
-                                            className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                            }}
-                                        />
-                                    );
-                                }
-
-                                return (
-                                    <div className="w-full h-full flex items-center justify-center font-bold text-xs text-[var(--foreground-muted)]" style={{ backgroundColor: 'var(--background-elevated)' }}>
-                                        {event.title.charAt(0)}
-                                    </div>
-                                );
-                            })()}
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.95rem] border border-[var(--mobile-app-surface-border)] bg-[color-mix(in_srgb,var(--mobile-app-surface-bg-strong)_82%,transparent)] p-1.5">
+                            {activeLogoSrc ? (
+                                <Image
+                                    src={activeLogoSrc}
+                                    alt={logoAltText}
+                                    width={28}
+                                    height={28}
+                                    className="h-7 w-7 object-contain"
+                                    onError={handleLogoError}
+                                />
+                            ) : (
+                                <div className="text-base font-bold text-gray-400">
+                                    {event.title.charAt(0)}
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex-1 min-w-0 pt-0.5">
-                            <h3 className="text-[16px] font-semibold text-[var(--foreground-primary)] leading-snug line-clamp-2">
+                        <div className="min-w-0 flex-1">
+                            <h3 className="line-clamp-2 text-[16px] font-semibold leading-tight text-foreground">
                                 {event.title}
                             </h3>
+                            <div className="mt-1 flex items-center gap-2 text-[11px] font-mono text-[var(--mobile-app-muted)]">
+                                <span>{dateLabel}</span>
+                                <span>·</span>
+                                <span>{timeLabel}</span>
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-1 -mt-1 -mr-1">
+                        <div className="-mr-1 flex shrink-0 items-center justify-end gap-0.5 pt-0.5">
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -288,15 +312,16 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                     void handleAttendanceToggle();
                                 }}
                                 className={cn(
-                                    'p-2 rounded-md transition-colors',
+                                    'inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors',
                                     isAttending
-                                        ? 'text-emerald-300'
-                                        : 'text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]',
+                                        ? 'text-emerald-400'
+                                        : 'text-muted-foreground/60 hover:bg-foreground/5 hover:text-foreground',
                                     isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''
                                 )}
                                 aria-pressed={isAttending}
                                 aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
                                 disabled={isAttendanceUpdating}
+                                aria-busy={isAttendanceUpdating}
                             >
                                 <UserCheck size={16} weight={isAttending ? 'fill' : 'regular'} />
                             </button>
@@ -307,10 +332,18 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                     e.stopPropagation();
                                     void performBookmarkToggle({ source: 'bookmark' });
                                 }}
-                                className="p-2 rounded-md text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)] transition-colors"
-                                aria-label={isBookmarkedValue ? 'Remove bookmark' : 'Bookmark'}
+                                className={cn(
+                                    'inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors',
+                                    isBookmarkedValue
+                                        ? 'text-amber-400'
+                                        : 'text-muted-foreground/60 hover:bg-foreground/5 hover:text-foreground',
+                                    isBookmarking ? 'opacity-50 cursor-not-allowed' : ''
+                                )}
+                                aria-label={isBookmarkedValue ? 'Remove bookmark' : 'Bookmark event'}
+                                disabled={isBookmarking}
+                                aria-busy={isBookmarking}
                             >
-                                <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-[var(--foreground-primary)]' : 'text-[var(--foreground-tertiary)]'} size={18} />
+                                <BookmarkSimple size={16} weight={isBookmarkedValue ? 'fill' : 'regular'} />
                             </button>
 
                             <button
@@ -319,7 +352,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                     e.stopPropagation();
                                     setIsActionSheetOpen(true);
                                 }}
-                                className="p-2 rounded-md text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)] transition-colors"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
                                 aria-label="Open actions"
                             >
                                 <DotsThree size={16} weight="bold" />
@@ -327,54 +360,29 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                         </div>
                     </div>
 
-                    <p className="mt-2 text-[13px] text-[var(--foreground-secondary)] leading-relaxed line-clamp-2 font-normal">
-                        {event.description || 'No description available.'}
+                    <p className="mb-4 mt-4 line-clamp-2 text-[13px] leading-relaxed text-[var(--mobile-app-muted)]">
+                        {event.description || 'No description available for this event.'}
                     </p>
 
-                    <div className="mt-3">
-                        <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[var(--foreground-tertiary)]">Recommendation</span>
-                            <span className="text-[var(--foreground-secondary)] font-medium">{Math.round(displayScore)}%</span>
+                    <div className="mt-auto flex items-center justify-between gap-3 border-t border-[var(--mobile-app-divider)] pt-3">
+                        <div className="flex min-w-0 items-center gap-2 text-[11px] font-mono text-[var(--mobile-app-muted)]">
+                            <MapPin size={12} weight="fill" className="flex-shrink-0 text-[var(--mobile-app-muted)]/70" />
+                            <span className="truncate max-w-[128px]">{event.location || 'Location TBA'}</span>
                         </div>
-                        <div className="mt-1 h-1.5 rounded-full bg-[var(--background-tertiary)] overflow-hidden">
-                            <div
-                                className="h-full rounded-full bg-[var(--accent-primary)] transition-all"
-                                style={{ width: `${displayScore}%` }}
-                            />
-                        </div>
-                    </div>
 
-                    <div className="mt-3 flex items-center gap-3 text-[12px] text-[var(--foreground-tertiary)] font-mono whitespace-nowrap overflow-hidden">
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <Calendar size={14} weight="regular" className="text-[var(--foreground-muted)]" />
-                            <span>{formatDate(event.startTime, event.timezone)}</span>
-                        </div>
-                        {event.location && (
-                            <>
-                                <span className="text-[var(--border-strong)]">•</span>
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                    <MapPin size={14} weight="regular" className="text-[var(--foreground-muted)] flex-shrink-0" />
-                                    <span className="truncate">{event.location}</span>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--background-tertiary)] border border-[var(--border-subtle)]">
-                            <div className={cn('w-1 h-1 rounded-full',
-                                eventFormat === 'virtual' ? 'bg-blue-500' :
-                                    eventFormat === 'hybrid' ? 'bg-purple-500' : 'bg-orange-500'
-                            )} />
-                            <span className="text-[11px] text-[var(--foreground-secondary)]">
-                                {eventFormat === 'virtual' ? 'Remote' : eventFormat === 'hybrid' ? 'Hybrid' : 'In-Person'}
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                            <span className="rounded-[4px] bg-blue-50 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
+                                {formatDisplay}
                             </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--background-tertiary)] border border-[var(--border-subtle)]">
-                            <div className={cn('w-1 h-1 rounded-full', isFree ? 'bg-green-500' : 'bg-[var(--foreground-primary)]')} />
-                            <span className="text-[11px] text-[var(--foreground-secondary)]">
-                                {isFree ? 'Free' : 'Paid'}
+                            <span
+                                className={cn(
+                                    'rounded-[4px] px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider',
+                                    isFree
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                        : 'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-muted-foreground'
+                                )}
+                            >
+                                {priceDisplay}
                             </span>
                         </div>
                     </div>
@@ -390,16 +398,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                         aria-label="Close actions"
                     />
                     <div className="relative w-full rounded-t-2xl border-t border-border bg-background p-4 pb-6 space-y-1">
-                        <button
-                            type="button"
-                            className={actionButtonClass}
-                            onClick={() => {
-                                onExplainRecommendation?.(event);
-                                setIsActionSheetOpen(false);
-                            }}
-                        >
-                            Why this event
-                        </button>
                         <button
                             type="button"
                             className={actionButtonClass}

@@ -29,7 +29,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
                     setIsOpen(!isOpen);
                 }}
             >
-                <h3 className="text-[12px] font-semibold text-foreground/80 group-hover:text-foreground transition-colors uppercase tracking-wider">{title}</h3>
+                <h3 className="text-[12px] font-semibold text-foreground/80 group-hover:text-foreground transition-colors">{title}</h3>
                 {isOpen ? (
                     <CaretUp size={12} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                 ) : (

@@ -160,6 +160,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
                     navItems={APP_MOBILE_NAV_ITEMS}
                     className="sticky top-0 z-50 bg-[var(--mono-bg-main)]/80 backdrop-blur-xl border-b border-[var(--mono-border-default)]"
                     showLogo={false}
+                    variant="app"
                 />
                 <div className="p-4">
                     {/* Unified Top Navigation */}

@@ -319,6 +319,8 @@ export function CalendarLayout({
                                 currentDate={localDate}
                                 filters={{
                                     searchTerm: '',
+                                    tags: [],
+                                    locations: [],
                                     format: 'all',
                                     cost: 'all',
                                     difficulty: 'all',
@@ -340,12 +342,6 @@ export function CalendarLayout({
                                     // TODO: Implement filter reset for mobile
                                     // Mobile filter reset handled
                                 }}
-                                onApplyQuickFilter={(_filterType) => {
-                                    // TODO: Implement quick filter application for mobile
-                                    // Mobile quick filter handled
-                                }}
-                                searchSuggestions={[]}
-                                onSearchSuggestionSelect={() => { }}
                             />
                         </div>
                     )}

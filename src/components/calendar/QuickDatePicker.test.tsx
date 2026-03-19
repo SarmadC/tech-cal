@@ -30,8 +30,8 @@ describe('QuickDatePicker', () => {
     render(<QuickDatePicker {...defaultProps} />);
     
     expect(screen.getByText('Jump to...')).toBeInTheDocument();
-    expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
+    expect(screen.queryByText('Quick Select')).not.toBeInTheDocument();
   });
 
   it('should not render when closed', () => {
@@ -70,18 +70,6 @@ describe('QuickDatePicker', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('should call onDateChange when today button is clicked', () => {
-    const onDateChange = vi.fn();
-    const onClose = vi.fn();
-    render(<QuickDatePicker {...defaultProps} onDateChange={onDateChange} onClose={onClose} />);
-    
-    const todayButton = screen.getByText('Today');
-    fireEvent.click(todayButton);
-    
-    expect(onDateChange).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
-  });
-
   it('should call onDateChange when done button is clicked', () => {
     const onDateChange = vi.fn();
     const onClose = vi.fn();
@@ -105,27 +93,12 @@ describe('QuickDatePicker', () => {
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
-  it('should render quick date options', () => {
+  it('should not render quick select controls', () => {
     render(<QuickDatePicker {...defaultProps} />);
-    
-    // Component renders these quick options
-    expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('Yesterday')).toBeInTheDocument();
-    expect(screen.getByText('Tomorrow')).toBeInTheDocument();
-    expect(screen.getByText('Next week')).toBeInTheDocument();
-    expect(screen.getByText('Next month')).toBeInTheDocument();
-  });
 
-  it('should call onDateChange when quick date option is clicked', () => {
-    const onDateChange = vi.fn();
-    const onClose = vi.fn();
-    render(<QuickDatePicker {...defaultProps} onDateChange={onDateChange} onClose={onClose} />);
-    
-    const yesterdayOption = screen.getByText('Yesterday');
-    fireEvent.click(yesterdayOption);
-    
-    expect(onDateChange).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
+    expect(screen.queryByText('Quick Select')).not.toBeInTheDocument();
+    expect(screen.queryByText('Today')).not.toBeInTheDocument();
+    expect(screen.queryByText('Next week')).not.toBeInTheDocument();
   });
 
   it('should handle navigation buttons', () => {

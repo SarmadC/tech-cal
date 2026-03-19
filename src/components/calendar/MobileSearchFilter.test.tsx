@@ -1,45 +1,13 @@
-// src/components/calendar/MobileSearchFilter.test.tsx
-
-import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@/utils/test-utils';
+import { describe, expect, it, vi } from 'vitest';
 import MobileSearchFilter from './MobileSearchFilter';
-
-// Mock the MaterialIcon component
-vi.mock('@/components/ui/Icon', () => ({
-  MaterialIcon: ({ name, size }: { name: string; size: number }) => (
-    <span data-testid={`icon-${name}`} data-size={size}>
-      {name}
-    </span>
-  ),
-}));
-
-// Mock the Button component
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, className, variant }: { children: React.ReactNode; onClick: () => void; className: string; variant: string }) => (
-    <button onClick={onClick} className={className} data-variant={variant}>
-      {children}
-    </button>
-  ),
-}));
-
-// Mock the Badge component
-vi.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, variant, className }: { children: React.ReactNode; variant: string; className: string }) => (
-    <span className={className} data-variant={variant}>
-      {children}
-    </span>
-  ),
-}));
-
-// Mock the useDebounce hook
-vi.mock('@/hooks/useDebounce', () => ({
-  useDebounce: (value: unknown) => value,
-}));
 
 describe('MobileSearchFilter', () => {
   const defaultProps = {
     filters: {
       searchTerm: '',
+      tags: [],
+      locations: [],
       format: 'all' as const,
       cost: 'all' as const,
       difficulty: 'all' as const,
@@ -56,7 +24,6 @@ describe('MobileSearchFilter', () => {
     },
     onUpdateFilter: vi.fn(),
     onResetFilters: vi.fn(),
-    onApplyQuickFilter: vi.fn(),
     activeFilterCount: 0,
     isOpen: true,
     onClose: vi.fn(),
@@ -69,192 +36,135 @@ describe('MobileSearchFilter', () => {
     vi.clearAllMocks();
   });
 
-  it('should render the search filter when open', () => {
+  it('renders the discovery-style filter sheet and removes the old tabbed UI', () => {
     render(<MobileSearchFilter {...defaultProps} />);
-    
-    expect(screen.getByText('Search & Filters')).toBeInTheDocument();
-    expect(screen.getByText('Search')).toBeInTheDocument();
-    expect(screen.getByText('Filters')).toBeInTheDocument();
+
+    expect(screen.getByRole('dialog', { name: 'Calendar filters' })).toBeInTheDocument();
+    expect(screen.getByText('Categories and format')).toBeInTheDocument();
+    expect(screen.getByText('Location and timing')).toBeInTheDocument();
+    expect(screen.getByLabelText('Location')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Select date range' })).toHaveTextContent('Any date');
+    expect(screen.queryByText('Quick filters')).not.toBeInTheDocument();
+    expect(screen.queryByText('Difficulty')).not.toBeInTheDocument();
   });
 
-  it('should not render when closed', () => {
+  it('does not render when closed', () => {
     render(<MobileSearchFilter {...defaultProps} isOpen={false} />);
-    
-    expect(screen.queryByText('Search & Filters')).not.toBeInTheDocument();
+
+    expect(screen.queryByRole('dialog', { name: 'Calendar filters' })).not.toBeInTheDocument();
   });
 
-  it('should show search tab by default', () => {
-    render(<MobileSearchFilter {...defaultProps} />);
-    
-    const searchTab = screen.getByText('Search').closest('button');
-    expect(searchTab).toHaveClass('active');
-  });
-
-  it('should switch to filters tab when clicked', () => {
-    render(<MobileSearchFilter {...defaultProps} />);
-    
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    expect(filtersTab.closest('button')).toHaveClass('active');
-  });
-
-  it('should call onClose when close button is clicked', () => {
+  it('calls onClose when the sheet scrim is clicked', () => {
     const onClose = vi.fn();
     render(<MobileSearchFilter {...defaultProps} onClose={onClose} />);
-    
-    const closeButton = screen.getByLabelText('Close search and filters');
-    fireEvent.click(closeButton);
-    
+
+    fireEvent.click(screen.getByLabelText('Close'));
+
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('should handle search input changes', () => {
+  it('updates the location field from the shared location control', () => {
     render(<MobileSearchFilter {...defaultProps} />);
-    
-    const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
-    fireEvent.change(searchInput, { target: { value: 'test search' } });
-    
-    expect(searchInput).toHaveValue('test search');
+
+    const locationInput = screen.getByLabelText('Location');
+    fireEvent.change(locationInput, { target: { value: 'Edmonton' } });
+
+    expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('locations', ['Edmonton']);
   });
 
-  it('should show search suggestions when provided', () => {
-    // Note: Search suggestions are generated by useSearchSuggestions hook based on events/categories
-    // This test verifies the component renders without errors when suggestions would be available
-    const testEvents = [
-      { id: '1', title: 'Test Event', organizer: 'Test Org', eventTypeId: 'type1', startTime: '2024-01-01T10:00:00Z' },
-    ];
-    
-    render(<MobileSearchFilter {...defaultProps} events={testEvents} categories={[]} />);
-    
-    const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
-    fireEvent.change(searchInput, { target: { value: 'test' } });
-    fireEvent.focus(searchInput);
-    
-    // Component renders search input - suggestions are handled by hook
-    expect(searchInput).toBeInTheDocument();
-  });
-
-  it('should call onSearchSuggestionSelect when suggestion is clicked', () => {
-    const onSearchSuggestionSelect = vi.fn();
-    const testEvents = [
-      { id: '1', title: 'Test Event', organizer: 'Test Org', eventTypeId: 'type1', startTime: '2024-01-01T10:00:00Z' },
-    ];
-    
-    render(<MobileSearchFilter {...defaultProps} events={testEvents} categories={[]} onSearchSuggestionSelect={onSearchSuggestionSelect} />);
-    
-    const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
-    fireEvent.change(searchInput, { target: { value: 'test' } });
-    fireEvent.focus(searchInput);
-    
-    // Suggestions are generated by useSearchSuggestions hook
-    // This test verifies the component handles suggestion selection when available
-    expect(searchInput).toBeInTheDocument();
-    // Note: Actual suggestion clicking would require mocking the hook or waiting for async rendering
-  });
-
-  it('should clear search input when clear button is clicked', () => {
-    render(<MobileSearchFilter {...defaultProps} filters={{ ...defaultProps.filters, searchTerm: 'test' }} />);
-    
-    const clearButton = screen.getByLabelText('Clear search');
-    fireEvent.click(clearButton);
-    
-    expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('searchTerm', '');
-  });
-
-  it('should render quick filter buttons', () => {
+  it('updates the format filter from the new sheet rows', () => {
     render(<MobileSearchFilter {...defaultProps} />);
-    
-    // Component renders filter options in the Filters tab
-    // Quick filters are not rendered as separate buttons in the current UI
-    // Verify the component renders the filters tab
-    const filtersTab = screen.getByText('Filters');
-    expect(filtersTab).toBeInTheDocument();
-  });
 
-  it('should call onApplyQuickFilter when quick filter is clicked', () => {
-    render(<MobileSearchFilter {...defaultProps} />);
-    
-    // Quick filters are accessed through the Filters tab in current UI
-    // This test verifies the component can handle quick filter application
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    // Component should be ready to apply filters
-    expect(filtersTab).toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByText('Virtual'));
 
-  it('should render filter options in filters tab', () => {
-    render(<MobileSearchFilter {...defaultProps} />);
-    
-    // Switch to filters tab
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    expect(screen.getByText('Format')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Difficulty Level')).toBeInTheDocument();
-    expect(screen.getByText('Personal')).toBeInTheDocument();
-  });
-
-  it('should call onUpdateFilter when filter option is changed', () => {
-    render(<MobileSearchFilter {...defaultProps} />);
-    
-    // Switch to filters tab
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    const virtualOption = screen.getByDisplayValue('virtual');
-    fireEvent.click(virtualOption);
-    
     expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('format', 'virtual');
   });
 
-  it('should show reset button when filters are active', () => {
-    render(<MobileSearchFilter {...defaultProps} activeFilterCount={2} />);
-    
-    // Switch to filters tab
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    expect(screen.getByText('Reset All Filters')).toBeInTheDocument();
+  it('renders categories in a collapsible section and toggles them', () => {
+    render(
+      <MobileSearchFilter
+        {...defaultProps}
+        events={[
+          {
+            id: 'event-1',
+            createdAt: '2026-03-18T10:00:00.000Z',
+            title: 'Build Hackathon',
+            description: 'A weekend build sprint.',
+            organizer: 'Tech Cal',
+            location: 'Edmonton',
+            status: 'published',
+            startTime: '2026-03-20T10:00:00.000Z',
+            endTime: '2026-03-21T18:00:00.000Z',
+            sourceUrl: 'https://example.com',
+            livestreamUrl: null,
+            eventTypeId: 'hackathons',
+            tags: [{ id: 'tag-1', name: 'AI', category: 'Topic' }],
+          },
+        ]}
+        categories={[{ id: 'hackathons', name: 'Hackathons' }]}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Hackathons'));
+
+    expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('categories', ['hackathons']);
   });
 
-  it('should call onResetFilters when reset button is clicked', () => {
-    render(<MobileSearchFilter {...defaultProps} activeFilterCount={2} />);
-    
-    // Switch to filters tab
-    const filtersTab = screen.getByText('Filters');
-    fireEvent.click(filtersTab);
-    
-    const resetButton = screen.getByText('Reset All Filters');
-    fireEvent.click(resetButton);
-    
+  it('renders discovery tag filters when tags are present', () => {
+    render(
+      <MobileSearchFilter
+        {...defaultProps}
+        events={[
+          {
+            id: 'event-1',
+            createdAt: '2026-03-18T10:00:00.000Z',
+            title: 'Frontend Summit',
+            description: 'A design systems event.',
+            organizer: 'Tech Cal',
+            location: 'Remote',
+            status: 'published',
+            startTime: '2026-03-20T10:00:00.000Z',
+            endTime: '2026-03-20T16:00:00.000Z',
+            sourceUrl: 'https://example.com',
+            livestreamUrl: null,
+            eventTypeId: 'summits',
+            tags: [{ id: 'tag-1', name: 'AI', category: 'Topic' }],
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Popular Tags')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /AI/i }));
+
+    expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('tags', ['ai']);
+  });
+
+  it('shows the reset action when filters are active', () => {
+    render(<MobileSearchFilter {...defaultProps} activeFilterCount={3} />);
+
+    expect(screen.getByText('3 active')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+
     expect(defaultProps.onResetFilters).toHaveBeenCalled();
   });
 
-  it('should show filter count badge when active', () => {
-    render(<MobileSearchFilter {...defaultProps} activeFilterCount={3} />);
-    
-    expect(screen.getAllByText('3')).toHaveLength(2); // Header badge and tab badge
-  });
-
-  it('should handle escape key', () => {
+  it('closes on escape', () => {
     const onClose = vi.fn();
     render(<MobileSearchFilter {...defaultProps} onClose={onClose} />);
-    
-    fireEvent.keyDown(document, { key: 'Escape' });
-    
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('should focus search input when search tab is active', async () => {
+  it('trims the location value on blur', () => {
     render(<MobileSearchFilter {...defaultProps} />);
-    
-    // Wait for the focus effect to complete
-    await waitFor(() => {
-      const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
-      expect(searchInput).toHaveFocus();
-    }, { timeout: 1000 });
+
+    const locationInput = screen.getByLabelText('Location');
+    fireEvent.blur(locationInput, { target: { value: '  Calgary  ' } });
+
+    expect(defaultProps.onUpdateFilter).toHaveBeenCalledWith('locations', ['Calgary']);
   });
 });

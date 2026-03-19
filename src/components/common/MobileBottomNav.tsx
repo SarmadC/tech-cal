@@ -3,7 +3,7 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Compass, CalendarBlank, SquaresFour, UsersThree } from '@phosphor-icons/react';
-import { cn } from '@/lib/utils';
+import MobileTabBar, { MobileTabBarItem } from '@/components/common/mobile/MobileTabBar';
 
 interface NavItem {
     name: string;
@@ -22,42 +22,14 @@ const MobileBottomNav = () => {
         { name: 'Dashboard', href: '/dashboard', icon: SquaresFour },
     ];
 
-    return (
-        <div
-            className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden bg-[var(--background-main)] border-t border-[var(--border-subtle)]"
-        >
-            <div className="flex justify-around items-center h-[60px] px-2">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+    const items: MobileTabBarItem[] = navItems.map((item) => ({
+        ...item,
+        active: pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href)),
+    }));
 
-                    return (
-                        <button
-                            key={item.name}
-                            onClick={() => router.push(item.href)}
-                            className="flex flex-col items-center justify-center w-full h-full gap-1 group"
-                        >
-                            <div className={cn(
-                                "flex items-center justify-center transition-colors duration-200",
-                                isActive
-                                    ? "text-[var(--accent-primary)]"
-                                    : "text-[var(--foreground-tertiary)] group-hover:text-[var(--foreground-secondary)]"
-                            )}>
-                                <item.icon size={24} weight={isActive ? "fill" : "regular"} />
-                            </div>
-                            <span
-                                className={cn(
-                                    "text-[10px] font-medium transition-colors duration-200",
-                                    isActive
-                                        ? "text-[var(--accent-primary)]"
-                                        : "text-[var(--foreground-tertiary)] group-hover:text-[var(--foreground-secondary)]"
-                                )}
-                            >
-                                {item.name}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+    return (
+        <div className="md:hidden">
+            <MobileTabBar items={items} onSelect={(href) => router.push(href)} />
         </div>
     );
 };

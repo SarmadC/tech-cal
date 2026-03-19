@@ -134,7 +134,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--background-main);
+  background: var(--mobile-calendar-page-bg, var(--background-main));
   color: var(--foreground-primary);
   overflow: hidden;
 }
@@ -1182,30 +1182,45 @@
 /* Legacy tab styles removed - using new navigation */
 
 .mobile-search-filter-button {
+  appearance: none;
+  -webkit-appearance: none;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  background: var(--background-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: 20px;
+  background: none;
+  border: none;
+  border-radius: 8px;
   color: var(--foreground-primary);
   transition: all 0.2s ease;
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .mobile-search-filter-button:hover {
-  background: var(--background-tertiary);
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--background-secondary);
+  box-shadow: none;
 }
 
 .mobile-search-filter-button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-xs);
+  opacity: 0.8;
+  box-shadow: none;
+}
+
+.mobile-search-filter-button:focus,
+.mobile-search-filter-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.dark .mobile-search-filter-button,
+.dark .mobile-search-filter-button:hover,
+.dark .mobile-search-filter-button:active {
+  border-color: transparent !important;
 }
 
 .mobile-filter-count-badge {
@@ -1245,10 +1260,6 @@
     grid-template-columns: 1fr;
   }
   
-  .mobile-search-filter-button {
-    width: 40px;
-    height: 40px;
-  }
 }
 
 /* Icon-only button styling */
@@ -1382,7 +1393,7 @@
 .mobile-calendar-controls {
   position: static;
   z-index: 40;
-  background: var(--background-elevated);
+  background: var(--mobile-calendar-chrome-bg, var(--background-elevated));
   border-bottom: 1px solid var(--border-default);
   backdrop-filter: blur(8px);
 }
@@ -1390,31 +1401,24 @@
 .mobile-calendar-controls-content {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  background: inherit;
   gap: 12px;
+  width: min(100%, var(--mobile-app-max-width));
+  margin: 0 auto;
+  padding-left: 28px;
+  padding-right: 28px;
 }
 
-/* Align month text with logo - navbar-container has 6px padding, logo has 12px left padding = 18px total */
-/* Calendar controls has 16px left padding, so we need to add 2px to align (18px - 16px = 2px) */
-/* But since the navbar is centered, we need to match the visual alignment */
-/* The logo container starts at the navbar-container's left edge (6px from container) */
-/* To align month with logo, we match the logo's left padding position */
 .mobile-calendar-controls-content .mobile-month-dropdown {
   margin-left: 0;
   padding-left: 0;
-}
-
-/* Adjust the container padding to align with navbar logo */
-.mobile-calendar-controls-content {
-  padding-left: 28px;
-  padding-right: 16px;
 }
 
 /* Legacy mobile-top-navigation-new styles (kept for backward compatibility) */
 .mobile-top-navigation-new {
   position: static;
   z-index: 50;
-  background: var(--background-elevated);
+  background: var(--mobile-calendar-chrome-bg, var(--background-elevated));
   border-bottom: 1px solid var(--border-default);
   backdrop-filter: blur(8px);
 }
@@ -1422,8 +1426,29 @@
 .mobile-nav-content-new {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  background: inherit;
   gap: 12px;
+  width: min(100%, var(--mobile-app-max-width));
+  margin: 0 auto;
+  padding: 12px 28px;
+}
+
+.dark .mobile-calendar-controls,
+.dark .mobile-calendar-controls-content,
+.dark .mobile-top-navigation-new,
+.dark .mobile-nav-content-new {
+  background: #08090a !important;
+}
+
+.dark .mobile-calendar-month-view,
+.dark .mobile-enhanced-month-view,
+.dark .mobile-calendar-content-container,
+.dark .month-events-discovery,
+.dark .month-events-discovery.collapsed,
+.dark .month-events-discovery .events-list,
+.dark .events-list .date-section-header,
+.dark .no-events-selected {
+  background: #08090a !important;
 }
 
 .mobile-nav-spacer {

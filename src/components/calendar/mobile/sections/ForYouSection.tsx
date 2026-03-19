@@ -162,15 +162,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         onEventSelect?.(event);
     }, [onEventSelect, trackForYouClick, isTrackingEnabled]);
 
-    const handleLearnMore = React.useCallback((event: Event, position: number) => {
-        // Track learn more interaction
-        if (isTrackingEnabled) {
-            trackForYouClick(event.id, position + 1);
-        }
-
-        onEventSelect?.(event);
-    }, [onEventSelect, trackForYouClick, isTrackingEnabled]);
-
     const handleEventView = React.useCallback((event: Event, position: number) => {
         // Track view interaction
         if (isTrackingEnabled) {
@@ -378,10 +369,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             event={event}
             onClick={() => handleEventClick(event, index)}
             onView={() => handleEventView(event, index)}
-            onLearnMore={() => handleLearnMore(event, index)}
-            variant={index === 0 ? 'featured' : 'default'}
-            showLearnMore={false}
-            className=""
             isAttending={isAttending(event.id)}
             isAttendanceUpdating={pendingAttendanceIds.has(event.id)}
             onAttendanceToggle={handleAttendanceToggle}

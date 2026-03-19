@@ -2,19 +2,30 @@
    MOBILE TODAY & CALENDAR VIEWS - MATCHING MOCKUP DESIGN
    ========================================================================== */
 
+:root {
+  --mobile-calendar-page-bg: var(--background-main);
+  --mobile-calendar-chrome-bg: var(--background-elevated);
+}
+
+.dark {
+  --mobile-calendar-page-bg: #08090a;
+  --mobile-calendar-chrome-bg: #08090a;
+}
+
 /* ========== MOBILE CALENDAR APP CONTAINER ========== */
 .mobile-calendar-app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  background: var(--background-main);
+  background: var(--mobile-calendar-page-bg);
 }
 
 .mobile-calendar-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background: var(--mobile-calendar-page-bg);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -114,7 +125,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--background-main);
+  background: var(--mobile-calendar-page-bg);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

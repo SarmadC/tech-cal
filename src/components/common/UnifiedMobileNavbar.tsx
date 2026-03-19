@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { SignOut, Sun, Moon, List, X } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
@@ -24,6 +24,7 @@ interface UnifiedMobileNavbarProps {
     showThemeToggle?: boolean;
     className?: string;
     fixed?: boolean;
+    variant?: 'brand' | 'app';
 }
 
 export default function UnifiedMobileNavbar({
@@ -33,30 +34,28 @@ export default function UnifiedMobileNavbar({
     showThemeToggle = true,
     className,
     fixed = false,
+    variant = 'brand',
 }: UnifiedMobileNavbarProps) {
     const router = useRouter();
     const pathname = usePathname();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [mobileMenuRoute, setMobileMenuRoute] = useState<string | null>(null);
     const { user, signOut } = useAuth();
     const { theme, setTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    // Close menu when route changes
-    useEffect(() => {
-        setIsMobileMenuOpen(false);
-    }, [pathname]);
+    const mounted = useSyncExternalStore(
+        () => () => undefined,
+        () => true,
+        () => false
+    );
+    const currentPath = pathname ?? '';
+    const isMobileMenuOpen = mobileMenuRoute === currentPath;
 
     const handleSignOut = async () => {
-        setIsMobileMenuOpen(false);
+        setMobileMenuRoute(null);
         await signOut();
     };
 
     const handleNavClick = (href: string) => {
-        setIsMobileMenuOpen(false);
+        setMobileMenuRoute(null);
         if (href.startsWith('#')) {
             return;
         }
@@ -65,18 +64,25 @@ export default function UnifiedMobileNavbar({
 
     const handleCtaClick = () => {
         if (ctaButton) {
-            setIsMobileMenuOpen(false);
+            setMobileMenuRoute(null);
             router.push(ctaButton.href);
         }
     };
 
     const navbarContent = (
-        <div className={cn("pointer-events-auto", !fixed && className)}>
-            <div className="relative z-50 mx-auto flex w-full flex-col items-center justify-between bg-transparent px-4 py-2 lg:hidden">
-                <div className="flex w-full flex-row items-center justify-between">
+        <div className={cn('pointer-events-auto', !fixed && className)}>
+            <div className="mobile-unified-nav lg:hidden" data-variant={variant}>
+                <div className="mobile-unified-nav__frame">
                     {/* Logo */}
                     {showLogo && (
-                        <a href="#" onClick={(e) => { e.preventDefault(); router.push('/'); }} className="navbar-logo relative z-20 flex min-h-11 items-center gap-2 px-3 py-1.5 text-sm font-medium no-underline rounded-full transition-colors m-0">
+                        <a
+                            href="#"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                router.push('/');
+                            }}
+                            className="mobile-unified-nav__brand relative z-20"
+                        >
                             <svg width="24" height="24" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" className="object-contain">
                                 <rect width="120" height="120" fill="#000000"></rect>
                                 <polygon points="60,60 52,56 28,68 36,72" fill="#FFFFFF" opacity="0.3"></polygon>
@@ -99,16 +105,16 @@ export default function UnifiedMobileNavbar({
                                 <polygon points="52,24 60,20 68,24 60,28" fill="#FFFFFF" opacity="1"></polygon>
                                 <polygon points="52,56 60,52 68,56 60,60" fill="#FFFFFF" opacity="1"></polygon>
                             </svg>
-                            <span className="navbar-logo-text font-medium m-0 p-0 text-[14px]">Kure-Cal</span>
+                            <span className="mobile-unified-nav__brandText">Kure-Cal</span>
                         </a>
                     )}
 
                     {/* Controls */}
-                    <div className="flex items-center gap-3">
+                    <div className="mobile-unified-nav__controls">
                         {showThemeToggle && mounted && (
                             <button
                                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className="navbar-theme-toggle w-11 h-11 p-0 rounded-full transition-all flex items-center justify-center bg-transparent border-none cursor-pointer m-0 text-black dark:text-white"
+                                className="mobile-unified-nav__control"
                                 aria-label="Switch theme"
                             >
                                 {theme === 'dark' ? (
@@ -122,8 +128,10 @@ export default function UnifiedMobileNavbar({
 
                         {/* Hamburger Menu Toggle */}
                         <button
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="text-black dark:text-white w-11 h-11 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            onClick={() => setMobileMenuRoute(isMobileMenuOpen ? null : currentPath)}
+                            className="mobile-unified-nav__control"
+                            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                            aria-expanded={isMobileMenuOpen}
                         >
                             {isMobileMenuOpen ? (
                                 <X size={20} weight="thin" />
@@ -211,7 +219,7 @@ export default function UnifiedMobileNavbar({
 
     if (fixed) {
         return (
-            <div className={cn("fixed top-0 left-0 right-0 z-50 pointer-events-none", className)}>
+            <div className={cn('fixed top-0 left-0 right-0 z-50 pointer-events-none', className)}>
                 {navbarContent}
             </div>
         );

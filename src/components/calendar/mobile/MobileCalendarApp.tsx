@@ -58,7 +58,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         filteredEvents,
         updateFilter,
         resetFilters,
-        applyQuickFilter,
+        applyQuickFilter: _applyQuickFilter,
         activeFilterCount
     } = useSmartFilters(enrichedEvents, profile);
 
@@ -134,6 +134,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={false}
                 className="static"
+                variant="app"
             />
 
             {/* Calendar Controls Bar */}
@@ -201,28 +202,11 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
                 filters={filters}
                 onUpdateFilter={updateFilter}
                 onResetFilters={resetFilters}
-                onApplyQuickFilter={applyQuickFilter}
                 activeFilterCount={activeFilterCount}
                 isOpen={isSearchFilterOpen}
                 onClose={() => setIsSearchFilterOpen(false)}
-                events={events.map(event => ({
-                    id: event.id,
-                    title: event.title,
-                    organizer: event.organizer,
-                    eventTypeId: event.eventTypeId,
-                    startTime: event.startTime,
-                    endTime: event.endTime || undefined
-                }))}
-                categories={categories.map(cat => ({
-                    id: cat.id,
-                    name: cat.name,
-                    color: cat.color
-                }))}
-                onSearchSuggestionSelect={(_suggestion) => {
-                    // Handle suggestion selection - could filter events or navigate
-                    // Selected suggestion handled
-                }}
-                onDateChange={(date) => handleDateChange(date, true)}
+                events={enrichedEvents}
+                categories={categories}
             />
 
             {/* Mobile Bottom Navigation */}

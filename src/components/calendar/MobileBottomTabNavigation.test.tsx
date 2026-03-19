@@ -25,6 +25,8 @@ describe('MobileBottomTabNavigation', () => {
         currentDate: new Date(),
       filters: {
         searchTerm: '',
+        tags: [],
+        locations: [],
         format: 'all' as const,
         cost: 'all' as const,
         difficulty: 'all' as const,
@@ -41,7 +43,6 @@ describe('MobileBottomTabNavigation', () => {
       },
         onUpdateFilter: vi.fn(),
         onResetFilters: vi.fn(),
-        onApplyQuickFilter: vi.fn(),
         searchSuggestions: [],
         onSearchSuggestionSelect: vi.fn(),
     };
@@ -56,7 +57,7 @@ describe('MobileBottomTabNavigation', () => {
     // Check for header elements
     expect(screen.getByText('Calendar')).toBeInTheDocument();
     expect(screen.getByLabelText('Open sidebar')).toBeInTheDocument();
-    expect(screen.getByLabelText('Open search and filters')).toBeInTheDocument();
+    expect(screen.getByLabelText('Open filters')).toBeInTheDocument();
     
     // Check for bottom tab buttons
     expect(screen.getByLabelText('Switch to Month view')).toBeInTheDocument();
@@ -94,11 +95,10 @@ describe('MobileBottomTabNavigation', () => {
   it('should open search filter when search button is clicked', () => {
     render(<MobileBottomTabNavigation {...defaultProps} />);
     
-    const searchButton = screen.getByLabelText('Open search and filters');
+    const searchButton = screen.getByLabelText('Open filters');
     fireEvent.click(searchButton);
     
-    // The search filter modal should be rendered
-    expect(screen.getByText('Search & Filters')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Calendar filters' })).toBeInTheDocument();
   });
 
   it('should show filter badge when activeFilterCount > 0', () => {
@@ -122,6 +122,6 @@ describe('MobileBottomTabNavigation', () => {
     expect(screen.getAllByTestId('icon-event').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('icon-time').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('icon-menu').length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Open filters').querySelector('svg')).toBeInTheDocument();
   });
 });

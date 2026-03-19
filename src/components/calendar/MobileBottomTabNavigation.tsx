@@ -1,11 +1,12 @@
 'use client';
 
 import { FC, useState, useMemo } from 'react';
+import { SlidersHorizontal } from '@phosphor-icons/react';
 import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import QuickDatePicker from './QuickDatePicker';
 import MobileSearchFilter from './MobileSearchFilter';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
-import type { SearchSuggestion } from '@/types';
+import type { Event, EventType } from '@/types';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -22,9 +23,6 @@ export interface MobileBottomTabNavigationProps {
     filters: SmartFilterOptions;
     onUpdateFilter: <K extends keyof SmartFilterOptions>(key: K, value: SmartFilterOptions[K]) => void;
     onResetFilters: () => void;
-    onApplyQuickFilter: (filterType: string) => void;
-    searchSuggestions?: SearchSuggestion[];
-    onSearchSuggestionSelect?: (suggestion: SearchSuggestion) => void;
 }
 
 const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
@@ -39,9 +37,6 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
     filters,
     onUpdateFilter,
     onResetFilters,
-    onApplyQuickFilter,
-    searchSuggestions: _searchSuggestions,
-    onSearchSuggestionSelect
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
@@ -82,9 +77,9 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
                         <button
                             onClick={() => setIsSearchFilterOpen(true)}
                             className="mobile-header-button relative"
-                            aria-label="Open search and filters"
+                            aria-label="Open filters"
                         >
-                            <MaterialIcon name="search" size={20} />
+                            <SlidersHorizontal size={20} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
                             {activeFilterCount > 0 && (
                                 <div className="mobile-filter-badge">
                                     {activeFilterCount}
@@ -136,13 +131,11 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
                 filters={filters}
                 onUpdateFilter={onUpdateFilter}
                 onResetFilters={onResetFilters}
-                onApplyQuickFilter={onApplyQuickFilter}
                 activeFilterCount={activeFilterCount}
                 isOpen={isSearchFilterOpen}
                 onClose={() => setIsSearchFilterOpen(false)}
-                events={emptyEvents}
-                categories={emptyCategories}
-                onSearchSuggestionSelect={onSearchSuggestionSelect}
+                events={emptyEvents as Event[]}
+                categories={emptyCategories as EventType[]}
             />
         </>
     );

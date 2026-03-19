@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { screen } from '@/utils/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@/utils/test-utils';
-import type { Event, Speaker } from '@/types';
+import type { AgendaItem, Event, Speaker } from '@/types';
 import { EventService } from '@/services/eventServices';
 import EventDetailPanel from './EventDetailPanel';
 
