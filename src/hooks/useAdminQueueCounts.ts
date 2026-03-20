@@ -7,6 +7,7 @@ export interface AdminQueueCounts {
     moderation: number;
     enrichment: number;
     fieldProtection: number;
+    submissions: number;
 }
 
 interface UseAdminQueueCountsOptions {

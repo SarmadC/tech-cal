@@ -68,10 +68,10 @@ export function HackathonDetailPanel({
     const primaryUrlLabel = hackathon.registrationUrl ? 'Register Now' : (hackathon.websiteUrl || hackathon.sourceUrl) ? 'Visit Website' : 'View Details';
 
     return (
-        <div className="h-full flex flex-col bg-[#0A0A0A] border-l border-white/10 shadow-2xl relative overflow-hidden">
+        <div className="relative flex h-full flex-col overflow-hidden bg-[#0A0A0A] shadow-2xl sm:border-l sm:border-white/10">
             {/* Header Banner */}
             {headerImageSrc ? (
-                <div className="relative w-full h-48 flex-shrink-0">
+                <div className="relative w-full h-40 flex-shrink-0 sm:h-48">
                     <Image
                         src={headerImageSrc}
                         alt={hackathon.title}
@@ -89,10 +89,10 @@ export function HackathonDetailPanel({
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center justify-between p-6 border-b border-white/5">
-                    <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between gap-4 border-b border-white/5 p-4 sm:p-6">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                         {organizerLogoSrc && (
-                            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden p-2 relative">
+                            <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-white/5 p-2">
                                 <Image
                                     src={organizerLogoSrc}
                                     alt={hackathon.organizerName || 'Organizer'}
@@ -101,8 +101,8 @@ export function HackathonDetailPanel({
                                 />
                             </div>
                         )}
-                        <div>
-                            <h2 className="text-xl font-bold text-white leading-tight">{hackathon.title}</h2>
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-bold leading-tight text-white sm:text-xl">{hackathon.title}</h2>
                             <p className="text-sm text-white/40">{hackathon.organizerName}</p>
                         </div>
                     </div>
@@ -117,9 +117,9 @@ export function HackathonDetailPanel({
 
             {/* Title Section when Banner exists */}
             {headerImageSrc && (
-                <div className="px-6 pb-2 -mt-12 relative z-10 flex items-end gap-4">
+                <div className="relative z-10 -mt-10 flex flex-col gap-3 px-4 pb-2 sm:-mt-12 sm:flex-row sm:items-end sm:gap-4 sm:px-6">
                     {organizerLogoSrc && (
-                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl overflow-hidden p-3 relative shadow-2xl">
+                        <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 shadow-2xl backdrop-blur-xl sm:h-16 sm:w-16">
                             <Image
                                 src={organizerLogoSrc}
                                 alt={hackathon.organizerName || 'Organizer'}
@@ -128,15 +128,15 @@ export function HackathonDetailPanel({
                             />
                         </div>
                     )}
-                    <div className="pb-2">
-                        <h2 className="text-2xl font-bold text-white leading-tight drop-shadow-lg">{hackathon.title}</h2>
+                    <div className="pb-1 sm:pb-2">
+                        <h2 className="text-xl font-bold leading-tight text-white drop-shadow-lg sm:text-2xl">{hackathon.title}</h2>
                         <p className="text-sm text-white/60 font-medium drop-shadow-md">{hackathon.organizerName}</p>
                     </div>
                 </div>
             )}
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+            <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto p-4 sm:space-y-8 sm:p-6">
                 {/* Description */}
                 <div className="space-y-3">
                     <h3 className="text-xs font-bold text-white/30 tracking-tight">About</h3>
@@ -146,20 +146,20 @@ export function HackathonDetailPanel({
                 </div>
 
                 {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <CalendarBlank size={14} />
                             <span>Dates</span>
                         </div>
-                        <p className="text-sm text-white/80">{getDateRange(hackathon)}</p>
+                        <p className="break-words text-sm text-white/80">{getDateRange(hackathon)}</p>
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 text-[10px] text-white/30 tracking-tight font-bold">
                             <MapPin size={14} />
                             <span>Location</span>
                         </div>
-                        <p className="text-sm text-white/80">
+                        <p className="break-words text-sm text-white/80">
                             {formatLocation(hackathon)}
                         </p>
                     </div>
@@ -235,12 +235,12 @@ export function HackathonDetailPanel({
 
                 {/* Teams Section */}
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h3 className="text-xs font-bold text-white/30 tracking-tight">Teams</h3>
                         {canUserCreateTeam(hackathon, userId).canCreate && !hasTeam && !hasEnded && (
                             <button
                                 onClick={() => onCreateTeam(hackathon.id)}
-                                className="text-[10px] font-bold text-blue-400 hover:text-blue-300 tracking-tight flex items-center gap-1 transition-colors"
+                                className="inline-flex items-center gap-1 self-start text-[10px] font-bold tracking-tight text-blue-400 transition-colors hover:text-blue-300"
                             >
                                 <Plus size={14} />
                                 Create Team
@@ -251,10 +251,10 @@ export function HackathonDetailPanel({
                     {/* User's Team */}
                     {userCreatedTeam && (
                         <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/15 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20 tracking-tight">Your Team</span>
-                                    <span className="text-sm font-bold text-white">{userCreatedTeam.name}</span>
+                                    <span className="truncate text-sm font-bold text-white">{userCreatedTeam.name}</span>
                                 </div>
                                 {!hasEnded && (
                                     <div className="flex items-center gap-1">
@@ -280,7 +280,7 @@ export function HackathonDetailPanel({
                             {userCreatedTeam.description && (
                                 <p className="text-xs text-white/50 leading-relaxed font-normal">{userCreatedTeam.description}</p>
                             )}
-                            <div className="flex items-center gap-3 text-[10px] text-white/30">
+                            <div className="flex flex-wrap items-center gap-3 text-[10px] text-white/30">
                                 <span className="flex items-center gap-1"><UsersThree size={12} /> {userCreatedTeam.memberCount || 0}/{hackathon.maxTeamSize}</span>
                                 {userCreatedTeam.lookingForMembers && (
                                     <span className="flex items-center gap-1 text-blue-400/70">
@@ -325,7 +325,7 @@ export function HackathonDetailPanel({
             </div>
 
             {/* Bottom Sticky Action Bar */}
-            <div className="p-6 bg-white/[0.02] border-t border-white/5 backdrop-blur-md">
+            <div className="border-t border-white/5 bg-white/[0.02] p-4 backdrop-blur-md sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
                         {!isRegistered && !hasEnded && (

@@ -56,6 +56,15 @@ function normalizeNextImageWidth(width: number): number {
     ?? NEXT_ALLOWED_IMAGE_WIDTHS[NEXT_ALLOWED_IMAGE_WIDTHS.length - 1];
 }
 
+function isSvgImageUrl(src: string): boolean {
+  try {
+    const parsed = new URL(src, 'https://kure-cal.local');
+    return parsed.pathname.toLowerCase().endsWith('.svg');
+  } catch {
+    return src.toLowerCase().includes('.svg');
+  }
+}
+
 /**
  * Route remote images through Next's same-origin optimizer so browsers like Chrome
  * do not hotlink external avatar URLs directly.
@@ -68,6 +77,11 @@ export function getBrowserSafeImageSrc(
   if (!safeSrc) return null;
 
   if (safeSrc.startsWith('/')) {
+    return safeSrc;
+  }
+
+  // Remote SVGs are safer to render directly than to push through Next's optimizer.
+  if (isSvgImageUrl(safeSrc)) {
     return safeSrc;
   }
 

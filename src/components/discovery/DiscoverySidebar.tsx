@@ -61,14 +61,14 @@ const RadioButtonOption: React.FC<RadioButtonOptionProps> = ({ label, count, che
             }`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`
-                    w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
+                    h-4 w-4 rounded border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
                     ${checked
-                        ? 'border-primary bg-primary ring-2 ring-primary/20'
+                        ? 'border-primary bg-primary shadow-sm ring-2 ring-primary/20'
                         : 'border-muted-foreground/40 bg-background group-hover:border-foreground/60'
                     }
                 `}>
                     {checked && (
-                        <div className="w-[8px] h-[8px] rounded-full bg-[var(--brand-primary-foreground)]" />
+                        <div className="h-[7px] w-[7px] rounded-[2px] bg-[var(--brand-primary-foreground)]" />
                     )}
                 </div>
                 <input

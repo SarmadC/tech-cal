@@ -27,6 +27,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from '@/lib/utils';
 import Avatar, { getDisplayName } from './Avatar';
 import VoteControls from './VoteControls';
 import type { CircleDiscussionComment } from '@/types/circleDiscussions';
@@ -35,6 +36,13 @@ type CurrentUser = {
     id: string;
     avatarUrl?: string | null;
 } | null;
+
+const actionLinkClasses = 'inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100';
+
+function getIndentIncrement(depth: number): number {
+    if (depth === 0) return 0;
+    return depth <= 2 ? 18 : 10;
+}
 
 export default function CommentItem({
     comment,
@@ -55,7 +63,6 @@ export default function CommentItem({
     const [replyContent, setReplyContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Edit/Delete State
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(comment.content);
     const [isEditingSubmit, setIsEditingSubmit] = useState(false);
@@ -65,9 +72,11 @@ export default function CommentItem({
     const { showSuccess, showError } = useSnackbar();
     const router = useRouter();
 
-    // Optimistic Voting State
     const [localScore, setLocalScore] = useState(comment.score || 0);
     const [localVote, setLocalVote] = useState(comment.userVote || 0);
+
+    const indentIncrement = getIndentIncrement(depth);
+    const replies = comment.replies ?? [];
 
     const handleReplySubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -85,9 +94,8 @@ export default function CommentItem({
             } else {
                 showError(result.error || 'Failed to post reply');
             }
-        } catch (error) {
+        } catch {
             showError('Failed to post reply');
-            console.error(error);
         } finally {
             setIsSubmitting(false);
         }
@@ -165,217 +173,245 @@ export default function CommentItem({
     const isAuthor = Boolean(currentUser?.id && comment.author?.id && currentUser.id === comment.author.id);
 
     return (
-        <article className="group/comment">
-            <div className="flex items-start gap-3">
-                <Avatar
-                    name={comment.author?.full_name}
-                    avatarUrl={comment.author?.avatar_url}
-                />
+        <article className="group/comment" data-thread-depth={depth}>
+            <div
+                className="relative"
+                style={indentIncrement > 0 ? { marginLeft: `${indentIncrement}px` } : undefined}
+            >
+                <div
+                    className={cn(
+                        'border-b border-zinc-200/80 pb-4 pt-4 dark:border-zinc-800/80',
+                        depth > 0 && 'ml-5 border-l border-zinc-200/80 pl-4 dark:border-zinc-800/80'
+                    )}
+                >
+                    <div className="flex items-start gap-3">
+                        <Avatar
+                            name={comment.author?.full_name}
+                            avatarUrl={comment.author?.avatar_url}
+                            size={depth === 0 ? 'md' : 'sm'}
+                        />
 
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                            {getDisplayName(comment.author?.full_name)}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <span className="text-[13px] font-semibold text-zinc-950 dark:text-zinc-50">
+                                            {getDisplayName(comment.author?.full_name)}
+                                        </span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">&middot;</span>
+                                        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                        </span>
+                                        {depth > 0 && (
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                                                Reply
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                        <span className="text-zinc-300 dark:text-zinc-700">&middot;</span>
+                                {isAuthor && currentUser && (
+                                    <>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-900/80 dark:hover:text-zinc-200 sm:opacity-0 sm:group-hover/comment:opacity-100 sm:focus:opacity-100"
+                                                    aria-label="Comment actions"
+                                                >
+                                                    <DotsThree size={14} weight="bold" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-32">
+                                                <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(comment.content); }} className="gap-2 cursor-pointer">
+                                                    <PencilSimple size={14} /> Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onSelect={() => setShowDeleteConfirm(true)} className="text-red-600 focus:text-red-700 dark:text-red-500 dark:focus:bg-red-950/50 gap-2 cursor-pointer">
+                                                    <Trash size={14} /> Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
 
-                        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                        </span>
+                                        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                                            <DialogContent className="sm:max-w-[400px]">
+                                                <DialogHeader>
+                                                    <DialogTitle>Delete Comment</DialogTitle>
+                                                    <DialogDescription>
+                                                        Are you sure you want to delete this comment? This action cannot be undone.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <DialogFooter className="gap-2 sm:gap-0">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => setShowDeleteConfirm(false)}
+                                                        disabled={isDeleting}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        onClick={handleConfirmDelete}
+                                                        disabled={isDeleting}
+                                                    >
+                                                        {isDeleting ? 'Deleting...' : 'Delete Comment'}
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </>
+                                )}
+                            </div>
 
-                        {isAuthor && currentUser && (
-                            <>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors opacity-0 group-hover/comment:opacity-100 focus:opacity-100"
-                                            aria-label="Comment actions"
-                                        >
-                                            <DotsThree size={14} weight="bold" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-32">
-                                        <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(comment.content); }} className="gap-2 cursor-pointer">
-                                            <PencilSimple size={14} /> Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => setShowDeleteConfirm(true)} className="text-red-600 focus:text-red-700 dark:text-red-500 dark:focus:bg-red-950/50 gap-2 cursor-pointer">
-                                            <Trash size={14} /> Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-
-                                <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                                    <DialogContent className="sm:max-w-[400px]">
-                                        <DialogHeader>
-                                            <DialogTitle>Delete Comment</DialogTitle>
-                                            <DialogDescription>
-                                                Are you sure you want to delete this comment? This action cannot be undone.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <DialogFooter className="gap-2 sm:gap-0">
+                            {isEditing ? (
+                                <div className="mt-3 overflow-hidden border border-zinc-200/80 dark:border-zinc-800">
+                                    <textarea
+                                        value={editContent}
+                                        onChange={(e) => setEditContent(e.target.value)}
+                                        className="min-h-[88px] w-full resize-none border-0 bg-transparent px-3.5 py-3 text-[14px] leading-6 text-zinc-900 placeholder:text-zinc-500 focus:outline-none focus:ring-0 dark:text-zinc-100"
+                                        disabled={isEditingSubmit}
+                                        autoFocus
+                                    />
+                                    <div className="flex items-center justify-between border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800/80">
+                                        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                            Update your reply and save when you are ready.
+                                        </span>
+                                        <div className="flex items-center gap-2">
                                             <Button
+                                                type="button"
                                                 variant="ghost"
-                                                onClick={() => setShowDeleteConfirm(false)}
-                                                disabled={isDeleting}
+                                                size="sm"
+                                                onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
+                                                disabled={isEditingSubmit}
+                                                className="h-8 px-3 text-xs"
                                             >
                                                 Cancel
                                             </Button>
                                             <Button
-                                                variant="destructive"
-                                                onClick={handleConfirmDelete}
-                                                disabled={isDeleting}
+                                                type="button"
+                                                size="sm"
+                                                onClick={handleEditSubmit}
+                                                disabled={!editContent.trim() || isEditingSubmit}
+                                                className="h-8 bg-zinc-950 px-3.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
                                             >
-                                                {isDeleting ? 'Deleting...' : 'Delete Comment'}
+                                                {isEditingSubmit ? 'Saving...' : 'Save'}
                                             </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                            </>
-                        )}
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="mt-2 whitespace-pre-wrap text-[14px] leading-6 text-zinc-700 dark:text-zinc-300">
+                                    {comment.content}
+                                </p>
+                            )}
 
-                    {isEditing ? (
-                        <div className="mt-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/60">
-                            <textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="w-full rounded-t-lg bg-transparent px-3 py-2 text-[14px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none border-0 focus:ring-0 resize-none min-h-[70px]"
-                                disabled={isEditingSubmit}
-                                autoFocus
-                            />
-                            <div className="flex items-center justify-end gap-2 border-t border-zinc-200/80 dark:border-zinc-700/80 px-3 py-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
-                                    disabled={isEditingSubmit}
-                                    className="h-7 px-2.5 text-xs"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={handleEditSubmit}
-                                    disabled={!editContent.trim() || isEditingSubmit}
-                                    className="h-7 rounded-md bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs"
-                                >
-                                    {isEditingSubmit ? 'Saving...' : 'Save'}
-                                </Button>
+                            <div className="mt-3 flex flex-wrap items-center gap-3">
+                                <VoteControls
+                                    score={localScore}
+                                    vote={localVote}
+                                    onVote={handleVote}
+                                    density="sm"
+                                />
+
+                                {isJoined && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsReplying(prev => !prev)}
+                                        className={actionLinkClasses}
+                                    >
+                                        Reply
+                                    </button>
+                                )}
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className={actionLinkClasses}
+                                            aria-label="More comment actions"
+                                        >
+                                            <DotsThree size={14} weight="bold" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-28">
+                                        <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                                            Share
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                                            Report
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
+
+                            {isReplying && isJoined && currentUser && (
+                                <form
+                                    onSubmit={handleReplySubmit}
+                                    className="mt-3 overflow-hidden border border-zinc-200/80 dark:border-zinc-800"
+                                >
+                                    <textarea
+                                        autoFocus
+                                        value={replyContent}
+                                        onChange={(e) => setReplyContent(e.target.value)}
+                                        placeholder="Write a reply..."
+                                        className="min-h-[84px] w-full resize-none border-0 bg-transparent px-3.5 py-3 text-[14px] leading-6 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                                        disabled={isSubmitting}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                const form = e.currentTarget.closest('form');
+                                                form?.requestSubmit();
+                                            }
+                                        }}
+                                    />
+                                    <div className="flex items-center justify-between border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800/80">
+                                        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                            Press Enter to reply, Shift + Enter for newline.
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setIsReplying(false);
+                                                    setReplyContent('');
+                                                }}
+                                                className="h-8 px-3 text-xs"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                disabled={!replyContent.trim() || isSubmitting}
+                                                size="sm"
+                                                className="h-8 bg-zinc-950 px-3.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+                                            >
+                                                {isSubmitting ? 'Replying...' : 'Reply'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </form>
+                            )}
                         </div>
-                    ) : (
-                        <p className="mt-1.5 whitespace-pre-wrap text-[14px] leading-[1.5] text-zinc-700 dark:text-zinc-300">
-                            {comment.content}
-                        </p>
-                    )}
-
-                    <div className="mt-2 flex items-center gap-4 text-[13px] font-medium leading-none text-zinc-500 dark:text-zinc-400">
-                        <VoteControls
-                            score={localScore}
-                            vote={localVote}
-                            onVote={handleVote}
-                        />
-
-                        {isJoined && (
-                            <button
-                                type="button"
-                                onClick={() => setIsReplying(prev => !prev)}
-                                className="inline-flex items-center leading-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                            >
-                                Reply
-                            </button>
-                        )}
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center leading-none opacity-0 group-hover/comment:opacity-100 focus:opacity-100 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                                    aria-label="More comment actions"
-                                >
-                                    <DotsThree size={14} weight="bold" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-28">
-                                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                                    Share
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                                    Report
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
                     </div>
-
-                    {isReplying && isJoined && currentUser && (
-                        <form
-                            onSubmit={handleReplySubmit}
-                            className="mt-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/60"
-                        >
-                            <textarea
-                                autoFocus
-                                value={replyContent}
-                                onChange={(e) => setReplyContent(e.target.value)}
-                                placeholder="Reply..."
-                                className="w-full rounded-t-lg bg-transparent px-3 py-2 text-[14px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none border-0 focus:ring-0 resize-none min-h-[68px]"
-                                disabled={isSubmitting}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        const form = e.currentTarget.closest('form');
-                                        form?.requestSubmit();
-                                    }
-                                }}
-                            />
-                            <div className="flex items-center justify-end gap-2 border-t border-zinc-200/80 dark:border-zinc-700/80 px-3 py-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                        setIsReplying(false);
-                                        setReplyContent('');
-                                    }}
-                                    className="h-7 px-2.5 text-xs"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={!replyContent.trim() || isSubmitting}
-                                    size="sm"
-                                    className="h-7 rounded-md bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white text-xs"
-                                >
-                                    {isSubmitting ? 'Replying...' : 'Reply'}
-                                </Button>
-                            </div>
-                        </form>
-                    )}
                 </div>
             </div>
 
-            {comment.replies && comment.replies.length > 0 && (
-                <div className="mt-4 ml-3 sm:ml-4 space-y-4">
-                    {comment.replies.map(reply => (
-                        <div
+            {replies.length > 0 && (
+                <div className="space-y-0">
+                    {replies.map(reply => (
+                        <CommentItem
                             key={reply.id}
-                            className="relative pl-4 sm:pl-5"
-                        >
-                            <span className="pointer-events-none absolute left-0 top-0 bottom-5 w-px bg-zinc-200/90 dark:bg-zinc-700/90" />
-                            <CommentItem
-                                comment={reply}
-                                postId={postId}
-                                circleSlug={circleSlug}
-                                currentUser={currentUser}
-                                isJoined={isJoined}
-                                depth={depth + 1}
-                            />
-                        </div>
+                            comment={reply}
+                            postId={postId}
+                            circleSlug={circleSlug}
+                            currentUser={currentUser}
+                            isJoined={isJoined}
+                            depth={depth + 1}
+                        />
                     ))}
                 </div>
             )}

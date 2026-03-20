@@ -14,6 +14,7 @@ export interface QueueCountsResponse {
     moderation: number;
     enrichment: number;
     fieldProtection: number;
+    submissions: number;
 }
 
 interface AdminTableClient {
@@ -66,30 +67,37 @@ export async function GET() {
             moderationQueueItems,
             enrichmentResult,
             fieldProtectionResult,
+            submissionsResult,
         ] = await Promise.all([
             // Pending update queue items
             tableClient
                 .from('event_update_queue')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending'),
-            
+
             // Pending moderation items (need to fetch with events to filter out enriched)
             serviceClient
                 .from('event_moderation_queue')
                 .select('id, events:event_id(enrichment_status)')
                 .eq('status', 'pending'),
-            
+
             // Events needing enrichment (all pending enrichment work)
             serviceClient
                 .from('events')
                 .select('id', { count: 'exact', head: true })
                 .eq('enrichment_status', 'pending'),
-            
+
             // Fields with review_required protection mode
             tableClient
                 .from('event_field_protection_config')
                 .select('id', { count: 'exact', head: true })
                 .eq('protection_mode', 'review_required'),
+
+            // Pending user-submitted events
+            tableClient
+                .from('user_submitted_events')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'pending'),
         ]);
 
         // Filter out enriched events from moderation count (enriched events should be reviewed in update queue)
@@ -105,6 +113,7 @@ export async function GET() {
             moderation: moderationCount,
             enrichment: enrichmentResult.count ?? 0,
             fieldProtection: fieldProtectionResult.count ?? 0,
+            submissions: submissionsResult.count ?? 0,
         };
 
         return NextResponse.json(counts);

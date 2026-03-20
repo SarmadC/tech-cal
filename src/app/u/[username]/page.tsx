@@ -223,10 +223,10 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
                 </p>
                 <div className="mt-4 flex items-center gap-3">
                   <Link
-                    href={`/community?tab=directory&search=${encodeURIComponent(publicProfile.username)}`}
+                    href="/community"
                     className="inline-flex items-center px-4 py-2 rounded-lg bg-[var(--foreground-primary)] text-[var(--background-main)] text-sm font-medium hover:opacity-90 transition-opacity"
                   >
-                    View in Community
+                    Open Community
                   </Link>
                   {publicProfile.recentAttendingEvents.length > 0 && (
                     <Link

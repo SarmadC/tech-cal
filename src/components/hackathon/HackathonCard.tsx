@@ -3,13 +3,11 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { ArrowSquareOut } from '@phosphor-icons/react';
 import {
     HackathonEvent,
     formatHackathonDuration
 } from '@/types/hackathon';
 import {
-    getDateRange,
     calculateProgress,
     formatProgress,
     getRegistrationCountdown,
@@ -57,20 +55,16 @@ export function HackathonCard({
     const progress = useMemo(() => isRunning ? calculateProgress(hackathon) : 0, [isRunning, hackathon]);
     const registrationCountdown = useMemo(() => getRegistrationCountdown(hackathon.registrationDeadline), [hackathon.registrationDeadline]);
     const duration = useMemo(() => formatHackathonDuration(hackathon), [hackathon]);
-    const organizerLogoSrc = useMemo(() => getSafeImageSrc(hackathon.organizerLogoUrl), [hackathon.organizerLogoUrl]);
     const headerImageSrc = useMemo(() => getSafeImageSrc(hackathon.headerImageUrl), [hackathon.headerImageUrl]);
     const gradient = useMemo(() => getBrandGradient(hackathon.title), [hackathon.title]);
-
-    // Primary CTA URL — fallback chain: registration → website → platform
-    const primaryUrlLabel = hackathon.registrationUrl ? 'Register Now' : (hackathon.websiteUrl || hackathon.sourceUrl) ? 'Visit Website' : 'View Details';
 
     return (
         <div
             onClick={() => onViewDetails(hackathon)}
-            className={`group relative flex flex-col h-full rounded-2xl bg-[#0A0A0A] border border-white/5 hover:border-blue-500/30 hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.25)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer ${featured ? 'md:col-span-2 md:row-span-2' : ''}`}
+            className={`group relative flex min-w-0 flex-col h-full rounded-2xl bg-[#0A0A0A] border border-white/5 hover:border-blue-500/30 hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.25)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer ${featured ? '2xl:col-span-2 2xl:row-span-2' : ''}`}
         >
             {/* Visual Cover Section (Top 40%) */}
-            <div className={`relative w-full overflow-hidden ${featured ? 'h-64' : 'h-40'}`}>
+            <div className={`relative w-full overflow-hidden ${featured ? 'h-56 sm:h-64' : 'h-40'}`}>
                 {/* Background Gradient / Image */}
                 {headerImageSrc ? (
                     <Image
@@ -105,18 +99,18 @@ export function HackathonCard({
                 </div>
             </div>
 
-            <div className="p-6 flex-1 flex flex-col relative">
+            <div className="p-5 sm:p-6 flex-1 flex flex-col relative">
                 {/* Content Section */}
                 <div className="mb-4">
-                    <h3 className={`font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-2 leading-tight ${featured ? 'text-2xl mb-3' : 'text-lg mb-2'}`}>
+                    <h3 className={`font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-2 leading-tight ${featured ? 'mb-3 text-xl sm:text-2xl' : 'mb-2 text-lg'}`}>
                         {hackathon.title}
                     </h3>
-                    <div className="flex flex-nowrap items-center gap-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                         <span className="inline-flex items-center shrink-0 px-2 py-0.5 rounded-md bg-white/[0.03] text-white/60 border border-white/10 text-[10px] font-medium">
                             <MaterialIcon name="time" size={12} className="mr-1 opacity-60" />
                             {duration}
                         </span>
-                        <span className="inline-flex items-center min-w-0 px-2 py-0.5 rounded-md bg-white/[0.03] text-white/60 border border-white/10 text-[10px] font-medium">
+                        <span className="inline-flex max-w-full items-center min-w-0 px-2 py-0.5 rounded-md bg-white/[0.03] text-white/60 border border-white/10 text-[10px] font-medium sm:max-w-[70%]">
                             <MaterialIcon name="location" size={12} className="mr-1 shrink-0 opacity-60" />
                             <span className="truncate">{formatLocation(hackathon)}</span>
                         </span>
@@ -132,8 +126,8 @@ export function HackathonCard({
                 </p>
 
                 {/* Footer Visual Cue & Indicators */}
-                <div className="mt-auto flex items-center justify-between pt-2">
-                    <div className="flex-1">
+                <div className="mt-auto flex items-end justify-between gap-3 pt-2">
+                    <div className="min-w-0 flex-1">
                         {registrationCountdown && !isRegistered && !hasEnded && (
                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${registrationCountdown.urgency === 'high'
                                 ? 'bg-red-500/10 text-red-400 border-red-500/20'
@@ -162,13 +156,11 @@ export function HackathonCard({
                         )}
                     </div>
 
-                    <div className="opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 text-blue-400/80">
+                    <div className="hidden shrink-0 text-blue-400/80 transition-all duration-300 md:block opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0">
                         <MaterialIcon name="arrow-forward" size={20} />
                     </div>
                 </div>
             </div>
-
-
-        </div >
+        </div>
     );
 }

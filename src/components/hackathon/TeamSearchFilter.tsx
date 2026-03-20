@@ -96,9 +96,9 @@ export function TeamSearchFilter({ teams, onFilteredTeams, maxTeamSize }: TeamSe
       </div>
 
       {/* Filters and Sort */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Filter Buttons */}
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {[
             { key: 'all', label: 'All Teams', icon: 'menu' as const },
             { key: 'available', label: 'Available', icon: 'check-circle' as const },
@@ -126,7 +126,7 @@ export function TeamSearchFilter({ teams, onFilteredTeams, maxTeamSize }: TeamSe
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="text-xs border border-white/10 rounded-md bg-white/5 text-glass-primary px-2 py-1 focus:ring-2 focus:ring-white/20 focus:border-white/20"
+            className="min-w-0 flex-1 text-xs border border-white/10 rounded-md bg-white/5 text-glass-primary px-2 py-1 focus:ring-2 focus:ring-white/20 focus:border-white/20 sm:w-auto sm:flex-none"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>

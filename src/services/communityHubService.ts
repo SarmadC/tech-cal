@@ -1,10 +1,7 @@
-import { BlockService } from '@/services/blockService';
 import type {
   CommunityFeedPost,
-  CommunityHubData,
+  CommunityFeedPageData,
   CommunityLaunchpadCircle,
-  CommunityLaunchpadMember,
-  CommunityLaunchpadProgress,
   CommunityUpcomingEvent,
 } from '@/types/community';
 import type { SupabaseClientType } from '@/types/database';
@@ -23,9 +20,6 @@ interface ProfileRow {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
-  username: string | null;
-  headline: string | null;
-  created_at: string | null;
 }
 
 interface CircleRow {
@@ -34,18 +28,6 @@ interface CircleRow {
   name: string;
   description: string | null;
   member_count: number;
-  icon: string | null;
-}
-
-interface SocialStatsRow {
-  user_id: string;
-  follower_count: number;
-  following_count: number;
-}
-
-interface CommentCountRow {
-  post_id: string;
-  count: number;
 }
 
 // ── Constants ────────────────────────────────────────────────────
@@ -53,34 +35,35 @@ interface CommentCountRow {
 const FEED_LIMIT = 20;
 const TRENDING_THRESHOLD = 8; // ≥8 comments = trending
 const UPCOMING_EVENTS_LIMIT = 5;
-const SUGGESTED_MEMBERS_LIMIT = 8;
-const SUGGESTED_MEMBERS_FETCH_LIMIT = 30;
 
 // ── Service ──────────────────────────────────────────────────────
 
 export class CommunityHubService {
-  /**
-   * Fetch all data needed for the unified community hub in parallel.
-   */
-  static async getHubData({
+  static async getFeedPageData({
     viewerId,
-    viewerScopedClient,
     readClient,
   }: {
-    viewerId: string;
-    viewerScopedClient: SupabaseClientType;
+    viewerId: string | null;
     readClient: SupabaseClientType;
-  }): Promise<CommunityHubData> {
-    const [feed, circles, progress, upcomingEvents, suggestedMembers] =
-      await Promise.all([
-        this.getFeed({ viewerId, readClient }),
-        this.getCircles({ viewerId, readClient }),
-        this.getProgress({ viewerId, readClient }),
-        this.getUpcomingEvents({ viewerId, readClient }),
-        this.getSuggestedMembers({ viewerId, viewerScopedClient, readClient }),
-      ]);
+  }): Promise<CommunityFeedPageData> {
+    const feedPromise = this.getFeed({ viewerId, readClient });
 
-    return { feed, circles, progress, upcomingEvents, suggestedMembers };
+    if (!viewerId) {
+      const feed = await feedPromise;
+      return {
+        feed,
+        circles: [],
+        upcomingEvents: [],
+      };
+    }
+
+    const [feed, circles, upcomingEvents] = await Promise.all([
+      feedPromise,
+      this.getCircles({ viewerId, readClient }),
+      this.getUpcomingEvents({ viewerId, readClient }),
+    ]);
+
+    return { feed, circles, upcomingEvents };
   }
 
   // ── Feed ──────────────────────────────────────────────────────
@@ -89,18 +72,22 @@ export class CommunityHubService {
     viewerId,
     readClient,
   }: {
-    viewerId: string;
+    viewerId: string | null;
     readClient: SupabaseClientType;
   }): Promise<CommunityFeedPost[]> {
     try {
-      // Get circles the user has joined
-      const { data: memberships } = await readClient
-        .from('circle_members')
-        .select('circle_id')
-        .eq('user_id', viewerId);
+      const joinedCircleIds =
+        viewerId
+          ? (
+              await readClient
+                .from('circle_members')
+                .select('circle_id')
+                .eq('user_id', viewerId)
+            ).data || []
+          : [];
 
-      const joinedCircleIds = (memberships || []).map(
-        (m: { circle_id: string }) => m.circle_id
+      const normalizedJoinedCircleIds = joinedCircleIds.map(
+        (membership: { circle_id: string }) => membership.circle_id
       );
 
       // Get all circles (for name resolution)
@@ -118,11 +105,11 @@ export class CommunityHubService {
       // Fetch recent posts — from joined circles first, then globally
       let posts: FeedPostRow[] = [];
 
-      if (joinedCircleIds.length > 0) {
+      if (normalizedJoinedCircleIds.length > 0) {
         const { data: joinedPosts } = await readClient
           .from('circle_posts')
           .select('id, content, created_at, author_id, circle_id')
-          .in('circle_id', joinedCircleIds)
+          .in('circle_id', normalizedJoinedCircleIds)
           .order('created_at', { ascending: false })
           .limit(FEED_LIMIT);
 
@@ -240,113 +227,6 @@ export class CommunityHubService {
     }
   }
 
-  // ── Profile Progress ──────────────────────────────────────────
-
-  private static async getProgress({
-    viewerId,
-    readClient,
-  }: {
-    viewerId: string;
-    readClient: SupabaseClientType;
-  }): Promise<CommunityLaunchpadProgress> {
-    try {
-      const [viewerResult, careerResult] = await Promise.all([
-        readClient
-          .from('profiles')
-          .select('username, headline, profile_visibility, avatar_url')
-          .eq('id', viewerId)
-          .maybeSingle(),
-        readClient
-          .from('career_profiles')
-          .select('interests')
-          .eq('user_id', viewerId)
-          .maybeSingle(),
-      ]);
-
-      const viewer = viewerResult.data as {
-        username: string | null;
-        headline: string | null;
-        profile_visibility: string;
-        avatar_url: string | null;
-      } | null;
-
-      const career = careerResult.data as {
-        interests: string[] | null;
-      } | null;
-
-      const hasHeadline = Boolean(viewer?.headline?.trim());
-      const hasAvatar = Boolean(viewer?.avatar_url?.trim());
-      const isPublic = viewer?.profile_visibility === 'public';
-      const interestCount = Array.isArray(career?.interests)
-        ? career.interests.filter(
-            (i) => typeof i === 'string' && i.trim().length > 0
-          ).length
-        : 0;
-
-      const tasks = [
-        {
-          id: 'add_photo' as const,
-          title: 'Add a profile photo',
-          description: 'Help others recognize you',
-          completed: hasAvatar,
-          weight: 15,
-          ctaLabel: 'Upload photo',
-          ctaHref: '/dashboard/settings?tab=profile',
-          telemetryEvent: 'profile_completion_started' as const,
-        },
-        {
-          id: 'add_headline' as const,
-          title: 'Add headline',
-          description: 'A concise one-line summary of your focus',
-          completed: hasHeadline,
-          weight: 20,
-          ctaLabel: 'Add headline',
-          ctaHref: '/dashboard/settings?tab=profile',
-          telemetryEvent: 'profile_completion_started' as const,
-        },
-        {
-          id: 'pick_interests' as const,
-          title: 'Pick 3 interests',
-          description: `Choose at least 3 interests. Current: ${interestCount}.`,
-          completed: interestCount >= 3,
-          weight: 30,
-          ctaLabel: 'Edit interests',
-          ctaHref: '/dashboard/settings?tab=career',
-          telemetryEvent: 'profile_completion_started' as const,
-        },
-        {
-          id: 'set_profile_public' as const,
-          title: 'Set profile public',
-          description: 'Let people discover and follow you',
-          completed: isPublic,
-          weight: 35,
-          ctaLabel: 'Update visibility',
-          ctaHref: '/dashboard/settings?tab=profile',
-          telemetryEvent: 'profile_completion_started' as const,
-        },
-      ];
-
-      const completedWeight = tasks
-        .filter((t) => t.completed)
-        .reduce((sum, t) => sum + t.weight, 0);
-      const totalWeight = tasks.reduce((sum, t) => sum + t.weight, 0);
-      const completionPercent =
-        totalWeight > 0
-          ? Math.round((completedWeight / totalWeight) * 100)
-          : 0;
-
-      return { completionPercent, completedWeight, totalWeight, tasks };
-    } catch (error) {
-      console.error('Failed to load profile progress:', error);
-      return {
-        completionPercent: 0,
-        completedWeight: 0,
-        totalWeight: 100,
-        tasks: [],
-      };
-    }
-  }
-
   // ── Upcoming Events ───────────────────────────────────────────
 
   private static async getUpcomingEvents({
@@ -420,80 +300,6 @@ export class CommunityHubService {
       }));
     } catch (error) {
       console.error('Failed to load upcoming events:', error);
-      return [];
-    }
-  }
-
-  // ── Suggested Members ─────────────────────────────────────────
-
-  private static async getSuggestedMembers({
-    viewerId,
-    viewerScopedClient,
-    readClient,
-  }: {
-    viewerId: string;
-    viewerScopedClient: SupabaseClientType;
-    readClient: SupabaseClientType;
-  }): Promise<CommunityLaunchpadMember[]> {
-    try {
-      const { data: profiles } = await readClient
-        .from('profiles')
-        .select('id, full_name, avatar_url, username, headline, created_at')
-        .eq('profile_visibility', 'public')
-        .not('username', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(SUGGESTED_MEMBERS_FETCH_LIMIT);
-
-      const candidates = ((profiles || []) as unknown as ProfileRow[]).filter(
-        (p) => p.id !== viewerId
-      );
-      const candidateIds = candidates.map((p) => p.id);
-
-      const blockedIds = await BlockService.getBlockedUserIdsForViewer(
-        viewerId,
-        candidateIds,
-        viewerScopedClient
-      );
-
-      const visible = candidates.filter((p) => !blockedIds.has(p.id));
-      const visibleIds = visible.map((p) => p.id);
-
-      const statsResult =
-        visibleIds.length > 0
-          ? await readClient
-              .from('user_social_stats')
-              .select('user_id, follower_count, following_count')
-              .in('user_id', visibleIds)
-          : { data: [], error: null };
-
-      const statsByUser = new Map<string, SocialStatsRow>(
-        ((statsResult.data || []) as SocialStatsRow[]).map((s) => [
-          s.user_id,
-          s,
-        ])
-      );
-
-      return visible
-        .map((p) => {
-          const stats = statsByUser.get(p.id);
-          return {
-            id: p.id,
-            fullName: p.full_name,
-            avatarUrl: p.avatar_url,
-            username: p.username,
-            headline: p.headline,
-            followerCount: stats?.follower_count ?? 0,
-            followingCount: stats?.following_count ?? 0,
-            _sortScore:
-              (stats?.follower_count ?? 0) +
-              (p.created_at ? Date.parse(p.created_at) / 1e12 : 0),
-          };
-        })
-        .sort((a, b) => b._sortScore - a._sortScore)
-        .slice(0, SUGGESTED_MEMBERS_LIMIT)
-        .map(({ _sortScore: _, ...member }) => member);
-    } catch (error) {
-      console.error('Failed to load suggested members:', error);
       return [];
     }
   }

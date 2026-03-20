@@ -15,7 +15,7 @@ import {
 } from '@/types/hackathon';
 import { AppProfile } from '@/types';
 import { TeamSetupModal } from '@/components/hackathon/TeamSetupModal';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
@@ -32,7 +32,18 @@ interface HackathonClientViewProps {
     userId: string;
 }
 
-// HackathonCard removed and moved to its own file
+function SidebarInsetMain({ children }: { children: React.ReactNode }) {
+    const { open } = useSidebar();
+
+    return (
+        <main
+            className={`relative flex-1 flex flex-col overflow-hidden transition-[padding] duration-200 ${open ? 'md:pl-[var(--sidebar-width)]' : 'md:pl-16'
+                }`}
+        >
+            {children}
+        </main>
+    );
+}
 
 export default function HackathonClientView({
     initialHackathons,
@@ -249,11 +260,11 @@ export default function HackathonClientView({
                 />
                 <div className="flex h-screen bg-background">
                     <AppSidebar />
-                    <main className="flex-1 flex flex-col overflow-hidden relative">
+                    <SidebarInsetMain>
                         <div className="flex-1 overflow-auto">
                             <div className="min-h-screen glass-bg-gradient relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
-                                <div className="relative max-w-[1600px] mx-auto px-6 py-8">
+                                <div className="relative max-w-[1600px] mx-auto px-4 py-6 sm:px-6 sm:py-8">
                                     <div className="animate-pulse space-y-6">
                                         <div className="h-8 bg-white/10 rounded w-64"></div>
                                         <div className="grid gap-6">
@@ -265,7 +276,7 @@ export default function HackathonClientView({
                                 </div>
                             </div>
                         </div>
-                    </main>
+                    </SidebarInsetMain>
                 </div>
             </SidebarProvider>
         );
@@ -279,19 +290,19 @@ export default function HackathonClientView({
             />
             <div className="flex h-screen bg-background">
                 <AppSidebar />
-                <main className="flex-1 flex flex-col overflow-hidden relative">
+                <SidebarInsetMain>
                     <div className="flex-1 overflow-auto">
                         <div className="min-h-screen glass-bg-gradient relative">
                             {/* Subtle atmospheric overlay */}
                             <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
 
-                            <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+                            <div className="relative max-w-[1600px] mx-auto px-4 py-6 space-y-6 sm:px-6 sm:py-8">
                                 {/* Header */}
-                                <div className="mb-8">
-                                    <h1 className="text-3xl font-bold text-glass-primary mb-2">
+                                <div className="mb-6 sm:mb-8">
+                                    <h1 className="text-2xl font-bold text-glass-primary sm:text-3xl mb-2">
                                         Hackathons
                                     </h1>
-                                    <p className="text-glass-secondary">
+                                    <p className="max-w-2xl text-sm text-glass-secondary sm:text-base">
                                         Discover and participate in exciting coding competitions and events
                                     </p>
                                 </div>
@@ -304,13 +315,13 @@ export default function HackathonClientView({
                                 )}
 
                                 {/* Filters */}
-                                <div className="flex flex-wrap items-center justify-between gap-6 mb-10 border-b border-white/5">
-                                    <div className="flex items-center gap-8">
+                                <div className="mb-8 flex flex-col gap-4 border-b border-white/5 pb-4 sm:mb-10 md:flex-row md:items-end md:justify-between">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6">
                                         {(['all', 'upcoming', 'running', 'past'] as const).map(filterOption => (
                                             <button
                                                 key={filterOption}
                                                 onClick={() => setFilter(filterOption)}
-                                                className={`pb-4 text-sm font-bold tracking-tight transition-all relative ${filter === filterOption
+                                                className={`relative pb-2 text-sm font-bold tracking-tight transition-all sm:pb-4 ${filter === filterOption
                                                     ? 'text-blue-400'
                                                     : 'text-white/30 hover:text-white/60'
                                                     }`}
@@ -328,7 +339,7 @@ export default function HackathonClientView({
 
                                     <button
                                         onClick={() => setShowShort(!showShort)}
-                                        className={`pb-4 flex items-center gap-2 text-[11px] font-bold tracking-tight transition-colors ${showShort
+                                        className={`inline-flex items-center gap-2 self-start pb-1 text-[11px] font-bold tracking-tight transition-colors sm:pb-4 md:self-auto ${showShort
                                             ? 'text-white/60'
                                             : 'text-white/20'
                                             }`}
@@ -379,7 +390,7 @@ export default function HackathonClientView({
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                                         {visibleHackathons.map(hackathon => {
                                             const isRegistered = !!hackathon.userParticipation;
                                             const isRunning = isHackathonRunning(hackathon);
@@ -413,7 +424,7 @@ export default function HackathonClientView({
                             </div>
                         </div>
                     </div>
-                </main>
+                </SidebarInsetMain>
 
                 {/* Details Panel Overlay */}
                 {selectedHackathon && (
@@ -422,7 +433,7 @@ export default function HackathonClientView({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
                             onClick={() => setSelectedHackathon(null)}
                         />
-                        <div className="w-full max-w-2xl h-full animate-in slide-in-from-right duration-300 relative z-10">
+                        <div className="relative z-10 h-full w-full sm:max-w-xl xl:max-w-2xl animate-in slide-in-from-right duration-300">
                             <HackathonDetailPanel
                                 hackathon={selectedHackathon}
                                 onClose={() => setSelectedHackathon(null)}

@@ -101,12 +101,8 @@ export interface CommunityUpcomingEvent {
   format: string | null;
 }
 
-export interface CommunityHubData {
+export interface CommunityFeedPageData {
   feed: CommunityFeedPost[];
   circles: CommunityLaunchpadCircle[];
-  progress: CommunityLaunchpadProgress;
   upcomingEvents: CommunityUpcomingEvent[];
-  suggestedMembers: CommunityLaunchpadMember[];
 }
-
-export type CommunityTab = 'directory' | 'feed' | 'circles';

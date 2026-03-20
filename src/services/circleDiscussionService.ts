@@ -9,12 +9,13 @@ import type {
   CircleDiscussionPost,
   CircleDiscussionUpcomingEvent,
 } from '@/types/circleDiscussions';
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
 import { generateEventSlug } from '@/utils/slugUtils';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CIRCLE_POST_LIMIT = 50;
 const UPCOMING_EVENT_LIMIT = 4;
 const UPCOMING_EVENT_FETCH_LIMIT = 20;
+const UPCOMING_EVENT_SUPPLEMENTAL_FETCH_LIMIT = 120;
 const MEMBER_PREVIEW_LIMIT = 10;
 
 interface CircleRow {
@@ -57,6 +58,7 @@ interface MatchingEventRow {
   title: string | null;
   start_time: string | null;
   organizer_name: string | null;
+  organizer_logo_url: string | null;
   description: string | null;
   tags: string[] | null;
 }
@@ -89,7 +91,164 @@ export interface CirclePostPageData {
 
 export interface CirclePostMetadataData {
   circleName: string;
+  circleSlug: string;
   postContent: string;
+}
+
+function normalizeCircleEventTerm(term: string): string {
+  return term.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function tokenizeCircleEventTerm(term: string): string[] {
+  return normalizeCircleEventTerm(term)
+    .split(/[^a-z0-9]+/g)
+    .filter((token) => token.length >= 2);
+}
+
+function dedupeNormalizedCircleTerms(terms: string[]): string[] {
+  return Array.from(
+    new Set(
+      terms
+        .map((term) => normalizeCircleEventTerm(term))
+        .filter((term) => term.length >= 2)
+    )
+  );
+}
+
+function getCircleEventExactTerms(circle: Pick<CircleSummary, 'slug' | 'name'>): string[] {
+  return dedupeNormalizedCircleTerms([
+    circle.slug,
+    circle.slug.replace(/-/g, ' '),
+    circle.name,
+  ]);
+}
+
+function matchesNormalizedTextTerm(
+  term: string,
+  normalizedText: string,
+  tokenSet: Set<string>
+): boolean {
+  const comparableTerm = normalizeCircleEventTerm(term).replace(/-/g, ' ');
+
+  if (!comparableTerm) {
+    return false;
+  }
+
+  if (comparableTerm.includes(' ')) {
+    return normalizedText.includes(comparableTerm);
+  }
+
+  return tokenSet.has(comparableTerm);
+}
+
+function matchesNormalizedTagTerm(
+  term: string,
+  eventTagSet: Set<string>,
+  eventTagTokenSet: Set<string>
+): boolean {
+  const comparableTerm = normalizeCircleEventTerm(term);
+
+  if (!comparableTerm) {
+    return false;
+  }
+
+  if (comparableTerm.includes(' ')) {
+    return eventTagSet.has(comparableTerm);
+  }
+
+  return eventTagSet.has(comparableTerm) || eventTagTokenSet.has(comparableTerm);
+}
+
+export function buildCircleEventFilterTags(
+  circle: Pick<CircleSummary, 'slug' | 'name'>
+): string[] {
+  const exactTerms = getCircleEventExactTerms(circle);
+  const componentTerms = dedupeNormalizedCircleTerms([
+    ...tokenizeCircleEventTerm(circle.slug),
+    ...tokenizeCircleEventTerm(circle.name),
+  ]);
+  const filterTags = new Set<string>(exactTerms);
+  const candidateTerms = dedupeNormalizedCircleTerms([...exactTerms, ...componentTerms]);
+
+  candidateTerms.forEach((term) => {
+    const mappingKeys = new Set([
+      term,
+      term.replace(/\s+/g, '-'),
+      term.replace(/-/g, ' '),
+    ]);
+
+    let hasMappedTags = false;
+
+    mappingKeys.forEach((mappingKey) => {
+      const mappedTags = CIRCLE_TAG_MAPPINGS[mappingKey];
+      if (!mappedTags?.length) {
+        return;
+      }
+
+      hasMappedTags = true;
+      mappedTags.forEach((mappedTag) => {
+        filterTags.add(normalizeCircleEventTerm(mappedTag));
+      });
+    });
+
+    const expandedTerms = TagBasedMatchingService.expandSearchTerm(term)
+      .map((expandedTerm) => normalizeCircleEventTerm(expandedTerm))
+      .filter(Boolean);
+    const hasMeaningfulExpansion = expandedTerms.some((expandedTerm) => expandedTerm !== term);
+
+    if (exactTerms.includes(term) || hasMappedTags || hasMeaningfulExpansion) {
+      expandedTerms.forEach((expandedTerm) => {
+        filterTags.add(expandedTerm);
+      });
+    }
+  });
+
+  return Array.from(filterTags);
+}
+
+export function scoreCircleEventRelevance(
+  circle: Pick<CircleSummary, 'slug' | 'name'>,
+  event: Pick<MatchingEventRow, 'title' | 'description' | 'tags'>,
+  filterTags: readonly string[]
+): number {
+  const exactTerms = getCircleEventExactTerms(circle);
+  const normalizedFilterTags = dedupeNormalizedCircleTerms([...filterTags]);
+  const signalTerms = normalizedFilterTags.filter((term) => !exactTerms.includes(term));
+  const normalizedTitle = normalizeCircleEventTerm(event.title || '');
+  const normalizedDescription = normalizeCircleEventTerm(event.description || '');
+  const titleTokens = new Set(tokenizeCircleEventTerm(normalizedTitle));
+  const descriptionTokens = new Set(tokenizeCircleEventTerm(normalizedDescription));
+  const normalizedEventTags = dedupeNormalizedCircleTerms(event.tags || []);
+  const eventTagSet = new Set(normalizedEventTags);
+  const eventTagTokenSet = new Set(
+    normalizedEventTags.flatMap((tag) => tokenizeCircleEventTerm(tag))
+  );
+
+  let relevanceScore = 0;
+
+  const exactTitleMatches = exactTerms.filter((term) =>
+    matchesNormalizedTextTerm(term, normalizedTitle, titleTokens)
+  );
+  const exactDescriptionMatches = exactTerms.filter((term) =>
+    matchesNormalizedTextTerm(term, normalizedDescription, descriptionTokens)
+  );
+  const matchedEventTags = signalTerms.filter((term) =>
+    matchesNormalizedTagTerm(term, eventTagSet, eventTagTokenSet)
+  );
+  const signalTitleMatches = signalTerms.filter((term) =>
+    matchesNormalizedTextTerm(term, normalizedTitle, titleTokens)
+  );
+  const signalDescriptionMatches = signalTerms.filter((term) =>
+    matchesNormalizedTextTerm(term, normalizedDescription, descriptionTokens)
+  );
+
+  relevanceScore += Math.min(exactTitleMatches.length * 90, 180);
+  relevanceScore += Math.min(exactDescriptionMatches.length * 24, 48);
+  relevanceScore += Math.min(matchedEventTags.length * 36, 144);
+  relevanceScore += Math.min(signalTitleMatches.length * 18, 72);
+  relevanceScore += Math.min(signalDescriptionMatches.length * 8, 32);
+
+  return relevanceScore;
 }
 
 export class CircleDiscussionService {
@@ -125,25 +284,21 @@ export class CircleDiscussionService {
   }
 
   static async getCirclePostPageData({
-    slug,
     postId,
     viewerId,
     readClient,
   }: {
-    slug: string;
     postId: string;
     viewerId: string | null;
     readClient: SupabaseClientType;
   }): Promise<CirclePostPageData | null> {
-    if (!this.isValidUuid(postId)) {
+    const postLocator = await this.getPostLocatorById({ postId, readClient });
+
+    if (!postLocator) {
       return null;
     }
 
-    const circle = await this.getCircleBySlug({ slug, readClient });
-
-    if (!circle) {
-      return null;
-    }
+    const { circle } = postLocator;
 
     const [viewerContext, posts, upcomingEvents] = await Promise.all([
       this.getViewerContext({ circleId: circle.id, viewerId, readClient }),
@@ -168,38 +323,22 @@ export class CircleDiscussionService {
   }
 
   static async getPostMetadataData({
-    slug,
     postId,
     readClient,
   }: {
-    slug: string;
     postId: string;
     readClient: SupabaseClientType;
   }): Promise<CirclePostMetadataData | null> {
-    if (!this.isValidUuid(postId)) {
-      return null;
-    }
+    const postLocator = await this.getPostLocatorById({ postId, readClient });
 
-    const circle = await this.getCircleBySlug({ slug, readClient });
-
-    if (!circle) {
-      return null;
-    }
-
-    const { data, error } = await readClient
-      .from('circle_posts')
-      .select('content')
-      .eq('circle_id', circle.id)
-      .eq('id', postId)
-      .maybeSingle();
-
-    if (error || !data) {
+    if (!postLocator) {
       return null;
     }
 
     return {
-      circleName: circle.name,
-      postContent: data.content ?? '',
+      circleName: postLocator.circle.name,
+      circleSlug: postLocator.circle.slug,
+      postContent: postLocator.postContent,
     };
   }
 
@@ -228,6 +367,54 @@ export class CircleDiscussionService {
       name: circle.name,
       description: circle.description || '',
       memberCount: circle.member_count ?? 0,
+    };
+  }
+
+  private static async getPostLocatorById({
+    postId,
+    readClient,
+  }: {
+    postId: string;
+    readClient: SupabaseClientType;
+  }): Promise<{
+    circle: CircleSummary;
+    postContent: string;
+  } | null> {
+    if (!postId?.trim()) {
+      return null;
+    }
+
+    const { data: post, error: postError } = await readClient
+      .from('circle_posts')
+      .select('id, content, circle_id')
+      .eq('id', postId)
+      .maybeSingle();
+
+    if (postError || !post?.circle_id) {
+      return null;
+    }
+
+    const { data: circleData, error: circleError } = await readClient
+      .from('circles')
+      .select('id, slug, name, description, member_count')
+      .eq('id', post.circle_id)
+      .maybeSingle();
+
+    if (circleError || !circleData) {
+      return null;
+    }
+
+    const circle = circleData as CircleRow;
+
+    return {
+      circle: {
+        id: circle.id,
+        slug: circle.slug,
+        name: circle.name,
+        description: circle.description || '',
+        memberCount: circle.member_count ?? 0,
+      },
+      postContent: post.content ?? '',
     };
   }
 
@@ -462,65 +649,57 @@ export class CircleDiscussionService {
     circle: CircleSummary;
     readClient: SupabaseClientType;
   }): Promise<CircleDiscussionUpcomingEvent[]> {
-    const mappedTags = CIRCLE_TAG_MAPPINGS[circle.slug.toLowerCase()] ?? [];
-    const expandedTags = TagBasedMatchingService.expandSearchTerm(circle.slug);
-    const allFilterTags = Array.from(new Set([...mappedTags, ...expandedTags]));
+    const allFilterTags = buildCircleEventFilterTags(circle);
 
     if (allFilterTags.length === 0) {
       return [];
     }
 
-    const { data } = await readClient
+    const nowIso = new Date().toISOString();
+    const candidateEventsById = new Map<string, MatchingEventRow>();
+
+    const { data: tagMatchedEvents } = await readClient
       .from('events_detailed')
-      .select('id, title, start_time, organizer_name, description, tags')
+      .select('id, title, start_time, organizer_name, organizer_logo_url, description, tags')
       .overlaps('tags', allFilterTags)
-      .gte('start_time', new Date().toISOString())
+      .gte('start_time', nowIso)
       .order('start_time', { ascending: true })
       .limit(UPCOMING_EVENT_FETCH_LIMIT);
 
-    const circleNameLower = circle.name.toLowerCase();
-    const circleSlugLower = circle.slug.toLowerCase();
-    const circleKeywords = [circleSlugLower, ...circleNameLower.split(/\s+/)]
-      .map((keyword) => keyword.replace(/[^a-z0-9]/g, ''))
-      .filter((keyword) => keyword.length > 2);
+    ((tagMatchedEvents || []) as MatchingEventRow[]).forEach((event) => {
+      candidateEventsById.set(event.id, event);
+    });
 
-    return ((data || []) as MatchingEventRow[])
+    if (candidateEventsById.size < UPCOMING_EVENT_LIMIT) {
+      const { data: supplementalEvents } = await readClient
+        .from('events_detailed')
+        .select('id, title, start_time, organizer_name, organizer_logo_url, description, tags')
+        .gte('start_time', nowIso)
+        .order('start_time', { ascending: true })
+        .limit(UPCOMING_EVENT_SUPPLEMENTAL_FETCH_LIMIT);
+
+      ((supplementalEvents || []) as MatchingEventRow[]).forEach((event) => {
+        if (!candidateEventsById.has(event.id)) {
+          candidateEventsById.set(event.id, event);
+        }
+      });
+    }
+
+    return Array.from(candidateEventsById.values())
       .map((event) => {
-        let relevanceScore = 0;
-        const titleLower = (event.title || '').toLowerCase();
-        const descriptionLower = (event.description || '').toLowerCase();
-        const eventTags = (event.tags || []).map((tag) => tag.toLowerCase());
-
-        if (titleLower.includes(circleSlugLower) || titleLower.includes(circleNameLower)) {
-          relevanceScore += 100;
-        } else {
-          circleKeywords.forEach((keyword) => {
-            if (titleLower.includes(keyword)) {
-              relevanceScore += 30;
-            }
-          });
-        }
-
-        if (eventTags.includes(circleSlugLower)) {
-          relevanceScore += 50;
-        }
-
-        if (
-          descriptionLower.includes(circleSlugLower) ||
-          descriptionLower.includes(circleNameLower)
-        ) {
-          relevanceScore += 20;
-        }
-
         return {
           id: event.id,
           title: event.title,
           startTime: event.start_time,
           organizerName: event.organizer_name,
+          organizerLogoUrl:
+            getLogoUrlFromInput(event.organizer_logo_url, event.organizer_name || undefined) ??
+            null,
           slug: generateEventSlug(event.title ?? '', event.id),
-          relevanceScore,
+          relevanceScore: scoreCircleEventRelevance(circle, event, allFilterTags),
         };
       })
+      .filter((event) => event.relevanceScore > 0)
       .sort((left, right) => {
         if (right.relevanceScore !== left.relevanceScore) {
           return right.relevanceScore - left.relevanceScore;
@@ -532,9 +711,5 @@ export class CircleDiscussionService {
       })
       .slice(0, UPCOMING_EVENT_LIMIT)
       .map(({ relevanceScore: _relevanceScore, ...event }) => event);
-  }
-
-  private static isValidUuid(value: string): boolean {
-    return UUID_REGEX.test(value);
   }
 }

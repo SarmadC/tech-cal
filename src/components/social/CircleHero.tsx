@@ -3,9 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { PencilSimple, Plus, Check, SignOut } from '@phosphor-icons/react';
-import { formatCompactCount } from '@/utils/numberFormatting';
-import { MaterialIcon, type IconName } from '@/components/ui/Icon';
+import { Check, SignOut } from '@phosphor-icons/react';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 
 interface CircleHeroProps {
@@ -22,12 +20,12 @@ interface CircleHeroProps {
 export default function CircleHero({
     id,
     name,
-    description,
-    memberCount,
+    description: _description,
+    memberCount: _memberCount,
     isJoined: initialIsJoined,
-    icon,
+    icon: _icon,
     onJoinToggle,
-    postComposerRef,
+    postComposerRef: _postComposerRef,
 }: CircleHeroProps) {
     const [isJoined, setIsJoined] = useState(initialIsJoined);
     const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +52,7 @@ export default function CircleHero({
     return (
         <div className="bg-white dark:bg-[#08090a] border-b border-zinc-200 dark:border-zinc-800">
             {/* Breadcrumb bar */}
-            <div className="max-w-[960px] mx-auto px-6 lg:px-8 pt-3 pb-0">
+            <div className="mx-auto hidden max-w-[1180px] px-6 pb-0 pt-3 lg:px-8 md:block">
                 <Breadcrumbs
                     trail={[
                         { label: 'Community', href: '/community' },
@@ -62,50 +60,43 @@ export default function CircleHero({
                     ]}
                 />
             </div>
-            <div className="max-w-[960px] mx-auto px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-
-                    <div className="min-w-0">
-                        <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                            {name}
-                            <span className="text-xs font-normal text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                {formatCompactCount(memberCount)} members
-                            </span>
-                        </h1>
-                    </div>
+            <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-6 py-4 lg:px-8">
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                        {name}
+                    </h1>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    {isJoined && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs font-medium gap-1.5 px-3 border-zinc-200 dark:border-zinc-800 shadow-sm"
-                        >
-                            <Plus size={14} /> Invite
-                        </Button>
-                    )}
-
+                <div className="flex shrink-0 items-center gap-2">
                     <Button
                         onClick={handleToggle}
                         disabled={isLoading}
-                        variant={isJoined ? "outline" : "default"}
+                        aria-label={isJoined ? 'Leave circle' : 'Join circle'}
+                        variant="ghost"
                         size="sm"
                         className={`group h-8 text-xs font-medium transition-all px-3 ${isJoined
-                            ? 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-red-400 hover:text-red-500 dark:hover:border-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
-                            : 'bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm'
+                            ? '!border-0 !bg-transparent !shadow-none text-[var(--foreground-secondary)] hover:!bg-transparent hover:text-red-500 dark:hover:text-red-400'
+                            : '!border-0 !bg-transparent !shadow-none text-[var(--foreground-primary)] hover:!bg-transparent hover:text-[var(--foreground-secondary)]'
                             }`}
                     >
                         {isLoading ? '...' : isJoined ? (
                             <>
-                                <span className="flex items-center gap-1.5 group-hover:hidden">
+                                <span className="flex items-center gap-1.5 md:hidden">
+                                    <SignOut size={14} /> Leave
+                                </span>
+                                <span className="hidden items-center gap-1.5 md:flex md:group-hover:hidden">
                                     <Check size={14} /> Joined
                                 </span>
-                                <span className="hidden items-center gap-1.5 group-hover:flex">
+                                <span className="hidden items-center gap-1.5 md:group-hover:flex">
                                     <SignOut size={14} /> Leave
                                 </span>
                             </>
-                        ) : 'Join Circle'}
+                        ) : (
+                            <>
+                                <span className="md:hidden">Join</span>
+                                <span className="hidden md:inline">Join Circle</span>
+                            </>
+                        )}
                     </Button>
 
                 </div>

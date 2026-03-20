@@ -6,10 +6,10 @@ import { revalidatePath } from 'next/cache';
 import CircleHero from '@/components/social/CircleHero';
 import CircleMembers from '@/components/social/CircleMembers';
 import CircleDiscussions from '@/components/social/CircleDiscussions';
+import CircleUpcomingEventsList from '@/components/social/CircleUpcomingEventsList';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
-import { formatDate } from '@/utils/dateUtils';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import { CircleDiscussionService } from '@/services/circleDiscussionService';
@@ -136,9 +136,9 @@ export default async function CirclePage(
               />
             </div>
 
-            <div className="mx-auto max-w-[960px] px-6 py-8 lg:px-8">
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
-                <div className="space-y-8 lg:col-span-8">
+            <div className="mx-auto max-w-[1180px] px-6 py-8 lg:px-8">
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.9fr)_300px] lg:gap-10">
+                <div className="space-y-8">
                   <CircleDiscussions
                     circleId={pageData.circle.id}
                     circleSlug={pageData.circle.slug}
@@ -148,7 +148,7 @@ export default async function CirclePage(
                   />
                 </div>
 
-                <div className="space-y-8 lg:col-span-4">
+                <div className="hidden space-y-8 lg:block">
                   <div className="sticky top-24 space-y-8">
                     <div className="space-y-4">
                       <div className="mt-1 flex items-center justify-between pb-3">
@@ -167,40 +167,10 @@ export default async function CirclePage(
                         </div>
                       </div>
 
-                      {pageData.upcomingEvents.length === 0 ? (
-                        <p className="py-2 text-sm text-zinc-500 dark:text-zinc-400">
-                          No upcoming events.
-                        </p>
-                      ) : (
-                        <div className="flex flex-col">
-                          {pageData.upcomingEvents.map((event, index) => {
-                            const startTime = event.startTime ? new Date(event.startTime) : null;
-
-                            return (
-                              <Link
-                                key={event.id}
-                                href={`/events/${event.slug}`}
-                                className={`group flex flex-col py-2 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
-                                  index !== 0 ? 'border-t border-zinc-100 dark:border-zinc-800/60' : ''
-                                }`}
-                              >
-                                <h3 className="truncate text-sm font-medium text-zinc-900 transition-colors group-hover:text-zinc-600 dark:text-zinc-100 dark:group-hover:text-zinc-400">
-                                  {event.title}
-                                </h3>
-                                <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                                  {startTime && <span>{formatDate(startTime)}</span>}
-                                  {event.organizerName && (
-                                    <>
-                                      <span>·</span>
-                                      <span className="truncate">{event.organizerName}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <CircleUpcomingEventsList
+                        events={pageData.upcomingEvents}
+                        emptyClassName="py-2 text-sm text-zinc-500 dark:text-zinc-400"
+                      />
                     </div>
 
                     <CircleMembers

@@ -46,4 +46,5 @@ export interface CircleDiscussionUpcomingEvent {
   title: string | null;
   startTime: string | null;
   organizerName: string | null;
+  organizerLogoUrl: string | null;
 }

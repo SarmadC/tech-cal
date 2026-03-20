@@ -72,6 +72,13 @@ export default function AdminSidebar() {
                         icon: <MaterialIcon name="code" size={16} />,
                         hotkey: 'G H',
                     },
+                    {
+                        title: 'Submissions',
+                        href: `${BASE_PATH}/submissions`,
+                        icon: <MaterialIcon name="add" size={16} />,
+                        badge: counts?.submissions ?? null,
+                        hotkey: 'G S',
+                    },
                 ],
             },
             {

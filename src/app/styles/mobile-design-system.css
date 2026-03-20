@@ -327,6 +327,123 @@
   color: var(--mobile-app-muted);
 }
 
+.mobile-community-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.15rem;
+}
+
+.mobile-community-group {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mobile-app-divider) 82%, transparent);
+  border-radius: 1.05rem;
+  background: color-mix(in srgb, var(--mobile-app-surface-bg) 68%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.mobile-community-groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0.7rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--mobile-app-divider) 74%, transparent);
+}
+
+.mobile-community-groupTitle {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mobile-app-muted);
+}
+
+.mobile-community-groupMeta {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--mobile-app-muted);
+}
+
+.mobile-community-rowList {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-community-rowList > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--mobile-app-divider) 86%, transparent);
+}
+
+.mobile-community-authStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--mobile-app-divider) 82%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--mobile-app-surface-bg) 54%, transparent);
+  padding: 0.95rem 1rem;
+}
+
+.mobile-community-authCopy {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-community-authIcon {
+  display: inline-flex;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--mobile-app-divider) 82%, transparent);
+  background: color-mix(in srgb, var(--mobile-app-surface-bg-strong) 58%, transparent);
+  color: var(--mobile-app-muted-strong);
+}
+
+.mobile-community-authText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--mobile-app-muted-strong);
+}
+
+.mobile-community-authActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.mobile-community-empty {
+  border: 1px solid color-mix(in srgb, var(--mobile-app-divider) 78%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--mobile-app-surface-bg) 48%, transparent);
+  padding: 1rem;
+}
+
+.mobile-community-emptyTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--mobile-app-muted-strong);
+}
+
+.mobile-community-emptyBody {
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--mobile-app-muted);
+}
+
 .mobile-sheet {
   position: fixed;
   inset: 0;

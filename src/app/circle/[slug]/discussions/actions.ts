@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const MAX_POST_LENGTH = 10_000;
 const MAX_COMMENT_LENGTH = 5_000;
@@ -148,7 +149,7 @@ export async function votePost(postId: string, voteType: 1 | -1 | 0, circleSlug:
             }
         }
 
-        revalidatePath(`/circle/${circleSlug}`, 'layout');
+        revalidatePath(`/circle/${circleSlug}`);
         return { success: true };
 
     } catch (error) {
@@ -250,10 +251,12 @@ export async function editCirclePost(postId: string, content: string, circleSlug
     }
 }
 
-export async function deleteCirclePost(postId: string, circleSlug: string) {
+export async function deleteCirclePost(postId: string, circleSlug: string, redirectTo?: string) {
     if (!isValidUUID(postId)) {
         return { success: false, error: 'Invalid post ID' };
     }
+
+    let didDelete = false;
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -273,13 +276,19 @@ export async function deleteCirclePost(postId: string, circleSlug: string) {
             return { success: false, error: 'Failed to delete post. You may not have permission.' };
         }
 
-        revalidatePath(`/circle/${circleSlug}`, 'layout');
-        return { success: true };
+        revalidatePath(`/circle/${circleSlug}`);
+        didDelete = true;
 
     } catch (error) {
         console.error('Exception deleting post:', error);
         return { success: false, error: 'An unexpected error occurred' };
     }
+
+    if (didDelete && redirectTo) {
+        redirect(redirectTo);
+    }
+
+    return { success: true };
 }
 
 export async function editCircleComment(commentId: string, content: string, circleSlug: string) {

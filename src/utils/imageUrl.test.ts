@@ -24,6 +24,12 @@ describe('imageUrl utilities', () => {
     );
   });
 
+  it('leaves remote svg urls unoptimized so they can render directly', () => {
+    expect(getBrowserSafeImageSrc('https://example.com/logo.svg')).toBe(
+      'https://example.com/logo.svg'
+    );
+  });
+
   it('leaves root-relative image urls untouched', () => {
     expect(getBrowserSafeImageSrc('/avatars/local.png')).toBe('/avatars/local.png');
   });

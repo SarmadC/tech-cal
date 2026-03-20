@@ -1,5 +1,18 @@
-export function buildCirclePostPath(circleSlug: string, postId: string): string {
-  return `/circle/${circleSlug}/posts/${postId}`;
+import { generateEventSlug } from './slugUtils';
+
+export function extractCirclePostId(postKey: string): string {
+  const normalizedKey = postKey.trim();
+
+  if (!normalizedKey) {
+    return '';
+  }
+
+  const slugParts = normalizedKey.split('--');
+  if (slugParts.length > 1) {
+    return slugParts[slugParts.length - 1];
+  }
+
+  return normalizedKey;
 }
 
 export function parseCirclePostContent(content: string): {
@@ -26,6 +39,21 @@ export function parseCirclePostContent(content: string): {
     body: normalizedContent,
     excerpt: '',
   };
+}
+
+export function buildCirclePostSlug(content: string, postId: string): string {
+  const { title, body } = parseCirclePostContent(content);
+  const canonicalTitle = title || body || 'discussion';
+  return generateEventSlug(canonicalTitle, postId);
+}
+
+export function buildCirclePostPath(
+  circleSlug: string,
+  postId: string,
+  content?: string
+): string {
+  const postKey = content ? buildCirclePostSlug(content, postId) : postId;
+  return `/circle/${circleSlug}/posts/${postKey}`;
 }
 
 export function getCirclePostMetaTitle(content: string, circleName: string): string {
