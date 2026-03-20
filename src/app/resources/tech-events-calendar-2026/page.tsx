@@ -282,13 +282,13 @@ export default async function TechEventsCalendar2026Page() {
                 ]}
             />
 
-            <div className="min-h-screen bg-background-main pb-32">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background-main pb-16 sm:pb-24 md:pb-32">
                 {/* Enhanced Hero Section - Extracted to Client Component */}
                 <AnimatedHero totalCount={totalCount} />
 
 
 
-                <main className="md:hidden max-w-xl mx-auto px-4 -mt-4 relative z-10">
+                <main className="relative z-10 mx-auto -mt-4 max-w-xl px-4 pb-8 md:hidden">
                     <section className="border-y border-border-subtle bg-background/95 backdrop-blur-sm">
                         <div className="px-1">
                             <div className="px-4 py-4 border-b border-border-subtle">
@@ -492,7 +492,7 @@ export default async function TechEventsCalendar2026Page() {
                     </section>
                 </main>
 
-                <main className="hidden md:block max-w-[1600px] mx-auto px-6 sm:px-8 -mt-8 relative z-10 space-y-16 sm:space-y-20">
+                <main className="relative z-10 mx-auto -mt-8 hidden max-w-[1600px] space-y-16 px-4 sm:px-6 sm:space-y-20 lg:px-8 md:block">
 
 
                     {/* Bento Grid Layout */}

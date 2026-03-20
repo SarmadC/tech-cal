@@ -1,6 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  BREAKPOINTS,
+  isDesktopViewportWidth,
+  isMobileViewportWidth,
+  isTabletViewportWidth,
+} from '@/constants/responsive';
 
 export interface DeviceInfo {
   isReady: boolean;
@@ -19,12 +25,6 @@ export interface DeviceInfo {
     isChrome: boolean;
   };
 }
-
-// Breakpoints following your existing design system
-const BREAKPOINTS = {
-  mobile: 768,
-  tablet: 1024,
-} as const;
 
 export function useDeviceDetection(): DeviceInfo {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
@@ -53,9 +53,9 @@ export function useDeviceDetection(): DeviceInfo {
       const height = window.innerHeight;
       
       // Viewport-based detection
-      const isMobile = width <= BREAKPOINTS.mobile;
-      const isTablet = width > BREAKPOINTS.mobile && width <= BREAKPOINTS.tablet;
-      const isDesktop = width > BREAKPOINTS.tablet;
+      const isMobile = isMobileViewportWidth(width);
+      const isTablet = isTabletViewportWidth(width);
+      const isDesktop = isDesktopViewportWidth(width);
       
       // Touch detection
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

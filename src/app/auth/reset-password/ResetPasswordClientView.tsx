@@ -111,13 +111,13 @@ export default function ResetPasswordClientView() {
     // Loading state
     if (sessionStatus === 'loading' || sessionStatus === 'exchanging') {
         return (
-            <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                 <div className="max-w-md w-full text-center">
                     <Link href="/" className="inline-flex items-center space-x-2">
                         <Image src="/logo.svg" alt="KureCal" width={48} height={48} />
                         <span className="text-2xl font-bold text-foreground-primary">KureCal</span>
                     </Link>
-                    <div className="mt-8 bg-background-secondary rounded-2xl p-8 border border-border-default">
+                    <div className="mt-8 rounded-2xl border border-border-default bg-background-secondary p-6 sm:p-8">
                         <div className="animate-pulse flex flex-col items-center space-y-4">
                             <div className="w-12 h-12 bg-background-tertiary rounded-full"></div>
                             <p className="text-foreground-secondary">
@@ -133,7 +133,7 @@ export default function ResetPasswordClientView() {
     // Error state
     if (sessionStatus === 'error') {
         return (
-            <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                 <div className="max-w-md w-full">
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
@@ -144,7 +144,7 @@ export default function ResetPasswordClientView() {
                             Unable to reset password
                         </h2>
                     </div>
-                    <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
+                    <div className="rounded-2xl border border-border-default bg-background-secondary p-6 sm:p-8">
                         <div className="text-center space-y-6">
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
                                 <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +172,7 @@ export default function ResetPasswordClientView() {
     }
 
     return (
-        <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
             <div className="max-w-md w-full">
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center space-x-2">
@@ -187,7 +187,7 @@ export default function ResetPasswordClientView() {
                     </p>
                 </div>
 
-                <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
+                <div className="rounded-2xl border border-border-default bg-background-secondary p-6 sm:p-8">
                     {state.success ? (
                         <SuccessDisplay />
                     ) : (

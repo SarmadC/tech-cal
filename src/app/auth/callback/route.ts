@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/supabase'
+import { getPostHogClient } from '@/lib/posthog-server'
+import { ProfileService } from '@/services/profileService'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +51,19 @@ export async function GET(request: NextRequest) {
     // Handle OAuth provider errors first
     if (error) {
         console.error('[AUTH CALLBACK] OAuth provider error:', { error, errorDescription });
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: 'anonymous_oauth_error',
+                event: 'oauth_callback_failed',
+                properties: {
+                    error_type: 'provider_error',
+                    error_code: error,
+                    error_description: errorDescription,
+                    source: 'auth_callback',
+                },
+            });
+        } catch (_) { /* don't fail redirect on tracking error */ }
         const errorMessage = encodeURIComponent(errorDescription || `OAuth error: ${error}`);
         return NextResponse.redirect(`${origin}/login?error=oauth-provider-error&message=${errorMessage}`);
     }
@@ -86,6 +101,23 @@ export async function GET(request: NextRequest) {
                 const errorMessage = encodeURIComponent(`Verification failed: ${verifyError.message}`);
                 return NextResponse.redirect(`${origin}/login?error=verification-failed&message=${errorMessage}`);
             }
+
+            // Track email verification success
+            try {
+                const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                if (verifiedUser && type === 'signup') {
+                    const posthog = getPostHogClient();
+                    posthog.capture({
+                        distinctId: verifiedUser.id,
+                        event: 'email_verified',
+                        properties: {
+                            email: verifiedUser.email,
+                            verification_type: type,
+                            source: 'auth_callback',
+                        },
+                    });
+                }
+            } catch (_) { /* don't fail redirect on tracking error */ }
 
             // Successful verification - redirect to appropriate destination
             const response = NextResponse.redirect(`${origin}${next}`)
@@ -135,14 +167,102 @@ export async function GET(request: NextRequest) {
 
         if (exchangeError) {
             console.error('[AUTH CALLBACK] Session exchange error:', exchangeError);
+            try {
+                const posthog = getPostHogClient();
+                posthog.capture({
+                    distinctId: 'anonymous_oauth_error',
+                    event: 'oauth_callback_failed',
+                    properties: {
+                        error_type: 'session_exchange_failed',
+                        error_message: exchangeError.message,
+                        source: 'auth_callback',
+                    },
+                });
+            } catch (_) { /* don't fail redirect on tracking error */ }
             const errorMessage = encodeURIComponent(`Failed to exchange code for session: ${exchangeError.message}`);
             return NextResponse.redirect(`${origin}/login?error=session-exchange-failed&message=${errorMessage}`);
         }
 
         if (!data.session) {
             console.error('[AUTH CALLBACK] No session returned after code exchange');
+            try {
+                const posthog = getPostHogClient();
+                posthog.capture({
+                    distinctId: 'anonymous_oauth_error',
+                    event: 'oauth_callback_failed',
+                    properties: {
+                        error_type: 'no_session',
+                        source: 'auth_callback',
+                    },
+                });
+            } catch (_) { /* don't fail redirect on tracking error */ }
             const errorMessage = encodeURIComponent('Authentication completed but no session was created');
             return NextResponse.redirect(`${origin}/login?error=no-session&message=${errorMessage}`);
+        }
+
+        const user = data.session.user;
+        const isNewUser = user.created_at
+            ? (Date.now() - new Date(user.created_at).getTime()) < 10 * 60 * 1000
+            : false;
+
+        // Track successful OAuth callback
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: user.id,
+                event: 'oauth_callback_succeeded',
+                properties: {
+                    provider: user.app_metadata?.provider ?? 'unknown',
+                    is_new_user: isNewUser,
+                    source: 'auth_callback',
+                },
+            });
+
+            // Fire user_signed_up server-side for new OAuth users
+            if (isNewUser) {
+                posthog.capture({
+                    distinctId: user.id,
+                    event: 'user_signed_up',
+                    properties: {
+                        email: user.email,
+                        method: user.app_metadata?.provider ?? 'oauth',
+                        email_confirmed: true,
+                        source: 'oauth_callback',
+                    },
+                });
+                posthog.identify({
+                    distinctId: user.id,
+                    properties: {
+                        email: user.email,
+                        name: user.user_metadata?.full_name,
+                    },
+                });
+            }
+        } catch (_) { /* don't fail redirect on tracking error */ }
+
+        // For new OAuth users, ensure profile exists and skip forced onboarding
+        if (isNewUser) {
+            try {
+                await ProfileService.getProfile(user.id, supabase);
+            } catch (profileError) {
+                if (profileError instanceof Error && profileError.name === 'ProfileNotFoundError') {
+                    try {
+                        await ProfileService.createProfile({
+                            id: user.id,
+                            fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                            avatarUrl: user.user_metadata?.avatar_url || null,
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            preferences: {
+                                careerOnboardingCompleted: true,
+                                careerOnboardingSkipped: true,
+                                careerOnboardingCompletedAt: new Date().toISOString(),
+                            }
+                        }, supabase);
+                    } catch (_) {
+                        console.error('[AUTH CALLBACK] Failed to create profile for new OAuth user');
+                    }
+                }
+            }
         }
 
         // Successful authentication - redirect to intended destination with session cookies
@@ -157,8 +277,20 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('[AUTH CALLBACK] Unexpected error during callback:', error);
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: 'anonymous_oauth_error',
+                event: 'oauth_callback_failed',
+                properties: {
+                    error_type: 'exception',
+                    error_message: error instanceof Error ? error.message : 'Unknown error',
+                    source: 'auth_callback',
+                },
+            });
+        } catch (_) { /* don't fail redirect on tracking error */ }
         const errorMessage = encodeURIComponent(
-            error instanceof Error 
+            error instanceof Error
                 ? `Callback error: ${error.message}`
                 : 'An unexpected error occurred during authentication'
         );

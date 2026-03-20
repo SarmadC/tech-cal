@@ -477,7 +477,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                 <SettingsSection title="Blocked Users" description="Manage users restricted from interacting with you.">
                     {blockedUsers.length === 0 ? (
                         <SettingsControl>
-                            <div className="flex items-center gap-4 w-full sm:w-[320px] text-[13px]">
+                            <div className="flex w-full flex-col gap-3 text-[13px] sm:w-[320px] sm:flex-row sm:items-center sm:gap-4">
                                 <span className="text-[var(--foreground-tertiary)] italic">No blocked users</span>
                                 <Button variant="ghost" size="sm" className="h-6 text-[11px] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] px-2 transition-all duration-200 active:scale-95">
                                     Block someone...
@@ -516,10 +516,10 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
             {/* Sticky Save Footer */}
             <div
-                className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[var(--background-secondary)] border border-[var(--border-default)] shadow-xl rounded-full px-4 py-2 flex items-center gap-4 transition-all duration-300 z-50 ${isDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}
+                className={`fixed bottom-[calc(var(--mobile-app-tabbar-offset)-0.25rem)] left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[30rem] -translate-x-1/2 items-center gap-4 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)] px-3 py-2 shadow-xl transition-all duration-300 sm:bottom-6 sm:w-auto sm:max-w-none sm:rounded-full sm:px-4 ${isDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}
             >
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[var(--foreground-secondary)] pl-2">
+                <div className="flex w-full items-center gap-2">
+                    <span className="pl-2 text-sm font-medium text-[var(--foreground-secondary)]">
                         Unsaved changes
                     </span>
                     <div className="h-4 w-[1px] bg-[var(--border-default)] mx-2" />
@@ -543,7 +543,9 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                     >
                         Reset
                     </Button>
-                    <SaveButton isDirty={isDirty} />
+                    <div className="ml-auto">
+                        <SaveButton isDirty={isDirty} />
+                    </div>
                 </div>
             </div>
         </form >

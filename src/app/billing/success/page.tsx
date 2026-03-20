@@ -86,8 +86,8 @@ export default function BillingSuccessPage() {
   // Loading/checking state
   if (status === 'checking' || isLoading) {
     return (
-      <main className="min-h-screen bg-background-main px-6 py-16">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-10 shadow-xl">
+      <main className="responsive-page-shell min-h-[100dvh] bg-background-main px-4 py-10 sm:px-6 sm:py-16">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-6 shadow-xl sm:p-10">
           <div className="flex flex-col items-center justify-center py-8">
             <Spinner className="h-10 w-10 animate-spin text-amber-600" />
             <p className="mt-4 text-lg font-medium text-foreground-primary">
@@ -105,9 +105,9 @@ export default function BillingSuccessPage() {
   // Pending state (subscription not yet active after timeout)
   if (status === 'pending') {
     return (
-      <main className="min-h-screen bg-background-main px-6 py-16">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-10 shadow-xl">
-          <div className="flex items-center gap-4">
+      <main className="responsive-page-shell min-h-[100dvh] bg-background-main px-4 py-10 sm:px-6 sm:py-16">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-6 shadow-xl sm:p-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-100">
               <WarningCircle weight="fill" size={28} />
             </span>
@@ -147,9 +147,9 @@ export default function BillingSuccessPage() {
 
   // Success state
   return (
-    <main className="min-h-screen bg-background-main px-6 py-16">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-10 shadow-xl">
-        <div className="flex items-center gap-4">
+    <main className="responsive-page-shell min-h-[100dvh] bg-background-main px-4 py-10 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-6 shadow-xl sm:p-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-100">
             <CheckCircle weight="fill" size={28} />
           </span>

@@ -37,7 +37,7 @@ function SidebarInsetMain({ children }: { children: React.ReactNode }) {
 
     return (
         <main
-            className={`relative flex-1 flex flex-col overflow-hidden transition-[padding] duration-200 ${open ? 'md:pl-[var(--sidebar-width)]' : 'md:pl-16'
+            className={`relative flex min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-200 ${open ? 'md:pl-[var(--sidebar-width)]' : 'md:pl-16'
                 }`}
         >
             {children}
@@ -258,11 +258,11 @@ export default function HackathonClientView({
                     navItems={APP_MOBILE_NAV_ITEMS}
                     fixed={true}
                 />
-                <div className="flex h-screen bg-background">
+                <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-background">
                     <AppSidebar />
                     <SidebarInsetMain>
-                        <div className="flex-1 overflow-auto">
-                            <div className="min-h-screen glass-bg-gradient relative">
+                        <div className="responsive-page-scroll flex-1">
+                            <div className="relative min-h-[100dvh] overflow-x-clip glass-bg-gradient">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
                                 <div className="relative max-w-[1600px] mx-auto px-4 py-6 sm:px-6 sm:py-8">
                                     <div className="animate-pulse space-y-6">
@@ -288,15 +288,15 @@ export default function HackathonClientView({
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={true}
             />
-            <div className="flex h-screen bg-background">
+            <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-background">
                 <AppSidebar />
                 <SidebarInsetMain>
-                    <div className="flex-1 overflow-auto">
-                        <div className="min-h-screen glass-bg-gradient relative">
+                    <div className="responsive-page-scroll flex-1">
+                        <div className="relative min-h-[100dvh] overflow-x-clip glass-bg-gradient">
                             {/* Subtle atmospheric overlay */}
                             <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
 
-                            <div className="relative max-w-[1600px] mx-auto px-4 py-6 space-y-6 sm:px-6 sm:py-8">
+                            <div className="relative mx-auto max-w-[1600px] space-y-6 px-4 pb-8 pt-[var(--mobile-app-top-offset)] sm:px-6 sm:py-8 md:pt-8">
                                 {/* Header */}
                                 <div className="mb-6 sm:mb-8">
                                     <h1 className="text-2xl font-bold text-glass-primary sm:text-3xl mb-2">
@@ -433,7 +433,7 @@ export default function HackathonClientView({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
                             onClick={() => setSelectedHackathon(null)}
                         />
-                        <div className="relative z-10 h-full w-full sm:max-w-xl xl:max-w-2xl animate-in slide-in-from-right duration-300">
+                        <div className="relative z-10 h-full w-full animate-in slide-in-from-right duration-300 sm:max-w-xl xl:max-w-2xl">
                             <HackathonDetailPanel
                                 hackathon={selectedHackathon}
                                 onClose={() => setSelectedHackathon(null)}

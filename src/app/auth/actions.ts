@@ -240,13 +240,17 @@ export async function signupAction(
                     // Profile exists, no need to create
                 } catch (profileError) {
                     if (profileError instanceof Error && profileError.name === 'ProfileNotFoundError') {
-                        // Create profile
+                        // Create profile — skip forced onboarding so user sees value first
                         await ProfileService.createProfile({
                             id: user.id,
                             fullName: user.user_metadata?.full_name || serviceData.name,
                             avatarUrl: user.user_metadata?.avatar_url || null,
                             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            preferences: {}
+                            preferences: {
+                                careerOnboardingCompleted: true,
+                                careerOnboardingSkipped: true,
+                                careerOnboardingCompletedAt: new Date().toISOString(),
+                            }
                         }, supabase);
                         console.log('[SignupAction] Profile created for new user:', user.id);
                     }

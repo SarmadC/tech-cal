@@ -74,9 +74,9 @@ export default function DashboardClientView({
 
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
+                <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-gray-50 dark:bg-[#0A0A0A]">
                     <AppSidebar />
-                    <main className="flex-1 flex flex-col overflow-hidden">
+                    <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
                             <div className="flex items-center justify-center min-h-[400px]">
                                 <div className="text-center">
@@ -100,9 +100,9 @@ export default function DashboardClientView({
 
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
+                <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-gray-50 dark:bg-[#0A0A0A]">
                     <AppSidebar />
-                    <main className="flex-1 flex flex-col overflow-hidden">
+                    <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
                             <DashboardErrorState
                                 title="Failed to load dashboard data"
@@ -141,18 +141,18 @@ export default function DashboardClientView({
 
     return (
         <SidebarProvider>
-            <div className="flex h-screen bg-background">
+            <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-background">
                 <h1 className="sr-only">Dashboard</h1>
                 <AppSidebar />
-                <main className="flex-1 flex flex-col overflow-hidden relative">
+                <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                     <div className="flex-1 overflow-auto">
                         <PageErrorBoundary name="Dashboard">
                             {/* Detailed Grid Dashboard with flat background */}
-                            <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] relative">
+                            <div className="relative min-h-[100dvh] overflow-x-clip bg-gray-50 dark:bg-[#0A0A0A]">
                                 {/* Subtle noise texture or grid could go here, keeping it clean for now */}
                                 <div className="absolute inset-0 bg-black/[0.02] dark:bg-white/[0.02] pointer-events-none" />
 
-                                <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+                                <div className="relative mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6 sm:py-8">
                                     {/* Breadcrumbs - Hidden on mobile */}
                                     <Breadcrumbs
                                         base={[{ label: 'Home', href: '/' }]}

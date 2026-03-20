@@ -34,7 +34,7 @@ const ShortlistCompareTray: React.FC<ShortlistCompareTrayProps> = ({
     }
 
     return (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] md:bottom-6 right-4 left-4 md:left-auto md:w-[420px] z-[115] rounded-xl border border-border/80 bg-background/95 backdrop-blur-md shadow-xl">
+        <div className="mobile-fixed-panel fixed bottom-[calc(var(--mobile-app-tabbar-offset)-0.25rem)] left-4 right-4 z-[115] rounded-xl border border-border/80 bg-background/95 shadow-xl backdrop-blur-md md:bottom-6 md:left-auto md:right-4 md:w-[420px]">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/60">
                 <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Shortlist</p>

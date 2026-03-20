@@ -102,7 +102,7 @@ export default function SignupPage() {
 
     return (
         <ProtectedRoute allowUnauthenticated>
-            <main className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <main className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                 <div className="max-w-md w-full">
                     <h1 className="sr-only">Create your Kure-Cal account</h1>
                     {/* Header section remains the same */}
@@ -118,7 +118,7 @@ export default function SignupPage() {
                         </p>
                     </div>
 
-                    <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
+                    <div className="rounded-2xl border border-border-default bg-background-secondary p-6 sm:p-8">
                         {/* Replaced separate OAuth forms with the AuthProviders component */}
                         <AuthProviders
                             onSelectProvider={handleOAuthSignIn}

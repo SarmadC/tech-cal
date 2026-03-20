@@ -100,7 +100,10 @@
       "mcp__posthog__projects-get",
       "mcp__posthog__list-errors",
       "mcp__posthog__event-definitions-list",
-      "mcp__posthog__query-run"
+      "mcp__posthog__query-run",
+      "mcp__posthog__insights-get-all",
+      "mcp__posthog__entity-search",
+      "Bash(npx next:*)"
     ],
     "deny": [],
     "ask": []

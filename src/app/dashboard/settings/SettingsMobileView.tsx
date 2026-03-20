@@ -155,14 +155,14 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
     // Master View
     if (!activeTab) {
         return (
-            <div className="min-h-screen bg-[var(--mono-bg-main)] text-[var(--mono-text-primary)] font-sans transition-colors duration-200">
+            <div className="responsive-page-shell min-h-[100dvh] bg-[var(--mono-bg-main)] text-[var(--mono-text-primary)] font-sans transition-colors duration-200">
                 <UnifiedMobileNavbar
                     navItems={APP_MOBILE_NAV_ITEMS}
                     className="sticky top-0 z-50 bg-[var(--mono-bg-main)]/80 backdrop-blur-xl border-b border-[var(--mono-border-default)]"
                     showLogo={false}
                     variant="app"
                 />
-                <div className="p-4">
+                <div className="mobile-bottom-nav-offset p-4">
                     {/* Unified Top Navigation */}
                     <div className="mb-8 pt-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -231,7 +231,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
     const currentTabLabel = allTabs.find(t => t.id === activeTab)?.label;
 
     return (
-        <div className="min-h-screen bg-[var(--mono-bg-main)] text-[var(--mono-text-primary)] transition-colors duration-200">
+        <div className="responsive-page-shell min-h-[100dvh] bg-[var(--mono-bg-main)] text-[var(--mono-text-primary)] transition-colors duration-200">
             {/* Frosted Glass Header */}
             <div className="sticky top-0 z-10 bg-[var(--mono-bg-main)]/80 backdrop-blur-xl border-b border-[var(--mono-border-default)]">
                 <div className="flex items-center h-14 px-4 gap-3">
@@ -245,7 +245,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
                 </div>
             </div>
 
-            <div className="p-4">
+            <div className="mobile-bottom-nav-offset p-4">
                 <div className="integration-settings-wrapper">
                     <style jsx global>{`
                         .integration-settings-wrapper * {

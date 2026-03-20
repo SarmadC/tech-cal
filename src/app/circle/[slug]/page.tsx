@@ -114,17 +114,17 @@ export default async function CirclePage(
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-zinc-50 dark:bg-[#08090a] md:flex-row">
+      <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip bg-zinc-50 dark:bg-[#08090a] md:flex-row">
         <AppSidebar />
-        <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto transition-all duration-300">
+        <div className="responsive-page-scroll relative flex min-w-0 flex-1 flex-col transition-all duration-300">
           <UnifiedMobileNavbar
             navItems={APP_MOBILE_NAV_ITEMS}
             fixed={true}
             className="border-b border-border/40 bg-white/95 backdrop-blur-xl dark:bg-[#08090a]/95 md:hidden"
           />
 
-          <main className="flex-1 pb-24 pt-16 md:pt-0">
-            <div className="sticky top-16 z-30 md:top-0">
+          <main className="mobile-top-nav-offset flex-1 pb-[calc(var(--mobile-app-tabbar-offset)+1rem)] md:pb-0 md:pt-0">
+            <div className="sticky top-[var(--mobile-app-top-offset)] z-30 md:top-0">
               <CircleHero
                 id={pageData.circle.id}
                 name={pageData.circle.name}
@@ -136,7 +136,7 @@ export default async function CirclePage(
               />
             </div>
 
-            <div className="mx-auto max-w-[1180px] px-6 py-8 lg:px-8">
+            <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.9fr)_300px] lg:gap-10">
                 <div className="space-y-8">
                   <CircleDiscussions

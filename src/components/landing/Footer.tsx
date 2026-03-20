@@ -35,9 +35,9 @@ export function Footer() {
                                 href="/signup"
                                 className={`cta-button animate-shimmer motion-reduce:animate-none ${isMobile ? 'mobile-optimized' : ''}`}
                                 aria-label="Start your free account to access tech events calendar"
-                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'footer', destination: '/signup' })}
+                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Get Started Free', cta_location: 'footer', destination: '/signup' })}
                             >
-                                <span>Start Free Trial</span>
+                                <span>Get Started Free</span>
                             </Link>
                         </div>
 

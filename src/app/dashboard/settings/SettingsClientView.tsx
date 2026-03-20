@@ -39,7 +39,7 @@ export default function SettingsClientView({ profile }: SettingsClientViewProps)
 
     return (
         <SidebarProvider>
-            <div className="flex min-h-screen" style={{ backgroundColor: 'var(--background-main)' }}>
+            <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip" style={{ backgroundColor: 'var(--background-main)' }}>
                 {/* App Sidebar - Hidden on mobile */}
                 <AppSidebar />
 
@@ -48,7 +48,7 @@ export default function SettingsClientView({ profile }: SettingsClientViewProps)
                     <SettingsNavigation />
 
                     {/* Main Content */}
-                    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 w-full">
+                    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                         <div className="mb-8">
                             <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground-primary)' }}>Settings</h1>
                             <p className="text-lg mt-2" style={{ color: 'var(--foreground-secondary)' }}>
@@ -75,5 +75,4 @@ export default function SettingsClientView({ profile }: SettingsClientViewProps)
         </SidebarProvider>
     );
 }
-
 

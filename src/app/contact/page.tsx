@@ -141,10 +141,10 @@ export default function ContactPage() {
     const searchResultsVisible = searchQuery.trim().length > 0;
 
     return (
-        <main className="min-h-screen bg-background text-foreground-primary selection:bg-neutral-800 font-sans">
-            <section className="pt-32 pb-16 px-6 relative">
+        <main className="responsive-page-shell min-h-[100dvh] bg-background text-foreground-primary selection:bg-neutral-800 font-sans">
+            <section className="relative px-4 pb-14 pt-10 sm:px-6 sm:pb-16 sm:pt-14">
                 <div className="max-w-[1200px] mx-auto text-center relative z-10">
-                    <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-foreground-primary mb-8">
+                    <h1 className="mb-6 text-4xl font-semibold tracking-tight text-foreground-primary md:text-6xl">
                         Hello, how can we help?
                     </h1>
                     <div className="max-w-xl mx-auto relative">
@@ -196,10 +196,10 @@ export default function ContactPage() {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-neutral-900/20 blur-[120px] rounded-full -z-0 pointer-events-none" />
             </section>
 
-            <div className="max-w-[1200px] mx-auto px-6 pb-24 space-y-24">
+            <div className="mx-auto max-w-[1200px] space-y-16 px-4 pb-20 sm:space-y-24 sm:px-6 sm:pb-24">
 
                 {/* Contact Options Cards */}
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid gap-6 md:grid-cols-3">
                     <div className="group p-6 rounded-xl bg-neutral-900/30 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/50 transition-all duration-300">
                         <div className="flex items-start justify-between mb-4">
                             <h3 className="text-lg font-medium text-foreground-primary">Issues</h3>
@@ -259,7 +259,7 @@ export default function ContactPage() {
                 </div>
 
                 {/* Additional Help Section */}
-                <div className="p-8 rounded-2xl bg-neutral-900/20 border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex flex-col gap-6 rounded-2xl border border-neutral-800 bg-neutral-900/20 p-6 md:flex-row md:items-center md:justify-between md:p-8">
                     <div className="max-w-xl">
                         <h2 className="text-xl font-semibold text-foreground-primary mb-2">
                             Can't find what you're looking for?
@@ -268,18 +268,18 @@ export default function ContactPage() {
                             The KureCal Support Team is ready to help. Response time varies depending on plan type.
                         </p>
                     </div>
-                    <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
                         <button
                             type="button"
                             onClick={() => handleOpenForm('sales')}
-                            className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium rounded-md border border-neutral-700 transition-colors"
+                            className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 sm:w-auto"
                         >
                             Contact Enterprise Sales
                         </button>
                         <button
                             type="button"
                             onClick={() => handleOpenForm('support')}
-                            className="flex items-center text-neutral-400 hover:text-white text-sm font-medium transition-colors"
+                            className="flex items-center justify-center text-sm font-medium text-neutral-400 transition-colors hover:text-white sm:justify-start"
                         >
                             Open Ticket
                             <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
@@ -303,7 +303,7 @@ export default function ContactPage() {
                 </div>
             </div>
 
-            <div className="border-t border-neutral-900 mx-auto max-w-[1200px]" />
+            <div className="mx-auto max-w-[1200px] border-t border-neutral-900" />
         </main>
     );
 }

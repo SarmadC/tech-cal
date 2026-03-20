@@ -195,12 +195,12 @@ export default function PricingPageClient() {
     };
 
     return (
-        <main className="min-h-screen pt-20 bg-background text-foreground">
-            <section className="relative px-6 pt-12 pb-24">
+        <main className="responsive-page-shell min-h-[100dvh] bg-background pt-20 text-foreground">
+            <section className="relative px-4 pb-20 pt-10 sm:px-6 sm:pt-12 sm:pb-24">
                 <div className="mx-auto max-w-6xl">
-                    <div className="flex flex-col gap-12 md:flex-row md:items-end md:justify-between">
+                    <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between md:gap-12">
                         <div className="space-y-8">
-                            <h1 className="text-5xl font-semibold tracking-tight text-foreground md:text-7xl font-dm-sans leading-[1.1]">
+                            <h1 className="font-dm-sans text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-7xl">
                                 Start for free<br />
                                 <span className="text-muted-foreground">Upgrade for insights</span>
                             </h1>
@@ -238,7 +238,7 @@ export default function PricingPageClient() {
                 </div>
             </section>
 
-            <section className="px-6 pb-12">
+            <section className="px-4 pb-[calc(var(--mobile-app-tabbar-offset)+0.5rem)] sm:px-6 sm:pb-12">
                 <div className="mx-auto max-w-6xl">
                     <div className="mb-8 flex flex-col gap-3 text-center">
                         <h2 className="text-3xl font-semibold text-foreground md:text-4xl font-dm-sans">

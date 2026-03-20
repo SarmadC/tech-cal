@@ -1,12 +1,15 @@
 'use client';
 
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import dynamic from 'next/dynamic';
 import { SlidersHorizontal, LockKey } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import Image from 'next/image';
+import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -34,11 +37,25 @@ import { useRemoteSearchSuggestions } from '@/hooks/useRemoteSearchSuggestions';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { useAuth } from '@/contexts';
 
+export interface PreviewEvent {
+    id: string;
+    slug: string | null;
+    title: string;
+    description: string | null;
+    start_time: string;
+    end_time: string | null;
+    location: string | null;
+    event_format: string | null;
+    event_type: { name: string } | null;
+    organizer: { name: string } | null;
+}
+
 interface EventListViewProps {
     initialCategories: EventType[];
     profile: AppProfile | null;
     locationOptions: string[];
     initialCircleSlug?: string;
+    previewEvents?: PreviewEvent[];
 }
 
 interface EventRow {
@@ -51,6 +68,10 @@ interface EventRow {
     categoryLabel?: string;
     categoryColor?: string;
     priceRange?: string | null;
+    eventFormat?: 'Online' | 'In-person' | 'Hybrid' | null;
+    eventImageUrl?: string | null;
+    organizationLogo?: string | null;
+    updatedAt?: string | null;
     status: string;
     slug: string;
     event: TrackedEvent;
@@ -67,7 +88,81 @@ const MobileEventDetailPanelDynamic = dynamic(
     { loading: () => <Loading /> },
 );
 
-export default function EventListView({ initialCategories, profile, locationOptions, initialCircleSlug }: EventListViewProps) {
+const PREVIEW_COUNT = 5;
+
+function EventLogo({ row }: { row: EventRow }) {
+    const orgLogoSrc = getSafeImageSrc(row.organizationLogo);
+    const eventImgSrc = getVersionedImageSrc(row.eventImageUrl, row.updatedAt);
+    const src = eventImgSrc || orgLogoSrc;
+    const fallbackLetter = row.title.charAt(0).toUpperCase();
+
+    const [imgError, setImgError] = React.useState(false);
+    const [activeSrc, setActiveSrc] = React.useState(src);
+
+    React.useEffect(() => {
+        setActiveSrc(eventImgSrc || orgLogoSrc);
+        setImgError(false);
+    }, [eventImgSrc, orgLogoSrc]);
+
+    if (!activeSrc || imgError) {
+        return (
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-white/10 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                {fallbackLetter}
+            </span>
+        );
+    }
+
+    return (
+        <span className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-white/10">
+            <Image
+                src={activeSrc}
+                alt=""
+                fill
+                sizes="32px"
+                className="object-cover"
+                onError={() => {
+                    if (activeSrc === eventImgSrc && orgLogoSrc) {
+                        setActiveSrc(orgLogoSrc);
+                    } else {
+                        setImgError(true);
+                    }
+                }}
+            />
+        </span>
+    );
+}
+
+function PriceBadge({ price }: { price: string }) {
+    const isFree = price.toLowerCase() === 'free' || price === '$0';
+    return (
+        <span className={cn(
+            'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
+            isFree
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'bg-zinc-100 text-zinc-600 dark:bg-white/8 dark:text-zinc-400'
+        )}>
+            {isFree ? 'Free' : price}
+        </span>
+    );
+}
+
+function FormatBadge({ format }: { format: string }) {
+    const styles: Record<string, string> = {
+        'Online': 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        'In-person': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        'Hybrid': 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+    };
+    return (
+        <span className={cn(
+            'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
+            styles[format] ?? 'bg-zinc-100 text-zinc-500 dark:bg-white/8 dark:text-zinc-400'
+        )}>
+            {format}
+        </span>
+    );
+}
+
+export default function EventListView({ initialCategories, profile, locationOptions, initialCircleSlug, previewEvents }: EventListViewProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const posthog = usePostHog();
@@ -242,11 +337,49 @@ export default function EventListView({ initialCategories, profile, locationOpti
             categoryLabel: event.category?.name,
             categoryColor: event.category?.color,
             priceRange: event.priceRange,
+            eventFormat: event.eventFormat,
+            eventImageUrl: event.eventImageUrl,
+            organizationLogo: event.organization?.logo,
+            updatedAt: event.updatedAt,
             status: event.status,
             slug,
             event,
         };
     }), [eventsWithNetwork]);
+
+    // Build preview rows from SSR events for anonymous soft gate
+    const previewRows: EventRow[] = useMemo(() => {
+        if (!previewEvents?.length) return [];
+        return previewEvents.slice(0, PREVIEW_COUNT).map((event) => {
+            const startDisplay = formatDate(event.start_time);
+            const timeDisplay = formatTime(event.start_time);
+            const slug = event.slug || generateEventSlug(event.title, event.id);
+            return {
+                id: event.id,
+                title: event.title,
+                organizer: event.organizer?.name || '',
+                startDisplay: `${startDisplay} · ${timeDisplay}`,
+                endDisplay: event.end_time ? formatTime(event.end_time) : null,
+                location: event.location || 'TBD',
+                categoryLabel: event.event_type?.name,
+                categoryColor: undefined,
+                priceRange: null,
+                status: 'confirmed',
+                slug,
+                event: {
+                    id: event.id,
+                    title: event.title,
+                    organizer: event.organizer?.name || 'Unknown',
+                    startTime: event.start_time,
+                    endTime: event.end_time || '',
+                    location: event.location || '',
+                    status: 'confirmed',
+                    eventTypeId: '',
+                    tags: [],
+                } as unknown as TrackedEvent,
+            };
+        });
+    }, [previewEvents]);
 
     const handleOpenDetails = useCallback((event: TrackedEvent) => {
         setSelectedEvent(event);
@@ -262,14 +395,23 @@ export default function EventListView({ initialCategories, profile, locationOpti
             header: 'Event',
             sortable: true,
             render: (row) => (
-                <div className="flex flex-col py-1 pl-2">
-                    <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{row.title}</span>
-                    {row.organizer && row.organizer !== 'Unknown' && (
-                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{row.organizer}</span>
-                    )}
+                <div className="flex items-start gap-2.5 py-1 pl-2">
+                    <EventLogo row={row} />
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100 truncate">{row.title}</span>
+                        {row.organizer && row.organizer !== 'Unknown' && (
+                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">{row.organizer}</span>
+                        )}
+                        {(row.priceRange || row.eventFormat) && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                                {row.priceRange && <PriceBadge price={row.priceRange} />}
+                                {row.eventFormat && <FormatBadge format={row.eventFormat} />}
+                            </div>
+                        )}
+                    </div>
                 </div>
             ),
-            width: '50%',
+            width: '45%',
             align: 'left'
         },
         {
@@ -293,12 +435,11 @@ export default function EventListView({ initialCategories, profile, locationOpti
             header: 'Location',
             sortable: true,
             render: (row) => (
-                <span className="text-[13px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                    {/* <MapPin size={12} className="opacity-70" /> */}
+                <span className="text-[13px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5 truncate">
                     {row.location}
                 </span>
             ),
-            width: '15%',
+            width: '20%',
         },
         {
             key: 'category',
@@ -368,6 +509,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     const activeQueryError = error; // Error from hook
     const isUnauthorized = activeQueryError?.includes('401') || error?.includes('401');
+    const showPreviewGate = isUnauthorized && previewRows.length > 0;
 
     useEffect(() => {
         if (isUnauthorized) {
@@ -419,15 +561,15 @@ export default function EventListView({ initialCategories, profile, locationOpti
                 variant="app"
             />
             {isMobile && <MobileBottomNav />}
-            <div className="flex h-screen bg-white dark:bg-[#08090a]">
+            <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-white dark:bg-[#08090a]">
                 {!isMobile && <AppSidebar />}
-                <main className="flex-1 flex flex-col overflow-hidden relative">
-                    <div ref={scrollContainerRef} className="flex-1 overflow-auto">
-                        <div className="min-h-screen relative bg-white dark:bg-[#08090a]">
+                <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <div ref={scrollContainerRef} className="responsive-page-scroll flex-1">
+                        <div className="responsive-page-shell relative bg-white dark:bg-[#08090a]">
 
                             {/* Mobile View */}
                             {isMobile ? (
-                                <div className="relative pt-20 pb-40">
+                                <div className="relative pb-[calc(var(--mobile-app-tabbar-offset)+4.5rem)] pt-[var(--mobile-app-top-offset)]">
                                     {/* Mobile Header */}
                                     <header className="px-4 pb-3 border-b border-white/10">
                                         <div className="flex items-center justify-between mb-1">
@@ -457,8 +599,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                             />
 
                                             {/* Content */}
-                                            <div className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
-                                                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                                            <div className="relative mx-auto flex h-[min(86dvh,52rem)] w-full max-w-[430px] flex-col rounded-t-[24px] border-t border-border bg-card shadow-2xl animate-in slide-in-from-bottom duration-300">
+                                                <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
                                                     <h2 className="text-xl font-semibold text-foreground">Filters</h2>
                                                     <button
                                                         onClick={() => setIsFilterOpen(false)}
@@ -471,13 +613,13 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                     </button>
                                                 </div>
 
-                                                <div className="flex-1 overflow-y-auto px-6 py-4">
+                                                <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
                                                     {/* Date Range Section */}
                                                     <div className="filter-section filter-section-with-margin mb-4">
                                                         <div className="flex items-center justify-between w-full mb-2 py-1">
                                                             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Date Range</h3>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-3">
+                                                        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
                                                             <div className="flex flex-col gap-1.5">
                                                                 <label htmlFor="drawer-start-date" className="text-xs text-muted-foreground">Start</label>
                                                                 <input
@@ -545,7 +687,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                     />
                                                 </div>
 
-                                                <div className="p-4 border-t border-border bg-card pb-8 flex gap-3">
+                                                <div className="flex gap-3 border-t border-border bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
                                                     <button
                                                         onClick={() => {
                                                             resetFilters();
@@ -569,6 +711,51 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                     {isLoading ? (
                                         <div className="flex items-center justify-center py-12">
                                             <Loading />
+                                        </div>
+                                    ) : showPreviewGate ? (
+                                        <div className="mt-2">
+                                            {/* Show preview events */}
+                                            {previewRows.map((row) => (
+                                                <MobileEventListCard
+                                                    key={row.id}
+                                                    event={row.event}
+                                                    category={initialCategories.find(c => c.name === row.categoryLabel)}
+                                                    onClick={() => {
+                                                        posthog?.capture('events_preview_event_clicked', { eventId: row.id });
+                                                    }}
+                                                />
+                                            ))}
+                                            {/* Soft gate overlay */}
+                                            <div className="relative mt-0">
+                                                {/* Blurred placeholder rows */}
+                                                <div className="pointer-events-none select-none" aria-hidden="true">
+                                                    {previewRows.slice(0, 3).map((row, i) => (
+                                                        <div key={`blur-${i}`} className="blur-[6px] opacity-50">
+                                                            <MobileEventListCard
+                                                                event={row.event}
+                                                                category={initialCategories.find(c => c.name === row.categoryLabel)}
+                                                                onClick={() => {}}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {/* CTA overlay */}
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white via-white/95 to-white/60 dark:from-[#08090a] dark:via-[#08090a]/95 dark:to-[#08090a]/60">
+                                                    <LockKey size={28} weight="duotone" className="text-zinc-400 dark:text-zinc-500 mb-3" />
+                                                    <h3 className="text-lg font-semibold text-foreground-primary mb-1.5">See all events</h3>
+                                                    <p className="text-sm text-foreground-secondary mb-5 max-w-[260px] text-center">
+                                                        Sign up free to browse, filter, and track every upcoming tech event.
+                                                    </p>
+                                                    <Link href="/signup" className="w-full max-w-[200px]" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/signup', variant: 'soft_gate' })}>
+                                                        <Button className="w-full font-medium">
+                                                            Sign Up Free
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href="/login" className="mt-2 text-xs text-foreground-secondary hover:text-foreground-primary transition-colors" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/login', variant: 'soft_gate' })}>
+                                                        Already have an account? Sign in
+                                                    </Link>
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : isUnauthorized ? (
                                         <div className="py-16 px-4 text-center flex flex-col items-center justify-center h-full">
@@ -611,8 +798,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                     {/* Mobile Pagination - Fixed Footer above Bottom Nav */}
                                     {isMobile && !isLoading && rows.length > 0 && pagination.totalPages > 1 && (
                                         <div
-                                            className="fixed left-0 right-0 z-40 flex items-center justify-between px-4 py-2 border-t border-zinc-100 dark:border-white/5 bg-white/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md min-h-[48px]"
-                                            style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+                                            className="fixed inset-x-0 z-40 mx-auto flex min-h-[48px] w-full max-w-[430px] items-center justify-between border-t border-zinc-100 bg-white/95 px-4 py-2 backdrop-blur-md dark:border-white/5 dark:bg-[#0F0F0F]/95"
+                                            style={{ bottom: 'calc(var(--mobile-app-tabbar-offset) - 0.75rem)' }}
                                         >
                                             {/* Previous Button - Anchored Left */}
                                             <Button
@@ -652,7 +839,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                 </div>
                             ) : (
                                 /* Desktop View (unchanged) */
-                                <div className="relative max-w-[1600px] mx-auto px-6 pt-16 pb-8 space-y-6">
+                                <div className="relative mx-auto max-w-[1600px] space-y-6 px-4 pb-8 pt-16 sm:px-6">
                                     <header className="flex flex-col gap-3">
                                         <div className="flex items-center gap-3">
                                             <div>
@@ -694,9 +881,11 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm text-foreground-secondary">
-                                                    Showing {rangeStart}-{rangeEnd} of {totalCount} events
+                                                    {showPreviewGate
+                                                        ? `Previewing ${previewRows.length} upcoming events`
+                                                        : `Showing ${rangeStart}-${rangeEnd} of ${totalCount} events`}
                                                 </p>
-                                                {error && (
+                                                {error && !showPreviewGate && (
                                                     <p className="text-xs text-destructive mt-1">
                                                         Failed to refresh events.{' '}
                                                         <button className="underline" onClick={() => refetch()}>Try again</button>
@@ -712,6 +901,58 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         </div>
 
                                         <AdminToolbarProvider>
+                                            {showPreviewGate ? (
+                                                <div>
+                                                    <AdminDataTable<EventRow>
+                                                        columns={columns}
+                                                        rows={previewRows}
+                                                        getRowId={(row) => row.id}
+                                                        sortKey={tableSortKey}
+                                                        sortDirection={filters.sortDirection}
+                                                        onSortChange={handleSortChange}
+                                                        isLoading={false}
+                                                        onRowClick={(row) => {
+                                                            posthog?.capture('events_preview_event_clicked', { eventId: row.id });
+                                                        }}
+                                                        className="w-full"
+                                                        hideInnerBorders={true}
+                                                        containerClassName="rounded-none shadow-none border-none bg-transparent"
+                                                        footerClassName="hidden"
+                                                        tableClassName="text-zinc-900 dark:text-zinc-100"
+                                                        headerClassName="bg-transparent text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500 pl-4"
+                                                        headerRowClassName="h-9 hover:bg-transparent"
+                                                        bodyRowClassName="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors min-h-[52px] cursor-pointer group"
+                                                        pageSize={PREVIEW_COUNT}
+                                                        total={PREVIEW_COUNT}
+                                                    />
+                                                    {/* Soft gate: blurred rows + CTA */}
+                                                    <div className="relative -mt-1">
+                                                        <div className="pointer-events-none select-none" aria-hidden="true">
+                                                            {previewRows.slice(0, 3).map((row, i) => (
+                                                                <div key={`blur-${i}`} className="blur-[6px] opacity-40 h-[52px] flex items-center px-4 border-b border-transparent">
+                                                                    <span className="text-[13px] text-zinc-500">{row.title}</span>
+                                                                    <span className="ml-auto text-[13px] text-zinc-400">{row.startDisplay}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-white via-white/95 to-white/60 dark:from-[#08090a] dark:via-[#08090a]/95 dark:to-[#08090a]/60">
+                                                            <LockKey size={28} weight="duotone" className="text-zinc-400 dark:text-zinc-500 mb-3" />
+                                                            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1.5">See all events</h3>
+                                                            <p className="text-sm text-zinc-500 mb-5 max-w-sm mx-auto text-center">
+                                                                Sign up free to browse, filter, and track every upcoming tech event.
+                                                            </p>
+                                                            <Link href="/signup" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/signup', variant: 'soft_gate' })}>
+                                                                <Button className="px-8 font-medium">
+                                                                    Sign Up Free
+                                                                </Button>
+                                                            </Link>
+                                                            <Link href="/login" className="mt-2.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/login', variant: 'soft_gate' })}>
+                                                                Already have an account? Sign in
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
                                             <AdminDataTable<EventRow>
                                                 columns={columns}
                                                 rows={rows}
@@ -728,7 +969,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                 tableClassName="text-zinc-900 dark:text-zinc-100"
                                                 headerClassName="bg-transparent text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500 pl-4"
                                                 headerRowClassName="h-9 hover:bg-transparent"
-                                                bodyRowClassName="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors h-[52px] cursor-pointer group"
+                                                bodyRowClassName="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors min-h-[52px] cursor-pointer group"
                                                 pageSize={pagination.pageSize}
                                                 pageSizeOptions={pageSizeOptions}
                                                 onPageSizeChange={handlePageSizeChange}
@@ -763,6 +1004,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                         </div>
                                                     )}
                                             />
+                                            )}
                                         </AdminToolbarProvider>
 
                                     </section>

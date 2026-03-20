@@ -17,6 +17,7 @@ import '@/app/styles/calendar-heatmap.css';
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 import { useCalendar } from '@/contexts';
 import { Event, Json } from '@/types';
+import { isMobileViewportWidth } from '@/constants/responsive';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -117,7 +118,7 @@ export function CalendarLayout({
 
     React.useEffect(() => {
         const checkMobile = () => {
-            setUseNewMobileViews(window.innerWidth < 768);
+            setUseNewMobileViews(isMobileViewportWidth(window.innerWidth));
         };
 
         // Check initially
@@ -253,7 +254,7 @@ export function CalendarLayout({
     // Handle loading states
     if (!profile && categories.length === 0) {
         return (
-            <div className="flex h-screen calendar-page">
+            <div className="calendar-page flex min-h-[100dvh] overflow-x-clip">
                 <div className="flex-1 flex flex-col">
                     <div className="flex-1 overflow-hidden">
                         {content}
@@ -266,7 +267,7 @@ export function CalendarLayout({
     // Render new mobile app for mobile devices
     if (useNewMobileViews) {
         return (
-            <div className="flex h-screen calendar-page">
+            <div className="calendar-page flex min-h-[100dvh] overflow-x-clip">
                 <MobileCalendarApp
                     events={events || []}
                     currentDate={localDate}
@@ -286,7 +287,7 @@ export function CalendarLayout({
 
     return (
         <SidebarProvider>
-            <div className="flex h-screen calendar-page">
+            <div className="calendar-page flex min-h-[100dvh] overflow-x-clip">
                 {/* Legacy overlay sidebar removed in favor of AppSidebar */}
 
                 <AppSidebar />
@@ -346,7 +347,7 @@ export function CalendarLayout({
                         </div>
                     )}
 
-                    <div ref={containerRef} className="flex-1 flex flex-col calendar-content-with-bottom-tabs">
+                    <div ref={containerRef} className="calendar-content-with-bottom-tabs flex min-w-0 flex-1 flex-col overflow-x-clip">
                         <CalendarTransitionWrapper view={view} date={localDate}>
                             {content}
                         </CalendarTransitionWrapper>

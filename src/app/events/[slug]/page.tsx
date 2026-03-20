@@ -332,11 +332,11 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 ]}
             />
 
-            <div className="min-h-screen bg-background-main pb-24 selection:bg-accent-primary/20 selection:text-accent-primary">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background-main pb-[calc(var(--mobile-app-tabbar-offset)+0.5rem)] selection:bg-accent-primary/20 selection:text-accent-primary lg:pb-24">
 
                 {/* Header - Linear-inspired minimal */}
                 <header className="sticky top-0 z-40 bg-background-main/95 backdrop-blur-md border-b border-border-subtle pt-5 pb-5">
-                    <div className="max-w-7xl mx-auto px-6 sm:px-8">
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         {/* Minimal Breadcrumb */}
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-5">
                             <Link href="/events" className="hover:text-foreground-tertiary transition-colors">
@@ -379,7 +379,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 </header>
 
                 {/* Body Layout - Generous spacing */}
-                <main className="max-w-7xl mx-auto px-6 sm:px-8 py-12 grid grid-cols-1 lg:grid-cols-12 gap-y-16 gap-x-6">
+                <main className="mx-auto grid max-w-7xl grid-cols-1 gap-x-6 gap-y-12 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-12 lg:gap-y-16 lg:px-8">
 
                     {/* Left Column */}
                     <div className="space-y-12 min-w-0 lg:col-span-8">
@@ -615,8 +615,8 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 </main>
 
                 {/* Mobile Sticky Bottom Bar */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-main/95 backdrop-blur-md border-t border-border-subtle lg:hidden z-50">
-                    <div className="flex gap-2 max-w-md mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-subtle bg-background-main/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-md lg:hidden">
+                    <div className="mx-auto flex max-w-md gap-2">
                         <AttendanceEventButton
                             eventId={event.id}
                             loginRedirect={`/events/${event.slug}`}

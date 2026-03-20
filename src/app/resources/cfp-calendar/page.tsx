@@ -91,9 +91,9 @@ export default async function CfpCalendarPage() {
                 }))}
             />
 
-            <div className="min-h-screen bg-background-main pb-24">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background-main pb-16 sm:pb-24">
                 <header className="border-b border-border-subtle">
-                    <div className="max-w-5xl mx-auto px-6 sm:px-8 py-12">
+                    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-6">
                             <Link
                                 href="/resources/tech-events-calendar-2026"
@@ -120,7 +120,7 @@ export default async function CfpCalendarPage() {
                     </div>
                 </header>
 
-                <main className="max-w-5xl mx-auto px-6 sm:px-8 py-10">
+                <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
                     {cfpEvents.length > 0 ? (
                         <ul className="divide-y divide-border-subtle">
                             {cfpEvents.map((event) => {
@@ -139,10 +139,10 @@ export default async function CfpCalendarPage() {
                                             href={`/events/${eventSlug}`}
                                             className="block py-5 group"
                                         >
-                                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <h2 className="text-[15px] font-medium text-foreground-primary group-hover:text-accent-primary transition-colors truncate">
+                                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                                        <h2 className="text-[15px] font-medium text-foreground-primary transition-colors group-hover:text-accent-primary sm:truncate">
                                                             {event.title}
                                                         </h2>
                                                         {event.event_type && (
@@ -169,7 +169,7 @@ export default async function CfpCalendarPage() {
                                                     </div>
                                                 </div>
 
-                                                <div className="shrink-0 text-right sm:text-right">
+                                                <div className="shrink-0 text-left sm:text-right">
                                                     <div
                                                         className={`text-[13px] font-medium ${
                                                             isUrgent

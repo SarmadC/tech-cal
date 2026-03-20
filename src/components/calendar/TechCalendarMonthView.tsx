@@ -5,6 +5,7 @@ import { EventClickArg } from '@/types/fullcalendar';
 import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { getEventAccentColor } from '@/utils/calendarColorUtils';
+import { isMobileViewportWidth } from '@/constants/responsive';
 import { MonthEventCard } from './MonthEventCard';
 import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
@@ -1449,7 +1450,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     // Mobile detection
     React.useEffect(() => {
         const checkMobile = () => {
-            setIsMobile(window.innerWidth <= 768);
+            setIsMobile(isMobileViewportWidth(window.innerWidth));
         };
 
         checkMobile();

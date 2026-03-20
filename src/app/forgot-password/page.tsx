@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
 
     return (
         <ProtectedRoute allowUnauthenticated>
-            <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                 <div className="max-w-md w-full">
                     {/* Header section is unchanged */}
                     <div className="text-center mb-8">
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                         </p>
                     </div>
 
-                    <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
+                    <div className="rounded-2xl border border-border-default bg-background-secondary p-6 sm:p-8">
                         {state.success ? (
                             <SuccessDisplay message={state.message} />
                         ) : (

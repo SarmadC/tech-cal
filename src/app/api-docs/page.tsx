@@ -7,20 +7,20 @@ import { CodeBlockIcon, CalendarIcon, BellIcon, LightningIcon } from '@phosphor-
 
 export default function ApiDocsPage() {
     return (
-        <div className="min-h-screen bg-background-main pt-20">
+        <div className="responsive-page-shell min-h-[100dvh] bg-background-main pt-20">
             {/* Header */}
-            <section className="py-16 px-6 bg-background-secondary">
+            <section className="bg-background-secondary px-4 py-14 sm:px-6 sm:py-16">
                 <div className="max-w-[1600px] mx-auto text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
+                    <h1 className="mb-6 text-3xl font-bold text-foreground-primary sm:text-4xl md:text-5xl">
                         API Coming Soon
                     </h1>
-                    <p className="text-xl text-foreground-secondary max-w-3xl mx-auto">
+                    <p className="mx-auto max-w-3xl text-lg text-foreground-secondary sm:text-xl">
                         We are building a powerful API to help you access our curated tech event data programmatically. Stay tuned for updates!
                     </p>
                 </div>
             </section>
 
-            <div className="max-w-[1600px] mx-auto px-6 py-12">
+            <div className="mx-auto max-w-[1600px] px-4 py-10 sm:px-6 sm:py-12">
                 {/* Coming Soon Content */}
                 <div className="text-center mb-16">
                     <div className="w-32 h-32 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
@@ -54,7 +54,7 @@ export default function ApiDocsPage() {
                 </div>
 
                 {/* Planned Features */}
-                <div className="grid md:grid-cols-3 gap-8 mb-16">
+                <div className="mb-16 grid gap-6 md:grid-cols-3 md:gap-8">
                     <div className="bg-background-secondary rounded-xl p-6 border border-border-color text-center">
                         <CalendarIcon className="w-12 h-12 text-accent-primary mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground-primary mb-2">

@@ -124,7 +124,7 @@ export default function ClientLayout({
                     <Navbar />
                 )
             )}
-            <div className={usesSelfManagedTopSpacing ? '' : 'pt-16'}>
+            <div className={usesSelfManagedTopSpacing ? '' : 'mobile-top-nav-offset md:pt-16'}>
                 {children}
             </div>
             {shouldShowLegalFooter && <LegalFooter />}

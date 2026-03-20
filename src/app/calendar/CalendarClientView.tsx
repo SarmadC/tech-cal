@@ -18,6 +18,7 @@ import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
 import { CalendarProvider, useAuth } from '@/contexts';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
+import { isMobileViewportWidth } from '@/constants/responsive';
 
 const DEFAULT_REGION_FILTER_SESSION_KEY = 'calendar-default-region-filter:v1';
 
@@ -201,7 +202,7 @@ function useCalendarUIState() {
     useResizeListener(() => {
         if (typeof window === 'undefined') return;
 
-        const isMobile = window.innerWidth < 768;
+        const isMobile = isMobileViewportWidth(window.innerWidth);
 
         // Only close sidebar on mobile if it's open
         if (isMobile && state.isSidebarOpen) {

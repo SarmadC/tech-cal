@@ -6,8 +6,11 @@
   --mobile-app-max-width: 430px;
   --mobile-app-page-gutter: 1rem;
   --mobile-app-section-gap: 1rem;
+  --mobile-app-top-offset: calc(env(safe-area-inset-top) + 5rem);
   --mobile-app-safe-top: max(0.75rem, env(safe-area-inset-top));
   --mobile-app-safe-bottom: max(0.875rem, env(safe-area-inset-bottom));
+  --mobile-app-tabbar-offset: calc(5.5rem + var(--mobile-app-safe-bottom));
+  --mobile-app-content-bottom: calc(var(--mobile-app-tabbar-offset) + 1rem);
   --mobile-app-shell-bg:
     radial-gradient(circle at top, color-mix(in srgb, var(--mono-bg-elevated) 34%, transparent), transparent 42%),
     linear-gradient(180deg, var(--mono-bg-main) 0%, color-mix(in srgb, var(--mono-bg-main) 88%, var(--mono-bg-surface)) 100%);
@@ -103,9 +106,10 @@
 }
 
 .mobile-app-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--mobile-app-shell-bg);
   color: var(--mobile-app-shell-text);
+  overflow-x: clip;
 }
 
 .mobile-app-shell__viewport {
@@ -128,7 +132,43 @@
 }
 
 .mobile-app-shell__content {
-  padding: 0 var(--mobile-app-page-gutter) calc(6rem + var(--mobile-app-safe-bottom));
+  padding: 0 var(--mobile-app-page-gutter) var(--mobile-app-content-bottom);
+}
+
+.responsive-page-shell {
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+.responsive-page-scroll {
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.responsive-page-content {
+  width: 100%;
+  min-width: 0;
+  padding-left: clamp(0.875rem, 4vw, 1rem);
+  padding-right: clamp(0.875rem, 4vw, 1rem);
+}
+
+.responsive-page-content--wide {
+  padding-left: clamp(1rem, 3vw, 1.5rem);
+  padding-right: clamp(1rem, 3vw, 1.5rem);
+}
+
+.mobile-top-nav-offset {
+  padding-top: var(--mobile-app-top-offset);
+}
+
+.mobile-bottom-nav-offset {
+  padding-bottom: var(--mobile-app-content-bottom);
+}
+
+.mobile-fixed-panel {
+  width: min(100%, calc(var(--mobile-app-max-width) + 2rem));
+  margin-inline: auto;
 }
 
 .mobile-header {
@@ -1037,12 +1077,13 @@ button.mobile-discovery-filterField[data-empty="true"] .mobile-discovery-filterF
 }
 
 .mobile-dashboard-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, color-mix(in srgb, var(--mono-bg-elevated) 44%, transparent), transparent 44%),
     linear-gradient(180deg, var(--mono-bg-main) 0%, color-mix(in srgb, var(--mono-bg-main) 84%, var(--mono-bg-surface)) 100%);
   color: var(--mobile-dashboard-text-primary);
   font-family: var(--font-sans);
+  overflow-x: clip;
 }
 
 .mobile-dashboard-stack {

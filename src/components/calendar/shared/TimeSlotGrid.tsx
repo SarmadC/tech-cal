@@ -7,6 +7,7 @@ import { EventCard } from './EventCard';
 import '@/app/styles/stacked-cards.css';
 import { calculateOverlapLayout, EventLayoutInfo } from '@/utils/eventViewUtils';
 import { getCategoryColor } from '@/utils/eventUtils';
+import { isMobileViewportWidth } from '@/constants/responsive';
 
 export interface TimeSlot {
     hour: number;
@@ -112,7 +113,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     const totalSlots = totalHours * 2 + 1; // +1 for the final time label
 
     // Generate the grid template columns (time column + 7 day columns)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const isMobile = typeof window !== 'undefined' && isMobileViewportWidth(window.innerWidth);
     const minWidth = isMobile ? '600px' : '1200px';
     const timeColumnWidth = isMobile ? '60px' : '80px';
 

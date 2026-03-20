@@ -37,8 +37,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         notFound();
     }
 
-    // 3. UPDATE DATE FORMATTING:
-    // Replace the .toLocaleString() calls with your new, consistent utilities.
     const datePart = formatDate(event.startTime, event.timezone); // e.g., "Sep 17, 2025"
     const timePart = formatTime(event.startTime, event.timezone); // e.g., "5:30 PM (PDT)"
     const formattedStartTime = `${datePart} at ${timePart}`;
@@ -46,8 +44,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     const formattedEndTime = event.endTime ? formatTime(event.endTime, event.timezone) : null;
 
     return (
-        <div className="min-h-screen bg-background-main pt-20">
-            <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="responsive-page-shell min-h-[100dvh] bg-background-main mobile-top-nav-offset md:pt-20">
+            <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
                 <Link href="/calendar" className="inline-flex items-center space-x-2 text-sm text-foreground-secondary hover:text-foreground-primary mb-8 transition-colors">
                     <ArrowLeftIcon className="w-4 h-4" />
                     <span>Back to Calendar</span>
@@ -56,7 +54,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <div className="bg-background-secondary rounded-2xl border border-border-color overflow-hidden">
                     <div className="h-48 bg-gradient-to-br from-background-tertiary to-background-elevated" />
 
-                    <div className="p-8">
+                    <div className="p-6 sm:p-8">
                         <h1 className="text-3xl md:text-4xl font-bold text-foreground-primary mb-4">
                             {event.title}
                         </h1>

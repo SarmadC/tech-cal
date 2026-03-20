@@ -162,7 +162,7 @@ function CareerOnboardingContent() {
 
     if (isCreatingProfile || (isLoading && !profile)) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
                     <p className="text-muted-foreground text-sm font-medium">
@@ -174,10 +174,10 @@ function CareerOnboardingContent() {
     }
 
     return (
-        <div className="min-h-screen bg-background dark:bg-[#08090a] transition-colors duration-300">
+        <div className="responsive-page-shell min-h-[100dvh] bg-background transition-colors duration-300 dark:bg-[#08090a]">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-50" />
 
-            <div className="max-w-2xl mx-auto px-6 py-12 md:py-20">
+            <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 md:py-20">
                 <OnboardingErrorBoundary>
                     <div className="relative">
                         {isSubmitting && (
@@ -219,7 +219,7 @@ function CareerOnboardingContent() {
 export default function CareerOnboardingPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
                     <p className="text-muted-foreground text-sm font-medium">Loading...</p>

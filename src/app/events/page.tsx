@@ -166,6 +166,7 @@ export default async function EventsPage(
                 profile={profile}
                 locationOptions={locationOptions}
                 initialCircleSlug={circleSlug}
+                previewEvents={ssrEvents}
             />
         </>
     );

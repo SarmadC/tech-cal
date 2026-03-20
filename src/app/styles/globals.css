@@ -588,6 +588,7 @@ textarea:not([class*="fc-"]):focus {
 
 html {
   font-family: var(--font-sans);
+  overflow-x: clip;
 }
 
 body {
@@ -599,6 +600,7 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
 }
 
 /* Typography Scale */
@@ -1200,7 +1202,7 @@ textarea::placeholder {
 /* Mobile responsiveness - iPhone optimized */
 @media (max-width: 768px) {
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
     /* Prevent body from scrolling horizontally */
     -webkit-text-size-adjust: 100%;
     /* Prevent text scaling on iOS */
@@ -1210,7 +1212,7 @@ textarea::placeholder {
 
   .main-container {
     max-width: 100vw;
-    overflow-x: hidden;
+    overflow-x: clip;
     /* Prevent main container from scrolling horizontally */
   }
 

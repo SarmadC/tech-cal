@@ -272,7 +272,7 @@ function LoginPageContent() {
 
     // 3. Only if initialization is complete AND there's no user, show the login form.
     return (
-        <main className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
+        <main className="responsive-page-shell flex min-h-[100dvh] items-center justify-center bg-background-main px-4 py-10 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <h1 className="sr-only">Sign in to Kure-Cal</h1>
                 <div className="text-center">

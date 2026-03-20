@@ -101,7 +101,7 @@ export default function MobileDashboardView({
                 variant="app"
             />
 
-            <div className="mobile-dashboard-page pb-28 pt-20">
+            <div className="mobile-dashboard-page mobile-top-nav-offset pb-[calc(var(--mobile-app-tabbar-offset)+1rem)]">
                 {state === 'loading' && (
                     <div className="mobile-dashboard-stack pt-0">
                         <div className="mobile-dashboard-card mobile-dashboard-skeletonCard">

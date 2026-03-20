@@ -63,10 +63,10 @@ export default function MarketingNavbar() {
                             </NavbarButton>
                             <NavbarButton
                                 variant="primary"
-                                href="/pricing?checkout=monthly"
-                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'navbar', destination: '/pricing?checkout=monthly' })}
+                                href="/signup"
+                                onClick={() => posthog?.capture('landing_cta_clicked', { cta_text: 'Get Started Free', cta_location: 'navbar', destination: '/signup' })}
                             >
-                                Start Free Trial
+                                Get Started Free
                             </NavbarButton>
                         </div>
                     </NavBody>
@@ -135,15 +135,15 @@ export default function MarketingNavbar() {
                             {/* Primary CTA Button */}
                             <div>
                                 <NavbarButton
-                                    href="/pricing?checkout=monthly"
+                                    href="/signup"
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
-                                        posthog?.capture('landing_cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'navbar_mobile', destination: '/pricing?checkout=monthly' });
+                                        posthog?.capture('landing_cta_clicked', { cta_text: 'Get Started Free', cta_location: 'navbar_mobile', destination: '/signup' });
                                     }}
                                     variant="primary"
                                     className="w-full py-4 text-lg font-semibold rounded-lg"
                                 >
-                                    Start Free Trial
+                                    Get Started Free
                                 </NavbarButton>
                             </div>
                         </MobileNavMenu>

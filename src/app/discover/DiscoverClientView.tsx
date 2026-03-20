@@ -16,6 +16,7 @@ import AppSidebar from '@/components/app-sidebar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
+import { ProfileCompletionBanner } from '@/components/common/ProfileCompletionBanner';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
@@ -356,18 +357,18 @@ export default function DiscoverClientView({
             <SidebarProvider>
                 {/* Mobile Navigation - Only visible on mobile */}
                 <MobileBottomNav />
-                <div className="flex h-screen bg-background">
+                <div className="responsive-page-shell flex min-h-[100dvh] overflow-x-clip bg-background">
                     <h1 className="sr-only">Discover tech events</h1>
                     <AppSidebar />
-                    <main className="flex-1 flex flex-col overflow-hidden relative">
-                        <div className="flex-1 overflow-auto">
+                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                        <div className="responsive-page-scroll flex-1">
                             {/* Main background - Notion/Linear dark theme */}
-                            <div className="min-h-screen bg-background relative font-sans">
+                            <div className="responsive-page-shell relative bg-background font-sans">
                                 {/* Subtle noise or grain could be added here if desired, but keeping it clean for now */}
 
-                                <div className="relative max-w-[1600px] mx-auto px-0 pt-0 pb-0 md:px-6 md:pt-24 md:pb-8 space-y-6">
+                                <div className="relative mx-auto max-w-[1600px] px-0 pb-[calc(var(--mobile-app-tabbar-offset)+1rem)] pt-0 md:px-6 md:pb-8 md:pt-24">
                                     {/* Main Content */}
-                                    <div className="flex-1 flex flex-col" data-view="discovery">
+                                    <div className="flex min-w-0 flex-1 flex-col space-y-6" data-view="discovery">
                                         <SmartLoader
                                             loading={eventData.isLoading}
                                             isBackgroundRefetch={eventData.isBackgroundRefetch}
@@ -419,6 +420,11 @@ export default function DiscoverClientView({
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* Profile completion prompt for users who skipped onboarding */}
+                                                <ProfileCompletionBanner
+                                                    showBanner={!!activeProfile && !extractCareerProfile(activeProfile)}
+                                                />
 
                                                 {/* Empty-results hint for budget tiers */}
                                                 {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (

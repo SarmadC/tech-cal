@@ -178,21 +178,19 @@ export function HeroSection() {
                     >
                         Browse Events Free
                     </Link>
-                    <Link
-                        href="#product-demo"
-                        aria-label="Jump to Product Demo"
+                    <button
+                        aria-label="See how it works"
                         className={`hero-secondary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            posthog?.capture('landing_cta_clicked', { cta_text: 'See It in Action', cta_location: 'hero', destination: '#product-demo' });
+                        onClick={() => {
+                            posthog?.capture('landing_cta_clicked', { cta_text: 'See How It Works', cta_location: 'hero', destination: '#product-demo' });
                             const element = document.getElementById('product-demo');
                             if (element) {
                                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
                         }}
                     >
-                        See It in Action
-                    </Link>
+                        See How It Works
+                    </button>
                 </div>
             </div>
         </section>

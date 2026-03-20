@@ -201,9 +201,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 }))}
             />
 
-            <div className="min-h-screen bg-background-main pb-24">
+            <div className="responsive-page-shell min-h-[100dvh] bg-background-main pb-16 lg:pb-24">
                 <header className="border-b border-border-subtle">
-                    <div className="max-w-5xl mx-auto px-6 sm:px-8 py-12">
+                    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-6">
                             <Link
                                 href="/events"
@@ -230,7 +230,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     </div>
                 </header>
 
-                <main className="max-w-5xl mx-auto px-6 sm:px-8 py-10">
+                <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
                     {events.length > 0 ? (
                         <ul className="divide-y divide-border-subtle">
                             {events.map((event) => {

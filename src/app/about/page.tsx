@@ -19,13 +19,13 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
     return (
-        <main id="main-content" className="min-h-screen bg-background-main pt-20">
-            <section className="py-16 px-6 bg-background-secondary">
+        <main id="main-content" className="responsive-page-shell min-h-[100dvh] bg-background-main pt-20">
+            <section className="bg-background-secondary px-4 py-14 sm:px-6 sm:py-16">
                 <div className="max-w-[1600px] mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
+                    <h1 className="mb-6 text-3xl font-bold text-foreground-primary sm:text-4xl md:text-5xl">
                         About Kure-Cal
                     </h1>
-                    <p className="text-xl text-foreground-secondary max-w-3xl">
+                    <p className="max-w-3xl text-lg text-foreground-secondary sm:text-xl">
                         Kure-Cal helps developers and teams discover, track, and plan tech events without the
                         information overload. We organize conferences, meetups, hackathons, and live streams into one
                         trusted calendar so you can focus on what matters.
@@ -33,7 +33,7 @@ export default function AboutPage() {
                 </div>
             </section>
 
-            <section className="px-6 py-12">
+            <section className="px-4 py-10 sm:px-6 sm:py-12">
                 <div className="max-w-[1600px] mx-auto grid gap-8 lg:grid-cols-2">
                     <div className="space-y-4">
                         <h2 className="text-2xl font-semibold text-foreground-primary">Our Mission</h2>
