@@ -46,10 +46,12 @@ interface SSREvent {
     description: string | null;
     start_time: string;
     end_time: string | null;
+    updated_at: string | null;
     location: string | null;
     event_format: string | null;
+    event_image_url: string | null;
     event_type: { name: string } | null;
-    organizer: { name: string } | null;
+    organizer: { name: string; logo_url: string | null } | null;
 }
 
 async function getLocations() {
@@ -72,7 +74,7 @@ async function getUpcomingEvents(): Promise<SSREvent[]> {
     const supabase = await createClient();
     const { data } = await supabase
         .from('events')
-        .select('id, slug, title, description, start_time, end_time, location, event_format, event_type:event_type_id(name), organizer:organizer_id(name)')
+        .select('id, slug, title, description, start_time, end_time, updated_at, location, event_format, event_image_url, event_type:event_type_id(name), organizer:organizer_id(name, logo_url)')
         .eq('status', 'confirmed')
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })

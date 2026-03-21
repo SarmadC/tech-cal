@@ -8,8 +8,7 @@ import dynamic from 'next/dynamic';
 import { SlidersHorizontal, LockKey } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import Image from 'next/image';
-import { getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
+import { getBrowserSafeImageSrc, getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { useNetworkEventCounts } from '@/hooks/useNetworkEventCounts';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -44,10 +43,12 @@ export interface PreviewEvent {
     description: string | null;
     start_time: string;
     end_time: string | null;
+    updated_at: string | null;
     location: string | null;
     event_format: string | null;
+    event_image_url: string | null;
     event_type: { name: string } | null;
-    organizer: { name: string } | null;
+    organizer: { name: string; logo_url: string | null } | null;
 }
 
 interface EventListViewProps {
@@ -91,20 +92,45 @@ const MobileEventDetailPanelDynamic = dynamic(
 const PREVIEW_COUNT = 5;
 
 function EventLogo({ row }: { row: EventRow }) {
-    const orgLogoSrc = getSafeImageSrc(row.organizationLogo);
-    const eventImgSrc = getVersionedImageSrc(row.eventImageUrl, row.updatedAt);
-    const src = eventImgSrc || orgLogoSrc;
     const fallbackLetter = row.title.charAt(0).toUpperCase();
 
-    const [imgError, setImgError] = React.useState(false);
-    const [activeSrc, setActiveSrc] = React.useState(src);
+    const logoCandidates = React.useMemo(() => {
+        const candidates = [
+            {
+                kind: 'event' as const,
+                rawSrc: getVersionedImageSrc(row.eventImageUrl, row.updatedAt),
+            },
+            {
+                kind: 'logo' as const,
+                rawSrc: getSafeImageSrc(row.organizationLogo),
+            },
+        ];
+
+        const seen = new Set<string>();
+
+        return candidates.flatMap((candidate) => {
+            if (!candidate.rawSrc || seen.has(candidate.rawSrc)) {
+                return [];
+            }
+
+            seen.add(candidate.rawSrc);
+
+            return [{
+                kind: candidate.kind,
+                src: getBrowserSafeImageSrc(candidate.rawSrc, { width: 64 }) ?? candidate.rawSrc,
+            }];
+        });
+    }, [row.eventImageUrl, row.organizationLogo, row.updatedAt]);
+
+    const [activeIndex, setActiveIndex] = React.useState(0);
 
     React.useEffect(() => {
-        setActiveSrc(eventImgSrc || orgLogoSrc);
-        setImgError(false);
-    }, [eventImgSrc, orgLogoSrc]);
+        setActiveIndex(0);
+    }, [logoCandidates]);
 
-    if (!activeSrc || imgError) {
+    const activeCandidate = logoCandidates[activeIndex];
+
+    if (!activeCandidate) {
         return (
             <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-white/10 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
                 {fallbackLetter}
@@ -113,22 +139,23 @@ function EventLogo({ row }: { row: EventRow }) {
     }
 
     return (
-        <span className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-white/10">
-            <Image
-                src={activeSrc}
+        <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={activeCandidate.src}
                 alt=""
-                fill
-                sizes="32px"
-                className="object-cover"
+                className={cn(
+                    'h-full w-full',
+                    activeCandidate.kind === 'logo' ? 'object-contain p-1' : 'object-cover'
+                )}
+                decoding="async"
+                loading="lazy"
+                referrerPolicy="no-referrer"
                 onError={() => {
-                    if (activeSrc === eventImgSrc && orgLogoSrc) {
-                        setActiveSrc(orgLogoSrc);
-                    } else {
-                        setImgError(true);
-                    }
+                    setActiveIndex((currentIndex) => currentIndex + 1);
                 }}
             />
-        </span>
+        </div>
     );
 }
 
@@ -364,6 +391,10 @@ export default function EventListView({ initialCategories, profile, locationOpti
                 categoryLabel: event.event_type?.name,
                 categoryColor: undefined,
                 priceRange: null,
+                eventFormat: event.event_format as EventRow['eventFormat'],
+                eventImageUrl: event.event_image_url,
+                organizationLogo: event.organizer?.logo_url || null,
+                updatedAt: event.updated_at,
                 status: 'confirmed',
                 slug,
                 event: {
@@ -376,6 +407,14 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     status: 'confirmed',
                     eventTypeId: '',
                     tags: [],
+                    eventFormat: event.event_format as TrackedEvent['eventFormat'],
+                    eventImageUrl: event.event_image_url,
+                    updatedAt: event.updated_at,
+                    organization: event.organizer ? {
+                        id: '',
+                        name: event.organizer.name,
+                        ...(event.organizer.logo_url ? { logo: event.organizer.logo_url } : {}),
+                    } : undefined,
                 } as unknown as TrackedEvent,
             };
         });
@@ -722,6 +761,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                     category={initialCategories.find(c => c.name === row.categoryLabel)}
                                                     onClick={() => {
                                                         posthog?.capture('events_preview_event_clicked', { eventId: row.id });
+                                                        handleOpenDetails(row.event);
                                                     }}
                                                 />
                                             ))}
@@ -844,9 +884,6 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         <div className="flex items-center gap-3">
                                             <div>
                                                 <h1 className="text-3xl font-semibold text-foreground-primary">Event Listings</h1>
-                                                <p className="text-sm text-foreground-secondary">
-                                                    Browse and organize upcoming events with advanced filtering controls.
-                                                </p>
                                             </div>
                                         </div>
                                     </header>
@@ -913,6 +950,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                         isLoading={false}
                                                         onRowClick={(row) => {
                                                             posthog?.capture('events_preview_event_clicked', { eventId: row.id });
+                                                            handleOpenDetails(row.event);
                                                         }}
                                                         className="w-full"
                                                         hideInnerBorders={true}
