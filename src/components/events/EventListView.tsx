@@ -816,7 +816,7 @@ export default function EventListView({
                                                     <LockKey size={28} weight="duotone" className="text-zinc-400 dark:text-zinc-500 mb-3" />
                                                     <h3 className="text-lg font-semibold text-foreground-primary mb-1.5">See all events</h3>
                                                     <p className="text-sm text-foreground-secondary mb-5 max-w-[260px] text-center">
-                                                        Sign up free to browse, filter, and track every upcoming tech event.
+                                                        Save events, get calendar reminders, and never miss a tech conference.
                                                     </p>
                                                     <Link href="/signup" className="w-full max-w-[200px]" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/signup', variant: 'soft_gate' })}>
                                                         <Button className="w-full font-medium">
@@ -1010,7 +1010,7 @@ export default function EventListView({
                                                             <LockKey size={28} weight="duotone" className="text-zinc-400 dark:text-zinc-500 mb-3" />
                                                             <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1.5">See all events</h3>
                                                             <p className="text-sm text-zinc-500 mb-5 max-w-sm mx-auto text-center">
-                                                                Sign up free to browse, filter, and track every upcoming tech event.
+                                                                Save events, get calendar reminders, and never miss a tech conference.
                                                             </p>
                                                             <Link href="/signup" onClick={() => posthog?.capture('events_wall_cta_clicked', { destination: '/signup', variant: 'soft_gate' })}>
                                                                 <Button className="px-8 font-medium">

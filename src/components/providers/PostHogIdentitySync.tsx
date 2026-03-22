@@ -20,19 +20,6 @@ export function PostHogIdentitySync() {
                     name: profile?.fullName ?? user.user_metadata?.full_name,
                 });
 
-                // Fire client-side user_signed_up for accounts created in the last 5 minutes.
-                // This links the browser session to the server-side event so the signup funnel works.
-                if (previousUserIdRef.current === null && user.created_at) {
-                    const ageMs = Date.now() - new Date(user.created_at).getTime();
-                    if (ageMs < 10 * 60 * 1000) {
-                        posthog.capture('user_signed_up', {
-                            email: user.email,
-                            method: user.app_metadata?.provider ?? 'unknown',
-                            source: 'client_identity_sync',
-                        });
-                    }
-                }
-
                 previousUserIdRef.current = user.id;
             }
         } else {

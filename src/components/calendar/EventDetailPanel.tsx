@@ -228,13 +228,14 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     type="button"
                     onClick={handleBookmarkEvent}
                     disabled={isBookmarkLoading || !user}
-                    className={`p-2 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${eventIsBookmarked
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${eventIsBookmarked
                         ? 'bg-yellow-500/15 dark:bg-yellow-500/20 hover:bg-yellow-500/20 dark:hover:bg-yellow-500/30 border-yellow-500/30 dark:border-yellow-500/40 text-yellow-700 dark:text-yellow-400'
                         : 'bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300'
                         }`}
                     title={eventIsBookmarked ? 'Unbookmark' : 'Bookmark'}
                 >
                     <Bookmark className="w-4 h-4" weight={eventIsBookmarked ? "fill" : "regular"} />
+                    <span className="text-xs font-medium">{eventIsBookmarked ? 'Saved' : 'Save'}</span>
                 </button>
 
                 <EventTracking event={displayEvent} variant="compact" />
@@ -260,7 +261,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
-                <div className="pr-52 sm:pr-56">
+                <div className="pr-56 sm:pr-60">
                     <h3 className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">
                         {displayEvent.title}
                     </h3>

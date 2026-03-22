@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/supabase'
-import { getPostHogClient } from '@/lib/posthog-server'
+import { getPostHogClient, shutdownPostHog } from '@/lib/posthog-server'
 import { ProfileService } from '@/services/profileService'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
                     source: 'auth_callback',
                 },
             });
+            await shutdownPostHog();
         } catch (_) { /* don't fail redirect on tracking error */ }
         const errorMessage = encodeURIComponent(errorDescription || `OAuth error: ${error}`);
         return NextResponse.redirect(`${origin}/login?error=oauth-provider-error&message=${errorMessage}`);
@@ -135,6 +136,18 @@ export async function GET(request: NextRequest) {
 
     if (!code) {
         console.warn('[AUTH CALLBACK] No authorization code found in request');
+        try {
+            const posthog = getPostHogClient();
+            posthog.capture({
+                distinctId: 'anonymous_oauth_error',
+                event: 'oauth_callback_failed',
+                properties: {
+                    error_type: 'no_code',
+                    source: 'auth_callback',
+                },
+            });
+            await shutdownPostHog();
+        } catch (_) { /* don't fail redirect on tracking error */ }
         const errorMessage = encodeURIComponent('No authorization code received. The link may have expired.');
         return NextResponse.redirect(`${origin}/login?error=no-code&message=${errorMessage}`);
     }
@@ -163,6 +176,12 @@ export async function GET(request: NextRequest) {
             }
         )
 
+        // Diagnostic: warn if PKCE code verifier cookie is missing
+        const pkceVerifier = request.cookies.getAll().find(c => c.name.includes('code-verifier') || c.name.includes('code_verifier'));
+        if (!pkceVerifier) {
+            console.warn('[AUTH CALLBACK] PKCE code verifier cookie missing before exchangeCodeForSession — may cause session_exchange_failed');
+        }
+
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
         if (exchangeError) {
@@ -178,6 +197,7 @@ export async function GET(request: NextRequest) {
                         source: 'auth_callback',
                     },
                 });
+                await shutdownPostHog();
             } catch (_) { /* don't fail redirect on tracking error */ }
             const errorMessage = encodeURIComponent(`Failed to exchange code for session: ${exchangeError.message}`);
             return NextResponse.redirect(`${origin}/login?error=session-exchange-failed&message=${errorMessage}`);
@@ -195,6 +215,7 @@ export async function GET(request: NextRequest) {
                         source: 'auth_callback',
                     },
                 });
+                await shutdownPostHog();
             } catch (_) { /* don't fail redirect on tracking error */ }
             const errorMessage = encodeURIComponent('Authentication completed but no session was created');
             return NextResponse.redirect(`${origin}/login?error=no-session&message=${errorMessage}`);
@@ -238,6 +259,7 @@ export async function GET(request: NextRequest) {
                     },
                 });
             }
+            await shutdownPostHog();
         } catch (_) { /* don't fail redirect on tracking error */ }
 
         // For new OAuth users, ensure profile exists and skip forced onboarding
@@ -288,6 +310,7 @@ export async function GET(request: NextRequest) {
                     source: 'auth_callback',
                 },
             });
+            await shutdownPostHog();
         } catch (_) { /* don't fail redirect on tracking error */ }
         const errorMessage = encodeURIComponent(
             error instanceof Error
