@@ -94,11 +94,67 @@ export function cityNameToSlug(cityName: string): string {
         .replace(/^-|-$/g, '');
 }
 
+function compareCityLabelPreference(a: string, b: string): number {
+    const punctuationWeight = (value: string) =>
+        Array.from(value).reduce((weight, character) => {
+            if (character === '.') return weight + 3;
+            if (character === ',') return weight + 2;
+            if (character === '\'') return weight + 1;
+            return weight;
+        }, 0);
+
+    const punctuationDiff = punctuationWeight(a) - punctuationWeight(b);
+    if (punctuationDiff !== 0) {
+        return punctuationDiff;
+    }
+
+    if (a.length !== b.length) {
+        return b.length - a.length;
+    }
+
+    return a.localeCompare(b);
+}
+
+export function findCitiesBySlug(cities: string[], citySlug: string): string[] {
+    return cities
+        .filter((city) => cityNameToSlug(city) === citySlug)
+        .sort(compareCityLabelPreference);
+}
+
+export function groupCitiesBySlug(cities: string[]): Array<{ citySlug: string; cityNames: string[] }> {
+    const cityGroups = new Map<string, string[]>();
+
+    for (const city of cities) {
+        const cityName = city.trim();
+
+        if (!cityName) {
+            continue;
+        }
+
+        const citySlug = cityNameToSlug(cityName);
+        const existing = cityGroups.get(citySlug);
+
+        if (existing) {
+            if (!existing.includes(cityName)) {
+                existing.push(cityName);
+            }
+            continue;
+        }
+
+        cityGroups.set(citySlug, [cityName]);
+    }
+
+    return Array.from(cityGroups.entries()).map(([citySlug, cityNames]) => ({
+        citySlug,
+        cityNames: cityNames.sort(compareCityLabelPreference),
+    }));
+}
+
 /**
  * Resolve the canonical city label from a city slug.
  */
 export function findCityBySlug(cities: string[], citySlug: string): string | null {
-    return cities.find((city) => cityNameToSlug(city) === citySlug) || null;
+    return findCitiesBySlug(cities, citySlug)[0] || null;
 }
 
 /**

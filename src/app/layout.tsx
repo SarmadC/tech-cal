@@ -12,6 +12,7 @@ import './styles/premium-animation.css';
 import './styles/premium-colors.css';
 import './styles/smart-filters.css';
 import './styles/utilities.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/styles/layout-utilities.css';
 // Calendar CSS moved to calendar-specific components for better performance
 import './styles/landing-page.css';

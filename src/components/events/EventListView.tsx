@@ -57,6 +57,7 @@ interface EventListViewProps {
     locationOptions: string[];
     initialCircleSlug?: string;
     previewEvents?: PreviewEvent[];
+    cityDirectoryHref?: string;
 }
 
 interface EventRow {
@@ -189,7 +190,14 @@ function FormatBadge({ format }: { format: string }) {
     );
 }
 
-export default function EventListView({ initialCategories, profile, locationOptions, initialCircleSlug, previewEvents }: EventListViewProps) {
+export default function EventListView({
+    initialCategories,
+    profile,
+    locationOptions,
+    initialCircleSlug,
+    previewEvents,
+    cityDirectoryHref,
+}: EventListViewProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const posthog = usePostHog();
@@ -422,7 +430,12 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     const handleOpenDetails = useCallback((event: TrackedEvent) => {
         setSelectedEvent(event);
-    }, []);
+        posthog?.capture('event_viewed', {
+            event_id: event.id,
+            event_title: event.title,
+            source: 'event_list',
+        });
+    }, [posthog]);
 
     const handleCloseDetails = useCallback(() => {
         setSelectedEvent(null);
@@ -591,6 +604,15 @@ export default function EventListView({ initialCategories, profile, locationOpti
         }
     }, [filters.sortBy, filters.sortDirection]);
 
+    const cityDirectoryLink = cityDirectoryHref ? (
+        <Link
+            href={cityDirectoryHref}
+            className="inline-flex items-center rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:text-foreground-primary"
+        >
+            Browse cities
+        </Link>
+    ) : undefined;
+
     return (
         <SidebarProvider>
             <UnifiedMobileNavbar
@@ -611,20 +633,30 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                 <div className="relative pb-[calc(var(--mobile-app-tabbar-offset)+4.5rem)] pt-[var(--mobile-app-top-offset)]">
                                     {/* Mobile Header */}
                                     <header className="px-4 pb-3 border-b border-white/10">
-                                        <div className="flex items-center justify-between mb-1">
+                                        <div className="mb-1 flex items-center justify-between gap-3">
                                             <div>
                                                 <h1 className="text-2xl font-bold text-foreground-primary">Events</h1>
                                                 <p className="text-sm text-foreground-secondary mt-1">
                                                     {totalCount} events
                                                 </p>
                                             </div>
-                                            <button
-                                                onClick={() => setIsFilterOpen(true)}
-                                                className="p-2 rounded-lg transition-colors text-foreground-secondary hover:text-foreground-primary hover:bg-white/5"
-                                                aria-label="Open filters"
-                                            >
-                                                <SlidersHorizontal size={20} weight="regular" />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {cityDirectoryHref ? (
+                                                    <Link
+                                                        href={cityDirectoryHref}
+                                                        className="inline-flex items-center rounded-lg border border-border/60 px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:border-border hover:text-foreground-primary"
+                                                    >
+                                                        Cities
+                                                    </Link>
+                                                ) : null}
+                                                <button
+                                                    onClick={() => setIsFilterOpen(true)}
+                                                    className="p-2 rounded-lg transition-colors text-foreground-secondary hover:text-foreground-primary hover:bg-white/5"
+                                                    aria-label="Open filters"
+                                                >
+                                                    <SlidersHorizontal size={20} weight="regular" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </header>
 
@@ -911,6 +943,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                             suggestions={suggestions}
                                             searchHistory={searchHistory}
                                             isAutocompletLoading={isSuggestionsLoading}
+                                            actionControls={cityDirectoryLink}
                                         />
                                     </div>
 

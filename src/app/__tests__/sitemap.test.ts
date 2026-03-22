@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import sitemap from '@/app/sitemap';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { SITE_URL } from '@/config/site';
 
-vi.mock('@/utils/supabase/server', () => ({
+vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
 }));
 
@@ -106,11 +106,12 @@ describe('sitemap', () => {
   });
 
   it('includes category/city/resource pages and emits canonical www host URLs', async () => {
-    mockedCreateClient.mockResolvedValue(buildSupabaseMock() as never);
+    mockedCreateClient.mockReturnValue(buildSupabaseMock() as never);
 
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
 
+    expect(urls).toContain(`${SITE_URL}/events/cities`);
     expect(urls).toContain(`${SITE_URL}/events/category/conferences`);
     expect(urls).toContain(`${SITE_URL}/events/category/workshops`);
     expect(urls).toContain(`${SITE_URL}/events/cities/san-francisco`);
@@ -125,12 +126,15 @@ describe('sitemap', () => {
 
   it('falls back to static + resource pages when Supabase fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockedCreateClient.mockRejectedValue(new Error('supabase unavailable'));
+    mockedCreateClient.mockImplementation(() => {
+      throw new Error('supabase unavailable');
+    });
 
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toContain(`${SITE_URL}/events`);
+    expect(urls).toContain(`${SITE_URL}/events/cities`);
     expect(urls).toContain(`${SITE_URL}/resources/tech-events-calendar-2026`);
     expect(urls).toContain(`${SITE_URL}/resources/cfp-calendar`);
     expect(urls).not.toContain(`${SITE_URL}/events/devcon-2026`);

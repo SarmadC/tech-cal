@@ -17,16 +17,35 @@
 
 import { PostHog } from 'posthog-node';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 let posthogClient: PostHog | null = null;
 
 /**
+ * Stub that silently discards all calls in non-production environments.
+ * Prevents dev/test traffic from polluting PostHog analytics.
+ */
+const noopPostHog = new Proxy({} as PostHog, {
+  get(_target, prop) {
+    if (prop === 'shutdown') return () => Promise.resolve();
+    // Return a no-op for capture, identify, etc.
+    return () => {};
+  },
+});
+
+/**
  * Get a PostHog server-side client instance.
+ *
+ * Returns a no-op stub in non-production environments to prevent dev traffic
+ * from polluting analytics data.
  *
  * Note: For short-lived serverless functions, flushAt and flushInterval are set to
  * send events immediately. Always call `await posthog.shutdown()` when done to
  * ensure events are flushed before the function terminates.
  */
 export function getPostHogClient(): PostHog {
+  if (!IS_PRODUCTION) return noopPostHog;
+
   if (!posthogClient) {
     posthogClient = new PostHog(
       process.env.NEXT_PUBLIC_POSTHOG_KEY!,

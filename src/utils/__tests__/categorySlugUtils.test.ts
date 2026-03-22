@@ -3,6 +3,8 @@ import {
   cityNameToSlug,
   findCategoryBySlug,
   findCityBySlug,
+  findCitiesBySlug,
+  groupCitiesBySlug,
   slugToCategoryPattern,
   slugToCityName,
 } from '../categorySlugUtils';
@@ -62,6 +64,26 @@ describe('categorySlugUtils', () => {
         'Amsterdam, Netherlands'
       );
       expect(findCityBySlug(cities, 'berlin-germany')).toBeNull();
+    });
+
+    it('groups punctuation variants under the same slug', () => {
+      const cities = ['Washington, D.C.', 'Washington DC', 'Amsterdam'];
+
+      expect(findCitiesBySlug(cities, 'washington-dc')).toEqual([
+        'Washington DC',
+        'Washington, D.C.',
+      ]);
+
+      expect(groupCitiesBySlug(cities)).toEqual([
+        {
+          citySlug: 'washington-dc',
+          cityNames: ['Washington DC', 'Washington, D.C.'],
+        },
+        {
+          citySlug: 'amsterdam',
+          cityNames: ['Amsterdam'],
+        },
+      ]);
     });
   });
 });

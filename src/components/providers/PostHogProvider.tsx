@@ -4,9 +4,17 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import React, { useEffect } from 'react';
 
+const IS_PRODUCTION = typeof window !== 'undefined'
+    && window.location.hostname !== 'localhost'
+    && !window.location.hostname.startsWith('127.')
+    && !window.location.hostname.startsWith('192.168.');
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+
+        // Skip PostHog entirely in development to prevent polluting production analytics
+        if (!IS_PRODUCTION) return;
 
         const init = () => posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
             api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
@@ -14,13 +22,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             capture_pageview: false,
             capture_exceptions: true,
             disable_session_recording: false,
-            loaded: (ph) => {
-                // Mark localhost sessions so they can be filtered in PostHog UI
-                // (Filter > "Test accounts" using $is_test_account property)
-                if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-                    ph.register({ $is_test_account: true });
-                }
-            },
         });
 
         if ('requestIdleCallback' in window) {

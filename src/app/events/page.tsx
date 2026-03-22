@@ -169,6 +169,7 @@ export default async function EventsPage(
                 locationOptions={locationOptions}
                 initialCircleSlug={circleSlug}
                 previewEvents={ssrEvents}
+                cityDirectoryHref="/events/cities"
             />
         </>
     );

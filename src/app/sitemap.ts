@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { categoryNameToSlug, cityNameToSlug } from '@/utils/categorySlugUtils'
+import { categoryNameToSlug, groupCitiesBySlug } from '@/utils/categorySlugUtils'
 import { SITE_URL } from '@/config/site'
 import { Database } from '@/types/supabase'
 
@@ -20,6 +20,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/events/cities`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.7,
         },
         {
             url: `${baseUrl}/pricing`,
@@ -161,8 +167,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                         .filter((c): c is string => c !== null && c.trim() !== '')
                 )
             )
-            const cityPages: MetadataRoute.Sitemap = uniqueCities.map((city) => ({
-                url: `${baseUrl}/events/cities/${cityNameToSlug(city)}`,
+            const cityPages: MetadataRoute.Sitemap = groupCitiesBySlug(uniqueCities).map(({ citySlug }) => ({
+                url: `${baseUrl}/events/cities/${citySlug}`,
                 lastModified: new Date(),
                 changeFrequency: 'weekly' as const,
                 priority: 0.6,

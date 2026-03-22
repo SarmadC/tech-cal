@@ -8,8 +8,13 @@ import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { BreadcrumbJsonLd, ItemListJsonLd } from '@/components/seo';
 import { formatDate } from '@/utils/dateUtils';
-import { cityNameToSlug, findCityBySlug, slugToCityName } from '@/utils/categorySlugUtils';
-import { categoryNameToSlug } from '@/utils/categorySlugUtils';
+import {
+    categoryNameToSlug,
+    findCityBySlug,
+    findCitiesBySlug,
+    groupCitiesBySlug,
+    slugToCityName,
+} from '@/utils/categorySlugUtils';
 import { SITE_URL } from '@/config/site';
 import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
@@ -75,11 +80,12 @@ const getCityData = cache(async (citySlug: string) => {
     const now = new Date().toISOString();
 
     const uniqueCities = await getUpcomingCityNames();
-    const matchedCity = findCityBySlug(uniqueCities, citySlug);
+    const matchedCities = findCitiesBySlug(uniqueCities, citySlug);
+    const matchedCity = findCityBySlug(matchedCities, citySlug);
 
-    if (!matchedCity) return null;
+    if (!matchedCity || matchedCities.length === 0) return null;
 
-    // Fetch events and count in parallel using the exact DB city name
+    // Fetch events and count in parallel across all DB city variants that collapse to this slug.
     const [{ data: events }, { count }] = await Promise.all([
         supabase
             .from('events')
@@ -87,7 +93,7 @@ const getCityData = cache(async (citySlug: string) => {
                 'id, slug, title, description, start_time, end_time, location, event_format, event_type:event_type_id(name), organizer:organizer_id(name)'
             )
             .eq('status', 'confirmed')
-            .eq('location_city', matchedCity)
+            .in('location_city', matchedCities)
             .gte('start_time', now)
             .order('start_time', { ascending: true })
             .limit(50),
@@ -95,7 +101,7 @@ const getCityData = cache(async (citySlug: string) => {
             .from('events')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'confirmed')
-            .eq('location_city', matchedCity)
+            .in('location_city', matchedCities)
             .gte('start_time', now),
     ]);
 
@@ -142,7 +148,7 @@ export async function generateMetadata({
 export async function generateStaticParams(): Promise<{ city: string }[]> {
     const uniqueCities = await getUpcomingCityNames();
 
-    return uniqueCities.map((c) => ({ city: cityNameToSlug(c) }));
+    return groupCitiesBySlug(uniqueCities).map(({ citySlug }) => ({ city: citySlug }));
 }
 
 export default async function CityPage({ params }: CityPageProps) {
@@ -176,6 +182,7 @@ export default async function CityPage({ params }: CityPageProps) {
                 items={[
                     { name: 'Home', url: SITE_URL },
                     { name: 'Events', url: `${SITE_URL}/events` },
+                    { name: 'Cities', url: `${SITE_URL}/events/cities` },
                     { name: cityName },
                 ]}
             />
@@ -198,10 +205,28 @@ export default async function CityPage({ params }: CityPageProps) {
                     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                         <nav className="flex items-center gap-1.5 text-[11px] text-foreground-tertiary/60 mb-6">
                             <Link
+                                href="/"
+                                className="hover:text-foreground-tertiary transition-colors"
+                            >
+                                Home
+                            </Link>
+                            <span className="text-foreground-tertiary/30">
+                                /
+                            </span>
+                            <Link
                                 href="/events"
                                 className="hover:text-foreground-tertiary transition-colors"
                             >
                                 Events
+                            </Link>
+                            <span className="text-foreground-tertiary/30">
+                                /
+                            </span>
+                            <Link
+                                href="/events/cities"
+                                className="hover:text-foreground-tertiary transition-colors"
+                            >
+                                Cities
                             </Link>
                             <span className="text-foreground-tertiary/30">
                                 /
@@ -219,6 +244,14 @@ export default async function CityPage({ params }: CityPageProps) {
                                 ? `Discover ${totalCount} upcoming tech events in ${cityName}. From conferences to meetups, find the best developer events happening near you.`
                                 : `No upcoming tech events in ${cityName} right now. Check back soon or browse events in other cities.`}
                         </p>
+                        <div className="mt-5">
+                            <Link
+                                href="/events/cities"
+                                className="inline-flex items-center rounded-lg border border-border-subtle px-4 py-2 text-sm text-foreground-secondary transition-colors hover:border-border-default hover:text-foreground-primary"
+                            >
+                                Browse all cities
+                            </Link>
+                        </div>
                     </div>
                 </header>
 
@@ -295,9 +328,17 @@ export default async function CityPage({ params }: CityPageProps) {
                             })}
                         </ul>
                     ) : (
-                        <p className="text-[15px] text-foreground-tertiary/60 italic py-12 text-center">
-                            No upcoming events in this city.
-                        </p>
+                        <div className="py-12 text-center">
+                            <p className="text-[15px] text-foreground-tertiary/60 italic">
+                                No upcoming events in this city.
+                            </p>
+                            <Link
+                                href="/events/cities"
+                                className="mt-4 inline-flex items-center rounded-lg border border-border-subtle px-4 py-2 text-sm text-foreground-secondary transition-colors hover:border-border-default hover:text-foreground-primary"
+                            >
+                                Browse all cities
+                            </Link>
+                        </div>
                     )}
 
                     {/* Cross-links to category pages */}

@@ -11,6 +11,7 @@ import { EventService } from '@/services/eventServices';
 import { EventAgendaTimeline } from '@/components/blog/EventAgendaTimeline';
 import { TableOfContents } from '@/components/blog/TableOfContents';
 import { BlogShareButtons } from '@/components/blog/BlogShareButtons';
+import { BlogSignupCTA } from '@/components/blog/BlogSignupCTA';
 import {
     InteractiveBlogContent,
     type RoleFilter,
@@ -451,6 +452,8 @@ function SupportRail({
 
     return (
         <>
+            <BlogSignupCTA postSlug={shareSlug} />
+
             {showEventModules && ctaEvent ? (
                 <FeaturedEventModule title={ctaEvent.title} eventDate={eventDate} href={eventLink} />
             ) : (

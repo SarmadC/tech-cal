@@ -16,6 +16,7 @@ import {
     NetworkingGoal,
     CareerOptionalSectionStatus
 } from '@/types/career';
+import { usePostHog } from 'posthog-js/react';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import { RoleAutocomplete } from './RoleAutocomplete';
 import { ExperienceLevelSelector } from './ExperienceLevelSelector';
@@ -267,6 +268,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     const totalSteps = VISIBLE_ONBOARDING_STEP_COUNT;
     const isWelcomeStep = currentStep === 0;
     const prefersReducedMotion = useReducedMotion();
+    const posthog = usePostHog();
 
     const { showConfirmation } = useSnackbar();
 
@@ -297,6 +299,12 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
             onSkip?.();
             return;
         }
+
+        posthog?.capture('onboarding_skipped', {
+            skipped_at_step: currentStep,
+            step_name: ['welcome', 'role', 'skills', 'goals'][currentStep] ?? `step_${currentStep}`,
+            had_progress: hasCoreOnboardingProgress(data),
+        });
 
         // Otherwise, check for progress and show confirmation
         const hasProgress = hasCoreOnboardingProgress(data);
@@ -337,7 +345,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         }
 
         if (currentStep < totalSteps) {
-            setCurrentStep(prev => prev + 1);
+            const nextStep = currentStep + 1;
+            posthog?.capture('onboarding_step_completed', {
+                step: currentStep,
+                step_name: ['welcome', 'role', 'skills', 'goals'][currentStep] ?? `step_${currentStep}`,
+                next_step: nextStep,
+            });
+            setCurrentStep(nextStep);
             setValidationErrors([]);
             setStep1Errors({});
         } else {
@@ -345,13 +359,17 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
             if (validation.isValid) {
                 const sanitizedData = sanitizeOnboardingData(data);
                 const optionalSectionsCompleted = deriveOptionalSectionStatus(data);
+                posthog?.capture('onboarding_completed', {
+                    steps_completed: totalSteps,
+                    has_optional_preferences: showOptionalPreferences,
+                });
                 clearPersistedState();
                 onComplete(sanitizedData, { optionalSectionsCompleted });
             } else {
                 setValidationErrors(validation.errors);
             }
         }
-    }, [clearPersistedState, currentStep, data, onComplete, totalSteps]);
+    }, [clearPersistedState, currentStep, data, onComplete, totalSteps, posthog, showOptionalPreferences]);
 
     const handlePrevious = () => {
         if (currentStep > 1) setCurrentStep(prev => prev - 1);
