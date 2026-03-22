@@ -48,7 +48,7 @@ export const QUERY_LIMITS = {
 } as const;
 
 // Deduplication Time Windows
-export const DEDUPLICATION_TIME_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours before/after for duplicate matching
+export const DEDUPLICATION_TIME_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours before/after for duplicate matching
 
 // Similarity Thresholds
 export const SIMILARITY_THRESHOLDS = {
@@ -91,4 +91,3 @@ export const VALIDATION_LIMITS = {
     MAX_DESCRIPTION_LENGTH: 5000, // Maximum description length
     MIN_TITLE_LENGTH_FOR_SCORE: 10, // Minimum title length for full score
 } as const;
-

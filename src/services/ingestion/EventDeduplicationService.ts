@@ -14,6 +14,7 @@ import {
     SIMILARITY_THRESHOLDS,
 } from '@/config/ingestionConstants';
 import { normalizeCanonicalUrl } from './utils/urlResolver';
+import { buildEventIdentityKeys } from './utils/eventIdentity';
 import * as Sentry from '@sentry/nextjs';
 
 export interface DuplicateCheckResult {
@@ -24,6 +25,25 @@ export interface DuplicateCheckResult {
 }
 
 export class EventDeduplicationService {
+    private static getEventYearBounds(
+        startTime: string | null | undefined
+    ): { start: string; end: string } | null {
+        if (!startTime) {
+            return null;
+        }
+
+        const parsed = new Date(startTime);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+
+        const year = parsed.getUTCFullYear();
+        return {
+            start: new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0)).toISOString(),
+            end: new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0, 0)).toISOString(),
+        };
+    }
+
     /**
      * Check if an event is a duplicate before normalization
      * Optimized to run fast checks in parallel, then slower checks if needed
@@ -34,10 +54,10 @@ export class EventDeduplicationService {
         supabaseClient: SupabaseClientType
     ): Promise<DuplicateCheckResult> {
         try {
-            // Phase 1: Run fast checks in parallel (checksum and canonical URL)
+            // Phase 1: Run fast checks in parallel (checksum and exact identity keys)
             const [checksumMatch, canonicalUrlMatch] = await Promise.all([
                 this.checkChecksumDuplicate(record.provenance.raw_hash, supabaseClient),
-                this.checkCanonicalUrlDuplicate(record, supabaseClient),
+                this.checkIdentityKeyDuplicate(record, supabaseClient),
             ]);
 
             // Return checksum match first (highest confidence)
@@ -102,6 +122,48 @@ export class EventDeduplicationService {
 
 
     /**
+     * Check for exact identity-key match in event_identity_keys
+     */
+    private static async checkIdentityKeyDuplicate(
+        record: EventSourceRecord,
+        supabaseClient: SupabaseClientType
+    ): Promise<{ eventId: string } | null> {
+        const identityKeys = buildEventIdentityKeys({
+            startTime: record.startTime,
+            sourceUrl: record.normalizedSourceUrl ?? record.sourceUrl,
+            registrationUrl: record.normalizedRegistrationUrl ?? record.registrationUrl,
+        });
+
+        if (identityKeys.length === 0) {
+            return await this.checkCanonicalUrlDuplicate(record, supabaseClient);
+        }
+
+        for (const identityKey of identityKeys) {
+            const { data, error } = await supabaseClient
+                .from('event_identity_keys')
+                .select('event_id')
+                .eq('key_type', identityKey.keyType)
+                .eq('key_hash', identityKey.keyHash)
+                .eq('event_year', identityKey.eventYear)
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                if (error.code === 'PGRST205' || error.message?.includes('event_identity_keys')) {
+                    return await this.checkCanonicalUrlDuplicate(record, supabaseClient);
+                }
+                throw error;
+            }
+
+            if (data?.event_id) {
+                return { eventId: data.event_id };
+            }
+        }
+
+        return await this.checkCanonicalUrlDuplicate(record, supabaseClient);
+    }
+
+    /**
      * Check for canonical URL match in events table
      * High-confidence duplicate detection for multi-source events
      */
@@ -129,6 +191,13 @@ export class EventDeduplicationService {
             let query = supabaseClient
                 .from('events')
                 .select('id, source_url, registration_url');
+
+            const eventYearBounds = this.getEventYearBounds(record.startTime);
+            if (eventYearBounds) {
+                query = query
+                    .gte('start_time', eventYearBounds.start)
+                    .lt('start_time', eventYearBounds.end);
+            }
 
             // If we have a domain, use ILIKE to filter by domain (more efficient)
             if (domain) {
@@ -586,4 +655,3 @@ export class EventDeduplicationService {
         }
     }
 }
-

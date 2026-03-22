@@ -19,10 +19,12 @@ export interface QueueCountsResponse {
 
 interface AdminTableClient {
     from(table: string): {
-        select(columns: string, options?: Record<string, unknown>): {
-            eq(column: string, value: string): PromiseLike<{ count?: number | null }>;
-        };
+        select(columns: string, options?: Record<string, unknown>): AdminCountQuery;
     };
+}
+
+interface AdminCountQuery extends PromiseLike<{ count?: number | null }> {
+    eq(column: string, value: string): AdminCountQuery;
 }
 
 interface ModerationQueueItem {
@@ -73,6 +75,7 @@ export async function GET() {
             tableClient
                 .from('event_update_queue')
                 .select('id', { count: 'exact', head: true })
+                .eq('queue_type', 'ingestion_update')
                 .eq('status', 'pending'),
 
             // Pending moderation items (need to fetch with events to filter out enriched)

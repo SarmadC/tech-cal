@@ -22,7 +22,16 @@ export default async function EnrichmentEditorPage({
     const { eventId } = await params;
     const resolvedSearchParams = await searchParams;
     const from = resolvedSearchParams.from === 'events' ? 'events' : 'enrichment';
-    const backUrl = from === 'events' ? '/admin/events' : '/admin/ingestion/enrichment';
+    const returnToParam = typeof resolvedSearchParams.returnTo === 'string' ? resolvedSearchParams.returnTo : null;
+    const allowedReturnPrefixes = [
+        '/admin/ingestion/enrichment',
+        '/admin/events',
+    ];
+    const backUrl = returnToParam && allowedReturnPrefixes.some((prefix) => returnToParam.startsWith(prefix))
+        ? returnToParam
+        : from === 'events'
+            ? '/admin/events'
+            : '/admin/ingestion/enrichment';
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

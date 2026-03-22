@@ -22,10 +22,13 @@ type UpdateReviewInitialData = NonNullable<Parameters<typeof UpdateReviewClient>
 
 export default async function UpdateReviewPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ returnTo?: string }>;
 }) {
     const { id } = await params;
+    const { returnTo: returnToParam } = await searchParams;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -39,6 +42,15 @@ export default async function UpdateReviewPage({
     }
 
     const queueId = id;
+    const allowedReturnPrefixes = [
+        '/admin/ingestion/update-queue',
+        '/admin/ingestion/enrichment',
+        '/admin/ingestion/moderation',
+        '/admin/events',
+    ];
+    const returnTo = returnToParam && allowedReturnPrefixes.some((prefix) => returnToParam.startsWith(prefix))
+        ? returnToParam
+        : '/admin/ingestion/update-queue';
 
     // Fetch queue item with all field diffs directly from Supabase
     const client = supabase as any;
@@ -50,6 +62,7 @@ export default async function UpdateReviewPage({
             event:events(id, title, start_time, description, organizer:organizers(id, name))
         `)
         .eq('id', queueId)
+        .eq('queue_type', 'ingestion_update')
         .single();
 
     if (queueError || !queueItem) {
@@ -59,7 +72,8 @@ export default async function UpdateReviewPage({
                 <div className="mb-8">
                     <div className="flex items-center gap-4 mb-4">
                         <Link
-                            href="/admin/ingestion/update-queue"
+                            href={returnTo}
+                            scroll={false}
                             className="text-blue-600 hover:text-blue-800"
                         >
                             ← Back to Queue
@@ -71,7 +85,7 @@ export default async function UpdateReviewPage({
                     </p>
                 </div>
 
-                <UpdateReviewClient queueId={queueId} initialData={null} />
+                <UpdateReviewClient queueId={queueId} initialData={null} returnTo={returnTo} />
             </div>
         );
     }
@@ -126,7 +140,8 @@ export default async function UpdateReviewPage({
             <div className="mb-8">
                 <div className="flex items-center gap-4 mb-4">
                     <Link
-                        href="/admin/ingestion/update-queue"
+                        href={returnTo}
+                        scroll={false}
                         className="text-blue-600 hover:text-blue-800"
                     >
                         ← Back to Queue
@@ -138,8 +153,7 @@ export default async function UpdateReviewPage({
                 </p>
             </div>
 
-            <UpdateReviewClient queueId={queueId} initialData={queueData} />
+            <UpdateReviewClient queueId={queueId} initialData={queueData} returnTo={returnTo} />
         </div>
     );
 }
-

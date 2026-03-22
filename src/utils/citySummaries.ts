@@ -250,11 +250,11 @@ export function buildCitySummaries(rows: CitySummaryRow[]): CitySummary[] {
         const rowHasCoordinates =
             typeof row.location_latitude === 'number' &&
             typeof row.location_longitude === 'number';
-        const candidateLatitude = rowHasCoordinates
-            ? row.location_latitude
+        const candidateLatitude: number | null = rowHasCoordinates
+            ? (row.location_latitude ?? null)
             : fallbackCoordinates?.lat ?? null;
-        const candidateLongitude = rowHasCoordinates
-            ? row.location_longitude
+        const candidateLongitude: number | null = rowHasCoordinates
+            ? (row.location_longitude ?? null)
             : fallbackCoordinates?.lng ?? null;
         const coordinateSource: 'row' | 'fallback' | 'none' = rowHasCoordinates
             ? 'row'

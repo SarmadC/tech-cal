@@ -225,7 +225,7 @@ export default function MarketingNavbar() {
     const posthog = usePostHog();
     const desktopResourcesRef = useRef<HTMLDivElement>(null);
     const desktopResourcesFlyoutRef = useRef<HTMLDivElement>(null);
-    const mobileResourcesRef = useRef<HTMLDivElement>(null);
+    const mobileResourcesRef = useRef<HTMLButtonElement>(null);
     const mobileResourcesFlyoutRef = useRef<HTMLDivElement>(null);
     const desktopResourcesCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

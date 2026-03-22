@@ -7,14 +7,28 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
+import UpdateQueueSignalBadges from '@/components/admin/UpdateQueueSignalBadges';
+import {
+    deriveUpdateQueueSignals,
+    formatQueueFieldLabel,
+    isScheduleField,
+    sortQueueFields,
+} from '@/lib/admin/updateQueueTriage';
+import {
+    buildQueueContinuationLookupUrl,
+    buildQueueReturnTo,
+    isQueueReturnTo,
+    readQueueReturnPage,
+} from '@/lib/admin/updateQueueContinuation';
 import { formatRelationLabels } from '@/services/ingestion/utils/enrichmentQueue';
 
 interface QueueField {
@@ -37,7 +51,7 @@ interface QueueItem {
     event?: {
         id: string;
         title: string;
-        start_time: string;
+        start_time: string | null;
         organizer?: {
             id: string;
             name: string;
@@ -47,6 +61,7 @@ interface QueueItem {
 
 interface UpdateReviewClientProps {
     queueId: string;
+    returnTo: string;
     initialData: {
         queue: QueueItem;
         fields: QueueField[];
@@ -56,6 +71,18 @@ interface UpdateReviewClientProps {
 interface NextPendingItem {
     id: string;
     eventTitle: string;
+}
+
+interface QueueListItemForContinuation {
+    id: string;
+    event?: {
+        title?: string | null;
+    } | null;
+}
+
+interface ContinuationResolution {
+    nextItem: NextPendingItem | null;
+    fallbackReturnTo: string;
 }
 
 interface QueueActionResponse {
@@ -117,8 +144,18 @@ const buildApprovalMessage = (
     };
 };
 
-export default function UpdateReviewClient({ queueId, initialData }: UpdateReviewClientProps) {
+const isContinuationTerminalStatus = (status?: string): boolean => {
+    return status === 'approved' || status === 'rejected' || status === 'auto_applied';
+};
+
+const toNextPendingItem = (item: QueueListItemForContinuation): NextPendingItem => ({
+    id: item.id,
+    eventTitle: item.event?.title || 'Untitled Event',
+});
+
+export default function UpdateReviewClient({ queueId, initialData, returnTo }: UpdateReviewClientProps) {
     const router = useRouter();
+    const { showConfirmation, showError, showSuccess } = useSnackbar();
     const [queue, setQueue] = useState<QueueItem | null>(initialData?.queue || null);
     const [fields, setFields] = useState<QueueField[]>(initialData?.fields || []);
     const [loading, setLoading] = useState(!initialData);
@@ -136,7 +173,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
 
     // "Up next" navigation state
     const [nextItem, setNextItem] = useState<NextPendingItem | null>(null);
-    const [showNextPrompt, setShowNextPrompt] = useState(false);
+    const orderedFields = useMemo(() => sortQueueFields(fields), [fields]);
+    const canContinueWithinQueue = isQueueReturnTo(returnTo);
+
+    const goBackToQueueContext = useCallback(
+        (target = returnTo) => {
+            router.push(target, { scroll: false });
+        },
+        [returnTo, router]
+    );
 
     const fetchQueueDetail = useCallback(async () => {
         setLoading(true);
@@ -187,28 +232,119 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         }
     }, [initialData, fetchQueueDetail]);
 
-    // Fetch next pending item for "up next" navigation
-    const fetchNextPending = useCallback(async (): Promise<NextPendingItem | null> => {
-        try {
-            const response = await fetch('/api/admin/ingestion/update-queue?status=pending&pageSize=1&sort=created_at&direction=asc', {
-                credentials: 'include',
-            });
-            if (!response.ok) return null;
-            const data = await response.json();
-            const items = data.items || [];
-            // Find next item that's not the current one
-            const next = items.find((item: { id: string }) => item.id !== queueId);
-            if (next) {
+    const fetchContinuationPage = useCallback(
+        async (page: number): Promise<QueueListItemForContinuation[]> => {
+            const lookupUrl = buildQueueContinuationLookupUrl(returnTo, page);
+
+            if (!lookupUrl) {
+                return [];
+            }
+
+            try {
+                const response = await fetch(lookupUrl, {
+                    cache: 'no-store',
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    return [];
+                }
+
+                const data = await response.json().catch(() => ({}));
+                return Array.isArray(data.items) ? (data.items as QueueListItemForContinuation[]) : [];
+            } catch {
+                return [];
+            }
+        },
+        [returnTo]
+    );
+
+    const resolveContinuationTarget = useCallback(
+        async (currentQueueItemId: string): Promise<ContinuationResolution> => {
+            if (!canContinueWithinQueue) {
                 return {
-                    id: next.id,
-                    eventTitle: next.event?.title || 'Untitled Event',
+                    nextItem: null,
+                    fallbackReturnTo: returnTo,
                 };
             }
-            return null;
-        } catch {
-            return null;
-        }
-    }, [queueId]);
+
+            const currentPage = readQueueReturnPage(returnTo);
+            const currentPageItems = await fetchContinuationPage(currentPage);
+            const nextFromCurrentPage = currentPageItems.find((item) => item.id !== currentQueueItemId);
+
+            if (nextFromCurrentPage) {
+                return {
+                    nextItem: toNextPendingItem(nextFromCurrentPage),
+                    fallbackReturnTo: buildQueueReturnTo(returnTo, currentPage),
+                };
+            }
+
+            if (currentPage > 1) {
+                const previousPage = currentPage - 1;
+                const previousPageItems = await fetchContinuationPage(previousPage);
+                const nextFromPreviousPage = previousPageItems.find((item) => item.id !== currentQueueItemId);
+
+                if (nextFromPreviousPage) {
+                    return {
+                        nextItem: toNextPendingItem(nextFromPreviousPage),
+                        fallbackReturnTo: buildQueueReturnTo(returnTo, previousPage),
+                    };
+                }
+
+                return {
+                    nextItem: null,
+                    fallbackReturnTo: buildQueueReturnTo(returnTo, previousPage),
+                };
+            }
+
+            return {
+                nextItem: null,
+                fallbackReturnTo: buildQueueReturnTo(returnTo, currentPage),
+            };
+        },
+        [canContinueWithinQueue, fetchContinuationPage, returnTo]
+    );
+
+    const continueAfterTerminalAction = useCallback(
+        async (currentQueueItemId: string, successMessage: string) => {
+            const resolution = await resolveContinuationTarget(currentQueueItemId);
+
+            if (resolution.nextItem) {
+                const nextUrl =
+                    `/admin/ingestion/update-queue/${resolution.nextItem.id}` +
+                    `?returnTo=${encodeURIComponent(resolution.fallbackReturnTo)}`;
+                showSuccess(`${successMessage} Opening the next review item.`);
+                router.push(nextUrl);
+                return;
+            }
+
+            showSuccess(successMessage);
+            goBackToQueueContext(resolution.fallbackReturnTo);
+        },
+        [goBackToQueueContext, resolveContinuationTarget, router, showSuccess]
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadNextItemHint = async () => {
+            if (!canContinueWithinQueue) {
+                setNextItem(null);
+                return;
+            }
+
+            const resolution = await resolveContinuationTarget(queueId);
+            if (!cancelled) {
+                setNextItem(resolution.nextItem);
+            }
+        };
+
+        void loadNextItemHint();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [canContinueWithinQueue, queueId, resolveContinuationTarget]);
 
     const handleApproveAll = async () => {
         setActionLoading(true);
@@ -220,18 +356,17 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve'));
             const data = await readActionResponse(response);
-            setMessage(buildApprovalMessage(data, 'All fields approved successfully.'));
-
-            // Check for next pending item
-            const next = await fetchNextPending();
-            if (next) {
-                setNextItem(next);
-                setShowNextPrompt(true);
-            } else {
+            const actionMessage = buildApprovalMessage(data, 'All fields approved successfully.');
+            if (actionMessage.type === 'error') {
+                setMessage(actionMessage);
+                showError(actionMessage.text);
                 await fetchQueueDetail();
+            } else {
+                await continueAfterTerminalAction(queueId, actionMessage.text);
             }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
+            showError(error instanceof Error ? error.message : 'Failed to approve');
         } finally {
             setActionLoading(false);
         }
@@ -246,29 +381,17 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 { method: 'POST' }
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to reject'));
-            setMessage({ type: 'success', text: 'All fields rejected' });
-
-            // Check for next pending item
-            const next = await fetchNextPending();
-            if (next) {
-                setNextItem(next);
-                setShowNextPrompt(true);
-            } else {
-                await fetchQueueDetail();
-            }
+            await continueAfterTerminalAction(queueId, 'All fields rejected.');
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to reject' });
+            showError(error instanceof Error ? error.message : 'Failed to reject');
         } finally {
             setActionLoading(false);
         }
     };
 
-    const handleDeleteEvent = async () => {
+    const handleDeleteEvent = useCallback(async () => {
         if (!queue?.event_id) return;
-
-        if (!confirm(`Are you sure you want to delete this event? This cannot be undone.\n\nEvent: ${queue.event?.title || 'Unknown'}`)) {
-            return;
-        }
 
         setActionLoading(true);
         setMessage(null);
@@ -277,19 +400,33 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 `/api/admin/ingestion/update-queue/${queueId}?action=delete-event`,
                 { method: 'POST' }
             );
-            if (!response.ok) throw new Error('Failed to delete event');
-            setMessage({ type: 'success', text: 'Event deleted successfully' });
-            // Redirect to queue list after a short delay
-            setTimeout(() => {
-                const queueUrl = '/admin/ingestion/update-queue';
-                router.push(queueUrl);
-            }, 1500);
+            if (!response.ok) throw new Error(await readResponseError(response, 'Failed to delete event'));
+            await continueAfterTerminalAction(queueId, 'Event deleted successfully.');
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to delete event' });
+            showError(error instanceof Error ? error.message : 'Failed to delete event');
         } finally {
             setActionLoading(false);
         }
-    };
+    }, [continueAfterTerminalAction, queue?.event_id, queueId, showError]);
+
+    const confirmDeleteEvent = useCallback(() => {
+        if (!queue?.event_id) {
+            return;
+        }
+
+        showConfirmation(
+            'Delete event?',
+            `This will permanently delete "${queue.event?.title || 'Unknown event'}" and all related records. This cannot be undone.`,
+            () => {
+                void handleDeleteEvent();
+            },
+            {
+                confirmText: 'Delete event',
+                cancelText: 'Keep event',
+            }
+        );
+    }, [handleDeleteEvent, queue?.event?.title, queue?.event_id, showConfirmation]);
 
     const handleApproveSelective = async () => {
         if (selectedFields.size === 0) {
@@ -310,24 +447,21 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve selected fields'));
             const data = await readActionResponse(response);
-            setMessage(
-                buildApprovalMessage(data, `${selectedFields.size} field(s) approved successfully.`)
+            const actionMessage = buildApprovalMessage(
+                data,
+                `${selectedFields.size} field(s) approved successfully.`
             );
+            setMessage(actionMessage);
             setSelectedFields(new Set());
 
-            if (data.status && data.status !== 'pending') {
-                const next = await fetchNextPending();
-                if (next) {
-                    setNextItem(next);
-                    setShowNextPrompt(true);
-                } else {
-                    await fetchQueueDetail();
-                }
+            if (isContinuationTerminalStatus(data.status)) {
+                await continueAfterTerminalAction(queueId, actionMessage.text);
             } else {
                 await fetchQueueDetail();
             }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
+            showError(error instanceof Error ? error.message : 'Failed to approve');
         } finally {
             setActionLoading(false);
         }
@@ -348,21 +482,17 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to approve field'));
             const data = await readActionResponse(response);
-            setMessage(buildApprovalMessage(data, `Field "${fieldName}" approved.`));
+            const actionMessage = buildApprovalMessage(data, `Field "${fieldName}" approved.`);
+            setMessage(actionMessage);
 
-            if (data.status && data.status !== 'pending') {
-                const next = await fetchNextPending();
-                if (next) {
-                    setNextItem(next);
-                    setShowNextPrompt(true);
-                } else {
-                    await fetchQueueDetail();
-                }
+            if (isContinuationTerminalStatus(data.status)) {
+                await continueAfterTerminalAction(queueId, actionMessage.text);
             } else {
                 await fetchQueueDetail();
             }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
+            showError(error instanceof Error ? error.message : 'Failed to approve');
         } finally {
             setActionLoading(false);
         }
@@ -382,10 +512,18 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 }
             );
             if (!response.ok) throw new Error(await readResponseError(response, 'Failed to reject field'));
-            setMessage({ type: 'success', text: `Field "${fieldName}" rejected` });
-            await fetchQueueDetail();
+            const data = await readActionResponse(response);
+            const successText = `Field "${fieldName}" rejected`;
+            setMessage({ type: 'success', text: successText });
+
+            if (isContinuationTerminalStatus(data.status)) {
+                await continueAfterTerminalAction(queueId, successText);
+            } else {
+                await fetchQueueDetail();
+            }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to reject' });
+            showError(error instanceof Error ? error.message : 'Failed to reject');
         } finally {
             setActionLoading(false);
         }
@@ -416,7 +554,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             // Navigation
             if (e.key === 'j' || e.key === 'ArrowDown') {
                 e.preventDefault();
-                setFocusedFieldIndex((prev) => Math.min(prev + 1, fields.length - 1));
+                setFocusedFieldIndex((prev) => Math.min(prev + 1, orderedFields.length - 1));
                 return;
             }
 
@@ -427,8 +565,8 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             }
 
             // Actions on focused field
-            if (focusedFieldIndex >= 0 && focusedFieldIndex < fields.length) {
-                const focusedField = fields[focusedFieldIndex];
+            if (focusedFieldIndex >= 0 && focusedFieldIndex < orderedFields.length) {
+                const focusedField = orderedFields[focusedFieldIndex];
 
                 if (focusedField.field_status !== 'pending') {
                     return; // Only allow actions on pending fields
@@ -471,11 +609,23 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 handleRejectAll();
                 return;
             }
+
+            if (e.key === 'D' && e.shiftKey && queue?.event_id) {
+                e.preventDefault();
+                confirmDeleteEvent();
+                return;
+            }
+
+            if (e.key === 'b' || e.key === 'B') {
+                e.preventDefault();
+                goBackToQueueContext();
+                return;
+            }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [fields, focusedFieldIndex, shortcutsOpen, handleApproveAll, handleRejectAll]); // eslint-disable-line react-hooks/exhaustive-deps -- keyboard handler intentionally uses the latest render state snapshot
+    }, [confirmDeleteEvent, focusedFieldIndex, goBackToQueueContext, handleApproveAll, handleRejectAll, orderedFields, queue?.event_id, shortcutsOpen]); // eslint-disable-line react-hooks/exhaustive-deps -- keyboard handler intentionally uses the latest render state snapshot
 
     // Scroll focused field into view
     useEffect(() => {
@@ -488,14 +638,14 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
     // Clean up fieldRefs Map when fields change to prevent DOM reference leaks
     useEffect(() => {
         // Remove refs for indices that no longer exist in the fields array
-        const currentFieldCount = fields.length;
+        const currentFieldCount = orderedFields.length;
         const refsMap = fieldRefs.current;
         for (const index of refsMap.keys()) {
             if (index >= currentFieldCount) {
                 refsMap.delete(index);
             }
         }
-    }, [fields.length]);
+    }, [orderedFields.length]);
 
     const toggleFieldSelection = (fieldName: string) => {
         const newSelected = new Set(selectedFields);
@@ -625,9 +775,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         );
     };
 
-    const pendingFields = fields.filter(f => f.field_status === 'pending');
-    const approvedFields = fields.filter(f => f.field_status === 'approved');
-    const rejectedFields = fields.filter(f => f.field_status === 'rejected');
+    const pendingFields = orderedFields.filter((field) => field.field_status === 'pending');
+    const approvedFields = orderedFields.filter((field) => field.field_status === 'approved');
+    const rejectedFields = orderedFields.filter((field) => field.field_status === 'rejected');
+    const queueSignals = deriveUpdateQueueSignals({
+        requiresReviewReason: queue?.requires_review_reason,
+        eventStartTime: queue?.event?.start_time ?? null,
+        fieldNames: orderedFields.map((field) => field.field_name),
+    });
+    const prioritizedFieldNames = orderedFields.map((field) => field.field_name).slice(0, 4);
 
     // Check if event is in the past
     const isPastEvent = queue?.event?.start_time
@@ -653,7 +809,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-32">
             {/* Message */}
             {message && (
                 <div
@@ -670,34 +826,12 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             {isPastEvent && daysAgo !== null && (
                 <Card className="border-orange-300 bg-orange-50">
                     <CardContent className="pt-6">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <div className="font-semibold text-orange-800 mb-2">
-                                    ⚠️ Past Event Warning
-                                </div>
-                                <p className="text-sm text-orange-700 mb-3">
-                                    This event occurred <strong>{daysAgo} days ago</strong> ({format(new Date(queue.event!.start_time), 'MMM d, yyyy')}).
-                                    Past events are typically not relevant for a calendar of upcoming events.
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={handleRejectAll}
-                                        disabled={actionLoading}
-                                        variant="outline"
-                                        className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                                    >
-                                        Reject Update
-                                    </Button>
-                                    <Button
-                                        onClick={handleDeleteEvent}
-                                        disabled={actionLoading}
-                                        variant="destructive"
-                                        className="bg-orange-600 hover:bg-orange-700"
-                                    >
-                                        Delete Event
-                                    </Button>
-                                </div>
-                            </div>
+                        <div>
+                            <div className="mb-2 font-semibold text-orange-800">Past Event Warning</div>
+                            <p className="text-sm text-orange-700">
+                                This event occurred <strong>{daysAgo} days ago</strong> ({queue.event?.start_time ? format(new Date(queue.event.start_time), 'MMM d, yyyy') : 'Unknown date'}).
+                                Past events are typically not relevant for a calendar of upcoming events. The sticky review bar below keeps the fastest reject and delete actions available while you scan the diff.
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -706,21 +840,22 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             {/* Queue Header */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <CardTitle className="text-xl mb-2">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                            <CardTitle className="mb-2 text-xl">
                                 {queue.event?.title || 'Untitled Event'}
                             </CardTitle>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                                {queue.event?.organizer && (
-                                    <span>Organizer: {queue.event.organizer.name}</span>
-                                )}
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                                {queue.event?.organizer && <span>Organizer: {queue.event.organizer.name}</span>}
                                 {queue.event?.start_time && (
-                                    <span>
-                                        {format(new Date(queue.event.start_time), 'MMM d, yyyy')}
-                                    </span>
+                                    <>
+                                        <span>{format(new Date(queue.event.start_time), 'MMM d, yyyy HH:mm')}</span>
+                                        <span>{formatDistanceToNow(new Date(queue.event.start_time), { addSuffix: true })}</span>
+                                    </>
                                 )}
+                                <span>Queued {formatDistanceToNow(new Date(queue.created_at), { addSuffix: true })}</span>
                             </div>
+                            <UpdateQueueSignalBadges signals={queueSignals} className="mt-3" />
                         </div>
                         <div className="flex items-center gap-2">
                             {getStatusBadge(queue.status)}
@@ -728,12 +863,33 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {queue.requires_review_reason && (
-                        <div className="mb-4 text-sm text-gray-600">
-                            <strong>Reason:</strong> {queue.requires_review_reason}
+                    {(queue.requires_review_reason || prioritizedFieldNames.length > 0) && (
+                        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            {queue.requires_review_reason && (
+                                <div className="text-sm text-slate-700">
+                                    <strong>Review reason:</strong> {queue.requires_review_reason}
+                                </div>
+                            )}
+                            {prioritizedFieldNames.length > 0 && (
+                                <div className={cn('flex flex-wrap gap-2', queue.requires_review_reason ? 'mt-3' : '')}>
+                                    {prioritizedFieldNames.map((fieldName) => (
+                                        <span
+                                            key={fieldName}
+                                            className={cn(
+                                                'rounded border px-2 py-1 text-[11px]',
+                                                isScheduleField(fieldName)
+                                                    ? 'border-sky-200 bg-sky-50 text-sky-700'
+                                                    : 'border-slate-200 bg-white text-slate-700'
+                                            )}
+                                        >
+                                            {formatQueueFieldLabel(fieldName)}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-4 gap-4 text-sm">
                         <div>
                             <div className="text-gray-500">Pending</div>
                             <div className="font-semibold text-yellow-600">{pendingFields.length}</div>
@@ -746,62 +902,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                             <div className="text-gray-500">Rejected</div>
                             <div className="font-semibold text-red-600">{rejectedFields.length}</div>
                         </div>
+                        <div>
+                            <div className="text-gray-500">Schedule</div>
+                            <div className="font-semibold text-sky-700">
+                                {queueSignals.hasScheduleChange ? 'Changed' : 'No change'}
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Bulk Actions */}
-            {pendingFields.length > 0 && (
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex gap-2 flex-wrap">
-                            <Button
-                                onClick={handleApproveAll}
-                                disabled={actionLoading}
-                                className="bg-green-600 hover:bg-green-700"
-                            >
-                                Approve All ({pendingFields.length})
-                            </Button>
-                            <Button
-                                onClick={handleApproveSelective}
-                                disabled={actionLoading || selectedFields.size === 0}
-                                variant="outline"
-                            >
-                                Approve Selected ({selectedFields.size})
-                            </Button>
-                            <Button
-                                onClick={handleRejectAll}
-                                disabled={actionLoading}
-                                variant="destructive"
-                            >
-                                Reject All
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Delete Event Option */}
-            {queue && (
-                <Card className="border-red-200">
-                    <CardHeader>
-                        <CardTitle className="text-red-700">Danger Zone</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-gray-600 mb-4">
-                            If this event should not exist (for example, it is a blog post rather than an event), you can delete it entirely.
-                        </p>
-                        <Button
-                            onClick={handleDeleteEvent}
-                            disabled={actionLoading}
-                            variant="destructive"
-                            className="bg-red-600 hover:bg-red-700"
-                        >
-                            Delete Event
-                        </Button>
-                    </CardContent>
-                </Card>
-            )}
 
             {/* Field Diffs */}
             <Card>
@@ -809,11 +918,11 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     <CardTitle>Field Changes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {fields.length === 0 ? (
+                    {orderedFields.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">No field changes found</div>
                     ) : (
                         <div className="space-y-4">
-                            {fields.map((field, index) => {
+                            {orderedFields.map((field, index) => {
                                 const isPending = field.field_status === 'pending';
                                 const isSelected = selectedFields.has(field.field_name);
                                 const isEditing = editingField === field.field_name;
@@ -846,7 +955,9 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                                                         className="w-4 h-4"
                                                     />
                                                 )}
-                                                <h3 className="font-mono font-semibold">{field.field_name}</h3>
+                                                <h3 className="font-mono font-semibold">
+                                                    {formatQueueFieldLabel(field.field_name)}
+                                                </h3>
                                                 {getStatusBadge(field.field_status)}
                                                 {field.confidence && (
                                                     <span className="text-xs text-gray-500">
@@ -930,15 +1041,84 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                 </CardContent>
             </Card>
 
-            {/* Keyboard Hint */}
-            <div className="fixed bottom-4 right-4 z-40">
-                <button
-                    onClick={() => setShortcutsOpen(true)}
-                    className="flex items-center gap-2 rounded-lg border border-default bg-background-secondary/90 px-3 py-2 text-xs text-foreground-tertiary shadow-lg hover:bg-background-tertiary transition-colors"
-                >
-                    <MaterialIcon name="info" size={14} />
-                    Press <kbd className="rounded bg-background-tertiary px-1.5 py-0.5 font-mono">?</kbd> for shortcuts
-                </button>
+            <div className="fixed inset-x-0 bottom-4 z-40 px-4">
+                <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 rounded-2xl border border-default bg-background-secondary/95 p-3 shadow-2xl backdrop-blur">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-foreground-tertiary">
+                                <span>Review Flow</span>
+                                {pendingFields.length > 0 && (
+                                    <span>{pendingFields.length} pending</span>
+                                )}
+                                {selectedFields.size > 0 && (
+                                    <span>{selectedFields.size} selected</span>
+                                )}
+                            </div>
+                            <div className="mt-1 flex min-h-6 flex-wrap items-center gap-2 text-sm text-foreground-400">
+                                {nextItem ? (
+                                    <>
+                                        <span className="text-foreground-tertiary">Up next:</span>
+                                        <span className="truncate font-medium text-foreground-primary">
+                                            {nextItem.eventTitle}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-foreground-tertiary">
+                                        Finish this review to return to your preserved queue position.
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" onClick={() => goBackToQueueContext()} disabled={actionLoading}>
+                                Back
+                            </Button>
+                            {pendingFields.length > 0 && (
+                                <Button
+                                    onClick={handleApproveAll}
+                                    disabled={actionLoading}
+                                    className="bg-green-600 hover:bg-green-700"
+                                >
+                                    Approve All ({pendingFields.length})
+                                </Button>
+                            )}
+                            {pendingFields.length > 0 && (
+                                <Button
+                                    onClick={handleApproveSelective}
+                                    disabled={actionLoading || selectedFields.size === 0}
+                                    variant="outline"
+                                >
+                                    Approve Selected ({selectedFields.size})
+                                </Button>
+                            )}
+                            {pendingFields.length > 0 && (
+                                <Button
+                                    onClick={handleRejectAll}
+                                    disabled={actionLoading}
+                                    variant="destructive"
+                                >
+                                    Reject All
+                                </Button>
+                            )}
+                            <Button
+                                onClick={confirmDeleteEvent}
+                                disabled={actionLoading || !queue.event_id}
+                                variant="destructive"
+                                className="bg-red-600 hover:bg-red-700"
+                            >
+                                Delete Event
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setShortcutsOpen(true)}
+                                className="text-foreground-tertiary"
+                            >
+                                <MaterialIcon name="info" size={14} />
+                                Shortcuts
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Shortcuts Overlay */}
@@ -969,6 +1149,8 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                                 { keys: 'e', description: 'Edit focused field' },
                                 { keys: 'Shift+A', description: 'Approve all fields' },
                                 { keys: 'Shift+R', description: 'Reject all fields' },
+                                { keys: 'Shift+D', description: 'Open delete event confirmation' },
+                                { keys: 'B', description: 'Back to preserved queue position' },
                                 { keys: 'Esc', description: 'Close this dialog' },
                             ].map((shortcut) => (
                                 <div
@@ -983,47 +1165,6 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                             ))}
                         </div>
                         <p className="mt-4 text-center text-xs text-foreground-500">Press Esc to close.</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Up Next Prompt */}
-            {showNextPrompt && nextItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-xl border border-default bg-background-secondary p-6 shadow-2xl">
-                        <div className="text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-                                <MaterialIcon name="check" size={24} className="text-emerald-400" />
-                            </div>
-                            <h2 className="text-lg font-semibold text-foreground-primary">Review Complete!</h2>
-                            <p className="mt-2 text-sm text-foreground-400">
-                                Would you like to review the next pending item?
-                            </p>
-                            <p className="mt-1 text-sm font-medium text-foreground-200 truncate">
-                                {nextItem.eventTitle}
-                            </p>
-                        </div>
-                        <div className="mt-6 flex gap-3">
-                            <Button
-                                variant="outline"
-                                className="flex-1 border-default text-foreground-tertiary hover:bg-background-tertiary"
-                                onClick={() => {
-                                    setShowNextPrompt(false);
-                                    router.push('/admin/ingestion/update-queue');
-                                }}
-                            >
-                                Back to Queue
-                            </Button>
-                            <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                                onClick={() => {
-                                    setShowNextPrompt(false);
-                                    router.push(`/admin/ingestion/update-queue/${nextItem.id}`);
-                                }}
-                            >
-                                Review Next
-                            </Button>
-                        </div>
                     </div>
                 </div>
             )}

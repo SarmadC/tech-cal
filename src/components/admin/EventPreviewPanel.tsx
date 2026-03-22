@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import UpdateQueueSignalBadges from '@/components/admin/UpdateQueueSignalBadges';
+import {
+    formatQueueFieldLabel,
+    isScheduleField,
+    sortQueueFields,
+    type UpdateQueueSignals,
+} from '@/lib/admin/updateQueueTriage';
 
 export interface QueueItemPreview {
     id: string;
@@ -17,10 +24,12 @@ export interface QueueItemPreview {
     status: 'pending' | 'approved' | 'rejected' | 'auto_applied' | 'partially_approved';
     requires_review_reason?: string;
     created_at: string;
+    signals: UpdateQueueSignals;
+    changedFieldNames: string[];
     event?: {
         id: string;
         title: string;
-        start_time: string;
+        start_time: string | null;
         description?: string;
         location?: string;
         source_url?: string;
@@ -48,8 +57,10 @@ interface QueueField {
 
 interface EventPreviewPanelProps {
     item: QueueItemPreview;
+    returnTo: string;
     onClose: () => void;
     onActionComplete: () => void;
+    onOpenFullReview?: () => void;
 }
 
 const statusBadgeStyles: Record<QueueItemPreview['status'], string> = {
@@ -67,13 +78,18 @@ const fieldStatusStyles: Record<string, string> = {
     auto_applied: 'border-sky-500/30 bg-sky-950/20',
 };
 
-export default function EventPreviewPanel({ item, onClose, onActionComplete }: EventPreviewPanelProps) {
+export default function EventPreviewPanel({
+    item,
+    returnTo,
+    onClose,
+    onActionComplete,
+    onOpenFullReview,
+}: EventPreviewPanelProps) {
     const [fields, setFields] = useState<QueueField[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const { showSuccess, showError } = useSnackbar();
 
-    // Fetch field details
     useEffect(() => {
         const fetchFields = async () => {
             setLoading(true);
@@ -97,7 +113,6 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
         fetchFields();
     }, [item.id]);
 
-    // Close on Escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -145,7 +160,9 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
         if (typeof value === 'string') return value || '(empty)';
         if (typeof value === 'number' || typeof value === 'boolean') return String(value);
         if (Array.isArray(value)) {
-            return value.length > 0 ? value.slice(0, 5).join(', ') + (value.length > 5 ? '...' : '') : '(empty array)';
+            return value.length > 0
+                ? value.slice(0, 5).join(', ') + (value.length > 5 ? '...' : '')
+                : '(empty array)';
         }
         if (typeof value === 'object') {
             try {
@@ -158,18 +175,18 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
         return String(value);
     };
 
-    const pendingFields = fields.filter((f) => f.field_status === 'pending');
+    const orderedFields = sortQueueFields(fields);
+    const pendingFields = orderedFields.filter((field) => field.field_status === 'pending');
+    const prioritizedFieldNames = item.changedFieldNames.slice(0, 4);
 
     return (
         <>
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            {/* Panel */}
             <div
                 className={cn(
                     'fixed inset-y-0 right-0 z-50 w-full max-w-2xl',
@@ -181,7 +198,6 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                 aria-modal="true"
                 aria-labelledby="preview-title"
             >
-                {/* Header */}
                 <div className="flex items-start justify-between gap-4 border-b border-default px-6 py-4">
                     <div className="min-w-0 flex-1">
                         <h2 id="preview-title" className="text-lg font-semibold text-foreground-primary truncate">
@@ -190,12 +206,17 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-foreground-tertiary">
                             {item.event?.organizer?.name && <span>{item.event.organizer.name}</span>}
                             {item.event?.start_time && (
-                                <span>• {format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
+                                <span>• {format(new Date(item.event.start_time), 'MMM d, yyyy HH:mm')}</span>
                             )}
+                            {item.event?.start_time && (
+                                <span>• {formatDistanceToNow(new Date(item.event.start_time), { addSuffix: true })}</span>
+                            )}
+                            <span>• Queued {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</span>
                             <Badge className={cn('ml-1', statusBadgeStyles[item.status])}>
                                 {item.status.replace('_', ' ')}
                             </Badge>
                         </div>
+                        <UpdateQueueSignalBadges signals={item.signals} className="mt-3" />
                     </div>
                     <button
                         onClick={onClose}
@@ -206,38 +227,58 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                     </button>
                 </div>
 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-4 gap-4 border-b border-default bg-background-secondary px-6 py-4">
-                    <div className="text-center">
-                        <div className="text-2xl font-semibold text-foreground-primary">{item.fieldCounts.total}</div>
-                        <div className="text-xs text-foreground-muted">Total Fields</div>
+                <div className="grid grid-cols-3 gap-4 border-b border-default bg-background-secondary px-6 py-4">
+                    <div className="rounded-lg border border-default/60 bg-background-main/50 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-foreground-muted">Pending</div>
+                        <div className="mt-1 text-2xl font-semibold text-foreground-primary">
+                            {item.fieldCounts.pending}
+                        </div>
                     </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-semibold text-amber-300">{item.fieldCounts.pending}</div>
-                        <div className="text-xs text-foreground-muted">Pending</div>
+                    <div className="rounded-lg border border-default/60 bg-background-main/50 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-foreground-muted">Schedule</div>
+                        <div className="mt-1 text-sm font-medium text-foreground-primary">
+                            {item.signals.hasScheduleChange ? 'Changed' : 'No change'}
+                        </div>
                     </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-semibold text-emerald-300">{item.fieldCounts.approved}</div>
-                        <div className="text-xs text-foreground-muted">Approved</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-semibold text-rose-300">{item.fieldCounts.rejected}</div>
-                        <div className="text-xs text-foreground-muted">Rejected</div>
+                    <div className="rounded-lg border border-default/60 bg-background-main/50 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-foreground-muted">Queued</div>
+                        <div className="mt-1 text-sm font-medium text-foreground-primary">
+                            {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}
+                        </div>
                     </div>
                 </div>
 
-                {/* Review Reason */}
-                {item.requires_review_reason && (
-                    <div className="border-b border-default bg-amber-950/20 px-6 py-3">
-                        <div className="flex items-center gap-2 text-sm text-amber-200">
-                            <MaterialIcon name="warning" size={16} />
-                            <span className="font-medium">Review needed:</span>
-                            <span className="text-amber-100">{item.requires_review_reason}</span>
-                        </div>
+                {(item.requires_review_reason || prioritizedFieldNames.length > 0) && (
+                    <div className="border-b border-default bg-background-secondary/40 px-6 py-4">
+                        {item.requires_review_reason && (
+                            <div className="flex items-start gap-2 text-sm text-amber-100">
+                                <MaterialIcon name="warning" size={16} className="mt-0.5 text-amber-300" />
+                                <div>
+                                    <div className="font-medium text-amber-200">Review reason</div>
+                                    <div>{item.requires_review_reason}</div>
+                                </div>
+                            </div>
+                        )}
+                        {prioritizedFieldNames.length > 0 && (
+                            <div className={cn('flex flex-wrap gap-2', item.requires_review_reason ? 'mt-3' : '')}>
+                                {prioritizedFieldNames.map((fieldName) => (
+                                    <span
+                                        key={fieldName}
+                                        className={cn(
+                                            'rounded border px-2 py-1 text-[11px]',
+                                            isScheduleField(fieldName)
+                                                ? 'border-sky-500/30 bg-sky-500/10 text-sky-200'
+                                                : 'border-default/60 bg-background-main/50 text-foreground-secondary'
+                                        )}
+                                    >
+                                        {formatQueueFieldLabel(fieldName)}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* Field Changes */}
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
                         Field Changes
@@ -245,11 +286,11 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
 
                     {loading ? (
                         <div className="py-8 text-center text-sm text-foreground-muted">Loading fields...</div>
-                    ) : fields.length === 0 ? (
+                    ) : orderedFields.length === 0 ? (
                         <div className="py-8 text-center text-sm text-foreground-muted">No field changes found</div>
                     ) : (
                         <div className="space-y-3">
-                            {fields.slice(0, 10).map((field) => (
+                            {orderedFields.slice(0, 10).map((field) => (
                                 <div
                                     key={field.id}
                                     className={cn(
@@ -257,9 +298,9 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                                         fieldStatusStyles[field.field_status] ?? 'border-default bg-background-secondary'
                                     )}
                                 >
-                                    <div className="flex items-center gap-2 mb-2">
+                                    <div className="mb-2 flex items-center gap-2">
                                         <code className="text-xs font-medium text-foreground-secondary">
-                                            {field.field_name}
+                                            {formatQueueFieldLabel(field.field_name)}
                                         </code>
                                         <Badge
                                             className={cn(
@@ -274,34 +315,35 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
-                                            <div className="text-foreground-muted mb-1">Current</div>
-                                            <div className="text-foreground-tertiary font-mono truncate">
+                                            <div className="mb-1 text-foreground-muted">Current</div>
+                                            <div className="truncate font-mono text-foreground-tertiary">
                                                 {formatValue(field.old_value)}
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-foreground-muted mb-1">New</div>
-                                            <div className="text-foreground-secondary font-mono truncate">
+                                            <div className="mb-1 text-foreground-muted">New</div>
+                                            <div className="truncate font-mono text-foreground-secondary">
                                                 {formatValue(field.new_value)}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                            {fields.length > 10 && (
+                            {orderedFields.length > 10 && (
                                 <div className="text-center text-xs text-foreground-muted">
-                                    +{fields.length - 10} more fields
+                                    +{orderedFields.length - 10} more fields
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* Footer Actions */}
                 <div className="border-t border-default bg-background-secondary px-6 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <Link
-                            href={`/admin/ingestion/update-queue/${item.id}`}
+                            href={`/admin/ingestion/update-queue/${item.id}?returnTo=${encodeURIComponent(returnTo)}`}
+                            scroll={false}
+                            onClick={() => onOpenFullReview?.()}
                             className="inline-flex items-center gap-2 text-sm text-foreground-tertiary hover:text-foreground-secondary"
                         >
                             <MaterialIcon name="arrow-up-right" size={14} />
@@ -332,9 +374,7 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-xs text-foreground-muted">
-                        <span>
-                            Queued {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                        </span>
+                        <span>Queued {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</span>
                         <span className="flex items-center gap-1">
                             <kbd className="rounded border border-default bg-background-tertiary px-1.5 py-0.5 text-[10px]">
                                 Esc

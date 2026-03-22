@@ -22,6 +22,8 @@ import {
     X,
 } from '@phosphor-icons/react';
 import maplibregl, {
+    type FillLayerSpecification,
+    type LineLayerSpecification,
     type StyleSpecification,
 } from 'maplibre-gl';
 import MapLibreMap, {
@@ -41,10 +43,10 @@ const DEFAULT_CENTER: [number, number] = [10, 20];
 const DEFAULT_ZOOM = 1;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
-const ATLAS_BOUNDS = [
+const ATLAS_BOUNDS: [[number, number], [number, number]] = [
     [-165, -54],
     [190, 78],
-] as const;
+];
 
 const ATLAS_STYLE: StyleSpecification = {
     version: 8,
@@ -125,7 +127,7 @@ function buildNormalizedCountryCounts(countryEventCounts: Record<string, number>
     }, {});
 }
 
-function buildCountryFillExpression(maxCountryEvents: number): LayerProps['paint'] {
+function buildCountryFillExpression(maxCountryEvents: number): FillLayerSpecification['paint'] {
     if (maxCountryEvents <= 0) {
         return {
             'fill-color': '#11141a',
@@ -150,13 +152,13 @@ function buildCountryFillExpression(maxCountryEvents: number): LayerProps['paint
     };
 }
 
-const COUNTRY_FILL_LAYER_BASE: Omit<LayerProps, 'paint'> = {
+const COUNTRY_FILL_LAYER_BASE: Pick<FillLayerSpecification, 'id' | 'type' | 'source'> = {
     id: 'atlas-country-fill',
     type: 'fill',
     source: 'atlas-countries',
 };
 
-const COUNTRY_ACTIVE_LINE_LAYER_BASE: Omit<LayerProps, 'filter'> = {
+const COUNTRY_ACTIVE_LINE_LAYER_BASE: Omit<LineLayerSpecification, 'filter'> = {
     id: 'atlas-country-active-line',
     type: 'line',
     source: 'atlas-countries',
@@ -167,7 +169,7 @@ const COUNTRY_ACTIVE_LINE_LAYER_BASE: Omit<LayerProps, 'filter'> = {
     },
 };
 
-const COUNTRY_LINE_LAYER: LayerProps = {
+const COUNTRY_LINE_LAYER: LineLayerSpecification = {
     id: 'atlas-country-lines',
     type: 'line',
     source: 'atlas-countries',
@@ -325,6 +327,7 @@ export default function CityDirectoryMap({
     const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
     const [selectedCountryKey, setSelectedCountryKey] = useState<string | null>(null);
     const selectedCity = selectedCitySlug ? cityBySlug.get(selectedCitySlug) ?? null : null;
+    const selectedMappedCity = selectedCity && isMappedCity(selectedCity) ? selectedCity : null;
     const selectedCountry = selectedCountryKey ? countrySummaryByKey.get(selectedCountryKey) ?? null : null;
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
     const countryFillLayer = useMemo<LayerProps>(() => ({
@@ -413,9 +416,9 @@ export default function CityDirectoryMap({
         const handleRealign = () => {
             const map = mapRef.current?.getMap();
 
-            if (selectedCity) {
+            if (selectedMappedCity) {
                 mapRef.current?.easeTo({
-                    center: [selectedCity.longitude, selectedCity.latitude],
+                    center: [selectedMappedCity.longitude, selectedMappedCity.latitude],
                     zoom: Math.max(typeof map?.getZoom === 'function' ? map.getZoom() : mapZoom, 2.6),
                     duration: 0,
                     padding: getFocusPadding(),
@@ -433,7 +436,7 @@ export default function CityDirectoryMap({
             window.removeEventListener('resize', handleRealign);
             window.removeEventListener('orientationchange', handleRealign);
         };
-    }, [mapZoom, selectedCity]);
+    }, [mapZoom, selectedMappedCity]);
 
     useEffect(() => {
         if (!focusRequest) {
@@ -443,7 +446,7 @@ export default function CityDirectoryMap({
         const city = cityBySlug.get(focusRequest.citySlug);
         const map = mapRef.current?.getMap();
 
-        if (!city) {
+        if (!city || !isMappedCity(city)) {
             return;
         }
 
@@ -706,9 +709,9 @@ export default function CityDirectoryMap({
                             setMapZoom(clampZoom(event.viewState.zoom));
                             const map = mapRef.current?.getMap();
                             if (map && isAtlasDrifted(map)) {
-                                if (selectedCity) {
+                                if (selectedMappedCity) {
                                     mapRef.current?.easeTo({
-                                        center: [selectedCity.longitude, selectedCity.latitude],
+                                        center: [selectedMappedCity.longitude, selectedMappedCity.latitude],
                                         zoom: Math.max(clampZoom(event.viewState.zoom), 2.6),
                                         duration: 420,
                                         padding: getFocusPadding(),
@@ -929,7 +932,7 @@ export default function CityDirectoryMap({
                                     {selectedCountry.cities.map((city) => {
                                         const mappedCity = cityBySlug.get(city.citySlug);
 
-                                        if (mappedCity) {
+                                        if (mappedCity && isMappedCity(mappedCity)) {
                                             return (
                                                 <button
                                                     key={city.citySlug}

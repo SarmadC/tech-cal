@@ -1226,6 +1226,52 @@ export type Database = {
           },
         ]
       }
+      event_identity_keys: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_year: number
+          key_hash: string
+          key_type: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_year: number
+          key_hash: string
+          key_type: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_year?: number
+          key_hash?: string
+          key_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_identity_keys_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_identity_keys_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_identity_keys_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_moderation_queue: {
         Row: {
           created_at: string
@@ -1643,6 +1689,9 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          latest_source_event_id: string | null
+          merge_count: number
+          queue_type: string
           requires_review_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1653,6 +1702,9 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          latest_source_event_id?: string | null
+          merge_count?: number
+          queue_type?: string
           requires_review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1663,6 +1715,9 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          latest_source_event_id?: string | null
+          merge_count?: number
+          queue_type?: string
           requires_review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1689,6 +1744,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_latest_source_event_id_fkey"
+            columns: ["latest_source_event_id"]
+            isOneToOne: false
+            referencedRelation: "source_events"
             referencedColumns: ["id"]
           },
           {

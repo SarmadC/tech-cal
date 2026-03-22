@@ -110,6 +110,8 @@ type ReviewQueueRow = {
     status: string;
     created_at?: string | null;
     requires_review_reason?: string | null;
+    queue_type?: string | null;
+    merge_count?: number | null;
 };
 
 type ReviewQueueField = QueueFieldSnapshot & {
@@ -923,8 +925,9 @@ export class LLMEnrichmentService {
 
         const { data, error } = await tableClient
             .from('event_update_queue')
-            .select('id, status, created_at, requires_review_reason')
+            .select('id, status, created_at, requires_review_reason, queue_type, merge_count')
             .eq('event_id', eventId)
+            .eq('queue_type', 'llm_enrichment')
             .order('created_at', { ascending: false })
             .limit(25);
 
@@ -1062,6 +1065,8 @@ export class LLMEnrichmentService {
 
         const queueUpdates: Record<string, unknown> = {};
 
+        queueUpdates.merge_count = (queue.merge_count ?? 0) + 1;
+
         if (queue.status !== 'pending' && fieldsToInsert.length > 0) {
             queueUpdates.status = 'partially_approved';
             queueUpdates.reviewed_by = null;
@@ -1092,10 +1097,12 @@ export class LLMEnrichmentService {
             .from('event_update_queue')
             .insert({
                 event_id: eventId,
+                queue_type: 'llm_enrichment',
+                merge_count: 0,
                 status: 'pending',
                 requires_review_reason: LLM_ENRICHMENT_REVIEW_REASON,
-                // Use event_id as source_event_id to satisfy NOT NULL constraints in some deployments
-                source_event_id: eventId,
+                source_event_id: null,
+                latest_source_event_id: null,
             })
             .select('id')
             .single();
@@ -1148,7 +1155,10 @@ export class LLMEnrichmentService {
         const tableClient = this.supabaseClient as any;
         const { error } = await tableClient
             .from('event_update_queue')
-            .update({ requires_review_reason: LLM_ENRICHMENT_MERGED_REVIEW_REASON })
+            .update({
+                requires_review_reason: LLM_ENRICHMENT_MERGED_REVIEW_REASON,
+                merge_count: (queue.merge_count ?? 0) + 1,
+            })
             .eq('id', queue.id);
 
         if (error) {

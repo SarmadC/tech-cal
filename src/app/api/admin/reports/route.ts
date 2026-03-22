@@ -145,6 +145,7 @@ async function generateIngestionSummary(supabase: any, startDate: Date, endDate:
     const { data: queueData } = await supabase
         .from('event_update_queue')
         .select('id, status')
+        .eq('queue_type', 'ingestion_update')
         .gte('created_at', startIso)
         .lte('created_at', endIso);
 
@@ -178,6 +179,7 @@ async function generateIngestionSummary(supabase: any, startDate: Date, endDate:
         const { count: dayUpdates } = await supabase
             .from('event_update_queue')
             .select('id', { count: 'exact', head: true })
+            .eq('queue_type', 'ingestion_update')
             .gte('created_at', dayStart.toISOString())
             .lte('created_at', dayEnd.toISOString());
 

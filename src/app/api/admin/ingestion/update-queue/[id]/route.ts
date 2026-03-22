@@ -386,6 +386,7 @@ export async function GET(
             .from('event_update_queue')
             .select('*')
             .eq('id', queueId)
+            .eq('queue_type', 'ingestion_update')
             .single();
 
         if (queueError || !queueItem) {
@@ -513,6 +514,7 @@ export async function POST(
             .from('event_update_queue')
             .select('event_id, status')
             .eq('id', queueId)
+            .eq('queue_type', 'ingestion_update')
             .single();
 
         if (queueFetchError || !queueItem) {
@@ -745,6 +747,7 @@ export async function POST(
                 .from('event_update_queue')
                 .select('event_id')
                 .eq('id', queueId)
+                .eq('queue_type', 'ingestion_update')
                 .single();
 
             if (queueFetchError || !queueItemForDelete || !queueItemForDelete.event_id) {

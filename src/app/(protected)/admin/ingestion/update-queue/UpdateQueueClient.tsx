@@ -14,24 +14,36 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
 import EventPreviewPanel, { type QueueItemPreview } from '@/components/admin/EventPreviewPanel';
+import UpdateQueueSignalBadges from '@/components/admin/UpdateQueueSignalBadges';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 import useAdminHotkeys from '@/components/admin/useAdminHotkeys';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { formatQueueFieldLabel, type UpdateQueueSignalKey, type UpdateQueueSignals } from '@/lib/admin/updateQueueTriage';
 
-const STATUS_OPTIONS = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
-    { value: 'all', label: 'All' },
+const TRIAGE_FILTERS: Array<{
+    id: 'pending' | 'needs_review' | 'schedule_change' | 'starts_soon' | 'past_event' | 'all';
+    label: string;
+    status?: 'pending' | 'all';
+    signal?: UpdateQueueSignalKey;
+}> = [
+    { id: 'pending', label: 'Pending', status: 'pending' },
+    { id: 'needs_review', label: 'Needs Review', status: 'pending', signal: 'needs_review' },
+    { id: 'schedule_change', label: 'Schedule Changes', status: 'pending', signal: 'schedule_change' },
+    { id: 'starts_soon', label: 'Starts Soon', status: 'pending', signal: 'starts_soon' },
+    { id: 'past_event', label: 'Past Events', status: 'pending', signal: 'past_event' },
+    { id: 'all', label: 'All', status: 'all' },
 ] as const;
 
 const PAGE_SIZE_STORAGE_KEY = 'techcal.admin.updateQueue.pageSize';
 const COLUMNS_STORAGE_KEY = 'techcal.admin.updateQueue.columns';
+const SCROLL_STATE_STORAGE_KEY = 'techcal.admin.updateQueue.scrollState';
 
 type ColumnVisibility = {
+    startDate: boolean;
+    signals: boolean;
     status: boolean;
     metrics: boolean;
     created: boolean;
@@ -71,10 +83,12 @@ interface QueueItem {
     status: 'pending' | 'approved' | 'rejected' | 'auto_applied' | 'partially_approved';
     requires_review_reason?: string;
     created_at: string;
+    signals: UpdateQueueSignals;
+    changedFieldNames: string[];
     event?: {
         id: string;
         title: string;
-        start_time: string;
+        start_time: string | null;
         organizer?: {
             id: string;
             name: string;
@@ -102,8 +116,17 @@ export default function UpdateQueueClient() {
     const pathname = usePathname();
 
     const statusParam = searchParams.get('status') ?? 'pending';
-    const sortParam = searchParams.get('sort') ?? 'created_at';
-    const directionParam = searchParams.get('direction') === 'asc' ? 'asc' : 'desc';
+    const signalParam = (searchParams.get('signal') as UpdateQueueSignalKey | null) ?? null;
+    const sortParam = searchParams.get('sort') ?? 'event_start_time';
+    const directionFromQuery = searchParams.get('direction');
+    const directionParam =
+        directionFromQuery === 'desc'
+            ? 'desc'
+            : directionFromQuery === 'asc'
+                ? 'asc'
+                : sortParam === 'created_at'
+                    ? 'desc'
+                    : 'asc';
     const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
     const pageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? '20', 10) || 20;
     const queryParam = searchParams.get('q') ?? '';
@@ -127,6 +150,8 @@ export default function UpdateQueueClient() {
         totalPages: 0,
     });
     const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>({
+        startDate: true,
+        signals: true,
         status: true,
         metrics: true,
         created: true,
@@ -151,6 +176,8 @@ export default function UpdateQueueClient() {
     const columnsPanelRef = useRef<HTMLDivElement>(null);
     const fetchAbortControllerRef = useRef<AbortController | null>(null);
     const fetchRequestIdRef = useRef(0);
+    const didRestoreScrollRef = useRef(false);
+    const currentQueueUrl = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
     const updateQuery = useCallback(
         (updates: Record<string, string | number | undefined>, options: { resetPage?: boolean } = {}) => {
@@ -213,32 +240,27 @@ export default function UpdateQueueClient() {
     }, [queryParam]);
 
     useEffect(() => {
-        const statusCounts = items.reduce<Record<string, number>>((acc, item) => {
-            acc[item.status] = (acc[item.status] ?? 0) + 1;
-            return acc;
-        }, {});
-        const totalCount = items.length;
-
         setQuickFilters(
-            STATUS_OPTIONS.map((option) => ({
-                id: option.value,
+            TRIAGE_FILTERS.map((option) => ({
+                id: option.id,
                 label: option.label,
-                active: option.value === 'all' ? statusParam === 'all' : statusParam === option.value,
-                badge:
-                    option.value === 'all'
-                        ? totalCount || undefined
-                        : statusCounts[option.value] || undefined,
+                active:
+                    (option.status ?? 'pending') === statusParam &&
+                    (option.signal ?? null) === signalParam,
                 onToggle: () => {
                     setSelectedRows([]);
-                    if (option.value === 'all') {
-                        updateQuery({ status: undefined, page: 1 }, { resetPage: true });
-                    } else {
-                        updateQuery({ status: option.value, page: 1 }, { resetPage: true });
-                    }
+                    updateQuery(
+                        {
+                            status: option.status === 'all' ? 'all' : option.status ?? 'pending',
+                            signal: option.signal,
+                            page: 1,
+                        },
+                        { resetPage: true }
+                    );
                 },
             }))
         );
-    }, [items, statusParam, setQuickFilters, updateQuery]);
+    }, [setQuickFilters, signalParam, statusParam, updateQuery]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -297,6 +319,41 @@ export default function UpdateQueueClient() {
         };
     }, []);
 
+    useEffect(() => {
+        if (typeof window === 'undefined' || loading || didRestoreScrollRef.current) return;
+
+        const rawState = window.sessionStorage.getItem(SCROLL_STATE_STORAGE_KEY);
+        if (!rawState) {
+            didRestoreScrollRef.current = true;
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(rawState) as { url?: string; y?: number };
+            if (parsed.url === currentQueueUrl && typeof parsed.y === 'number') {
+                window.requestAnimationFrame(() => {
+                    window.scrollTo({ top: parsed.y, behavior: 'auto' });
+                });
+            }
+        } catch {
+            // ignore parse failures
+        } finally {
+            window.sessionStorage.removeItem(SCROLL_STATE_STORAGE_KEY);
+            didRestoreScrollRef.current = true;
+        }
+    }, [currentQueueUrl, loading]);
+
+    const rememberQueueView = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(
+            SCROLL_STATE_STORAGE_KEY,
+            JSON.stringify({
+                url: currentQueueUrl,
+                y: window.scrollY,
+            })
+        );
+    }, [currentQueueUrl]);
+
     const fetchQueueItems = useCallback(async () => {
         const requestId = ++fetchRequestIdRef.current;
         fetchAbortControllerRef.current?.abort();
@@ -309,6 +366,9 @@ export default function UpdateQueueClient() {
             const query = new URLSearchParams();
             if (statusParam !== 'all') {
                 query.set('status', statusParam);
+            }
+            if (signalParam) {
+                query.set('signal', signalParam);
             }
             query.set('page', String(pageParam));
             query.set('pageSize', String(pageSizeParam));
@@ -369,7 +429,7 @@ export default function UpdateQueueClient() {
                 setLoading(false);
             }
         }
-    }, [statusParam, pageParam, pageSizeParam, sortParam, directionParam, queryParam]);
+    }, [statusParam, signalParam, pageParam, pageSizeParam, sortParam, directionParam, queryParam]);
 
     useEffect(() => {
         fetchQueueItems();
@@ -584,37 +644,60 @@ export default function UpdateQueueClient() {
                 render: (item) => (
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-foreground-primary">{item.event?.title ?? 'Untitled Event'}</span>
-                            {item.requires_review_reason && (
-                                <Badge className="bg-background-tertiary text-xs text-foreground-secondary">
-                                    Needs review
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-foreground-tertiary">
-                            <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
-                            {item.event?.start_time && (
-                                <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
-                            )}
-                            <span>Update ID: {item.id}</span>
-                            <span>
-                                Source:{' '}
-                                {item.event?.title ? (
-                                    <span className="font-medium text-foreground-secondary">{item.event.title}</span>
-                                ) : (
-                                    item.source_event_id ?? 'N/A'
-                                )}
+                            <span className="font-medium text-foreground-primary">
+                                {item.event?.title ?? 'Untitled Event'}
                             </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground-tertiary">
+                            <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
+                            <span>Update ID: {item.id}</span>
+                            {item.source_event_id && <span>Source ID: {item.source_event_id}</span>}
                         </div>
                     </div>
                 ),
+                width: 260,
             },
         ];
+
+        if (visibleColumns.startDate) {
+            base.push({
+                key: 'event_start_time',
+                header: 'Start Date',
+                sortable: true,
+                render: (item) => (
+                    item.event?.start_time ? (
+                        <div className="flex flex-col text-xs text-foreground-tertiary">
+                            <span>{format(new Date(item.event.start_time), 'MMM d, yyyy HH:mm')}</span>
+                            <span className="text-foreground-muted">
+                                {formatDistanceToNow(new Date(item.event.start_time), { addSuffix: true })}
+                            </span>
+                        </div>
+                    ) : (
+                        <span className="text-xs text-foreground-muted">No date</span>
+                    )
+                ),
+                width: 170,
+            });
+        }
+
+        if (visibleColumns.signals) {
+            base.push({
+                key: 'signals',
+                header: 'Signals',
+                render: (item) => (
+                    <div className="min-w-[180px]">
+                        <UpdateQueueSignalBadges signals={item.signals} compact />
+                    </div>
+                ),
+                width: 220,
+            });
+        }
 
         if (visibleColumns.status) {
             base.push({
                 key: 'status',
                 header: 'Status',
+                sortable: true,
                 render: (item) => (
                     <Badge className={cn('px-3 py-1 text-[11px] font-medium uppercase tracking-wide', statusBadgeStyles[item.status])}>
                         {item.status.replace('_', ' ')}
@@ -627,23 +710,43 @@ export default function UpdateQueueClient() {
 
         if (visibleColumns.metrics) {
             base.push({
-                key: 'metrics',
+                key: 'pending_fields',
                 header: 'Fields',
+                sortable: true,
                 render: (item) => (
-                    <div className="flex items-center gap-3 text-xs">
-                        <span className="text-foreground-muted">{item.fieldCounts.total} total</span>
-                        {item.fieldCounts.pending > 0 && (
-                            <span className="text-amber-300">{item.fieldCounts.pending} pending</span>
-                        )}
-                        {item.fieldCounts.approved > 0 && (
-                            <span className="text-emerald-300">{item.fieldCounts.approved} approved</span>
-                        )}
-                        {item.fieldCounts.rejected > 0 && (
-                            <span className="text-rose-300">{item.fieldCounts.rejected} rejected</span>
+                    <div className="flex flex-col gap-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-foreground-muted">{item.fieldCounts.total} total</span>
+                            {item.fieldCounts.pending > 0 && (
+                                <span className="text-amber-300">{item.fieldCounts.pending} pending</span>
+                            )}
+                            {item.fieldCounts.approved > 0 && (
+                                <span className="text-emerald-300">{item.fieldCounts.approved} approved</span>
+                            )}
+                            {item.fieldCounts.rejected > 0 && (
+                                <span className="text-rose-300">{item.fieldCounts.rejected} rejected</span>
+                            )}
+                        </div>
+                        {item.changedFieldNames.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                                {item.changedFieldNames.slice(0, 3).map((fieldName) => (
+                                    <span
+                                        key={fieldName}
+                                        className="rounded border border-default/60 bg-background-secondary px-2 py-1 text-[11px] text-foreground-secondary"
+                                    >
+                                        {formatQueueFieldLabel(fieldName)}
+                                    </span>
+                                ))}
+                                {item.changedFieldNames.length > 3 && (
+                                    <span className="text-[11px] text-foreground-muted">
+                                        +{item.changedFieldNames.length - 3} more
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
                 ),
-                width: 280,
+                width: 320,
             });
         }
 
@@ -672,7 +775,18 @@ export default function UpdateQueueClient() {
                     const isLoading = rowActionLoading[item.id];
                     const isPending = item.status === 'pending';
                     return (
-                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <div className="flex items-center justify-end gap-1.5">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewItem(item);
+                                }}
+                                className="rounded border border-default/70 bg-background-secondary px-2 py-1.5 text-[11px] text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground-primary"
+                                title="Preview update"
+                            >
+                                Preview
+                            </button>
                             {isPending && (
                                 <>
                                     <button
@@ -682,10 +796,10 @@ export default function UpdateQueueClient() {
                                             handleRowAction(item.id, 'approve');
                                         }}
                                         disabled={isLoading}
-                                        className="rounded p-1.5 text-emerald-400 transition-colors hover:bg-emerald-400/10 disabled:opacity-50"
+                                        className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1.5 text-[11px] text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-50"
                                         title="Approve all fields"
                                     >
-                                        <MaterialIcon name="check" size={16} />
+                                        Approve
                                     </button>
                                     <button
                                         type="button"
@@ -694,16 +808,20 @@ export default function UpdateQueueClient() {
                                             handleRowAction(item.id, 'reject');
                                         }}
                                         disabled={isLoading}
-                                        className="rounded p-1.5 text-rose-400 transition-colors hover:bg-rose-400/10 disabled:opacity-50"
+                                        className="rounded border border-rose-500/20 bg-rose-500/10 px-2 py-1.5 text-[11px] text-rose-300 transition-colors hover:bg-rose-500/15 disabled:opacity-50"
                                         title="Reject all fields"
                                     >
-                                        <MaterialIcon name="close" size={16} />
+                                        Reject
                                     </button>
                                 </>
                             )}
                             <Link
-                                href={`/admin/ingestion/update-queue/${item.id}`}
-                                onClick={(e) => e.stopPropagation()}
+                                href={`/admin/ingestion/update-queue/${item.id}?returnTo=${encodeURIComponent(currentQueueUrl)}`}
+                                scroll={false}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    rememberQueueView();
+                                }}
                                 className="rounded p-1.5 text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground-secondary"
                                 title="Open full review"
                             >
@@ -713,12 +831,12 @@ export default function UpdateQueueClient() {
                     );
                 },
                 align: 'right',
-                width: 110,
+                width: 210,
             });
         }
 
         return base;
-    }, [visibleColumns, rowActionLoading, handleRowAction]);
+    }, [visibleColumns, rowActionLoading, handleRowAction, currentQueueUrl, rememberQueueView, setPreviewItem]);
 
     const bulkActions = useMemo(
         () => [
@@ -780,6 +898,8 @@ export default function UpdateQueueClient() {
                             <div className="space-y-2 text-sm text-foreground-secondary">
                                 {(
                                     [
+                                        ['startDate', 'Start date'],
+                                        ['signals', 'Triage signals'],
                                         ['status', 'Status & badges'],
                                         ['metrics', 'Field metrics'],
                                         ['created', 'Queued date'],
@@ -961,7 +1081,7 @@ export default function UpdateQueueClient() {
                 sortKey={sortParam}
                 sortDirection={directionParam}
                 onSortChange={(key, direction) => {
-                    updateQuery({ sort: key, direction });
+                    updateQuery({ sort: key, direction, page: 1 }, { resetPage: true });
                 }}
                 isLoading={loading}
                 selectable
@@ -974,7 +1094,7 @@ export default function UpdateQueueClient() {
                 onPageChange={(nextPage) => updateQuery({ page: nextPage })}
                 onPageSizeChange={(nextSize) => updateQuery({ pageSize: nextSize, page: 1 }, { resetPage: true })}
                 toolbar={tableToolbar}
-                onRowClick={(item) => setPreviewItem(item as QueueItemPreview)}
+                onRowClick={(item) => setPreviewItem(item)}
             />
 
             {shortcutsOpen && (
@@ -984,7 +1104,9 @@ export default function UpdateQueueClient() {
             {previewItem && (
                 <EventPreviewPanel
                     item={previewItem}
+                    returnTo={currentQueueUrl}
                     onClose={() => setPreviewItem(null)}
+                    onOpenFullReview={rememberQueueView}
                     onActionComplete={() => {
                         setPreviewItem(null);
                         fetchQueueItems();

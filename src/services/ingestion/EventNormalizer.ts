@@ -126,6 +126,7 @@ export class EventNormalizer {
                 timezone: timezone ?? null,
                 location,
                 organizer_id: organizerId,
+                source_domain: record.sourceDomain ?? null,
                 source_url: normalizedSourceUrl,
                 registration_url: normalizedRegistrationUrl,
                 livestream_url: record.livestreamUrl ?? null,
@@ -156,6 +157,7 @@ export class EventNormalizer {
                 eventData,
                 {
                     normalizedUrl: record.normalizedSourceUrl ?? record.sourceUrl,
+                    normalizedRegistrationUrl: record.normalizedRegistrationUrl ?? record.registrationUrl ?? null,
                     sourceDomain: record.sourceDomain ?? null,
                 }
             );

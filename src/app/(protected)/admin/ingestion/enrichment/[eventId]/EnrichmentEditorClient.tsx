@@ -528,7 +528,7 @@ export default function EnrichmentEditorClient({
                         Save Changes
                     </Button>
                     <Button
-                        onClick={() => router.push(backUrl)}
+                        onClick={() => router.push(backUrl, { scroll: false })}
                         variant="ghost"
                         className="w-full justify-start text-foreground-tertiary hover:text-foreground-primary"
                     >
@@ -555,7 +555,7 @@ export default function EnrichmentEditorClient({
                                     }
 
                                     showSuccess('Event deleted successfully');
-                                    router.push(backUrl);
+                                    router.push(backUrl, { scroll: false });
                                 } catch (err) {
                                     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                                     showError(errorMessage);

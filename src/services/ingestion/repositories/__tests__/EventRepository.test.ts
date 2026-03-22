@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EventRepository } from '../EventRepository';
 
 describe('EventRepository.upsertSpeakers', () => {
@@ -77,5 +77,171 @@ describe('EventRepository.upsertSpeakers', () => {
                 }),
             },
         ]);
+    });
+});
+
+describe('EventRepository.upsertEvent', () => {
+    it('updates an existing canonical event resolved through identity keys', async () => {
+        const eventIdentitySelect = vi
+            .fn()
+            .mockResolvedValueOnce({ data: { event_id: 'event-1' }, error: null })
+            .mockResolvedValueOnce({ data: { event_id: 'event-1' }, error: null });
+        const eventUpdateEq = vi.fn().mockResolvedValue({ error: null });
+        const identityDeleteIn = vi.fn().mockResolvedValue({ error: null });
+        const identityInsert = vi.fn().mockResolvedValue({ error: null });
+
+        const supabaseClient = {
+            from(table: string) {
+                if (table === 'event_identity_keys') {
+                    return {
+                        select() {
+                            return {
+                                eq() {
+                                    return {
+                                        eq() {
+                                            return {
+                                                eq() {
+                                                    return {
+                                                        limit() {
+                                                            return {
+                                                                maybeSingle: eventIdentitySelect,
+                                                            };
+                                                        },
+                                                    };
+                                                },
+                                            };
+                                        },
+                                    };
+                                },
+                            };
+                        },
+                        delete() {
+                            return {
+                                eq() {
+                                    return {
+                                        in: identityDeleteIn,
+                                    };
+                                },
+                            };
+                        },
+                        insert: identityInsert,
+                    };
+                }
+
+                if (table === 'events') {
+                    return {
+                        update() {
+                            return {
+                                eq: eventUpdateEq,
+                            };
+                        },
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const result = await EventRepository.upsertEvent(
+            supabaseClient as never,
+            {
+                title: 'Canonical Event',
+                start_time: '2026-03-26T18:00:00.000Z',
+                source_url: 'https://example.com/events/canonical',
+            },
+            {
+                normalizedUrl: 'https://example.com/events/canonical',
+            }
+        );
+
+        expect(result).toEqual({ eventId: 'event-1', created: false });
+        expect(eventUpdateEq).toHaveBeenCalledWith('id', 'event-1');
+        expect(identityDeleteIn).toHaveBeenCalledWith('key_type', [
+            'source_url',
+            'registration_url',
+            'external_id',
+        ]);
+        expect(identityInsert).toHaveBeenCalledWith([
+            expect.objectContaining({
+                event_id: 'event-1',
+                key_type: 'source_url',
+                event_year: 2026,
+            }),
+        ]);
+    });
+
+    it('returns the conflicting canonical event when a new insert races on identity keys', async () => {
+        const eventIdentitySelect = vi
+            .fn()
+            .mockResolvedValueOnce({ data: null, error: null })
+            .mockResolvedValueOnce({ data: { event_id: 'event-existing' }, error: null });
+        const insertedEventDeleteEq = vi.fn().mockResolvedValue({ error: null });
+
+        const supabaseClient = {
+            from(table: string) {
+                if (table === 'event_identity_keys') {
+                    return {
+                        select() {
+                            return {
+                                eq() {
+                                    return {
+                                        eq() {
+                                            return {
+                                                eq() {
+                                                    return {
+                                                        limit() {
+                                                            return {
+                                                                maybeSingle: eventIdentitySelect,
+                                                            };
+                                                        },
+                                                    };
+                                                },
+                                            };
+                                        },
+                                    };
+                                },
+                            };
+                        },
+                    };
+                }
+
+                if (table === 'events') {
+                    return {
+                        insert() {
+                            return {
+                                select() {
+                                    return {
+                                        single: async () => ({ data: { id: 'event-new' }, error: null }),
+                                    };
+                                },
+                            };
+                        },
+                        delete() {
+                            return {
+                                eq: insertedEventDeleteEq,
+                            };
+                        },
+                    };
+                }
+
+                throw new Error(`Unexpected table: ${table}`);
+            },
+        };
+
+        const result = await EventRepository.upsertEvent(
+            supabaseClient as never,
+            {
+                title: 'Canonical Event',
+                start_time: '2026-03-26T18:00:00.000Z',
+                registration_url: 'https://tickets.example.com/canonical',
+                source_url: null,
+            },
+            {
+                normalizedRegistrationUrl: 'https://tickets.example.com/canonical',
+            }
+        );
+
+        expect(result).toEqual({ eventId: 'event-existing', created: false });
+        expect(insertedEventDeleteEq).toHaveBeenCalledWith('id', 'event-new');
     });
 });

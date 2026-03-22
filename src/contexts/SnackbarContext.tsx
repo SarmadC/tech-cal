@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useTheme as useNextTheme } from 'next-themes';
@@ -11,6 +10,7 @@ import MuiDialogActions from '@mui/material/DialogActions';
 import MuiDialogContent from '@mui/material/DialogContent';
 import MuiDialogContentText from '@mui/material/DialogContentText';
 import MuiDialogTitle from '@mui/material/DialogTitle';
+import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 
@@ -48,52 +48,6 @@ export interface SnackbarContextType {
 }
 
 const SnackbarContext = createContext<SnackbarContextType | null>(null);
-
-// Themed dialog component
-function ThemedDialog({ children, theme }: { children: React.ReactNode, theme: string | undefined }) {
-  // Dynamically import and wrap with MUI Theme
-  const [ThemeProvider, setThemeProvider] = useState<any>(null);
-  const [muiTheme, setMuiTheme] = useState<any>(null);
-  
-  React.useEffect(() => {
-    import('@mui/material/styles').then((mui) => {
-      const darkTheme = mui.createTheme({
-        palette: {
-          mode: 'dark',
-          background: {
-            default: '#121212',
-            paper: '#1e1e1e',
-          },
-          text: {
-            primary: '#ffffff',
-            secondary: '#b3b3b3',
-          },
-        },
-      });
-      
-      const lightTheme = mui.createTheme({
-        palette: {
-          mode: 'light',
-          background: {
-            default: '#ffffff',
-            paper: '#ffffff',
-          },
-          text: {
-            primary: '#0f0f0f',
-            secondary: '#666666',
-          },
-        },
-      });
-
-      setThemeProvider(mui.ThemeProvider);
-      setMuiTheme(theme === 'dark' ? darkTheme : lightTheme);
-    });
-  }, [theme]);
-
-  if (!ThemeProvider || !muiTheme) return <>{children}</>;
-  
-  return <ThemeProvider theme={muiTheme}>{children}</ThemeProvider>;
-}
 
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
   const themeContext = useNextTheme();
@@ -192,6 +146,32 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     showConfirmation
   }), [showSuccess, showError, showWarning, showInfo, showConfirmation]);
 
+  const dialogTheme = useMemo(() => createTheme({
+    palette: theme === 'dark'
+      ? {
+          mode: 'dark',
+          background: {
+            default: '#121212',
+            paper: '#1e1e1e',
+          },
+          text: {
+            primary: '#ffffff',
+            secondary: '#b3b3b3',
+          },
+        }
+      : {
+          mode: 'light',
+          background: {
+            default: '#ffffff',
+            paper: '#ffffff',
+          },
+          text: {
+            primary: '#0f0f0f',
+            secondary: '#666666',
+          },
+        },
+  }), [theme]);
+
   return (
     <SnackbarContext.Provider value={contextValue}>
       {children}
@@ -218,7 +198,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
 
       {/* Confirmation Dialog: mount only when open to defer MUI loading */}
       {isMounted && confirmation.open && (
-        <ThemedDialog theme={theme}>
+        <MuiThemeProvider theme={dialogTheme}>
           <MuiDialog
             open
             onClose={confirmation.onCancel}
@@ -241,7 +221,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
               </Button>
             </MuiDialogActions>
           </MuiDialog>
-        </ThemedDialog>
+        </MuiThemeProvider>
       )}
     </SnackbarContext.Provider>
   );

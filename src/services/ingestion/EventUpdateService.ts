@@ -46,7 +46,259 @@ export interface ExistingEventWithRelationships {
     agendaItems: Array<{ id: string; title: string; start_time: string; end_time: string }>;
 }
 
+export type ReviewQueueType = 'ingestion_update' | 'llm_enrichment';
+
+interface ReviewQueueRecord {
+    id: string;
+    event_id: string;
+    status: string;
+    source_event_id: string | null;
+    latest_source_event_id: string | null;
+    merge_count: number | null;
+    queue_type: ReviewQueueType;
+    requires_review_reason: string | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+}
+
+interface ReviewQueueFieldRecord {
+    id: string;
+    queue_id: string;
+    field_name: string;
+    field_status: string;
+    old_value: unknown;
+    new_value: unknown;
+    confidence: number | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+}
+
+const OPEN_REVIEW_QUEUE_STATUSES = ['pending', 'partially_approved'] as const;
+const REVIEW_QUEUE_APPROVED_FIELD_STATUSES = new Set(['approved', 'auto_applied']);
+const REVIEW_QUEUE_PENDING_FIELD_STATUS = 'pending';
+
 export class EventUpdateService {
+    static buildRequiresReviewReason(fieldNames: string[]): string {
+        const uniqueNames = Array.from(new Set(fieldNames.filter(Boolean))).sort((left, right) =>
+            left.localeCompare(right)
+        );
+
+        if (uniqueNames.length === 0) {
+            return 'Fields require review';
+        }
+
+        return `Fields require review: ${uniqueNames.join(', ')}`;
+    }
+
+    private static deriveQueueStatusFromFields(
+        fields: ReviewQueueFieldRecord[]
+    ): 'pending' | 'partially_approved' | 'approved' | 'rejected' {
+        const pendingCount = fields.filter((field) => field.field_status === REVIEW_QUEUE_PENDING_FIELD_STATUS).length;
+        const approvedCount = fields.filter((field) =>
+            REVIEW_QUEUE_APPROVED_FIELD_STATUSES.has(field.field_status)
+        ).length;
+
+        if (pendingCount > 0 && approvedCount > 0) {
+            return 'partially_approved';
+        }
+        if (pendingCount > 0) {
+            return 'pending';
+        }
+        if (approvedCount > 0) {
+            return 'approved';
+        }
+        return 'rejected';
+    }
+
+    private static async fetchOpenReviewQueue(
+        eventId: string,
+        queueType: ReviewQueueType,
+        supabaseClient: SupabaseClientType
+    ): Promise<ReviewQueueRecord | null> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = supabaseClient as any;
+        const { data, error } = await tableClient
+            .from('event_update_queue')
+            .select(
+                'id, event_id, status, source_event_id, latest_source_event_id, merge_count, queue_type, requires_review_reason, reviewed_by, reviewed_at'
+            )
+            .eq('event_id', eventId)
+            .eq('queue_type', queueType)
+            .in('status', [...OPEN_REVIEW_QUEUE_STATUSES])
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            throw new Error(`Failed to fetch open review queue entry: ${error.message}`);
+        }
+
+        return (data as ReviewQueueRecord | null) ?? null;
+    }
+
+    static async fetchReviewQueueFields(
+        queueId: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<ReviewQueueFieldRecord[]> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = supabaseClient as any;
+        const { data, error } = await tableClient
+            .from('event_update_queue_fields')
+            .select(
+                'id, queue_id, field_name, field_status, old_value, new_value, confidence, reviewed_by, reviewed_at'
+            )
+            .eq('queue_id', queueId);
+
+        if (error) {
+            throw new Error(`Failed to fetch review queue fields: ${error.message}`);
+        }
+
+        return (data ?? []) as ReviewQueueFieldRecord[];
+    }
+
+    private static async mergeIntoOpenQueue(
+        queue: ReviewQueueRecord,
+        sourceEventId: string | null,
+        reviewRequiredFields: FieldDiff[],
+        supabaseClient: SupabaseClientType
+    ): Promise<{ queueId: string }> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = supabaseClient as any;
+        const existingFields = await this.fetchReviewQueueFields(queue.id, supabaseClient);
+        const existingByField = new Map(existingFields.map((field) => [field.field_name, field]));
+
+        const upsertRows = reviewRequiredFields
+            .filter((field) => field.hasChanged)
+            .flatMap((field) => {
+                const existingField = existingByField.get(field.fieldName);
+                if (
+                    existingField &&
+                    REVIEW_QUEUE_APPROVED_FIELD_STATUSES.has(existingField.field_status)
+                ) {
+                    return [];
+                }
+
+                return [{
+                    queue_id: queue.id,
+                    field_name: field.fieldName,
+                    old_value: field.oldValue ?? null,
+                    new_value: field.newValue ?? null,
+                    field_status: REVIEW_QUEUE_PENDING_FIELD_STATUS,
+                    confidence: field.confidence ?? null,
+                    reviewed_by: null,
+                    reviewed_at: null,
+                }];
+            });
+
+        if (upsertRows.length > 0) {
+            const { error } = await tableClient
+                .from('event_update_queue_fields')
+                .upsert(upsertRows, {
+                    onConflict: 'queue_id,field_name',
+                });
+
+            if (error) {
+                throw new Error(`Failed to merge queue fields: ${error.message}`);
+            }
+        }
+
+        const nextFields = await this.fetchReviewQueueFields(queue.id, supabaseClient);
+        const pendingFieldNames = nextFields
+            .filter((field) => field.field_status === REVIEW_QUEUE_PENDING_FIELD_STATUS)
+            .map((field) => field.field_name);
+        const queueUpdate: Record<string, unknown> = {
+            status: this.deriveQueueStatusFromFields(nextFields),
+            requires_review_reason: this.buildRequiresReviewReason(pendingFieldNames),
+            merge_count: (queue.merge_count ?? 0) + 1,
+        };
+
+        if (sourceEventId) {
+            queueUpdate.latest_source_event_id = sourceEventId;
+        }
+
+        const { error: queueError } = await tableClient
+            .from('event_update_queue')
+            .update(queueUpdate)
+            .eq('id', queue.id);
+
+        if (queueError) {
+            throw new Error(`Failed to update merged review queue: ${queueError.message}`);
+        }
+
+        return { queueId: queue.id };
+    }
+
+    private static async findOrMergeOpenQueueItem(
+        eventId: string,
+        sourceEventId: string | null,
+        reviewRequiredFields: FieldDiff[],
+        queueType: ReviewQueueType,
+        supabaseClient: SupabaseClientType
+    ): Promise<{ queueId: string }> {
+        const existingOpenQueue = await this.fetchOpenReviewQueue(
+            eventId,
+            queueType,
+            supabaseClient
+        );
+
+        if (existingOpenQueue) {
+            return await this.mergeIntoOpenQueue(
+                existingOpenQueue,
+                sourceEventId,
+                reviewRequiredFields,
+                supabaseClient
+            );
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = supabaseClient as any;
+        const { data: queueEntry, error: queueError } = await tableClient
+            .from('event_update_queue')
+            .insert({
+                event_id: eventId,
+                source_event_id: sourceEventId,
+                latest_source_event_id: sourceEventId,
+                merge_count: 0,
+                queue_type: queueType,
+                status: 'pending',
+                requires_review_reason: this.buildRequiresReviewReason(
+                    reviewRequiredFields
+                        .filter((field) => field.hasChanged)
+                        .map((field) => field.fieldName)
+                ),
+            })
+            .select('id')
+            .single();
+
+        if (queueError || !queueEntry) {
+            throw new Error(`Failed to create queue entry: ${queueError?.message || 'Unknown error'}`);
+        }
+
+        const queueId = queueEntry.id;
+        const fieldRows = reviewRequiredFields
+            .filter((field) => field.hasChanged)
+            .map((field) => ({
+                queue_id: queueId,
+                field_name: field.fieldName,
+                old_value: field.oldValue ?? null,
+                new_value: field.newValue ?? null,
+                field_status: REVIEW_QUEUE_PENDING_FIELD_STATUS,
+                confidence: field.confidence ?? null,
+            }));
+
+        if (fieldRows.length > 0) {
+            const { error: fieldsError } = await tableClient
+                .from('event_update_queue_fields')
+                .insert(fieldRows);
+
+            if (fieldsError) {
+                throw new Error(`Failed to create field rows: ${fieldsError.message}`);
+            }
+        }
+
+        return { queueId };
+    }
+
     /**
      * Ensure end_time is after start_time for updates.
      * If end_time is missing or invalid, leaves untouched.
@@ -398,45 +650,13 @@ export class EventUpdateService {
                 return { success: true };
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabaseClient as any;
-
-            // Create main queue entry
-            const { data: queueEntry, error: queueError } = await tableClient
-                .from('event_update_queue')
-                .insert({
-                    event_id: eventId,
-                source_event_id: sourceEventId,
-                    status: 'pending',
-                    requires_review_reason: `Fields require review: ${reviewRequiredFields.map(f => f.fieldName).join(', ')}`,
-                })
-                .select('id')
-                .single();
-
-            if (queueError || !queueEntry) {
-                throw new Error(`Failed to create queue entry: ${queueError?.message || 'Unknown error'}`);
-            }
-
-            const queueId = queueEntry.id;
-
-            // Create field-level rows
-            const fieldRows = reviewRequiredFields.map(field => ({
-                queue_id: queueId,
-                field_name: field.fieldName,
-                old_value: field.oldValue,
-                new_value: field.newValue,
-                field_status: 'pending' as const,
-                confidence: field.confidence || null,
-            }));
-
-            const { error: fieldsError } = await tableClient
-                .from('event_update_queue_fields')
-                .insert(fieldRows);
-
-            if (fieldsError) {
-                throw new Error(`Failed to create field rows: ${fieldsError.message}`);
-            }
-
+            const { queueId } = await this.findOrMergeOpenQueueItem(
+                eventId,
+                sourceEventId,
+                reviewRequiredFields,
+                'ingestion_update',
+                supabaseClient
+            );
             return { success: true, queueId };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -584,4 +804,3 @@ export class EventUpdateService {
         }
     }
 }
-

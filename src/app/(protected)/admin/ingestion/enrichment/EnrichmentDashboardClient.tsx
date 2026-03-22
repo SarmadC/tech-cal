@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -12,6 +12,7 @@ import type { EnrichmentMetadata } from '@/types/enrichment';
 import { cn } from '@/lib/utils';
 
 const COLUMNS_STORAGE_KEY = 'techcal.admin.enrichment.columns';
+const SCROLL_STATE_STORAGE_KEY = 'techcal.admin.enrichment.scrollState';
 const DEFAULT_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 250;
 const STATUS_FILTERS = ['all', 'pending', 'processing', 'enriched', 'failed'] as const;
@@ -174,12 +175,17 @@ const getExtractedFieldSummary = (metadata: EnrichmentMetadata | null): string[]
 
 export default function EnrichmentDashboardClient() {
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [events, setEvents] = useState<EnrichmentEvent[]>([]);
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
-    const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>('all');
-    const [searchValue, setSearchValue] = useState('');
+    const initialStatusFilter = (searchParams.get('status') as DashboardStatusFilter | null);
+    const [statusFilter, setStatusFilter] = useState<DashboardStatusFilter>(
+        initialStatusFilter && STATUS_FILTERS.includes(initialStatusFilter) ? initialStatusFilter : 'all'
+    );
+    const [searchValue, setSearchValue] = useState(searchParams.get('q') ?? '');
     const deferredSearchValue = useDeferredValue(searchValue);
-    const [debouncedSearchValue, setDebouncedSearchValue] = useState('');
+    const [debouncedSearchValue, setDebouncedSearchValue] = useState((searchParams.get('q') ?? '').trim());
     const [loading, setLoading] = useState(true);
     const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>({
         status: true,
@@ -188,11 +194,15 @@ export default function EnrichmentDashboardClient() {
     });
     const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
     const columnsPanelRef = useRef<HTMLDivElement>(null);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+    const [page, setPage] = useState(Math.max(1, Number.parseInt(searchParams.get('page') ?? '1', 10) || 1));
+    const [pageSize, setPageSize] = useState(
+        Math.max(1, Number.parseInt(searchParams.get('pageSize') ?? String(DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE)
+    );
     const [total, setTotal] = useState(0);
-    const [sortKey, setSortKey] = useState('updated_at');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [sortKey, setSortKey] = useState(searchParams.get('sort') ?? 'updated_at');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
+        searchParams.get('dir') === 'asc' ? 'asc' : 'desc'
+    );
     const [statusCounts, setStatusCounts] = useState<Record<DashboardStatusFilter, number>>(DEFAULT_STATUS_COUNTS);
     const [dashboardMetrics, setDashboardMetrics] = useState<EnrichmentDashboardMetrics | null>(null);
     const fetchRequestIdRef = useRef(0);
@@ -206,9 +216,26 @@ export default function EnrichmentDashboardClient() {
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const streamAbortControllerRef = useRef<AbortController | null>(null);
     const streamReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+    const didRestoreScrollRef = useRef(false);
 
     const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent } = useAdminToolbar();
     const { showInfo, showSuccess, showError } = useSnackbar();
+    const currentDashboardUrl = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+
+    const updateQuery = useCallback((updates: Record<string, string | number | undefined>) => {
+        const next = new URLSearchParams(searchParams.toString());
+
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === undefined || value === null || value === '') {
+                next.delete(key);
+            } else {
+                next.set(key, String(value));
+            }
+        });
+
+        const nextQuery = next.toString();
+        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }, [pathname, router, searchParams]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -230,6 +257,41 @@ export default function EnrichmentDashboardClient() {
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || loading || didRestoreScrollRef.current) return;
+
+        const rawState = window.sessionStorage.getItem(SCROLL_STATE_STORAGE_KEY);
+        if (!rawState) {
+            didRestoreScrollRef.current = true;
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(rawState) as { url?: string; y?: number };
+            if (parsed.url === currentDashboardUrl && typeof parsed.y === 'number') {
+                window.requestAnimationFrame(() => {
+                    window.scrollTo({ top: parsed.y, behavior: 'auto' });
+                });
+            }
+        } catch {
+            // ignore parse errors
+        } finally {
+            window.sessionStorage.removeItem(SCROLL_STATE_STORAGE_KEY);
+            didRestoreScrollRef.current = true;
+        }
+    }, [currentDashboardUrl, loading]);
+
+    const rememberDashboardView = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(
+            SCROLL_STATE_STORAGE_KEY,
+            JSON.stringify({
+                url: currentDashboardUrl,
+                y: window.scrollY,
+            })
+        );
+    }, [currentDashboardUrl]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -287,6 +349,36 @@ export default function EnrichmentDashboardClient() {
         setStatusFilter(value);
         setPage(1);
     }, []);
+
+    useEffect(() => {
+        if ((searchParams.get('q') ?? '') === debouncedSearchValue) return;
+        updateQuery({ q: debouncedSearchValue || undefined, page: 1 });
+    }, [debouncedSearchValue, searchParams, updateQuery]);
+
+    useEffect(() => {
+        const queryStatus = searchParams.get('status') ?? 'all';
+        if (queryStatus === statusFilter) return;
+        updateQuery({ status: statusFilter === 'all' ? undefined : statusFilter, page: 1 });
+    }, [searchParams, statusFilter, updateQuery]);
+
+    useEffect(() => {
+        const currentPageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
+        if (currentPageParam === page) return;
+        updateQuery({ page });
+    }, [page, searchParams, updateQuery]);
+
+    useEffect(() => {
+        const currentPageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? String(DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE;
+        if (currentPageSizeParam === pageSize) return;
+        updateQuery({ pageSize, page: 1 });
+    }, [pageSize, searchParams, updateQuery]);
+
+    useEffect(() => {
+        const currentSort = searchParams.get('sort') ?? 'updated_at';
+        const currentDir = searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
+        if (currentSort === sortKey && currentDir === sortDirection) return;
+        updateQuery({ sort: sortKey, dir: sortDirection, page: 1 });
+    }, [searchParams, sortDirection, sortKey, updateQuery]);
 
     useEffect(() => {
         setTitle('LLM Enrichment');
@@ -622,9 +714,10 @@ export default function EnrichmentDashboardClient() {
 
     const handleRowClick = useCallback(
         (event: EnrichmentEvent) => {
-            router.push(`/admin/ingestion/enrichment/${event.id}`);
+            rememberDashboardView();
+            router.push(`/admin/ingestion/enrichment/${event.id}?returnTo=${encodeURIComponent(currentDashboardUrl)}`, { scroll: false });
         },
-        [router]
+        [currentDashboardUrl, rememberDashboardView, router]
     );
 
     useEffect(() => {
@@ -773,7 +866,13 @@ export default function EnrichmentDashboardClient() {
                                 size="sm"
                                 variant="ghost"
                                 className="h-6 px-2 text-[10px] text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground-primary"
-                                onClick={() => router.push(`/admin/ingestion/update-queue/${event.review_queue_id}`)}
+                                onClick={() => {
+                                    rememberDashboardView();
+                                    router.push(
+                                        `/admin/ingestion/update-queue/${event.review_queue_id}?returnTo=${encodeURIComponent(currentDashboardUrl)}`,
+                                        { scroll: false }
+                                    );
+                                }}
                                 title="View review diff"
                             >
                                 Review
@@ -816,7 +915,7 @@ export default function EnrichmentDashboardClient() {
         }
 
         return nextColumns;
-    }, [loading, router, triggerEnrichment, triggerInference, visibleColumns]);
+    }, [currentDashboardUrl, loading, rememberDashboardView, router, triggerEnrichment, triggerInference, visibleColumns]);
 
     const bulkActions = useMemo(
         () => [

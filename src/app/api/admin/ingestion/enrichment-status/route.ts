@@ -3,7 +3,6 @@ import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { EnrichmentMetadata } from '@/types/enrichment';
-import { LLM_ENRICHMENT_REVIEW_REASONS } from '@/services/ingestion/utils/enrichmentQueue';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -272,7 +271,7 @@ export async function GET(request: NextRequest) {
             serviceClient
                 .from('event_update_queue')
                 .select('id, event_id, status, created_at')
-                .in('requires_review_reason', [...LLM_ENRICHMENT_REVIEW_REASONS])
+                .eq('queue_type', 'llm_enrichment')
                 .order('created_at', { ascending: false })
                 .limit(10000),
             buildStatusCountQuery('all'),
@@ -313,7 +312,7 @@ export async function GET(request: NextRequest) {
             ? await serviceClient
                 .from('event_update_queue')
                 .select('id, event_id, status, created_at')
-                .in('requires_review_reason', [...LLM_ENRICHMENT_REVIEW_REASONS])
+                .eq('queue_type', 'llm_enrichment')
                 .in('event_id', pageEventIds)
                 .order('created_at', { ascending: false })
                 .limit(1000)
