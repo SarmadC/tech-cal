@@ -32,7 +32,8 @@ export interface EventSourceRecord {
     normalizedRegistrationUrl?: string;
     normalizedRegistrationUrlHash?: string;
     sourceDomain?: string;
-    
+    seriesName?: string;
+
     // Provenance and confidence
     provenance: IngestionProvenance;
     confidence: number; // 0-100, confidence in the extracted data

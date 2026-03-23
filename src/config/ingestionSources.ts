@@ -133,6 +133,39 @@ export const INITIAL_SOURCES: InitialSourceConfig[] = [
         },
         is_active: true,
     },
+    {
+        name: 'Microsoft Events Catalog',
+        source_url: 'https://www.microsoft.com/msonecloudapi/events/cards',
+        source_type: 'API',
+        access_type: 'public_api',
+        trust_score: 90.0,
+        fetch_interval_minutes: 360,
+        metadata: {
+            provider: 'microsoft.events',
+            filters: { format: 'in-person', language: 'english' },
+            pagination: {
+                type: 'offset',
+                params: { top: 50 },
+            },
+        },
+        is_active: true,
+    },
+    {
+        name: 'Google Developers Events',
+        source_url: 'https://developers.google.com/events',
+        source_type: 'HTML',
+        access_type: 'web_scrape',
+        trust_score: 90.0,
+        fetch_interval_minutes: 360,
+        metadata: {
+            selector_patterns: {
+                event_title: '.devsite-landing-row-item-title, h3',
+                event_date: '.devsite-landing-row-item-description',
+                event_location: '.devsite-landing-row-item-description',
+            },
+        },
+        is_active: true,
+    },
 ];
 
 /**

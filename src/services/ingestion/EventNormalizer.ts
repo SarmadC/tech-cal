@@ -167,6 +167,15 @@ export class EventNormalizer {
                 await this.linkEventTags(eventId, record.tags, supabaseClient);
             }
 
+            // Auto-link series if seriesName hint is provided by collector
+            if (record.seriesName) {
+                try {
+                    await this.linkEventSeries(eventId, record.seriesName, supabaseClient);
+                } catch (seriesError) {
+                    console.warn('[EventNormalizer] Series linking failed (non-critical):', seriesError);
+                }
+            }
+
             // Auto-enrich with tags from content (if no tags were provided)
             // Note: Agenda items may not exist yet at normalization time, so we enrich with title/description first
             // Agenda-based enrichment can happen later via backfill if needed
@@ -559,6 +568,58 @@ export class EventNormalizer {
         } catch (error) {
             console.warn('Error linking event tags:', error);
             // Don't throw - tag linking is non-critical
+        }
+    }
+
+    /**
+     * Auto-link an event to a series by name.
+     * Creates the series if it doesn't already exist.
+     */
+    private static async linkEventSeries(
+        eventId: string,
+        seriesName: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<void> {
+        // Check if series already exists (case-insensitive)
+        const { data: existing, error: lookupError } = await supabaseClient
+            .from('event_series')
+            .select('id')
+            .ilike('name', seriesName)
+            .limit(1)
+            .maybeSingle();
+
+        if (lookupError) {
+            console.warn('[EventNormalizer] Failed to look up series:', lookupError);
+            return;
+        }
+
+        let seriesId: string;
+
+        if (existing) {
+            seriesId = existing.id;
+        } else {
+            // Create new series
+            const { data: created, error: createError } = await supabaseClient
+                .from('event_series')
+                .insert({ name: seriesName })
+                .select('id')
+                .single();
+
+            if (createError || !created) {
+                console.warn('[EventNormalizer] Failed to create series:', createError);
+                return;
+            }
+            seriesId = created.id;
+        }
+
+        // Link event to series
+        const { error: updateError } = await supabaseClient
+            .from('events')
+            .update({ series_id: seriesId })
+            .eq('id', eventId);
+
+        if (updateError) {
+            console.warn('[EventNormalizer] Failed to link event to series:', updateError);
         }
     }
 

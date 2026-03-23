@@ -12,6 +12,7 @@ import { RssCollector } from './collectors/RssCollector';
 import { IcsCollector } from './collectors/IcsCollector';
 import { ConfsTechCollector } from './collectors/ConfsTechCollector';
 import { DevelopersEventsCollector } from './collectors/DevelopersEventsCollector';
+import { MicrosoftEventsCollector } from './collectors/MicrosoftEventsCollector';
 import { HtmlCollector } from './collectors/HtmlCollector';
 import type { BaseCollector } from './collectors/BaseCollector';
 import { FILTERING_CONFIG } from '@/config/ingestionConstants';
@@ -330,6 +331,13 @@ export class IngestionOrchestrator {
                 }
                 if ((metadata.provider as string | undefined) === 'developers.events') {
                     return new DevelopersEventsCollector({
+                        sourceId: source.id,
+                        sourceUrl: source.source_url,
+                        metadata,
+                    });
+                }
+                if ((metadata.provider as string | undefined) === 'microsoft.events') {
+                    return new MicrosoftEventsCollector({
                         sourceId: source.id,
                         sourceUrl: source.source_url,
                         metadata,
