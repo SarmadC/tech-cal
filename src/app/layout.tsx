@@ -1,11 +1,10 @@
-// src/app/layout.tsx 
-
-// Dynamic rendering only for authenticated routes that need SupabaseProvider
-// Static routes (landing, pricing, legal, blog) will be statically generated
+// src/app/layout.tsx
+// Root layout is intentionally kept static — no headers() or force-dynamic.
+// Dynamic rendering lives in individual page/route segments that need it.
 
 import type { Metadata } from "next";
 import { DM_Sans, Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
-import { headers } from 'next/headers';
+
 
 import "./styles/globals.css";
 import './styles/premium-animation.css';
@@ -40,9 +39,7 @@ import { PostHogIdentitySync } from '@/components/providers/PostHogIdentitySync'
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
 import { SITE_URL } from '@/config/site';
-import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
-export const dynamic = 'force-dynamic';
 
 const inter = Inter({
     subsets: ["latin"],
@@ -122,28 +119,27 @@ export const metadata: Metadata = {
     },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
 
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
             <head>
                 {/* FullCalendar CSS moved to calendar-specific components for better performance */}
                 {/* Structured Data for SEO */}
-                <OrganizationJsonLd nonce={nonce} />
-                <WebsiteJsonLd nonce={nonce} />
+                <OrganizationJsonLd />
+                <WebsiteJsonLd />
                 <link rel="alternate" type="application/rss+xml" title="Kure-Cal Blog RSS Feed" href="/blog/feed.xml" />
             </head>
-            <body className={`${inter.className} ${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`}>
+            <body className={`${inter.className} ${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
                 <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded-md focus:text-sm focus:font-medium">
                     Skip to main content
                 </a>
                 <PostHogProvider>
-                    <GoogleAnalytics nonce={nonce} />
+                    <GoogleAnalytics nonce="" />
                     <Suspense fallback={null}>
                         <PostHogPageView />
                     </Suspense>
@@ -170,15 +166,14 @@ export default async function RootLayout({
                                                 <QueryProvider>
                                                     <SnackbarProvider>
                                                         {/* 3. UI/UX providers can go inside */}
-                                                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                                                        {/* <SmoothScrollProvider> */}
+
                                                         {/* 4. ClientLayout contains the Navbar, which needs auth context */}
                                                         <IconProvider>
                                                             <ClientLayout>
                                                                 {children}
                                                             </ClientLayout>
                                                         </IconProvider>
-                                                        {/* </SmoothScrollProvider> */}
+
                                                     </SnackbarProvider>
                                                 </QueryProvider>
                                             </SubscriptionProvider>

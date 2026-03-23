@@ -11,7 +11,7 @@ import { CareerOnboardingData, CareerOptionalSectionStatus } from '@/types/caree
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCareerOnboarding';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { usePostHog } from 'posthog-js/react';

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/input-group"
 import { Spinner } from "@/components/ui/spinner"
 import type { BBox, Feature, FeatureCollection, Point } from "geojson"
-import { MapPinIcon, SearchIcon } from "lucide-react"
+import { MapPin, MagnifyingGlass } from "@phosphor-icons/react"
 import * as React from "react"
 
 interface PlaceFeatureProperties {
@@ -297,7 +297,7 @@ function PlaceAutocomplete({
                         showCommandList && "rounded-b-none"
                     )}>
                     <InputGroupAddon>
-                        <SearchIcon />
+                        <MagnifyingGlass />
                     </InputGroupAddon>
                     <InputGroupInput
                         placeholder="Search"
@@ -366,7 +366,7 @@ function PlaceAutocomplete({
                                                 )
                                                 onPlaceSelect?.(feature)
                                             }}>
-                                            <MapPinIcon />
+                                            <MapPin />
                                             <div className="flex flex-col items-start text-start">
                                                 <span className="font-medium">
                                                     {feature.properties.name ||

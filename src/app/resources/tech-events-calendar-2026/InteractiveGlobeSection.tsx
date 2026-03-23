@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Globe } from '@/components/ui/globe';
 import { cn } from '@/lib/utils';

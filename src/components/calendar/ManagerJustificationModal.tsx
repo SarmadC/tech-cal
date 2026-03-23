@@ -24,7 +24,7 @@ import {
     UI_STRINGS,
     PRINT_STYLES,
 } from './managerJustification.constants';
-import { Check } from 'lucide-react';
+import { Check } from '@phosphor-icons/react';
 import type {
     ManagerJustificationData,
     ManagerJustificationResponse as ManagerJustificationApiResponse,

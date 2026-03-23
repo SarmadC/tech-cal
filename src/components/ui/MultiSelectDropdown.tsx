@@ -6,7 +6,7 @@ import { Check, CaretDown, X, MagnifyingGlass } from '@phosphor-icons/react';
 import { normalizeForComparison, validateSkillEntry } from '@/utils/skillSuggestions';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 
 const UPPERCASE_SKILL_TOKENS = new Set([
     'ai',

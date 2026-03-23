@@ -91,7 +91,7 @@ vi.mock('@/components/onboarding/OnboardingErrorBoundary', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
 
-vi.mock('framer-motion', () => ({
+vi.mock('motion/react', () => ({
   motion: {
     div: ({ children }: { children: ReactNode }) => children,
   },

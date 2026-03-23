@@ -6,7 +6,7 @@ import { Check, X, MagnifyingGlass, CaretLeft } from '@phosphor-icons/react';
 import { normalizeForComparison, validateSkillEntry } from '@/utils/skillSuggestions';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { MultiSelectOption } from './MultiSelectDropdown';
 
 export interface MobileMultiSelectDropdownProps {

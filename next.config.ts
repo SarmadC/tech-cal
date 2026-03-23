@@ -95,64 +95,18 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',  // Allow any HTTPS hostname for og:images from event sources
-      },
-      {
+        // Event images, blog posts, and user avatars stored in Supabase Storage
         protocol: 'https',
         hostname: 'mddgtexrnnlctttbcpsy.supabase.co',
       },
       {
+        // Wildcard required: 400+ unique domains from ingested event organizer logos,
+        // speaker photos, and hackathon images. A static allowlist is impractical
+        // since new events are continuously imported from arbitrary sources.
+        // TODO: Consider proxying external images through Supabase Storage during
+        // ingestion to eliminate this wildcard.
         protocol: 'https',
-        hostname: 'upload.wikimedia.org',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.freebiesupply.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'logo.clearbit.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.jsdelivr.net',
-      },
-      {
-        protocol: 'https',
-        hostname: 'logo.svgcdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'openai.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.google.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'icon.horse',
-      },
-      {
-        protocol: 'https',
-        hostname: 'static1.squarespace.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'reactsummit.us',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.swetugg.se',
+        hostname: '**',
       },
     ],
   },

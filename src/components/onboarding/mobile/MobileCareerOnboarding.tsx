@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { CaretLeft, Check, CaretDown, MagnifyingGlass, X } from '@phosphor-icons/react';
-import { AnimatePresence as StepAnimatePresence, motion as stepMotion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence as StepAnimatePresence, motion as stepMotion, useReducedMotion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {

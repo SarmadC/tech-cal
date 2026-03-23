@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Check, CaretUpDown, Plus } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -94,7 +94,7 @@ export function TagSelector({
                                 <span className="text-foreground-muted">Select tags...</span>
                             )}
                         </div>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-foreground-tertiary" />
+                        <CaretUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-foreground-tertiary" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
