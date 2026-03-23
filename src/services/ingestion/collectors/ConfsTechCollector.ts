@@ -1,6 +1,7 @@
 import { BaseCollector } from './BaseCollector';
 import type { CollectorError, CollectorResult, EventSourceRecord } from '@/types/ingestion';
 import { extractDomain } from '../utils/urlResolver';
+import { sanitizeCollectorTags } from '../utils/tagSanitizer';
 
 interface ConfsTechEvent {
     name: string;
@@ -202,7 +203,8 @@ export class ConfsTechCollector extends BaseCollector {
 
         const location = this.buildLocation(event);
         const eventFormat = this.inferEventFormat(event);
-        const tags = this.buildTags(category, event);
+        const tags = this.buildTags(category);
+        const language = this.extractLanguage(event);
         const organizerDomain = extractDomain(normalizedUrl);
 
         const stableHashPayload = {
@@ -226,6 +228,7 @@ export class ConfsTechCollector extends BaseCollector {
             livestreamUrl: undefined,
             eventImageUrl: undefined,
             tags,
+            language,
             priceRange: undefined,
             difficultyLevel: undefined,
             eventFormat,
@@ -304,22 +307,13 @@ export class ConfsTechCollector extends BaseCollector {
         return 'in-person';
     }
 
-    private buildTags(category: string, event: ConfsTechEvent): string[] {
-        const tags = new Set<string>();
-        tags.add(category.toLowerCase());
-        if (event.online) {
-            tags.add('online');
-        }
-        if (event.locales) {
-            event.locales
-                .split(',')
-                .map((locale) => locale.trim())
-                .filter(Boolean)
-                .forEach((locale) => tags.add(locale.toUpperCase()));
-        }
-        if (event.twitter) {
-            tags.add('social:twitter');
-        }
-        return Array.from(tags);
+    private buildTags(category: string): string[] {
+        return sanitizeCollectorTags([category.toLowerCase()]);
+    }
+
+    private extractLanguage(event: ConfsTechEvent): string | undefined {
+        if (!event.locales) return undefined;
+        const first = event.locales.split(',')[0]?.trim().toLowerCase();
+        return first || undefined;
     }
 }

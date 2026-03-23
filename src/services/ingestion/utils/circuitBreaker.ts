@@ -7,6 +7,7 @@
 
 interface CircuitBreakerState {
     failures: number;
+    halfOpenSuccesses: number;
     lastFailureTime: number | null;
     state: 'closed' | 'open' | 'half-open';
 }
@@ -20,6 +21,7 @@ const CIRCUIT_BREAKER_CONFIG = {
 class CircuitBreaker {
     private state: CircuitBreakerState = {
         failures: 0,
+        halfOpenSuccesses: 0,
         lastFailureTime: null,
         state: 'closed',
     };
@@ -43,6 +45,7 @@ class CircuitBreaker {
             ) {
                 this.state.state = 'half-open';
                 this.state.failures = 0;
+                this.state.halfOpenSuccesses = 0;
                 return true;
             }
             return false;
@@ -57,10 +60,11 @@ class CircuitBreaker {
      */
     recordSuccess(): void {
         if (this.state.state === 'half-open') {
-            this.state.failures++;
-            if (this.state.failures >= CIRCUIT_BREAKER_CONFIG.HALF_OPEN_SUCCESS_THRESHOLD) {
+            this.state.halfOpenSuccesses++;
+            if (this.state.halfOpenSuccesses >= CIRCUIT_BREAKER_CONFIG.HALF_OPEN_SUCCESS_THRESHOLD) {
                 this.state.state = 'closed';
                 this.state.failures = 0;
+                this.state.halfOpenSuccesses = 0;
                 this.state.lastFailureTime = null;
             }
         } else if (this.state.state === 'closed') {
@@ -75,8 +79,11 @@ class CircuitBreaker {
     recordFailure(): void {
         this.state.failures++;
         this.state.lastFailureTime = Date.now();
-
-        if (this.state.failures >= CIRCUIT_BREAKER_CONFIG.FAILURE_THRESHOLD) {
+        // Any failure in half-open state immediately re-opens the circuit
+        if (this.state.state === 'half-open') {
+            this.state.state = 'open';
+            this.state.halfOpenSuccesses = 0;
+        } else if (this.state.failures >= CIRCUIT_BREAKER_CONFIG.FAILURE_THRESHOLD) {
             this.state.state = 'open';
         }
     }
@@ -94,6 +101,7 @@ class CircuitBreaker {
     reset(): void {
         this.state = {
             failures: 0,
+            halfOpenSuccesses: 0,
             lastFailureTime: null,
             state: 'closed',
         };

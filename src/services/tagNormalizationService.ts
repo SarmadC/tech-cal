@@ -238,11 +238,26 @@ const TAG_CANONICALIZATION: Record<string, string> = {
  * Tags to filter out (noise, language codes, etc.)
  */
 const EXCLUDED_TAGS = new Set([
-  'en', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'ru', 'ja', 'zh', 'ko', // Language codes
-  'online', 'virtual', 'in-person', 'hybrid', // Format indicators (handled elsewhere)
-  'free', 'paid', // Pricing (handled elsewhere)
-  'tbd', 'tba', // Unknown
-  'n/a', 'na', // Not applicable
+  // ISO 639-1 language codes
+  'en', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'ru', 'ja', 'zh', 'ko',
+  'ar', 'hi', 'tr', 'sv', 'da', 'no', 'fi', 'cs', 'sk', 'ro', 'hu', 'bg',
+  'hr', 'sl', 'uk', 'vi', 'th', 'he', 'id', 'ms', 'el', 'ca', 'et', 'lv', 'lt', 'sr',
+  // Full language names
+  'english', 'french', 'german', 'spanish', 'portuguese', 'italian',
+  'dutch', 'polish', 'russian', 'japanese', 'chinese', 'korean',
+  'arabic', 'hindi', 'turkish', 'swedish', 'danish', 'norwegian',
+  'finnish', 'czech', 'slovak', 'romanian', 'hungarian', 'bulgarian',
+  'croatian', 'slovenian', 'ukrainian', 'vietnamese', 'thai', 'hebrew',
+  'indonesian', 'malay', 'greek', 'mandarin', 'cantonese',
+  // Format indicators (handled by event_format field)
+  'online', 'virtual', 'in-person', 'hybrid', 'remote', 'on-site', 'digital', 'on-demand',
+  // Geographic noise
+  'usa', 'uk', 'europe', 'asia', 'americas', 'global', 'worldwide', 'international',
+  'emea', 'apac', 'latam',
+  // Pricing (handled elsewhere)
+  'free', 'paid',
+  // Unknown/not applicable
+  'tbd', 'tba', 'n/a', 'na',
 ]);
 
 /**

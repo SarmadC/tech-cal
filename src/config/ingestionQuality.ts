@@ -15,6 +15,12 @@ export const QUALITY_COMPONENT_WEIGHTS = {
     HISTORICAL_PERFORMANCE: 15, // 0-15%
 } as const;
 
+// Runtime validation: weights must sum to 100
+const weightSum = Object.values(QUALITY_COMPONENT_WEIGHTS).reduce((a, b) => a + b, 0);
+if (weightSum !== 100) {
+    throw new Error(`QUALITY_COMPONENT_WEIGHTS must sum to 100, got ${weightSum}`);
+}
+
 /**
  * Score thresholds for auto-publish vs moderation queue
  */

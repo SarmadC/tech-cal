@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { EventSourceRecord } from '@/types/ingestion';
-import { resolveTechmemeUrl } from '@/utils/ingestion/sourceCleanup';
+import { resolveTechmemeUrl, isTechmemeRedirect } from '@/utils/ingestion/sourceCleanup';
 
 const TRACKING_PARAM_PREFIXES = [
     'utm_',
@@ -42,7 +42,7 @@ export interface NormalizedUrlResult {
 /**
  * Strip known tracking parameters from the URL search params.
  */
-function stripTrackingParams(url: URL): void {
+export function stripTrackingParams(url: URL): void {
     const params = url.searchParams;
 
     const keysToDelete: string[] = [];
@@ -170,14 +170,14 @@ export function applyUrlCanonicalization(record: EventSourceRecord): void {
     }
 
     // Resolve Techmeme redirect URLs before canonicalization
-    if (record.sourceUrl?.includes('techmeme.com/r2/')) {
+    if (record.sourceUrl && isTechmemeRedirect(record.sourceUrl)) {
         const resolved = resolveTechmemeUrl(record.sourceUrl);
         if (resolved) {
             record.sourceUrl = resolved;
         }
     }
 
-    if (record.registrationUrl?.includes('techmeme.com/r2/')) {
+    if (record.registrationUrl && isTechmemeRedirect(record.registrationUrl)) {
         const resolved = resolveTechmemeUrl(record.registrationUrl);
         if (resolved) {
             record.registrationUrl = resolved;

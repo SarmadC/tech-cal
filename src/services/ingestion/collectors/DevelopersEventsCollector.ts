@@ -1,6 +1,7 @@
 import { BaseCollector } from './BaseCollector';
 import type { CollectorError, CollectorResult, EventSourceRecord } from '@/types/ingestion';
 import { extractDomain } from '../utils/urlResolver';
+import { sanitizeCollectorTags } from '../utils/tagSanitizer';
 
 interface DevelopersEvent {
     name: string;
@@ -132,7 +133,7 @@ export class DevelopersEventsCollector extends BaseCollector {
             registrationUrl: normalizedUrl,
             livestreamUrl: undefined,
             eventImageUrl: undefined,
-            tags: event.tags || [],
+            tags: sanitizeCollectorTags(event.tags || []),
             priceRange: undefined,
             difficultyLevel: undefined,
             eventFormat: this.inferEventFormat(event),

@@ -8,6 +8,7 @@
 
 import type { SupabaseClientType } from '@/types';
 import type { EventSourceRecord } from '@/types/ingestion';
+import { sanitizeCollectorTags } from './utils/tagSanitizer';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { env } from '@/utils/env';
@@ -134,6 +135,7 @@ export class EventNormalizer {
                 event_type_id: resolvedEventTypeId,
                 difficulty_level: difficultyLevel ?? null,
                 event_format: eventFormat ?? null,
+                language: record.language ?? null,
                 status: 'confirmed',
                 status_enum: 'Confirmed',
                 price_min: priceInfo.min,
@@ -648,9 +650,8 @@ export class EventNormalizer {
         };
 
         const candidates = flatten(rawTags);
-        const blockedTags = new Set(['online', 'en']);
 
-        const trimmed = candidates
+        const cleaned = candidates
             .map(t => t.trim())
             .filter(t => t.length > 0)
             // Drop JSON-like or key/value formatted tags to avoid polluting allowlist
@@ -658,11 +659,13 @@ export class EventNormalizer {
                 const lower = t.toLowerCase();
                 const isJsonLike = t.startsWith('{') || t.endsWith('}') || lower.includes('"key"') || lower.includes('"value"') || lower.includes('":');
                 const hasKeyValueDelimiter = t.includes(':');
-                const isBlocked = blockedTags.has(lower);
-                return !isJsonLike && !hasKeyValueDelimiter && !isBlocked;
+                return !isJsonLike && !hasKeyValueDelimiter;
             });
 
-        return Array.from(new Set(trimmed));
+        // Filter out languages, locations, formats, and other non-content tags
+        const sanitized = sanitizeCollectorTags(cleaned);
+
+        return Array.from(new Set(sanitized));
     }
 
     /**

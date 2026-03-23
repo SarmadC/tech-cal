@@ -125,6 +125,11 @@ Extract the richest agenda detail available: track, topics, day number, room/sta
 If linked agenda, speaker, or session pages are included, prefer those over generic marketing copy.
 For description, return a concise 2-4 sentence summary of what the event is about. Do not dump repeated headings, feature grids, CTAs, sponsor copy, or organizer notes.
 When choosing tags, only use items from the provided Allowed Tags list. If none apply, return an empty array.
+Tags must describe ONLY technical content and topics. Never include:
+- Languages or language codes (these belong in the 'language' field)
+- Locations, cities, or countries (these belong in venue/location fields)
+- Event formats like 'Online', 'In-person', 'Hybrid' (these belong in 'event_format')
+- Generic terms like 'conference', 'event', 'meetup', 'webinar', 'summit'
 `.trim();
 
 const INFERENCE_SYSTEM_PROMPT = `
@@ -140,6 +145,7 @@ Your task:
 Guidelines:
 - Be accurate and professional in the description
 - Only use tags from the provided Allowed Tags list
+- Tags must describe ONLY technical content/topics — never include languages, locations, event formats, or generic terms like 'conference'/'event'/'meetup'
 - If you cannot confidently determine something, omit it
 - Focus on technical accuracy over marketing language
 - Return ONLY valid JSON matching the schema

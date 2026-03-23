@@ -61,18 +61,17 @@ export class OrganizerEnrichmentService {
                     return existingByDomain.id;
                 }
 
-                // Try fuzzy match on domain using pg_trgm (if similarity is high)
-                // Using LIKE for now - can be enhanced with similarity() if needed
-                const domainPattern = `%${domain}%`;
-                const { data: fuzzyMatch } = await supabaseClient
+                // Try subdomain match (e.g., "events.google.com" matches "google.com")
+                const suffixPattern = `%.${domain}`;
+                const { data: subdomainMatch } = await supabaseClient
                     .from('organizers')
                     .select('id, domain')
-                    .ilike('domain', domainPattern)
+                    .ilike('domain', suffixPattern)
                     .limit(1)
                     .single();
 
-                if (fuzzyMatch) {
-                    return fuzzyMatch.id;
+                if (subdomainMatch) {
+                    return subdomainMatch.id;
                 }
             }
 

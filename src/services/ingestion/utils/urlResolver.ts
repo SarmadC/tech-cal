@@ -6,6 +6,7 @@
  */
 
 import { URL_RESOLVER_CONFIG } from '@/config/ingestionConstants';
+import { stripTrackingParams } from './urlCanonicalizer';
 
 /**
  * Check if URL matches TechMeme redirect pattern
@@ -179,6 +180,9 @@ export function normalizeCanonicalUrl(url: string | undefined): string | null {
         if (isTechMemeRedirect(url)) {
             urlObj.search = '';
         }
+
+        // Strip tracking params (utm_*, fbclid, etc.) for consistent dedup
+        stripTrackingParams(urlObj);
 
         // Strip trailing slash from pathname
         let pathname = urlObj.pathname;

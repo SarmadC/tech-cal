@@ -199,6 +199,9 @@ export class RssCollector extends BaseCollector {
         // Parse dates - look for event-specific dates first, not pubDate
         // pubDate is when the feed item was published, not the event start time
         const startTime = this.parseEventDate(item);
+        if (!startTime) {
+            throw new Error(`No parseable start date found for "${item.title}"`);
+        }
         const endTime = this.parseEventEndDate(item);
 
         // Extract location (common patterns in RSS)
@@ -259,23 +262,22 @@ export class RssCollector extends BaseCollector {
      * Parse event start date from RSS item
      * Looks for event-specific date fields first, falls back to pubDate only if event-specific dates not found
      */
-    private parseEventDate(item: RssFeedItem): string {
+    private parseEventDate(item: RssFeedItem): string | undefined {
         const itemRecord = item as unknown as Record<string, unknown>;
-        
+
         // Check for event-specific dates first
         const eventDate = parseEventDateFromFields(itemRecord, EVENT_START_DATE_FIELDS);
         if (eventDate) return eventDate;
 
         // Parse from content/description if it contains date patterns
-        const contentSource = typeof item.content === 'string' 
-            ? item.content 
+        const contentSource = typeof item.content === 'string'
+            ? item.content
             : (typeof item.description === 'string' ? item.description : '');
         const contentDate = extractDateFromContent(contentSource);
         if (contentDate) return contentDate;
 
-        // Last resort: use pubDate, but only if we're confident it's an event date
-        // (e.g., if the feed is event-specific)
-        return parseDate(item.pubDate || item.isoDate || item.date) || new Date().toISOString();
+        // Last resort: use pubDate (publication date, not necessarily event date)
+        return parseDate(item.pubDate || item.isoDate || item.date);
     }
 
     /**

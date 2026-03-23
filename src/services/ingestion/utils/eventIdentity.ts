@@ -31,7 +31,7 @@ export function getEventIdentityYear(startTime: string | null | undefined): numb
 }
 
 export function hashEventIdentityValue(value: string): string {
-    return crypto.createHash('md5').update(value).digest('hex');
+    return crypto.createHash('sha256').update(value).digest('hex');
 }
 
 export function normalizeEventIdentityUrl(url: string | null | undefined): string | null {

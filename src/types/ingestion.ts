@@ -26,6 +26,7 @@ export interface EventSourceRecord {
     };
     difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
     eventFormat?: 'virtual' | 'in-person' | 'hybrid';
+    language?: string; // ISO 639-1 code (e.g. 'en', 'fr')
     speakerLineup?: SpeakerRecord[];
     normalizedSourceUrl?: string;
     normalizedSourceUrlHash?: string;

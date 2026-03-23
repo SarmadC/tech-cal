@@ -130,7 +130,7 @@
   ],
 
   "tags": [
-    "Tag names describing content (e.g. 'AI', 'Cloud', 'DevOps', 'React', 'Security')"
+    "ONLY technical content/topic tags (e.g. 'AI', 'Cloud', 'DevOps', 'React', 'Security'). DO NOT include: languages (use 'language' field), locations/cities/countries (use 'venue' fields), event formats like 'Online'/'Hybrid' (use 'event_format' field), difficulty levels (use 'difficulty_level' field), or generic terms like 'conference'/'event'/'meetup'."
   ],
 
   "series": {

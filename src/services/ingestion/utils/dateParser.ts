@@ -6,14 +6,30 @@
  */
 
 /**
- * Parse date string to ISO format
+ * Parse date string to ISO format.
+ * If the string lacks timezone info, assumes UTC to avoid
+ * inconsistent results across server environments.
  */
 export function parseDate(dateStr: string | undefined): string | undefined {
     if (!dateStr) {
         return undefined;
     }
 
-    const date = new Date(dateStr);
+    let normalized = dateStr.trim();
+
+    // If the string looks like a date/datetime without timezone info, assume UTC
+    // Matches patterns like "2026-03-15", "2026-03-15 09:00", "2026-03-15T09:00:00"
+    // but NOT strings already containing Z, +offset, or -offset at the end
+    if (
+        /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?)?$/.test(normalized)
+    ) {
+        if (!normalized.includes('T')) {
+            normalized = normalized.replace(' ', 'T');
+        }
+        normalized += 'Z';
+    }
+
+    const date = new Date(normalized);
     if (isNaN(date.getTime())) {
         return undefined;
     }
