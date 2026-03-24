@@ -5,6 +5,7 @@ import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useResizeListener } from '@/hooks/useEventListener';
+import { useBackClose } from '@/hooks/useBackClose';
 
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
@@ -592,42 +593,22 @@ export default function CalendarClientView({
                                     {renderCalendarContent(context)}
                                 </div>
                                 {eventData.isFilterPanelOpen && (
-                                    <div
-                                        className="fixed inset-0 z-40 bg-black bg-opacity-50"
-                                        onClick={() => eventData.setIsFilterPanelOpen(false)}
-                                    >
-                                        <div
-                                            className="fixed right-0 top-0 h-full w-80 bg-background-elevated border-l border-border-default shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col pt-20 pb-4 overflow-y-auto"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div className="px-4 pb-4">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <h3 className="font-semibold text-foreground-primary">Filters</h3>
-                                                    <button
-                                                        onClick={eventData.resetFilters}
-                                                        className="text-xs text-accent-primary hover:underline"
-                                                    >
-                                                        Reset all
-                                                    </button>
-                                                </div>
-                                                <DiscoverySidebar
-                                                    filters={{
-                                                        format: eventData.filters.format,
-                                                        cost: eventData.filters.cost,
-                                                        categories: eventData.filters.categories,
-                                                        tags: eventData.filters.tags,
-                                                        locations: eventData.filters.locations
-                                                    }}
-                                                    onUpdateFilter={eventData.updateFilter}
-                                                    categories={initialCategories}
-                                                    locationOptions={calendarLocationOptions}
-                                                    events={enrichedEventsWithNetwork}
-                                                    counts={eventData.counts || {}}
-                                                    mobileMode={true}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <FilterPanelOverlay
+                                        onClose={() => eventData.setIsFilterPanelOpen(false)}
+                                        onReset={eventData.resetFilters}
+                                        filters={{
+                                            format: eventData.filters.format,
+                                            cost: eventData.filters.cost,
+                                            categories: eventData.filters.categories,
+                                            tags: eventData.filters.tags,
+                                            locations: eventData.filters.locations,
+                                        }}
+                                        onUpdateFilter={eventData.updateFilter}
+                                        categories={initialCategories}
+                                        locationOptions={calendarLocationOptions}
+                                        events={enrichedEventsWithNetwork}
+                                        counts={eventData.counts || {}}
+                                    />
                                 )}
                                 {state.selectedEvent && !isMobile && (
                                     <EventDetailSidebarDynamic
@@ -642,5 +623,45 @@ export default function CalendarClientView({
                 </CalendarProvider>
             </main>
         </PageErrorBoundary>
+    );
+}
+
+/** Wrapper that hooks into browser history so back-gesture closes the filter panel */
+function FilterPanelOverlay({
+    onClose,
+    onReset,
+    ...sidebarProps
+}: {
+    onClose: () => void;
+    onReset: () => void;
+} & Omit<React.ComponentProps<typeof DiscoverySidebar>, 'mobileMode'>) {
+    const { close } = useBackClose('calendar-filter-panel', onClose);
+
+    return (
+        <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50"
+            onClick={close}
+        >
+            <div
+                className="fixed right-0 top-0 h-full w-80 bg-background-elevated border-l border-border-default shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col pt-20 pb-4 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="px-4 pb-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-foreground-primary">Filters</h3>
+                        <button
+                            onClick={onReset}
+                            className="text-xs text-accent-primary hover:underline"
+                        >
+                            Reset all
+                        </button>
+                    </div>
+                    <DiscoverySidebar
+                        {...sidebarProps}
+                        mobileMode={true}
+                    />
+                </div>
+            </div>
+        </div>
     );
 }

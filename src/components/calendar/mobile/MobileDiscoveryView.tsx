@@ -124,6 +124,10 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     const [categoryPenalty, setCategoryPenalty] = useLocalStorage<Record<string, number>>('mobile-discovery-category-penalty', {});
     const [shortlistIds, setShortlistIds] = useLocalStorage<string[]>('mobile-discovery-shortlist-ids', []);
     const [shortlistMode, setShortlistMode] = useLocalStorage<boolean>('mobile-discovery-shortlist-mode', false);
+    const mobileRankingOptions = useMemo(
+        () => DISCOVERY_RANKING_OPTIONS.filter((option) => option.id !== 'soonest'),
+        []
+    );
 
     const hiddenEventIdSet = useMemo(() => new Set(hiddenEventIds), [hiddenEventIds]);
     const shortlistIdSet = useMemo(() => new Set(shortlistIds), [shortlistIds]);
@@ -196,8 +200,12 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
             return;
         }
         rankingInitializedRef.current = true;
-        applyRankingMode(rankingMode, false, false);
-    }, [applyRankingMode, rankingMode]);
+        const initialRankingMode = rankingMode === 'soonest' ? 'best-match' : rankingMode;
+        if (rankingMode === 'soonest') {
+            setRankingMode('best-match');
+        }
+        applyRankingMode(initialRankingMode, false, false);
+    }, [applyRankingMode, rankingMode, setRankingMode]);
 
     useEffect(() => {
         if (!rootRef.current || typeof window === 'undefined') {
@@ -522,7 +530,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             </MobileSurfaceCard>
                         ) : (
                             <div className="mobile-discovery-rankingRail" role="tablist" aria-label="Discovery ranking">
-                                {DISCOVERY_RANKING_OPTIONS.map((option) => (
+                                {mobileRankingOptions.map((option) => (
                                     <button
                                         key={option.id}
                                         type="button"

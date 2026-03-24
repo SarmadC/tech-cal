@@ -25,6 +25,7 @@ import { HackathonCard } from '@/components/hackathon/HackathonCard';
 import { RecommendedHackathons } from '@/components/hackathon/RecommendedHackathons';
 import { getRecommendedHackathons } from '@/services/hackathonRecommendationService';
 import { CareerProfileService } from '@/services/careerProfileService';
+import { useBackClose } from '@/hooks/useBackClose';
 
 interface HackathonClientViewProps {
     initialHackathons: HackathonEvent[];
@@ -409,9 +410,8 @@ export default function HackathonClientView({
                                         })}
                                     </div>
                                 )}
-                                {teamSetup.hackathon && (
-                                    <TeamSetupModal
-                                        open={teamSetup.open}
+                                {teamSetup.hackathon && teamSetup.open && (
+                                    <TeamSetupModalWithBack
                                         hackathon={teamSetup.hackathon}
                                         userId={userId}
                                         onClose={() => setTeamSetup(prev => ({ ...prev, open: false }))}
@@ -428,27 +428,76 @@ export default function HackathonClientView({
 
                 {/* Details Panel Overlay */}
                 {selectedHackathon && (
-                    <div className="fixed inset-0 z-50 flex justify-end">
-                        <div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
-                            onClick={() => setSelectedHackathon(null)}
-                        />
-                        <div className="relative z-10 h-full w-full animate-in slide-in-from-right duration-300 sm:max-w-xl xl:max-w-2xl">
-                            <HackathonDetailPanel
-                                hackathon={selectedHackathon}
-                                onClose={() => setSelectedHackathon(null)}
-                                userId={userId}
-                                isRegistered={!!selectedHackathon.userParticipation}
-                                onJoinTeamById={handleJoinTeamById}
-                                onCreateTeam={handleCreateTeam}
-                                onDeleteTeam={handleDeleteTeam}
-                                onLeaveTeam={handleLeaveTeam}
-                                joiningTeamId={null}
-                            />
-                        </div>
-                    </div>
+                    <HackathonDetailOverlay
+                        hackathon={selectedHackathon}
+                        userId={userId}
+                        onClose={() => setSelectedHackathon(null)}
+                        onJoinTeamById={handleJoinTeamById}
+                        onCreateTeam={handleCreateTeam}
+                        onDeleteTeam={handleDeleteTeam}
+                        onLeaveTeam={handleLeaveTeam}
+                    />
                 )}
             </div>
         </SidebarProvider>
+    );
+}
+
+/** Wrapper that hooks into browser history so back-gesture closes the panel */
+function HackathonDetailOverlay({
+    hackathon,
+    userId,
+    onClose,
+    onJoinTeamById,
+    onCreateTeam,
+    onDeleteTeam,
+    onLeaveTeam,
+}: {
+    hackathon: HackathonEvent;
+    userId: string;
+    onClose: () => void;
+    onJoinTeamById: (teamId: string) => Promise<void>;
+    onCreateTeam: (hackathonId: string) => void;
+    onDeleteTeam: (teamId: string, teamName: string) => Promise<void>;
+    onLeaveTeam: (hackathonId: string) => Promise<void>;
+}) {
+    const { close } = useBackClose('hackathon-detail', onClose);
+
+    return (
+        <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+                onClick={close}
+            />
+            <div className="relative z-10 h-full w-full animate-in slide-in-from-right duration-300 sm:max-w-xl xl:max-w-2xl">
+                <HackathonDetailPanel
+                    hackathon={hackathon}
+                    onClose={close}
+                    userId={userId}
+                    isRegistered={!!hackathon.userParticipation}
+                    onJoinTeamById={onJoinTeamById}
+                    onCreateTeam={onCreateTeam}
+                    onDeleteTeam={onDeleteTeam}
+                    onLeaveTeam={onLeaveTeam}
+                    joiningTeamId={null}
+                />
+            </div>
+        </div>
+    );
+}
+
+/** Wrapper that hooks into browser history so back-gesture closes the team setup modal */
+function TeamSetupModalWithBack({
+    onClose,
+    ...props
+}: Omit<React.ComponentProps<typeof TeamSetupModal>, 'open'> & { onClose: () => void }) {
+    const { close } = useBackClose('hackathon-team-setup', onClose);
+
+    return (
+        <TeamSetupModal
+            open={true}
+            onClose={close}
+            {...props}
+        />
     );
 }

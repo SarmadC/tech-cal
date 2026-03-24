@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts';
 import { getBrowserSafeImageSrc, getSafeImageSrc, getVersionedImageSrc } from '@/utils/imageUrl';
 import { buildAgendaDayGroups, getSpeakerAvatarUrls } from '@/utils/timelineUtils';
 import { dedupeSpeakersFromEvent, getSpeakerIdentity, hasSpeakerData } from '@/components/calendar/eventDetailShared';
+import { useBackClose } from '@/hooks/useBackClose';
 
 interface MobileEventDetailPanelProps {
     event: Event;
@@ -219,6 +220,7 @@ function MobileEventDetailPanelContent({
     onClose,
     categories,
 }: MobileEventDetailPanelProps) {
+    const { close } = useBackClose('mobile-event-detail', onClose);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
@@ -338,14 +340,14 @@ function MobileEventDetailPanelContent({
                 return;
             }
 
-            onClose();
+            close();
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [onClose, showMoreMenu]);
+    }, [close, showMoreMenu]);
 
     const handleTrackEvent = async () => {
         if (!user) {
@@ -469,7 +471,7 @@ function MobileEventDetailPanelContent({
 
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={close}
                                 className="flex h-10 w-10 items-center justify-center rounded-full text-[#8e9099] transition-colors hover:bg-white/[0.04] hover:text-[#f4f4f5]"
                                 aria-label="Close"
                             >

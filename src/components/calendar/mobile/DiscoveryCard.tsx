@@ -5,9 +5,6 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import {
     MapPin,
-    BookmarkSimple,
-    DotsThree,
-    UserCheck,
 } from '@phosphor-icons/react';
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
@@ -304,60 +301,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                             </div>
                         </div>
 
-                        <div className="-mr-1 flex shrink-0 items-center justify-end gap-0.5 pt-0.5">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    void handleAttendanceToggle();
-                                }}
-                                className={cn(
-                                    'inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-                                    isAttending
-                                        ? 'text-emerald-400'
-                                        : 'text-muted-foreground/60 hover:bg-foreground/5 hover:text-foreground',
-                                    isAttendanceUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                )}
-                                aria-pressed={isAttending}
-                                aria-label={isAttending ? 'Remove attending status' : 'Mark as attending'}
-                                disabled={isAttendanceUpdating}
-                                aria-busy={isAttendanceUpdating}
-                            >
-                                <UserCheck size={16} weight={isAttending ? 'fill' : 'regular'} />
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    void performBookmarkToggle({ source: 'bookmark' });
-                                }}
-                                className={cn(
-                                    'inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-                                    isBookmarkedValue
-                                        ? 'text-amber-400'
-                                        : 'text-muted-foreground/60 hover:bg-foreground/5 hover:text-foreground',
-                                    isBookmarking ? 'opacity-50 cursor-not-allowed' : ''
-                                )}
-                                aria-label={isBookmarkedValue ? 'Remove bookmark' : 'Bookmark event'}
-                                disabled={isBookmarking}
-                                aria-busy={isBookmarking}
-                            >
-                                <BookmarkSimple size={16} weight={isBookmarkedValue ? 'fill' : 'regular'} />
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsActionSheetOpen(true);
-                                }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                                aria-label="Open actions"
-                            >
-                                <DotsThree size={16} weight="bold" />
-                            </button>
-                        </div>
                     </div>
 
                     <p className="mb-4 mt-4 line-clamp-2 text-[13px] leading-relaxed text-[var(--mobile-app-muted)]">
