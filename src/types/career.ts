@@ -1,69 +1,27 @@
+import {
+  ROLE_CATEGORIES as DOMAIN_ROLE_CATEGORIES,
+  ROLE_TAXONOMY as DOMAIN_ROLE_TAXONOMY,
+  type AvailabilityPattern as DomainAvailabilityPattern,
+  type CareerOnboardingData as DomainCareerOnboardingData,
+  type CareerOptionalSectionSnoozes as DomainCareerOptionalSectionSnoozes,
+  type CareerOptionalSectionStatus as DomainCareerOptionalSectionStatus,
+  type CareerOptionalSectionTimestamps as DomainCareerOptionalSectionTimestamps,
+  type CollaborationStyle as DomainCollaborationStyle,
+  type CommunicationPreference as DomainCommunicationPreference,
+  type MentorshipPreference as DomainMentorshipPreference,
+  type TeamRole as DomainTeamRole,
+  type TeamSizePreference as DomainTeamSizePreference,
+} from '@kurecal/domain';
+
 // Career and Professional Development Types
 
 // Predefined Role Taxonomy for Peer Comparison
-export const ROLE_CATEGORIES = {
-  ENGINEERING: 'Engineering',
-  DATA_AI: 'Data & AI',
-  PRODUCT_DESIGN: 'Product & Design',
-  LEADERSHIP: 'Leadership & Strategy'
-} as const;
+export const ROLE_CATEGORIES = DOMAIN_ROLE_CATEGORIES;
 
-export const ROLE_TAXONOMY = {
-  [ROLE_CATEGORIES.ENGINEERING]: [
-    'Software Engineer',
-    'Frontend Engineer',
-    'Backend Engineer',
-    'Full Stack Engineer',
-    'Mobile Engineer (iOS/Android)',
-    'Platform Engineer',
-    'Solutions Engineer',
-    'DevOps Engineer',
-    'Site Reliability Engineer',
-    'QA Engineer',
-    'Security Engineer'
-  ],
-  [ROLE_CATEGORIES.DATA_AI]: [
-    'Data Scientist',
-    'Data Analyst',
-    'Data Engineer',
-    'AI Engineer',
-    'Analytics Engineer',
-    'ML Engineer',
-    'AI Research Scientist'
-  ],
-  [ROLE_CATEGORIES.PRODUCT_DESIGN]: [
-    'Product Manager',
-    'Product Designer',
-    'Product Owner',
-    'UX Designer',
-    'UI Designer',
-    'UX Researcher',
-    'Technical Product Manager',
-    'Technical Program Manager',
-    'Program Manager',
-    'Product Marketing Manager',
-    'Growth Marketer'
-  ],
-  [ROLE_CATEGORIES.LEADERSHIP]: [
-    'Founder',
-    'Entrepreneur / Startup Operator',
-    'Engineering Manager',
-    'Technical Lead',
-    'Product Director',
-    'VP of Engineering',
-    'CTO',
-    'Solutions Architect',
-    'Business Operations Manager',
-    'Developer Relations Manager',
-    'Community Manager',
-    'Customer Success Manager',
-    'Developer Relations',
-    'Technical Writer'
-  ]
-} as const;
+export const ROLE_TAXONOMY = DOMAIN_ROLE_TAXONOMY;
 
 // Flattened list for easy access
-export const ALL_PREDEFINED_ROLES = Object.values(ROLE_TAXONOMY).flat();
+export const ALL_PREDEFINED_ROLES = Object.values(ROLE_TAXONOMY).flatMap((roles) => [...roles]);
 
 // Company size categories
 export const COMPANY_SIZE_OPTIONS = [
@@ -547,36 +505,20 @@ export interface CareerProfile {
   preferredEventTypes: CareerEventType[];
 }
 
-export interface CareerOptionalSectionStatus {
-  learningPreferences: boolean;
-  networkingPreferences: boolean;
-  teamPreferences: boolean;
-}
+export type CareerOptionalSectionStatus = DomainCareerOptionalSectionStatus;
 
-export interface CareerOptionalSectionSnoozes {
-  learningPreferences?: string; // ISO timestamp of last snooze
-  networkingPreferences?: string;
-  teamPreferences?: string;
-}
+export type CareerOptionalSectionSnoozes = DomainCareerOptionalSectionSnoozes;
 
-export interface CareerOptionalSectionTimestamps {
-  learningPreferencesCompletedAt?: string;
-  networkingPreferencesCompletedAt?: string;
-  teamPreferencesCompletedAt?: string;
-}
+export type CareerOptionalSectionTimestamps = DomainCareerOptionalSectionTimestamps;
 
 // Team Building Preferences (stored separately in preferences JSON)
-export interface TeamBuildingPreferences {
+type DomainTeamBuildingDraft = DomainCareerOnboardingData['step6_teamBuilding'];
+
+export interface TeamBuildingPreferences extends DomainTeamBuildingDraft {
   skillProficiencies: SkillTag[];
-  teamRole: TeamRole;
-  collaborationStyle: CollaborationStyle[];
-  teamSizePreference: TeamSizePreference;
-  communicationPreferences: CommunicationPreference[];
-  teamGoals: string[];
-  mentorshipPreference: MentorshipPreference;
-  availabilityPattern?: AvailabilityPattern;
-  projectTypePreferences: string[];
 }
+
+export type TeamBuildingDraft = DomainTeamBuildingDraft;
 
 export type SeniorityLevel = 
   | 'student'
@@ -688,19 +630,7 @@ export const CAREER_EVENT_TYPE_OPTIONS: Array<{ value: CareerEventType; label: s
 ];
 
 // Team Building Types
-export type TeamRole = 
-  | 'frontend-developer'    // Frontend development focus
-  | 'backend-developer'     // Backend development focus
-  | 'full-stack-developer'  // Full stack development
-  | 'mobile-developer'      // Mobile app development
-  | 'ui-ux-designer'        // Design and user experience
-  | 'product-manager'       // Product management
-  | 'data-scientist'        // Data analysis and ML
-  | 'devops-engineer'       // Infrastructure and deployment
-  | 'qa-engineer'          // Quality assurance
-  | 'tech-lead'            // Technical leadership
-  | 'project-manager'      // Project coordination
-  | 'flexible';            // Can adapt to any role
+export type TeamRole = DomainTeamRole;
 
 // Team role configuration
 export interface TeamRoleConfig {
@@ -860,49 +790,15 @@ export const TEAM_ROLE_CONFIGS: Record<TeamRole, TeamRoleConfig> = {
   }
 };
 
-export type CollaborationStyle = 
-  | 'hands-on'            // Prefer coding and building
-  | 'strategic'           // Prefer planning and architecture
-  | 'mentoring'           // Prefer teaching others
-  | 'learning'            // Prefer learning from others
-  | 'leading'             // Prefer taking initiative
-  | 'supporting'          // Prefer supporting others
-  | 'innovating'          // Prefer exploring new ideas
-  | 'executing';          // Prefer implementing solutions
+export type CollaborationStyle = DomainCollaborationStyle;
 
-export type TeamSizePreference = 
-  | 'small'               // 2-3 people
-  | 'medium'              // 4-5 people
-  | 'large'               // 6+ people
-  | 'flexible';           // Any size
+export type TeamSizePreference = DomainTeamSizePreference;
 
-export type MentorshipPreference = 
-  | 'mentor'              // Prefer to mentor others
-  | 'mentee'              // Prefer to be mentored
-  | 'both'                // Open to both mentoring and being mentored
-  | 'neither';            // Prefer peer-to-peer collaboration
+export type MentorshipPreference = DomainMentorshipPreference;
 
-export interface AvailabilityPattern {
-  timezone: string;        // User's timezone (e.g., "America/New_York")
-  availableHours: {
-    start: string;         // Start time in HH:MM format (e.g., "09:00")
-    end: string;           // End time in HH:MM format (e.g., "17:00")
-  };
-  availableDays: string[]; // Days of the week (e.g., ["monday", "tuesday", "wednesday"])
-  timezoneOffset: number;  // Timezone offset in minutes (e.g., -300 for EST)
-}
+export type AvailabilityPattern = DomainAvailabilityPattern;
 
-export type CommunicationPreference = 
-  | 'slack'               // Slack messaging
-  | 'discord'             // Discord voice/text
-  | 'zoom'                // Video calls
-  | 'github'              // GitHub discussions
-  | 'email'               // Email communication
-  | 'phone'               // Phone calls
-  | 'in-person'           // Face-to-face meetings
-  | 'async'               // Asynchronous communication
-  | 'real-time'           // Real-time collaboration
-  | 'other';              // Other communication methods
+export type CommunicationPreference = DomainCommunicationPreference;
 
 // Team Matching Types
 export interface TeamSkillRequirement {
@@ -982,44 +878,7 @@ export interface OnboardingStep {
   order: number;
 }
 
-export interface CareerOnboardingData {
-  step1_role: {
-    currentRole: string;
-    seniority: SeniorityLevel;
-    industry: string;
-    companySize: CompanySize;
-  };
-  step2_skills: {
-    primarySkills: string[];
-    skillsToLearn: string[];
-    interests: string[];
-    skillTags?: SkillTag[]; // Enhanced skills with proficiency
-  };
-  step3_goals: {
-    careerGoals: CareerGoal[];
-    timeframe: CareerTimeframe;
-  };
-  step4_preferences: {
-    targetPath?: LearningPathTrack | string;
-    learningStyle: LearningStyle[];
-    availableTime: AvailableTime;
-    budget: BudgetRange;
-  };
-  step5_networking: {
-    networkingGoals: NetworkingGoal[];
-    preferredEventTypes: CareerEventType[];
-  };
-  step6_teamBuilding: {
-    teamRole: TeamRole;
-    collaborationStyle: CollaborationStyle[];
-    teamSizePreference: TeamSizePreference;
-    communicationPreferences: CommunicationPreference[];
-    teamGoals: string[];
-    mentorshipPreference: MentorshipPreference;
-    availabilityPattern?: AvailabilityPattern;
-    projectTypePreferences: string[];
-  };
-}
+export type CareerOnboardingData = DomainCareerOnboardingData;
 
 // Extended User Profile
 export interface EnhancedAppProfile {

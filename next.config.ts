@@ -48,6 +48,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  transpilePackages: ['@kurecal/domain', '@kurecal/mobile-client'],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // These packages are server-only but get pulled into the client bundle

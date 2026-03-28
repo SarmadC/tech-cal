@@ -10,6 +10,8 @@
 # next.js
 /.next/
 /out/
+.expo/
+apps/mobile/.expo/
 
 # production
 /build
@@ -17,6 +19,9 @@
 # misc
 .DS_Store
 *.pem
+next
+{post.circle.name}
+.tmp-*/
 
 # debug
 npm-debug.log*
@@ -37,6 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+expo-env.d.ts
 
 # Supabase
 supabase/.branches/
@@ -70,3 +76,14 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# scratch
+compile.log
+dev.log
+dev3005.log
+error_output.log
+error_output_2.log
+error_output_3.log
+error_text.log
+results.json
+server.log

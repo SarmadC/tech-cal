@@ -14,7 +14,15 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: './vitest.setup.ts',
         testTimeout: 10000,
-        exclude: ['**/node_modules/**', '**/tests/**/*.spec.ts'],
+        exclude: [
+            '**/node_modules/**',
+            '**/tests/**/*.spec.ts',
+            'apps/mobile/**',
+            'packages/**',
+            'playwright-report/**',
+            'test-results/**',
+            'coverage/**',
+        ],
         alias: {
             '@': path.resolve(__dirname, './src'),
         },

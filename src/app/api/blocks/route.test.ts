@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './route';
 
 const mocks = vi.hoisted(() => ({
-  authGetUser: vi.fn(),
+  getApiAuthContext: vi.fn(),
   createServiceClient: vi.fn(),
   getBlockedUsersForUser: vi.fn(),
   createRateLimiter: vi.fn(),
@@ -11,14 +11,8 @@ const mocks = vi.hoisted(() => ({
   evaluateTrustLevel: vi.fn(),
 }));
 
-const userScopedSupabase = {
-  auth: {
-    getUser: (...args: unknown[]) => mocks.authGetUser(...args),
-  },
-};
-
-vi.mock('@/utils/supabase/server', () => ({
-  createClient: vi.fn(async () => userScopedSupabase),
+vi.mock('@/lib/apiAuth', () => ({
+  getApiAuthContext: (...args: unknown[]) => mocks.getApiAuthContext(...args),
 }));
 
 vi.mock('@/utils/supabase/service', () => ({
@@ -51,12 +45,11 @@ describe('GET /api/blocks', () => {
   });
 
   it('returns 401 when user is unauthenticated', async () => {
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      user: null,
     });
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost/api/blocks') as any);
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -66,14 +59,13 @@ describe('GET /api/blocks', () => {
   });
 
   it('returns 500 when service role env vars are missing', async () => {
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: { id: '33333333-3333-4333-8333-333333333333' } },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      user: { id: '33333333-3333-4333-8333-333333333333' },
     });
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost/api/blocks') as any);
     const payload = await response.json();
 
     expect(response.status).toBe(500);
@@ -89,9 +81,8 @@ describe('GET /api/blocks', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
 
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: { id: userId } },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      user: { id: userId },
     });
     mocks.createServiceClient.mockReturnValue(serviceSupabase);
     mocks.getBlockedUsersForUser.mockResolvedValue([
@@ -105,7 +96,7 @@ describe('GET /api/blocks', () => {
       },
     ]);
 
-    const response = await GET();
+    const response = await GET(new Request('http://localhost/api/blocks') as any);
     const payload = await response.json();
 
     expect(response.status).toBe(200);

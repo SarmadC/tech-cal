@@ -1,0 +1,119 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/domain/**'
+      - 'packages/mobile-client/**'
+      - 'src/app/api/mobile/**'
+      - 'src/app/api/community/**'
+      - 'src/app/api/blocks/**'
+      - 'src/lib/apiAuth.ts'
+      - 'src/lib/apiAuth.test.ts'
+      - 'src/lib/mobileSubscriptions.ts'
+      - 'src/lib/mobileSubscriptions.test.ts'
+      - 'src/services/blockService.ts'
+      - 'src/services/communityModerationService.ts'
+      - 'src/services/communityMutationsService.ts'
+      - 'src/services/communityReportService.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/mobile-ci.yml'
+      - '.github/workflows/mobile-release.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/domain/**'
+      - 'packages/mobile-client/**'
+      - 'src/app/api/mobile/**'
+      - 'src/app/api/community/**'
+      - 'src/app/api/blocks/**'
+      - 'src/lib/apiAuth.ts'
+      - 'src/lib/apiAuth.test.ts'
+      - 'src/lib/mobileSubscriptions.ts'
+      - 'src/lib/mobileSubscriptions.test.ts'
+      - 'src/services/blockService.ts'
+      - 'src/services/communityModerationService.ts'
+      - 'src/services/communityMutationsService.ts'
+      - 'src/services/communityReportService.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/mobile-ci.yml'
+      - '.github/workflows/mobile-release.yml'
+  workflow_dispatch:
+
+jobs:
+  boundary-checks:
+    name: Boundary Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify web does not import Expo or React Native modules
+        run: |
+          if rg -n "from ['\"](expo|expo-[^'\"]*|react-native|react-native-[^'\"]*)" src packages --glob '!packages/mobile-client/**'; then
+            echo "Expo and React Native imports must stay inside apps/mobile."
+            exit 1
+          fi
+
+      - name: Verify Expo app uses the shared mobile client
+        run: |
+          if rg -n '\bfetch\(' apps/mobile --glob '!apps/mobile/lib/mobileApi.ts' --glob '!apps/mobile/**/__tests__/**'; then
+            echo "Use @kurecal/mobile-client instead of raw fetch in apps/mobile."
+            exit 1
+          fi
+
+  mobile-contracts:
+    name: Shared Contracts and Mobile APIs
+    runs-on: ubuntu-latest
+    needs: boundary-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check shared packages
+        run: npm run type-check:packages
+
+      - name: Run shared contract and mobile API tests
+        run: npm run test:mobile:contracts
+
+  mobile-app:
+    name: Expo App
+    runs-on: ubuntu-latest
+    needs: boundary-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Expo type check
+        run: npm run type-check:mobile
+
+      - name: Run Expo tests
+        run: npm run test:mobile

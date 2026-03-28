@@ -1,44 +1,42 @@
+import {
+  DEFAULT_ENTITLEMENTS,
+  type BillingProvider,
+  type NormalizedSubscription,
+  type RevenueCatReconcileInput,
+  type SubscriptionEntitlements,
+  type SubscriptionOffering,
+  type SubscriptionStatus,
+  type SubscriptionTier,
+} from '@kurecal/domain';
 import type { Database } from './supabase';
 
+export {
+  DEFAULT_ENTITLEMENTS,
+};
+export type {
+  BillingProvider,
+  NormalizedSubscription,
+  RevenueCatReconcileInput,
+  SubscriptionEntitlements,
+  SubscriptionOffering,
+  SubscriptionStatus,
+  SubscriptionTier,
+};
+
 // Type aliases for cleaner usage
-export type SubscriptionTier = Database['public']['Enums']['subscription_tier'];
-export type SubscriptionStatus = Database['public']['Enums']['subscription_status'];
 export type PlanType = Database['public']['Enums']['plan_type'];
 
-// Subscription row type
-export type Subscription = Database['public']['Tables']['subscriptions']['Row'];
-export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'];
-export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'];
-
-// Entitlements structure (matches the jsonb column default)
-export interface SubscriptionEntitlements {
-  calendar_sync: boolean;
-  full_history: boolean;
-  full_recommendations: boolean;
-  unlimited_bookmarks: boolean;
-}
-
-// Default entitlements by tier
-export const DEFAULT_ENTITLEMENTS: Record<SubscriptionTier, SubscriptionEntitlements> = {
-  free: {
-    calendar_sync: false,
-    full_history: false,
-    full_recommendations: false,
-    unlimited_bookmarks: false,
-  },
-  pro: {
-    calendar_sync: true,
-    full_history: true,
-    full_recommendations: true,
-    unlimited_bookmarks: true,
-  },
-  team: {
-    calendar_sync: true,
-    full_history: true,
-    full_recommendations: true,
-    unlimited_bookmarks: true,
-  },
+type SubscriptionProviderFields = {
+  billing_provider?: BillingProvider | null;
+  revenuecat_customer_id?: string | null;
+  revenuecat_entitlement_id?: string | null;
+  revenuecat_product_id?: string | null;
 };
+
+// Subscription row type
+export type Subscription = Database['public']['Tables']['subscriptions']['Row'] & SubscriptionProviderFields;
+export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'] & SubscriptionProviderFields;
+export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'] & SubscriptionProviderFields;
 
 // Feature names for gate checks (matches SubscriptionEntitlements keys)
 export type FeatureName = keyof SubscriptionEntitlements;

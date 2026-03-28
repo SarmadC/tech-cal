@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
-import { createClient } from '@/utils/supabase/server';
+import { getApiAuthContext } from '@/lib/apiAuth';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
@@ -58,11 +58,8 @@ function isSampledForMatchingTelemetry(userId: string, sampleRate: number): bool
  */
 export async function GET(request: NextRequest): Promise<NextResponse<RecommendationResponse>> {
   try {
-    const supabase = await createClient();
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const { supabase, user } = await getApiAuthContext(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }

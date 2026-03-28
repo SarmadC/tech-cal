@@ -25,3 +25,20 @@ export function createServiceClient(
     });
 }
 
+export function createUserScopedClient(
+    supabaseUrl: string,
+    supabaseAnonKey: string,
+    accessToken: string
+): SupabaseClientType {
+    return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        },
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
+}

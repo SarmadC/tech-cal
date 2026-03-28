@@ -11,6 +11,14 @@ export interface RankingOption {
     description: string;
 }
 
+interface TopPickSelectionOptions {
+    scoreThreshold?: number;
+    candidateLimit?: number;
+    limit?: number;
+    maxSameOrganizer?: number;
+    maxSameCategory?: number;
+}
+
 export const DISCOVERY_RANKING_OPTIONS: RankingOption[] = [
     {
         id: 'best-match',
@@ -48,6 +56,16 @@ interface DiversifyOptions {
 
 function getCareerScore(event: EventWithImpact): number {
     const raw = event.careerImpact?.overall ?? 0;
+    return Math.min(100, Math.max(0, raw));
+}
+
+function getTopPickScore(event: EventWithImpact): number {
+    const raw =
+        event.careerImpact?.overall ??
+        event.recommendationMetadata?.alignmentScore ??
+        event.recommendationMetadata?.matchScore ??
+        0;
+
     return Math.min(100, Math.max(0, raw));
 }
 
@@ -241,4 +259,41 @@ export function diversifyFirstViewport(
     }
 
     return [...prioritized, ...deferred];
+}
+
+export function selectTopPickEvents(
+    events: EventWithImpact[],
+    options: TopPickSelectionOptions = {}
+): EventWithImpact[] {
+    const {
+        scoreThreshold = 60,
+        candidateLimit = 9,
+        limit = 3,
+        maxSameOrganizer = 1,
+        maxSameCategory = 1,
+    } = options;
+
+    const topCandidates = events
+        .filter((event) => getTopPickScore(event) >= scoreThreshold)
+        .sort((a, b) => {
+            const scoreDelta = getTopPickScore(b) - getTopPickScore(a);
+            if (scoreDelta !== 0) {
+                return scoreDelta;
+            }
+
+            const aStart = getStartTimestamp(a);
+            const bStart = getStartTimestamp(b);
+            if (aStart !== bStart) {
+                return aStart - bStart;
+            }
+
+            return a.id.localeCompare(b.id);
+        })
+        .slice(0, candidateLimit);
+
+    return diversifyFirstViewport(topCandidates, {
+        viewportSize: limit,
+        maxSameOrganizer,
+        maxSameCategory,
+    }).slice(0, limit);
 }

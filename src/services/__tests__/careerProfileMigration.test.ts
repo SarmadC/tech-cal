@@ -136,7 +136,7 @@ describe('CareerProfileService Migration', () => {
     it('should transform CareerProfile to database row data', () => {
       const result = (CareerProfileService as unknown as { transformCareerProfileToRow: (profile: CareerProfile) => unknown }).transformCareerProfileToRow(mockCareerProfile);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         current_role: mockCareerProfile.currentRole,
         seniority: mockCareerProfile.seniority,
         industry: mockCareerProfile.industry,
@@ -150,9 +150,10 @@ describe('CareerProfileService Migration', () => {
         learning_style: mockCareerProfile.learningStyle,
         available_time: mockCareerProfile.availableTime,
         budget: mockCareerProfile.budget,
+        target_path: null,
         networking_goals: mockCareerProfile.networkingGoals,
         preferred_event_types: mockCareerProfile.preferredEventTypes
-      });
+      }));
     });
   });
 

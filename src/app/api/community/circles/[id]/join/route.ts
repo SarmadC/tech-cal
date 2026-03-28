@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getApiAuthContext } from '@/lib/apiAuth';
 
 export async function POST(
     request: Request,
@@ -11,9 +11,7 @@ export async function POST(
             return NextResponse.json({ error: 'Missing circle ID' }, { status: 400 });
         }
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
+        const { supabase, user } = await getApiAuthContext(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -64,9 +62,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'Missing circle ID' }, { status: 400 });
         }
 
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
+        const { supabase, user } = await getApiAuthContext(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

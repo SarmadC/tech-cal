@@ -1,16 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "vitest.d.ts"
-  ],
   "exclude": [
+    "node_modules",
+    "apps/mobile/**",
+    "packages/**",
     "**/__tests__/**",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/**/__tests__/**"
+    "src/**/__tests__/**",
+    "tests/**",
+    "test-cheerio.js"
   ]
 }
-
 

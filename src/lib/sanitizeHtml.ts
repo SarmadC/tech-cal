@@ -1,4 +1,4 @@
-import sanitizeHtml from 'sanitize-html';
+import sanitizeHtml, { type Attributes, type IOptions } from 'sanitize-html';
 
 const ALLOWED_TAGS = [
     'p', 'br', 'hr',
@@ -11,7 +11,7 @@ const ALLOWED_TAGS = [
     'iframe', 'div', 'aside',
 ];
 
-const ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions['allowedAttributes'] = {
+const ALLOWED_ATTRIBUTES: IOptions['allowedAttributes'] = {
     a: ['href', 'name', 'target', 'rel'],
     img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
     iframe: ['src', 'title', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
@@ -38,7 +38,7 @@ export function sanitizeBlogHtml(rawHtml: string): string {
         disallowedTagsMode: 'discard',
         allowedIframeHostnames: ALLOWED_IFRAME_HOSTNAMES,
         transformTags: {
-            a: (_tagName, attribs) => {
+            a: (_tagName: string, attribs: Attributes) => {
                 const nextAttribs = { ...attribs };
                 if (nextAttribs.target === '_blank') {
                     nextAttribs.rel = 'noopener noreferrer nofollow';

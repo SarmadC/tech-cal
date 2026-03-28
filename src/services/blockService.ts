@@ -1,13 +1,5 @@
+import type { BlockedUserSummary } from '@kurecal/domain';
 import type { SupabaseClientType } from '@/types';
-
-export interface BlockedUserSummary {
-  id: string;
-  fullName: string | null;
-  avatarUrl: string | null;
-  username: string | null;
-  headline: string | null;
-  blockedAt: string;
-}
 
 export class BlockService {
   static async blockUser(

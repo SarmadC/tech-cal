@@ -1,0 +1,23 @@
+appId: com.kurecal.mobile
+---
+- launchApp
+- assertVisible: "Career velocity, rebuilt for the pocket."
+- tapOn:
+    point: "50%,45%"
+- inputText: ${MAESTRO_TEST_EMAIL}
+- tapOn:
+    point: "50%,54%"
+- inputText: ${MAESTRO_TEST_PASSWORD}
+- tapOn: "Enter the app"
+- assertVisible: "Discover"
+- tapOn: "Calendar"
+- assertVisible: "Plan the month"
+- tapOn: "Community"
+- assertVisible: "Start a conversation"
+- tapOn: "Dashboard"
+- assertVisible: "Recommended next"
+- tapOn: "Settings"
+- assertVisible: "Account and appearance"
+- tapOn: "Light"
+- tapOn: "Manage subscription"
+- assertVisible: "Upgrade without leaving the app"

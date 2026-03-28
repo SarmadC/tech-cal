@@ -537,14 +537,7 @@ export class CareerProfileService {
       if (onboardingData.step6_teamBuilding) {
         const teamBuildingData: TeamBuildingPreferences = {
           skillProficiencies: onboardingData.step2_skills?.skillTags || [],
-          teamRole: onboardingData.step6_teamBuilding.teamRole,
-          collaborationStyle: onboardingData.step6_teamBuilding.collaborationStyle || [],
-          teamSizePreference: onboardingData.step6_teamBuilding.teamSizePreference || 'flexible',
-          communicationPreferences: onboardingData.step6_teamBuilding.communicationPreferences || [],
-          teamGoals: onboardingData.step6_teamBuilding.teamGoals || [],
-          mentorshipPreference: onboardingData.step6_teamBuilding.mentorshipPreference || 'neither',
-          availabilityPattern: onboardingData.step6_teamBuilding.availabilityPattern,
-          projectTypePreferences: onboardingData.step6_teamBuilding.projectTypePreferences || []
+          ...onboardingData.step6_teamBuilding,
         };
         await this.saveTeamBuildingPreferences(userId, teamBuildingData, supabaseClient);
       }

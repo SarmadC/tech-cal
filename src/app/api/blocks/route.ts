@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
+import { getApiAuthContext } from '@/lib/apiAuth';
 import { createServiceClient } from '@/utils/supabase/service';
 import { BlockService } from '@/services/blockService';
 import { TrustLevelService } from '@/services/trustLevelService';
@@ -12,12 +12,10 @@ const BlockRequestSchema = z.object({
 
 const blockActionRateLimiter = createRateLimiter('social-block-actions', 'LOW_FREQUENCY');
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const { user } = await getApiAuthContext(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -52,10 +50,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const { supabase, user } = await getApiAuthContext(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }

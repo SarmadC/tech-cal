@@ -1,5 +1,13 @@
 // src/types/index.ts
 
+import type {
+  ApiResponse as DomainApiResponse,
+  AppProfile as DomainAppProfile,
+  OAuthProvider as DomainOAuthProvider,
+  SignInInput,
+  SignUpInput,
+} from '@kurecal/domain';
+export { OAUTH_PROVIDERS } from '@kurecal/domain';
 import { User, Session } from '@supabase/supabase-js';
 import type { Json } from './supabase';
 export type { Json };
@@ -92,12 +100,8 @@ export type SupabaseProfile = {
 };
 
 // --- Application Types (Non-Event) ---
-export type AppProfile = {
-    id: string;
-    fullName: string | null;
+export type AppProfile = Omit<DomainAppProfile, 'avatarUrl' | 'preferences' | 'createdAt' | 'updatedAt'> & {
     avatarUrl: string | null;
-    timezone: string | null;
-    // And here
     preferences: Json | null;
     createdAt: string | null;
     updatedAt: string | null;
@@ -106,8 +110,7 @@ export type AppProfile = {
 export const CALENDAR_VIEWS = { MONTH: 'month', WEEK: 'week', DAY: 'day' } as const;
 export type CalendarView = typeof CALENDAR_VIEWS[keyof typeof CALENDAR_VIEWS];
 
-export const OAUTH_PROVIDERS = { GOOGLE: 'google', GITHUB: 'github' } as const;
-export type OAuthProvider = typeof OAUTH_PROVIDERS[keyof typeof OAUTH_PROVIDERS];
+export type OAuthProvider = DomainOAuthProvider;
 
 export type EventFilters = { 
   categories?: string[]; 
@@ -144,10 +147,10 @@ export type SearchSuggestion = {
   startTime?: string;
   organizerLogoUrl?: string | null;
 };
-export type LoginForm = { email: string; password: string; rememberMe?: boolean; };
-export type SignupForm = { name: string; email: string; password: string; confirmPassword: string; acceptTerms: boolean; };
+export type LoginForm = SignInInput & { rememberMe?: boolean; };
+export type SignupForm = SignUpInput;
 export type ProfileUpdateForm = { fullName?: string | null; avatarUrl?: string | null; timezone?: string | null; preferences?: Json | null; };
-export type ApiResponse<T = unknown> = { success: boolean; data?: T; error?: string; message?: string; };
+export type ApiResponse<T = unknown> = DomainApiResponse<T>;
 export type AuthState = { user: User | null; session: Session | null; profile: AppProfile | null; loading: boolean; };
 export type AuthResponse = { success: boolean; error?: string; message?: string; };
 

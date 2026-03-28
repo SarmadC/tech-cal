@@ -47,10 +47,14 @@ interface EnvConfig {
 }
 
 class EnvConfigManager {
-  private config: EnvConfig;
+  private config: EnvConfig | null = null;
 
-  constructor() {
-    this.config = this.loadConfig();
+  private getLoadedConfig(): EnvConfig {
+    if (!this.config) {
+      this.config = this.loadConfig();
+    }
+
+    return this.config;
   }
 
   private loadConfig(): EnvConfig {
@@ -112,14 +116,14 @@ class EnvConfigManager {
    * Get the complete configuration
    */
   getConfig(): EnvConfig {
-    return { ...this.config };
+    return { ...this.getLoadedConfig() };
   }
 
   /**
    * Check if a feature is enabled
    */
   isFeatureEnabled(feature: keyof EnvConfig['features']): boolean {
-    const featureConfig = this.config.features[feature] as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const featureConfig = this.getLoadedConfig().features[feature] as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     return featureConfig.enabled ?? false;
   }
 
@@ -129,7 +133,7 @@ class EnvConfigManager {
   getFeatureConfig<T extends keyof EnvConfig['features']>(
     feature: T
   ): EnvConfig['features'][T] {
-    return this.config.features[feature];
+    return this.getLoadedConfig().features[feature];
   }
 
   /**
@@ -161,14 +165,14 @@ class EnvConfigManager {
    * Check if KV (Vercel KV) is available
    */
   isKvAvailable(): boolean {
-    return !!(this.config.services.kv.url && this.config.services.kv.token);
+    return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
   }
 
   /**
    * Check if Redis (Upstash) is available
    */
   isRedisAvailable(): boolean {
-    return !!(this.config.services.redis.url && this.config.services.redis.token);
+    return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
   }
 
   /**
@@ -209,12 +213,12 @@ class EnvConfigManager {
       required: { present: requiredPresent, total: requiredVars.length },
       optional: { present: optionalPresent, total: optionalVars.length },
       features: {
-        logScoring: this.config.features.scoring.logScoring,
-        typePrefGate: !this.config.features.scoring.disableTypePrefGate,
-        behavioralBoost: this.config.features.behavioral.enabled,
-        scoreBreakdown: this.config.features.debug.scoreBreakdown,
-        budgetHint: this.config.features.debug.budgetHint,
-        monitoring: this.config.features.debug.monitoring,
+        logScoring: process.env.NEXT_PUBLIC_LOG_SCORING === 'true',
+        typePrefGate: process.env.NEXT_PUBLIC_DISABLE_TYPE_PREF_GATE !== 'true',
+        behavioralBoost: process.env.NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST !== 'false',
+        scoreBreakdown: process.env.NEXT_PUBLIC_ENABLE_SCORE_BREAKDOWN === 'true',
+        budgetHint: process.env.NEXT_PUBLIC_SHOW_BUDGET_HINT === 'true',
+        monitoring: process.env.ENABLE_MONITORING_API === 'true',
       }
     };
   }

@@ -149,6 +149,11 @@ See [Ingestion Setup Documentation](./docs/INGESTION_SETUP.md) for:
 ## Project Structure
 
 ```
+apps/
+├── mobile/              # Expo app shell and native release config
+packages/
+├── domain/              # Shared schemas/types for mobile, web, and server
+├── mobile-client/       # Shared Expo HTTP client wrapper
 src/
 ├── app/                 # App Router routes (public + protected)
 ├── components/          # UI components (landing, calendar, dashboard, etc.)
@@ -161,6 +166,13 @@ src/
 ├── utils/               # Cross-cutting utilities (transformers, navigation)
 └── data/                # Static marketing and onboarding datasets
 ```
+
+## Monorepo Release Strategy
+
+- Web production release gates are scoped to the Next.js app and do not depend on Expo code under `apps/mobile`.
+- The Expo app ships from the same repository, but it has its own CI lane and its own manual EAS release workflow.
+- Shared contracts for auth, onboarding, subscription, community, and mobile feed payloads live in `packages/domain`.
+- Expo consumes backend routes through `packages/mobile-client` rather than ad hoc fetch calls in `apps/mobile`.
 
 ---
 
