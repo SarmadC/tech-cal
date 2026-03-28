@@ -85,7 +85,7 @@ describe('ManagerJustificationModal', () => {
         renderModal(true);
 
         expect(screen.getByTestId('manager-justification-loading')).toBeInTheDocument();
-        expect(screen.getByText('Loading manager justification...')).toBeInTheDocument();
+        expect(screen.getByText('Generating approval brief...')).toBeInTheDocument();
     });
 
     it('displays justification data after fetch', async () => {
@@ -98,8 +98,7 @@ describe('ManagerJustificationModal', () => {
         await waitFor(() => {
             expect(screen.getByText('Event Attendance Request')).toBeInTheDocument();
             expect(screen.getByText('AI Leadership Summit')).toBeInTheDocument();
-            expect(screen.getByText('87/100')).toBeInTheDocument();
-            expect(screen.getByText('High Impact')).toBeInTheDocument();
+            expect(screen.getByText('Summary Pitch (High Impact)')).toBeInTheDocument();
         });
     });
 
@@ -182,31 +181,13 @@ describe('ManagerJustificationModal', () => {
 
         await screen.findByText('AI Leadership Summit');
 
-        await userEvent.click(screen.getByRole('button', { name: 'Remove skill Leadership' }));
-        await userEvent.click(screen.getByRole('button', { name: 'Copy to Clipboard' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Leadership' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Copy Brief' }));
 
         expect(mockCopyToClipboard).toHaveBeenCalledTimes(1);
         const copiedText = mockCopyToClipboard.mock.calls[0][0] as string;
-        expect(copiedText).not.toContain('\n- Leadership\n');
+        expect(copiedText).not.toContain('• Leadership');
         expect(copiedText).toContain('System Design');
-    });
-
-    it('removing a goal excludes it from clipboard output', async () => {
-        (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-            new Response(JSON.stringify(justificationPayload), { status: 200 })
-        );
-
-        renderModal(true);
-
-        await screen.findByText('AI Leadership Summit');
-
-        await userEvent.click(screen.getByRole('button', { name: 'Remove goal leadership-growth' }));
-        await userEvent.click(screen.getByRole('button', { name: 'Copy to Clipboard' }));
-
-        expect(mockCopyToClipboard).toHaveBeenCalledTimes(1);
-        const copiedText = mockCopyToClipboard.mock.calls[0][0] as string;
-        expect(copiedText).not.toContain('leadership-growth');
-        expect(copiedText).toContain('skill-development');
     });
 
     it('copy to clipboard calls utility with generated justification text', async () => {
@@ -217,12 +198,12 @@ describe('ManagerJustificationModal', () => {
         renderModal(true);
 
         await screen.findByText('AI Leadership Summit');
-        await userEvent.click(screen.getByRole('button', { name: 'Copy to Clipboard' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Copy Brief' }));
 
         expect(mockCopyToClipboard).toHaveBeenCalledTimes(1);
         const copiedText = mockCopyToClipboard.mock.calls[0][0] as string;
-        expect(copiedText).toContain('# Attendance Approval Brief');
-        expect(copiedText).toContain('AI Leadership Summit');
-        expect(copiedText).toContain('Career Impact Score');
+        expect(copiedText).toContain('Subject: Proposal to attend AI Leadership Summit');
+        expect(copiedText).toContain('AI Leadership Summit is scheduled to take place on');
+        expect(copiedText).toContain('Strong leadership alignment');
     });
 });

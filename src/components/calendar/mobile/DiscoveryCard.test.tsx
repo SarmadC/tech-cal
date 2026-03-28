@@ -1,3 +1,4 @@
+import { act, fireEvent } from '@testing-library/react';
 import type { ImgHTMLAttributes, ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -97,24 +98,35 @@ describe('Mobile DiscoveryCard', () => {
     });
 
     it('opens the mobile action sheet with the existing overflow actions', async () => {
-        const user = userEvent.setup();
+        vi.useFakeTimers();
 
-        render(
-            <DiscoveryCard
-                event={buildEvent({
-                    id: 'event-mobile-3',
-                    title: 'API Reliability Forum',
-                })}
-            />
-        );
+        try {
+            render(
+                <DiscoveryCard
+                    event={buildEvent({
+                        id: 'event-mobile-3',
+                        title: 'API Reliability Forum',
+                    })}
+                />
+            );
 
-        await user.click(screen.getByLabelText('Open actions'));
+            const card = screen.getByRole('listitem');
+            fireEvent.touchStart(card, {
+                touches: [{ clientX: 24, clientY: 32 }],
+            });
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(600);
+            });
+            fireEvent.touchEnd(card);
 
-        expect(screen.getByRole('dialog', { name: 'Event actions' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Why this event' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Add to shortlist' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Less like this' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Not relevant' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Hide event' })).toBeInTheDocument();
+            expect(screen.getByRole('dialog', { name: 'Event actions' })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Why this event' })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Add to shortlist' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Less like this' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Not relevant' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Hide event' })).toBeInTheDocument();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

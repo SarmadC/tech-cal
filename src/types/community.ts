@@ -90,6 +90,12 @@ export interface CommunityFeedPost {
   circle: { slug: string; name: string };
   commentCount: number;
   isTrending: boolean;
+  recentComments?: Array<{
+    id: string;
+    content: string;
+    createdAt: string;
+    author: { id: string; fullName: string | null; avatarUrl: string | null };
+  }>;
 }
 
 export interface CommunityUpcomingEvent {

@@ -10,6 +10,7 @@ export interface CircleDiscussionComment {
   content: string;
   created_at: string;
   author: CircleDiscussionAuthor;
+  isRemoved?: boolean;
   score?: number;
   userVote?: number;
   replies: CircleDiscussionComment[];
@@ -21,6 +22,7 @@ export interface CircleDiscussionPost {
   created_at: string;
   author: CircleDiscussionAuthor;
   comments: CircleDiscussionComment[];
+  isRemoved?: boolean;
   score?: number;
   userVote?: number;
 }

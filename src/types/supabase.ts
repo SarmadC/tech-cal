@@ -691,6 +691,11 @@ export type Database = {
       circle_comments: {
         Row: {
           author_id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           content: string
           created_at: string
           id: string
@@ -700,6 +705,11 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content: string
           created_at?: string
           id?: string
@@ -709,6 +719,11 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content?: string
           created_at?: string
           id?: string
@@ -834,6 +849,11 @@ export type Database = {
         Row: {
           author_id: string
           circle_id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           content: string
           created_at: string
           id: string
@@ -842,6 +862,11 @@ export type Database = {
         Insert: {
           author_id: string
           circle_id: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content: string
           created_at?: string
           id?: string
@@ -850,6 +875,11 @@ export type Database = {
         Update: {
           author_id?: string
           circle_id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content?: string
           created_at?: string
           id?: string
@@ -2981,6 +3011,11 @@ export type Database = {
           analytics_consent_date: string | null
           avatar_url: string | null
           bookmark_count_today: number | null
+          community_moderated_at: string | null
+          community_moderated_by: string | null
+          community_moderation_notes: string | null
+          community_moderation_reason: string | null
+          community_moderation_status: string
           created_at: string | null
           full_name: string | null
           headline: string | null
@@ -3003,6 +3038,11 @@ export type Database = {
           analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
+          community_moderated_at?: string | null
+          community_moderated_by?: string | null
+          community_moderation_notes?: string | null
+          community_moderation_reason?: string | null
+          community_moderation_status?: string
           created_at?: string | null
           full_name?: string | null
           headline?: string | null
@@ -3025,6 +3065,11 @@ export type Database = {
           analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
+          community_moderated_at?: string | null
+          community_moderated_by?: string | null
+          community_moderation_notes?: string | null
+          community_moderation_reason?: string | null
+          community_moderation_status?: string
           created_at?: string | null
           full_name?: string | null
           headline?: string | null

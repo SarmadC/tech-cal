@@ -137,6 +137,11 @@ export default function AdminSidebar() {
                         href: `${BASE_PATH}/utilities/reports`,
                         icon: <MaterialIcon name="bar-chart" size={16} />,
                     },
+                    {
+                        title: 'Community Reports',
+                        href: `${BASE_PATH}/community/reports`,
+                        icon: <MaterialIcon name="warning" size={16} />,
+                    },
                 ],
             },
         ],
@@ -254,4 +259,3 @@ export default function AdminSidebar() {
         </Sidebar>
     );
 }
-

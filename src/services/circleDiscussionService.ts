@@ -1,5 +1,11 @@
 import { CIRCLE_TAG_MAPPINGS } from '@/config/circleTagMappings';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
+import { BlockService } from '@/services/blockService';
+import {
+  REMOVED_COMMENT_PLACEHOLDER,
+  REMOVED_MEMBER_NAME,
+  REMOVED_POST_PLACEHOLDER,
+} from '@/services/communityModerationService';
 import type { SupabaseClientType } from '@/types/database';
 import type {
   CircleDiscussionAuthor,
@@ -36,6 +42,7 @@ interface RawCommentRow {
   parent_id: string | null;
   content: string;
   created_at: string;
+  moderation_status: 'active' | 'removed';
   author: CircleDiscussionAuthor | CircleDiscussionAuthor[] | null;
   votes: VoteRow[] | null;
 }
@@ -44,6 +51,7 @@ interface RawPostRow {
   id: string;
   content: string;
   created_at: string;
+  moderation_status: 'active' | 'removed';
   author: CircleDiscussionAuthor | CircleDiscussionAuthor[] | null;
   comments: RawCommentRow[] | null;
   votes: VoteRow[] | null;
@@ -386,7 +394,7 @@ export class CircleDiscussionService {
 
     const { data: post, error: postError } = await readClient
       .from('circle_posts')
-      .select('id, content, circle_id')
+      .select('id, content, circle_id, moderation_status')
       .eq('id', postId)
       .maybeSingle();
 
@@ -414,7 +422,10 @@ export class CircleDiscussionService {
         description: circle.description || '',
         memberCount: circle.member_count ?? 0,
       },
-      postContent: post.content ?? '',
+      postContent:
+        post.moderation_status === 'removed'
+          ? REMOVED_POST_PLACEHOLDER
+          : post.content ?? '',
     };
   }
 
@@ -530,12 +541,14 @@ export class CircleDiscussionService {
         id,
         content,
         created_at,
+        moderation_status,
         author: author_id(id, full_name, avatar_url),
         comments: circle_comments(
           id,
           parent_id,
           content,
           created_at,
+          moderation_status,
           author: author_id(id, full_name, avatar_url),
           votes: circle_comment_votes(user_id, vote_type)
         ),
@@ -546,7 +559,10 @@ export class CircleDiscussionService {
     if (postId) {
       query = query.eq('id', postId);
     } else {
-      query = query.order('created_at', { ascending: false }).limit(CIRCLE_POST_LIMIT);
+      query = query
+        .eq('moderation_status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(CIRCLE_POST_LIMIT);
     }
 
     const { data, error } = await query;
@@ -555,12 +571,52 @@ export class CircleDiscussionService {
       return [];
     }
 
-    return (data as RawPostRow[]).map((post) => this.formatPost(post, viewerId));
+    const rawPosts = data as RawPostRow[];
+    const blockedUserIds =
+      viewerId
+        ? await BlockService.getBlockedUserIdsForViewer(
+            viewerId,
+            [
+              ...new Set(
+                rawPosts.flatMap((post) => {
+                  const authorIds: string[] = [];
+                  const resolvedPostAuthor = Array.isArray(post.author)
+                    ? post.author[0]
+                    : post.author;
+
+                  if (resolvedPostAuthor?.id) {
+                    authorIds.push(resolvedPostAuthor.id);
+                  }
+
+                  (post.comments || []).forEach((comment) => {
+                    const resolvedCommentAuthor = Array.isArray(comment.author)
+                      ? comment.author[0]
+                      : comment.author;
+                    if (resolvedCommentAuthor?.id) {
+                      authorIds.push(resolvedCommentAuthor.id);
+                    }
+                  });
+
+                  return authorIds;
+                })
+              ),
+            ],
+            readClient
+          )
+        : new Set<string>();
+
+    return rawPosts
+      .filter((post) => {
+        const resolvedAuthor = Array.isArray(post.author) ? post.author[0] : post.author;
+        return !resolvedAuthor?.id || !blockedUserIds.has(resolvedAuthor.id);
+      })
+      .map((post) => this.formatPost(post, viewerId, blockedUserIds));
   }
 
   private static formatPost(
     post: RawPostRow,
-    viewerId: string | null
+    viewerId: string | null,
+    blockedUserIds: Set<string>
   ): CircleDiscussionPost {
     const postVotes = post.votes || [];
     const score = postVotes.reduce((sum, vote) => sum + vote.vote_type, 0);
@@ -574,23 +630,38 @@ export class CircleDiscussionService {
       full_name: null,
       avatar_url: null,
     };
+    const isRemoved = post.moderation_status === 'removed';
 
     return {
       id: post.id,
-      content: post.content,
+      content: isRemoved ? REMOVED_POST_PLACEHOLDER : post.content,
       created_at: post.created_at,
-      author,
-      comments: this.buildCommentTree(post.comments || [], viewerId),
-      score,
-      userVote,
+      author: isRemoved
+        ? {
+            id: author.id,
+            full_name: REMOVED_MEMBER_NAME,
+            avatar_url: null,
+          }
+        : author,
+      comments: isRemoved
+        ? []
+        : this.buildCommentTree(post.comments || [], viewerId, blockedUserIds),
+      isRemoved,
+      score: isRemoved ? 0 : score,
+      userVote: isRemoved ? 0 : userVote,
     };
   }
 
   private static buildCommentTree(
     comments: RawCommentRow[],
-    viewerId: string | null
+    viewerId: string | null,
+    blockedUserIds: Set<string>
   ): CircleDiscussionComment[] {
     const normalizedComments = comments
+      .filter((comment) => {
+        const resolvedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author;
+        return !resolvedAuthor?.id || !blockedUserIds.has(resolvedAuthor.id);
+      })
       .map((comment) => {
         const commentVotes = comment.votes || [];
         const score = commentVotes.reduce((sum, vote) => sum + vote.vote_type, 0);
@@ -598,19 +669,27 @@ export class CircleDiscussionService {
           ? commentVotes.find((vote) => vote.user_id === viewerId)?.vote_type || 0
           : 0;
         const resolvedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author;
+        const isRemoved = comment.moderation_status === 'removed';
 
         return {
           id: comment.id,
           parent_id: comment.parent_id,
-          content: comment.content,
+          content: isRemoved ? REMOVED_COMMENT_PLACEHOLDER : comment.content,
           created_at: comment.created_at,
-          author: resolvedAuthor ?? {
-            id: '',
-            full_name: null,
-            avatar_url: null,
-          },
-          score,
-          userVote,
+          author: isRemoved
+            ? {
+                id: resolvedAuthor?.id ?? '',
+                full_name: REMOVED_MEMBER_NAME,
+                avatar_url: null,
+              }
+            : resolvedAuthor ?? {
+                id: '',
+                full_name: null,
+                avatar_url: null,
+              },
+          isRemoved,
+          score: isRemoved ? 0 : score,
+          userVote: isRemoved ? 0 : userVote,
           replies: [],
         };
       })
@@ -634,6 +713,8 @@ export class CircleDiscussionService {
           parent.replies.push(comment);
           return;
         }
+
+        return;
       }
 
       rootComments.push(comment);
