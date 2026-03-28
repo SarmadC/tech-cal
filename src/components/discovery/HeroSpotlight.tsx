@@ -3,9 +3,8 @@
 import React from 'react';
 import { Event, CareerImpactScore } from '@/types';
 import { Sparkle } from '@phosphor-icons/react';
-import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 import HeroEventCard from './HeroEventCard';
-import { diversifyFirstViewport } from './discoveryRanking';
+import { selectTopPickEvents } from './discoveryRanking';
 import { DiscoveryFeedbackAction } from './discoveryFeedback';
 
 type EventWithImpact = Event & { careerImpact?: CareerImpactScore };
@@ -37,18 +36,7 @@ const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
     pendingBookmarkIds,
     pendingAttendanceIds,
 }) => {
-    const heroEvents = React.useMemo(() => {
-        const topCandidates = events
-            .filter(e => (e.careerImpact?.overall ?? 0) >= 60)
-            .sort((a, b) => (b.careerImpact?.overall ?? 0) - (a.careerImpact?.overall ?? 0))
-            .slice(0, 9);
-
-        return diversifyFirstViewport(topCandidates, {
-            viewportSize: 3,
-            maxSameOrganizer: 1,
-            maxSameCategory: 1,
-        }).slice(0, 3);
-    }, [events]);
+    const heroEvents = React.useMemo(() => selectTopPickEvents(events), [events]);
 
     if (heroEvents.length === 0) return null;
 

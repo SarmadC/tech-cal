@@ -45,9 +45,9 @@ export function extractDateFromContent(content: string): string | undefined {
 
     // Common date patterns in event descriptions
     const datePatterns = [
-        /(?:event|starts?|begins?|on)\s+(?:the\s+)?(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+        /(?:event|starts?|begins?|on)\s+(?:the\s+)?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
         /(\w+\s+\d{1,2},?\s+\d{4})/i, // "January 15, 2024"
-        /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i, // ISO-like format
+        /(\d{4}[/-]\d{1,2}[/-]\d{1,2})/i, // ISO-like format
     ];
 
     for (const pattern of datePatterns) {
@@ -107,4 +107,3 @@ export const EVENT_END_DATE_FIELDS = [
     'eventEnd',
     'endDate',
 ] as const;
-

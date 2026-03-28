@@ -41,7 +41,7 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
                     month: 'short',
                     year: 'numeric'
                 });
-            case 'week':
+            case 'week': {
                 const startOfWeek = new Date(date);
                 const dayOfWeek = startOfWeek.getDay();
                 const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -51,6 +51,7 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
                 endOfWeek.setDate(startOfWeek.getDate() + 6);
 
                 return `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            }
             case 'day':
                 return date.toLocaleDateString('en-US', {
                     month: 'short',

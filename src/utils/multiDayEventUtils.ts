@@ -71,7 +71,7 @@ export function generateDailyEventInstances(
     const viewDateStr = `${year}-${month}-${day}`;
 
     switch (event.dailySchedule.type) {
-        case 'daily_recurring':
+        case 'daily_recurring': {
             const dailyStart = event.dailySchedule.dailyStart || '09:00';
             const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
@@ -105,6 +105,7 @@ export function generateDailyEventInstances(
                 dayInfo
             });
             break;
+        }
             
         case 'custom':
             // Handle custom schedules with different times per day

@@ -58,7 +58,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "score": 40.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 18,
     "reasons": [
       "Exact match: React",
@@ -67,7 +67,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "Hands-on workshop matches your learning style",
     ],
     "recencyBoost": 0,
-    "totalScore": 62.1,
+    "totalScore": 64.1,
   },
   {
     "event": {
@@ -111,7 +111,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "score": 46.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 9,
     "reasons": [
       "Exact match: React",
@@ -120,7 +120,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "International event",
     ],
     "recencyBoost": 0,
-    "totalScore": 53.160000000000004,
+    "totalScore": 54.160000000000004,
   },
   {
     "event": {
@@ -160,14 +160,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "score": 30,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 8,
     "reasons": [
       "Learning: Exact match: Rust",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 42.64,
+    "totalScore": 43.64,
   },
   {
     "event": {
@@ -207,14 +207,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "score": 24,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 8,
     "reasons": [
       "Exact match: TypeScript",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 38.02,
+    "totalScore": 40.02,
   },
   {
     "event": {
@@ -257,14 +257,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "score": 16.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 4,
     "profileBoost": 8,
     "reasons": [
       "Exact match: CSS",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 32.08,
+    "totalScore": 36.08,
   },
   {
     "event": {
@@ -300,13 +300,13 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "matchedTags": [],
       "score": 0,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 0,
     "reasons": [
       "No specific matches found",
     ],
     "recencyBoost": 0,
-    "totalScore": 10,
+    "totalScore": 11,
   },
 ]
 `;
@@ -368,7 +368,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "score": 40.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 18,
     "reasons": [
       "Exact match: React",
@@ -377,7 +377,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "Hands-on workshop matches your learning style",
     ],
     "recencyBoost": 0,
-    "totalScore": 60.1,
+    "totalScore": 62.1,
   },
   {
     "event": {
@@ -421,7 +421,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "score": 46.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 9,
     "reasons": [
       "Exact match: React",
@@ -430,7 +430,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "International event",
     ],
     "recencyBoost": 0,
-    "totalScore": 52.160000000000004,
+    "totalScore": 53.160000000000004,
   },
   {
     "event": {
@@ -470,14 +470,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "score": 30,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 8,
     "reasons": [
       "Learning: Exact match: Rust",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 40.64,
+    "totalScore": 41.64,
   },
   {
     "event": {
@@ -517,14 +517,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "score": 24,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 8,
     "reasons": [
       "Exact match: TypeScript",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 36.02,
+    "totalScore": 38.02,
   },
   {
     "event": {
@@ -567,14 +567,14 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "score": 16.8,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 4,
     "profileBoost": 8,
     "reasons": [
       "Exact match: CSS",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 33.08,
+    "totalScore": 37.08,
   },
   {
     "event": {
@@ -610,13 +610,13 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "matchedTags": [],
       "score": 0,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 0,
     "reasons": [
       "No specific matches found",
     ],
     "recencyBoost": 0,
-    "totalScore": 8,
+    "totalScore": 9,
   },
 ]
 `;

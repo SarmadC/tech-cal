@@ -216,7 +216,7 @@ export function extractDomain(url: string): string | undefined {
 export function extractUrlFromText(text: string): string | undefined {
     if (!text) return undefined;
     
-    const urlMatch = text.match(/https?:\/\/[^\s<>"{}|\\^`\[\]]+/i);
+    const urlMatch = text.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i);
     return urlMatch ? urlMatch[0] : undefined;
 }
 
@@ -231,4 +231,3 @@ export function isValidUrl(url: string): boolean {
         return false;
     }
 }
-

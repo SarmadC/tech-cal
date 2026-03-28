@@ -255,10 +255,10 @@ export class ProfileService {
         try {
             const authMetadataUpdates: { data: { full_name?: string; avatar_url?: string | null } } = { data: {} };
 
-            if (updates.hasOwnProperty('fullName')) {
+            if (Object.prototype.hasOwnProperty.call(updates, 'fullName')) {
                 authMetadataUpdates.data.full_name = updates.fullName ?? undefined;
             }
-            if (updates.hasOwnProperty('avatarUrl')) {
+            if (Object.prototype.hasOwnProperty.call(updates, 'avatarUrl')) {
                 authMetadataUpdates.data.avatar_url = updates.avatarUrl;
             }
 

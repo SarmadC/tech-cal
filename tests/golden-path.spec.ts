@@ -22,7 +22,7 @@ async function ensureDiscoverReady(page: Page) {
 test.describe('Golden Path', () => {
   test('user can sign in, reach discovery, and navigate core views', async ({ page, isMobile }) => {
     await test.step('Open login page', async () => {
-      await page.goto('http://localhost:3000/login');
+      await page.goto('/login');
       await page.waitForLoadState('networkidle');
     });
 
@@ -41,7 +41,7 @@ test.describe('Golden Path', () => {
 
     await test.step('Navigate to calendar and verify', async () => {
       // Navigate to calendar
-      await page.goto('http://localhost:3000/calendar');
+      await page.goto('/calendar?view=month');
       await expect(page).toHaveURL(/\/calendar\?view=month/, { timeout: 15000 });
       await page.waitForLoadState('networkidle');
 
@@ -62,7 +62,7 @@ test.describe('Golden Path', () => {
     });
 
     await test.step('Return to discover feed', async () => {
-      await page.goto('http://localhost:3000/discover');
+      await page.goto('/discover');
       await ensureDiscoverReady(page);
     });
   });

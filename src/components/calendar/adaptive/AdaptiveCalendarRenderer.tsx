@@ -73,6 +73,29 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   const isIOSMobile = userAgent.isIOS && isMobile;
   const isAndroidMobile = userAgent.isAndroid && isMobile;
 
+  // Desktop/Web-optimized components (existing)
+  const fallbackDiscoverFilters = useMemo(() => createDefaultUnifiedFilters(), []);
+
+  // Calculate active filter count from filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (fallbackDiscoverFilters.categories.length > 0) count++;
+    if (fallbackDiscoverFilters.locations.length > 0) count++;
+    if (fallbackDiscoverFilters.searchTerm) count++;
+    if (fallbackDiscoverFilters.dateRange.start || fallbackDiscoverFilters.dateRange.end) count++;
+    if (fallbackDiscoverFilters.budget !== 'all') count++;
+    if (fallbackDiscoverFilters.format !== 'all') count++;
+    if (fallbackDiscoverFilters.cost !== 'all') count++;
+    if (fallbackDiscoverFilters.difficulty !== 'all') count++;
+    if (fallbackDiscoverFilters.availability !== 'all') count++;
+    if (fallbackDiscoverFilters.popularity !== 'all') count++;
+    if (fallbackDiscoverFilters.duration !== 'all') count++;
+    if (fallbackDiscoverFilters.myTracked) count++;
+    if (fallbackDiscoverFilters.myNetwork) count++;
+    if (fallbackDiscoverFilters.recommended) count++;
+    return count;
+  }, [fallbackDiscoverFilters]);
+
   if (useMobileVersion) {
     // Mobile-optimized components
     switch (view) {
@@ -145,29 +168,6 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
         );
     }
   }
-
-  // Desktop/Web-optimized components (existing)
-  const fallbackDiscoverFilters = useMemo(() => createDefaultUnifiedFilters(), []);
-
-  // Calculate active filter count from filters
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (fallbackDiscoverFilters.categories.length > 0) count++;
-    if (fallbackDiscoverFilters.locations.length > 0) count++;
-    if (fallbackDiscoverFilters.searchTerm) count++;
-    if (fallbackDiscoverFilters.dateRange.start || fallbackDiscoverFilters.dateRange.end) count++;
-    if (fallbackDiscoverFilters.budget !== 'all') count++;
-    if (fallbackDiscoverFilters.format !== 'all') count++;
-    if (fallbackDiscoverFilters.cost !== 'all') count++;
-    if (fallbackDiscoverFilters.difficulty !== 'all') count++;
-    if (fallbackDiscoverFilters.availability !== 'all') count++;
-    if (fallbackDiscoverFilters.popularity !== 'all') count++;
-    if (fallbackDiscoverFilters.duration !== 'all') count++;
-    if (fallbackDiscoverFilters.myTracked) count++;
-    if (fallbackDiscoverFilters.myNetwork) count++;
-    if (fallbackDiscoverFilters.recommended) count++;
-    return count;
-  }, [fallbackDiscoverFilters]);
 
   switch (view) {
     case 'discover':

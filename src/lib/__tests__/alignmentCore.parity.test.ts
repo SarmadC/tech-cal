@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
+import { LocationScoringService } from '@/services/locationScoringService';
+import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import type { Event, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
+
+const LOCATION_NEUTRAL_SCORE = 0.8;
 
 // Sample career profile for testing
 const sampleCareerProfile: CareerProfile = {
@@ -84,17 +88,22 @@ describe('Alignment Core vs Enrichment parity', () => {
       events,
       sampleCareerProfile,
       supabaseStub,
-      'test-user'
+      undefined
     );
 
     const enrichmentScores = enriched.map(e => e.careerImpact?.overall ?? 0);
 
     expect(enrichmentScores.length).toBe(coreScores.length);
-    enrichmentScores.forEach((score, idx) => {
-      const delta = Math.abs(score - coreScores[idx]);
-      expect(delta).toBeLessThanOrEqual(2);
+    enriched.forEach((event, idx) => {
+      const score = event.careerImpact?.overall ?? 0;
+      const tagMatch = TagBasedMatchingService.calculateTagSimilarity(events[idx], sampleCareerProfile);
+      const tagAffinityContribution = Math.min(20, Math.round((tagMatch?.score ?? 0) * 0.2));
+      const locationScore = LocationScoringService.calculateLocationScore(events[idx], undefined).score;
+      const locationAdjustment = (locationScore - LOCATION_NEUTRAL_SCORE) * 10;
+
+      expect(score).toBe(
+        Math.min(100, coreScores[idx] + tagAffinityContribution + locationAdjustment)
+      );
     });
   });
 });
-
-

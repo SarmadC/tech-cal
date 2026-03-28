@@ -35,7 +35,7 @@ export function useCardPositions(
     const [positions, setPositions] = useState<AllCardPositions>({ chaos: [], order: [] });
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const calculatePositions = useCallback((container: HTMLElement) => {
+    const calculatePositions = useCallback(function calculatePositions(container: HTMLElement) {
         // Clear any existing retry timeout
         if (retryTimeoutRef.current) {
             clearTimeout(retryTimeoutRef.current);

@@ -4,7 +4,7 @@ const TEST_EMAIL = process.env.E2E_ONBOARDING_EMAIL ?? 'testuser-1760225110319@e
 const TEST_PASSWORD = process.env.E2E_ONBOARDING_PASSWORD ?? process.env.E2E_PASSWORD ?? 'StrongPassword123';
 
 async function loginFromProtectedDeepLink(page: Page) {
-  await page.goto('http://localhost:3000/onboarding/career?from=protected');
+  await page.goto('/onboarding/career?from=protected');
   await page.waitForLoadState('networkidle');
 
   if (page.url().includes('/login')) {
@@ -82,7 +82,7 @@ test.describe('Career onboarding', () => {
       }));
     });
 
-    await page.goto('http://localhost:3000/onboarding/career?from=protected');
+    await page.goto('/onboarding/career?from=protected');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByLabel('Step 3: Goals')).toHaveAttribute('aria-current', 'step');
