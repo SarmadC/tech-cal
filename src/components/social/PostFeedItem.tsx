@@ -100,7 +100,10 @@ export default function PostFeedItem({
 
     const parsedPostContent = useMemo(() => parseCirclePostContent(post.content ?? ''), [post.content]);
     const authorName = getDisplayName(post.author?.full_name);
-    const replyLabel = `${totalComments} ${totalComments === 1 ? 'reply' : 'replies'}`;
+    const isRemoved = Boolean(post.isRemoved);
+    const replyLabel = isRemoved
+        ? 'Removed by moderators'
+        : `${totalComments} ${totalComments === 1 ? 'reply' : 'replies'}`;
     const hasSeparateBody = Boolean(parsedPostContent.title && parsedPostContent.body.trim());
     const isCollapsedPreview = !isPostExpanded && !disableCollapse;
     const previewNavigationLabel = parsedPostContent.title || parsedPostContent.body || 'Open thread';
@@ -321,7 +324,7 @@ export default function PostFeedItem({
                                 </p>
 
                                 <div className="flex items-center gap-3">
-                                    {isAuthor && currentUser && (
+                                    {isAuthor && currentUser && !isRemoved && (
                                         <>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -457,31 +460,39 @@ export default function PostFeedItem({
                             )}
 
                             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 pt-3">
-                                <VoteControls
-                                    score={localScore}
-                                    vote={localVote}
-                                    onVote={handleVote}
-                                    density="sm"
-                                    className="shrink-0"
-                                />
+                                {!isRemoved ? (
+                                    <>
+                                        <VoteControls
+                                            score={localScore}
+                                            vote={localVote}
+                                            onVote={handleVote}
+                                            density="sm"
+                                            className="shrink-0"
+                                        />
 
-                                <button
-                                    type="button"
-                                    onClick={handleReplyClick}
-                                    className={actionLinkClasses}
-                                >
-                                    <ChatCircle size={16} />
-                                    Reply
-                                </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleReplyClick}
+                                            className={actionLinkClasses}
+                                        >
+                                            <ChatCircle size={16} />
+                                            Reply
+                                        </button>
 
-                                <button
-                                    type="button"
-                                    onClick={handleShare}
-                                    className={actionLinkClasses}
-                                >
-                                    <ShareNetwork size={16} />
-                                    Share
-                                </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleShare}
+                                            className={actionLinkClasses}
+                                        >
+                                            <ShareNetwork size={16} />
+                                            Share
+                                        </button>
+                                    </>
+                                ) : (
+                                    <span className="text-[12px] font-medium uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                                        Moderation hold
+                                    </span>
+                                )}
 
                                 {!disableCollapse && (
                                     <button
@@ -502,7 +513,7 @@ export default function PostFeedItem({
                         <div className="mt-5 border-t border-zinc-200/80 pt-4 dark:border-zinc-800/80">
                             {totalComments === 0 ? (
                                 <div className="mt-4 border-b border-dashed border-zinc-200/80 py-5 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                                    No comments yet. Start the thread.
+                                    {isRemoved ? 'This thread is no longer available for replies.' : 'No comments yet. Start the thread.'}
                                 </div>
                             ) : (
                                 <div className="mt-2">
@@ -520,7 +531,7 @@ export default function PostFeedItem({
                                 </div>
                             )}
 
-                            {hiddenRootCommentCount > 0 && (
+                            {!isRemoved && hiddenRootCommentCount > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => setIsExpanded(true)}
@@ -530,7 +541,7 @@ export default function PostFeedItem({
                                 </button>
                             )}
 
-                            {isJoined && currentUser && (
+                            {!isRemoved && isJoined && currentUser && (
                                 <form
                                     ref={commentComposerRef}
                                     onSubmit={handleCommentSubmit}

@@ -691,6 +691,11 @@ export type Database = {
       circle_comments: {
         Row: {
           author_id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           content: string
           created_at: string
           id: string
@@ -705,6 +710,11 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content: string
           created_at?: string
           id?: string
@@ -719,6 +729,11 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content?: string
           created_at?: string
           id?: string
@@ -870,6 +885,11 @@ export type Database = {
         Row: {
           author_id: string
           circle_id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           content: string
           created_at: string
           id: string
@@ -883,6 +903,11 @@ export type Database = {
         Insert: {
           author_id: string
           circle_id: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content: string
           created_at?: string
           id?: string
@@ -896,6 +921,11 @@ export type Database = {
         Update: {
           author_id?: string
           circle_id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           content?: string
           created_at?: string
           id?: string
