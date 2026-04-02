@@ -76,7 +76,9 @@ jobs:
 
       - name: Build preview release
         working-directory: apps/mobile
-        run: npm run build:preview -- --platform ${{ github.event.inputs.platform }}
+        env:
+          MOBILE_PLATFORM: ${{ github.event.inputs.platform }}
+        run: npm run build:preview -- --platform "$MOBILE_PLATFORM"
 
   production-build:
     name: EAS Production Build
@@ -106,4 +108,6 @@ jobs:
 
       - name: Build production release
         working-directory: apps/mobile
-        run: npm run build:production -- --platform ${{ github.event.inputs.platform }}
+        env:
+          MOBILE_PLATFORM: ${{ github.event.inputs.platform }}
+        run: npm run build:production -- --platform "$MOBILE_PLATFORM"
