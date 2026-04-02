@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { SocialProfileService, type ProfileVisibility } from '@/services/socialProfileService';
 import { TrustLevelService } from '@/services/trustLevelService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const PROFILE_VISIBILITY_VALUES = ['private', 'connections', 'public'] as const satisfies readonly ProfileVisibility[];
 
@@ -13,17 +13,17 @@ const SocialProfileUpdateSchema = z.object({
   showAttendance: z.boolean().optional(),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    const { supabase, user } = authContext;
 
     const [socialProfile, trust] = await Promise.all([
       SocialProfileService.getSocialProfile(user.id, supabase),
@@ -48,15 +48,15 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    const { supabase, user } = authContext;
 
     const body = await request.json();
     const validation = SocialProfileUpdateSchema.safeParse(body);

@@ -41,7 +41,8 @@
     "test:budget": "tsx scripts/test-budget-filtering.ts",
     "validate:analytics": "tsx scripts/validate-analytics.ts",
     "verify:paddle": "tsx scripts/verify-paddle-setup.ts",
-    "verify:all": "npm run verify:production && npm run test:budget && npm run validate:analytics"
+    "verify:all": "npm run verify:production && npm run test:budget && npm run validate:analytics",
+    "mobile:release:check": "npm --prefix apps/mobile run release:check"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

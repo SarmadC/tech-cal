@@ -4,11 +4,50 @@ import type { Database } from './supabase';
 export type SubscriptionTier = Database['public']['Enums']['subscription_tier'];
 export type SubscriptionStatus = Database['public']['Enums']['subscription_status'];
 export type PlanType = Database['public']['Enums']['plan_type'];
+export type BillingProvider = 'manual' | 'paddle' | 'revenuecat';
 
 // Subscription row type
 export type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'];
 export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'];
+
+export interface RevenueCatReconcileInput {
+  customerId: string;
+  entitlementId: string;
+  productId: string;
+  tier: SubscriptionTier;
+  status: SubscriptionStatus;
+  planType?: PlanType | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
+  pastDueAt?: string | null;
+  entitlements?: Partial<SubscriptionEntitlements> | null;
+}
+
+export interface NormalizedMobileSubscription {
+  id: string;
+  userId: string;
+  provider: BillingProvider;
+  tier: SubscriptionTier;
+  status: SubscriptionStatus;
+  planType: PlanType | null;
+  entitlements: SubscriptionEntitlements;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  providerCustomerId: string | null;
+  providerProductId: string | null;
+}
+
+export interface SubscriptionOffering {
+  identifier: string;
+  productIdentifier: string;
+  title: string;
+  description: string;
+  tier: SubscriptionTier;
+  planType: PlanType;
+}
 
 // Entitlements structure (matches the jsonb column default)
 export interface SubscriptionEntitlements {

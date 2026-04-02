@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from './env';
+
 export const EVENT_SUBMISSION_TYPE_OPTIONS = [
   { value: 'tech_event', label: 'Tech Event' },
   { value: 'hackathon', label: 'Hackathon' },
@@ -41,15 +43,6 @@ export interface SubmitEventValidationErrors {
   location?: string;
   startDate?: string;
   title?: string;
-}
-
-function getApiBaseUrl() {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  if (!apiUrl) {
-    throw new Error('EXPO_PUBLIC_API_URL is missing from the mobile environment.');
-  }
-
-  return apiUrl.replace(/\/$/, '');
 }
 
 export function createInitialSubmitEventState(): SubmitEventFormState {
