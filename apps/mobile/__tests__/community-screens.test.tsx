@@ -6,7 +6,7 @@ import type {
     MobilePublicProfile,
     MobileSpeakerDetail,
 } from "@kurecal/domain";
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import CommunityScreen from "../app/(tabs)/community";
 import CommunityCircleScreen from "../app/community/[slug]";
@@ -501,6 +501,17 @@ describe("mobile community screens", () => {
         expect(
             screen.getAllByTestId("community-event-card-image").length,
         ).toBeGreaterThan(0);
+        const [attendingEventMetadata, savedEventMetadata] = screen.getAllByTestId(
+            "community-event-card-metadata",
+        );
+        expect(within(attendingEventMetadata).getByText("Virtual")).toBeTruthy();
+        expect(within(attendingEventMetadata).getByText("APR 2")).toBeTruthy();
+        expect(within(attendingEventMetadata).queryByText(/6:00/i)).toBeNull();
+        expect(
+            within(savedEventMetadata).getByText("Seattle, WA · Hybrid"),
+        ).toBeTruthy();
+        expect(within(savedEventMetadata).getByText("MAY 5")).toBeTruthy();
+        expect(within(savedEventMetadata).queryByText(/4:00/i)).toBeNull();
         expect(screen.queryByText("Attendee circle")).toBeNull();
 
         const serializedTree = JSON.stringify(view.toJSON());

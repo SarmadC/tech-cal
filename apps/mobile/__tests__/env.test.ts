@@ -1,22 +1,22 @@
 import { describe, expect, it } from '@jest/globals';
-import { resolveMobileEnvFromProcess } from '../lib/env';
+import { resolveMobileEnv } from '../lib/env';
 
 const baseEnv = {
-  EXPO_PUBLIC_SUPABASE_URL: 'https://kurecal.supabase.co',
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
-  EXPO_PUBLIC_REVENUECAT_API_KEY_IOS: 'ios-key',
-  EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID: 'android-key',
-  EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID: 'kure_cal_pro',
-  EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID: 'monthly',
-  EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID: 'annual',
+  supabaseUrl: 'https://kurecal.supabase.co',
+  supabaseAnonKey: 'anon-key',
+  revenueCatApiKeyIos: 'ios-key',
+  revenueCatApiKeyAndroid: 'android-key',
+  revenueCatProEntitlementId: 'kure_cal_pro',
+  revenueCatProMonthlyProductId: 'monthly',
+  revenueCatProAnnualProductId: 'annual',
 } satisfies Record<string, string>;
 
 describe('mobile env resolution', () => {
   it('allows localhost fallback only in development', () => {
-    const resolved = resolveMobileEnvFromProcess(
+    const resolved = resolveMobileEnv(
       {
         ...baseEnv,
-        EXPO_PUBLIC_APP_ENV: 'development',
+        appEnv: 'development',
       },
       'android'
     );
@@ -29,21 +29,21 @@ describe('mobile env resolution', () => {
 
   it('requires explicit staging runtime values', () => {
     expect(() =>
-      resolveMobileEnvFromProcess(
+      resolveMobileEnv(
         {
           ...baseEnv,
-          EXPO_PUBLIC_APP_ENV: 'staging',
+          appEnv: 'staging',
         },
         'ios'
       )
     ).toThrow('EXPO_PUBLIC_API_URL');
 
     expect(() =>
-      resolveMobileEnvFromProcess(
+      resolveMobileEnv(
         {
           ...baseEnv,
-          EXPO_PUBLIC_APP_ENV: 'staging',
-          EXPO_PUBLIC_API_URL: 'https://staging.kurecal.com',
+          appEnv: 'staging',
+          apiBaseUrl: 'https://staging.kurecal.com',
         },
         'ios'
       )
@@ -51,12 +51,12 @@ describe('mobile env resolution', () => {
   });
 
   it('resolves production identity and platform-specific RevenueCat keys', () => {
-    const resolved = resolveMobileEnvFromProcess(
+    const resolved = resolveMobileEnv(
       {
         ...baseEnv,
-        EXPO_PUBLIC_APP_ENV: 'production',
-        EXPO_PUBLIC_API_URL: 'https://app.kurecal.com',
-        EXPO_PUBLIC_AUTH_REDIRECT_URI: 'kurecal://auth/callback',
+        appEnv: 'production',
+        apiBaseUrl: 'https://app.kurecal.com',
+        authRedirectUri: 'kurecal://auth/callback',
       },
       'ios'
     );

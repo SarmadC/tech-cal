@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Subscription } from '@/types/subscription';
 import {
+  buildRevenueCatSubscriptionInsert,
   getMobileSubscriptionOfferings,
   toNormalizedSubscription,
 } from './mobileSubscriptions';
@@ -100,5 +101,38 @@ describe('mobileSubscriptions', () => {
         planType: 'annual',
       }),
     ]);
+  });
+
+  it('builds a typed RevenueCat upsert payload with provider metadata', () => {
+    const upsertPayload = buildRevenueCatSubscriptionInsert(userId, {
+      customerId: 'rc_customer_1',
+      entitlementId: 'kure_cal_pro',
+      productId: 'kurecal_pro_annual',
+      tier: 'pro',
+      status: 'active',
+      planType: 'annual',
+      currentPeriodStart: '2026-03-01T00:00:00.000Z',
+      currentPeriodEnd: '2027-03-01T00:00:00.000Z',
+      trialStartedAt: null,
+      trialEndsAt: null,
+      pastDueAt: null,
+      entitlements: {
+        calendar_sync: true,
+        full_history: true,
+        full_recommendations: true,
+        unlimited_bookmarks: true,
+      },
+    });
+
+    expect(upsertPayload).toMatchObject({
+      user_id: userId,
+      billing_provider: 'revenuecat',
+      revenuecat_customer_id: 'rc_customer_1',
+      revenuecat_entitlement_id: 'kure_cal_pro',
+      revenuecat_product_id: 'kurecal_pro_annual',
+      plan_type: 'annual',
+      status: 'active',
+      tier: 'pro',
+    });
   });
 });

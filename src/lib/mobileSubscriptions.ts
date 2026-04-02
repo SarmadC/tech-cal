@@ -5,7 +5,7 @@ import type {
   SubscriptionEntitlements,
   SubscriptionOffering,
 } from '@kurecal/domain';
-import type { Subscription, SubscriptionTier } from '@/types/subscription';
+import type { Subscription, SubscriptionInsert, SubscriptionTier } from '@/types/subscription';
 import { DEFAULT_ENTITLEMENTS } from '@/types/subscription';
 import { getSubscriptionByUserId } from '@/lib/subscription';
 import { createServiceClient } from '@/utils/supabase/service';
@@ -75,20 +75,12 @@ export async function getNormalizedSubscriptionForUser(
   return toNormalizedSubscription(subscription, userId);
 }
 
-export async function reconcileRevenueCatSubscription(
+export function buildRevenueCatSubscriptionInsert(
   userId: string,
-  payload: RevenueCatReconcileInput
-): Promise<NormalizedSubscription> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('RevenueCat reconciliation is not configured.');
-  }
-
-  const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
-  const now = new Date().toISOString();
-  const upsertPayload = {
+  payload: RevenueCatReconcileInput,
+  now = new Date().toISOString()
+): SubscriptionInsert {
+  return {
     id: randomUUID(),
     user_id: userId,
     billing_provider: 'revenuecat',
@@ -108,6 +100,21 @@ export async function reconcileRevenueCatSubscription(
     seats_used: 1,
     updated_at: now,
   };
+}
+
+export async function reconcileRevenueCatSubscription(
+  userId: string,
+  payload: RevenueCatReconcileInput
+): Promise<NormalizedSubscription> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('RevenueCat reconciliation is not configured.');
+  }
+
+  const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
+  const upsertPayload = buildRevenueCatSubscriptionInsert(userId, payload);
 
   const { data, error } = await (serviceClient as any)
     .from('subscriptions')

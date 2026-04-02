@@ -17,6 +17,7 @@ Expo Router native shell for the signed-in KureCal product surface.
 The Expo app now resolves one explicit environment: `development`, `staging`, or `production`.
 
 - Local development uses `EXPO_PUBLIC_APP_ENV=development` and may fall back to `http://localhost:3000` or `http://10.0.2.2:3000` when `EXPO_PUBLIC_API_URL` is omitted.
+- EAS `development`, `preview`, and `production` profiles now bind to the matching EAS environment so the required public vars are resolved from the correct remote env set during build.
 - EAS `preview` builds are the staging lane and set `EXPO_PUBLIC_APP_ENV=staging`.
 - EAS `production` builds set `EXPO_PUBLIC_APP_ENV=production`.
 - Staging and production require explicit values for:
@@ -29,6 +30,11 @@ The Expo app now resolves one explicit environment: `development`, `staging`, or
   - `EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID`
   - `EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID`
   - `EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID`
+- Production backend envs for the mobile subscription routes must also include:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `REVENUECAT_PRO_MONTHLY_PRODUCT_ID`
+  - `REVENUECAT_PRO_ANNUAL_PRODUCT_ID`
 
 ## App identities
 
@@ -52,6 +58,7 @@ The Expo app now resolves one explicit environment: `development`, `staging`, or
 - `npm run type-check:mobile`
 - `npm run test:mobile`
 - `npm run test:mobile:contracts`
+- `npm run mobile:release:check`
 - `npm run test:mobile:smoke`
 - `npm run build:mobile:preview`
 
@@ -59,6 +66,7 @@ The Expo app now resolves one explicit environment: `development`, `staging`, or
 
 - Expo config now lives in [`app.config.ts`](/Users/sarmad/tech-cal/apps/mobile/app.config.ts).
 - EAS profiles live in [`eas.json`](/Users/sarmad/tech-cal/apps/mobile/eas.json).
+- Production release preflight now runs `expo-doctor` plus a production `expo export` bundle check to ensure `EXPO_PUBLIC_*` values are statically inlined.
 - Maestro smoke flows live in [`apps/mobile/.maestro/smoke-auth-discovery.yaml`](/Users/sarmad/tech-cal/apps/mobile/.maestro/smoke-auth-discovery.yaml) and [`apps/mobile/.maestro/smoke-community-paywall.yaml`](/Users/sarmad/tech-cal/apps/mobile/.maestro/smoke-community-paywall.yaml).
 - RevenueCat sync depends on `EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID`, `EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID`, and matching product identifiers.
 

@@ -3447,6 +3447,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_provider: Database["public"]["Enums"]["billing_provider"]
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -3460,6 +3461,9 @@ export type Database = {
           seats_included: number
           seats_used: number
           status: Database["public"]["Enums"]["subscription_status"]
+          revenuecat_customer_id: string | null
+          revenuecat_entitlement_id: string | null
+          revenuecat_product_id: string | null
           tier: Database["public"]["Enums"]["subscription_tier"]
           trial_ends_at: string | null
           trial_started_at: string | null
@@ -3467,6 +3471,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_provider?: Database["public"]["Enums"]["billing_provider"]
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -3480,6 +3485,9 @@ export type Database = {
           seats_included?: number
           seats_used?: number
           status?: Database["public"]["Enums"]["subscription_status"]
+          revenuecat_customer_id?: string | null
+          revenuecat_entitlement_id?: string | null
+          revenuecat_product_id?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"]
           trial_ends_at?: string | null
           trial_started_at?: string | null
@@ -3487,6 +3495,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_provider?: Database["public"]["Enums"]["billing_provider"]
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -3500,6 +3509,9 @@ export type Database = {
           seats_included?: number
           seats_used?: number
           status?: Database["public"]["Enums"]["subscription_status"]
+          revenuecat_customer_id?: string | null
+          revenuecat_entitlement_id?: string | null
+          revenuecat_product_id?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"]
           trial_ends_at?: string | null
           trial_started_at?: string | null
@@ -4870,6 +4882,7 @@ export type Database = {
         | "find-employers"
         | "industry-insights"
         | "thought-leadership"
+      billing_provider: "paddle" | "revenuecat" | "manual"
       plan_type: "monthly" | "annual"
       pricing_type_enum: "Free" | "Paid" | "Varies"
       seniority_level:
@@ -5077,6 +5090,7 @@ export const Constants = {
         "industry-insights",
         "thought-leadership",
       ],
+      billing_provider: ["paddle", "revenuecat", "manual"],
       plan_type: ["monthly", "annual"],
       pricing_type_enum: ["Free", "Paid", "Varies"],
       seniority_level: [

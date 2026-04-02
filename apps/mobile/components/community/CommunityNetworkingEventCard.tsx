@@ -5,7 +5,6 @@ import { CommunityAvatarStack } from "@/components/community/CommunityAvatarStac
 import {
   formatCommunityCompactCount,
   formatCommunityEventDay,
-  formatCommunityEventTime,
   formatNetworkingLocation,
 } from "@/components/community/presentation";
 import { useAppTheme } from "@/providers/ThemeProvider";
@@ -167,9 +166,9 @@ function getEventTone(
   return EVENT_TONES.saved[mode];
 }
 
-function formatPosterDateTimeLine(event: MobileCommunityNetworkingEvent): string {
+function formatPosterDateLine(event: MobileCommunityNetworkingEvent): string {
   const dateParts = formatCommunityEventDay(event.startTime);
-  return `${formatCommunityEventTime(event.startTime)} · ${dateParts.month} ${dateParts.day}`;
+  return `${dateParts.month} ${dateParts.day}`;
 }
 
 function getSupportingCopy(event: MobileCommunityNetworkingEvent): string | null {
@@ -188,18 +187,6 @@ function getSupportingCopy(event: MobileCommunityNetworkingEvent): string | null
   return null;
 }
 
-function formatBodyMetaLine(event: MobileCommunityNetworkingEvent): string {
-  const weekdayLabel = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-  }).format(new Date(event.startTime));
-  const timeLabel = formatCommunityEventTime(event.startTime);
-  const locationLabel = formatNetworkingLocation(event.location, event.format);
-
-  return locationLabel
-    ? `${weekdayLabel} · ${timeLabel} | ${locationLabel}`
-    : `${weekdayLabel} · ${timeLabel}`;
-}
-
 export function CommunityNetworkingEventCard({
   event,
   featured = false,
@@ -209,8 +196,8 @@ export function CommunityNetworkingEventCard({
   const tone = getEventTone(event, tokens.mode);
   const [imageUri, setImageUri] = useState<string | null>(event.imageUrl ?? null);
   const supportingCopy = getSupportingCopy(event);
-  const metaLine = formatBodyMetaLine(event);
-  const posterDateTime = formatPosterDateTimeLine(event);
+  const posterDate = formatPosterDateLine(event);
+  const posterLocation = formatNetworkingLocation(event.location, event.format);
   const proofPeople = event.attendeePreview.map((person) => ({
     id: person.id,
     fullName: person.fullName,
@@ -275,17 +262,33 @@ export function CommunityNetworkingEventCard({
           },
         ]}
       >
-        <Text
-          style={[
-            styles.posterMeta,
-            {
-              color: tone.bodyMeta,
-              fontFamily: tokens.typography.mono,
-            },
-          ]}
-        >
-          {posterDateTime}
-        </Text>
+        <View testID="community-event-card-metadata" style={styles.posterMetaRow}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.posterMeta,
+              styles.posterMetaLocation,
+              {
+                color: tone.bodyMeta,
+                fontFamily: tokens.typography.mono,
+              },
+            ]}
+          >
+            {posterLocation}
+          </Text>
+          <Text
+            style={[
+              styles.posterMeta,
+              styles.posterMetaDate,
+              {
+                color: tone.bodyMeta,
+                fontFamily: tokens.typography.mono,
+              },
+            ]}
+          >
+            {posterDate}
+          </Text>
+        </View>
 
         <Text
           adjustsFontSizeToFit
@@ -301,20 +304,6 @@ export function CommunityNetworkingEventCard({
         >
           {event.title.toUpperCase()}
         </Text>
-
-        <Text
-          testID="community-event-card-metadata"
-          numberOfLines={1}
-          style={{
-            color: tone.bodyMeta,
-            fontFamily: tokens.typography.sans,
-            fontSize: 14,
-            lineHeight: 19,
-            fontWeight: "600",
-          }}
-          >
-            {metaLine}
-          </Text>
 
         {supportingCopy ? (
           <Text
@@ -383,6 +372,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.1,
     textTransform: "uppercase",
+  },
+  posterMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  posterMetaLocation: {
+    flex: 1,
+    minWidth: 0,
+  },
+  posterMetaDate: {
+    flexShrink: 0,
   },
   posterTitle: {
     fontSize: 22,

@@ -8,7 +8,19 @@ import {
 } from '@/config/appConfig';
 
 type MobilePlatform = 'android' | 'ios' | 'web' | 'windows' | 'macos';
-type EnvRecord = Record<string, string | undefined>;
+
+export interface MobilePublicEnv {
+  appEnv?: string;
+  apiBaseUrl?: string;
+  authRedirectUri?: string;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  revenueCatApiKeyIos?: string;
+  revenueCatApiKeyAndroid?: string;
+  revenueCatProEntitlementId?: string;
+  revenueCatProMonthlyProductId?: string;
+  revenueCatProAnnualProductId?: string;
+}
 
 export interface ResolvedMobileEnv {
   appEnv: MobileAppEnv;
@@ -24,6 +36,21 @@ export interface ResolvedMobileEnv {
     proEntitlementId: string;
     monthlyProductId: string | null;
     annualProductId: string | null;
+  };
+}
+
+function readExpoPublicEnv(): MobilePublicEnv {
+  return {
+    appEnv: process.env.EXPO_PUBLIC_APP_ENV,
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL,
+    authRedirectUri: process.env.EXPO_PUBLIC_AUTH_REDIRECT_URI,
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    revenueCatApiKeyIos: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS,
+    revenueCatApiKeyAndroid: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID,
+    revenueCatProEntitlementId: process.env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID,
+    revenueCatProMonthlyProductId: process.env.EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID,
+    revenueCatProAnnualProductId: process.env.EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID,
   };
 }
 
@@ -51,9 +78,9 @@ function requiredOutsideDevelopment(
   return undefined;
 }
 
-function resolveApiBaseUrl(appEnv: MobileAppEnv, platform: MobilePlatform, env: EnvRecord): string {
-  if (env.EXPO_PUBLIC_API_URL) {
-    return env.EXPO_PUBLIC_API_URL;
+function resolveApiBaseUrl(appEnv: MobileAppEnv, platform: MobilePlatform, value?: string): string {
+  if (value) {
+    return value;
   }
 
   if (appEnv !== 'development') {
@@ -63,9 +90,9 @@ function resolveApiBaseUrl(appEnv: MobileAppEnv, platform: MobilePlatform, env: 
   return platform === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 }
 
-function resolveAuthRedirectUri(appEnv: MobileAppEnv, env: EnvRecord): string {
-  if (env.EXPO_PUBLIC_AUTH_REDIRECT_URI) {
-    return env.EXPO_PUBLIC_AUTH_REDIRECT_URI;
+function resolveAuthRedirectUri(appEnv: MobileAppEnv, value?: string): string {
+  if (value) {
+    return value;
   }
 
   if (appEnv !== 'development') {
@@ -75,15 +102,15 @@ function resolveAuthRedirectUri(appEnv: MobileAppEnv, env: EnvRecord): string {
   return getDefaultMobileAuthRedirectUri(appEnv);
 }
 
-function resolveRevenueCat(platform: MobilePlatform, appEnv: MobileAppEnv, env: EnvRecord) {
+function resolveRevenueCat(platform: MobilePlatform, appEnv: MobileAppEnv, env: MobilePublicEnv) {
   const iosApiKey =
-    requiredOutsideDevelopment(appEnv, 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS', env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS) ??
+    requiredOutsideDevelopment(appEnv, 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS', env.revenueCatApiKeyIos) ??
     null;
   const androidApiKey =
     requiredOutsideDevelopment(
       appEnv,
       'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID',
-      env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID
+      env.revenueCatApiKeyAndroid
     ) ?? null;
   const platformApiKey =
     platform === 'ios' ? iosApiKey : platform === 'android' ? androidApiKey : null;
@@ -96,36 +123,36 @@ function resolveRevenueCat(platform: MobilePlatform, appEnv: MobileAppEnv, env: 
       requiredOutsideDevelopment(
         appEnv,
         'EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID',
-        env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID
+        env.revenueCatProEntitlementId
       ) ?? 'kure_cal_pro',
     monthlyProductId:
       requiredOutsideDevelopment(
         appEnv,
         'EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID',
-        env.EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID
+        env.revenueCatProMonthlyProductId
       ) ?? null,
     annualProductId:
       requiredOutsideDevelopment(
         appEnv,
         'EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID',
-        env.EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID
+        env.revenueCatProAnnualProductId
       ) ?? null,
   };
 }
 
-export function resolveMobileEnvFromProcess(
-  env: EnvRecord,
+export function resolveMobileEnv(
+  env: MobilePublicEnv,
   platform: MobilePlatform = Platform.OS
 ): ResolvedMobileEnv {
-  const appEnv = resolveMobileAppEnv(env.EXPO_PUBLIC_APP_ENV);
+  const appEnv = resolveMobileAppEnv(env.appEnv);
 
   return {
     appEnv,
     appIdentity: getMobileAppIdentity(appEnv),
-    apiBaseUrl: resolveApiBaseUrl(appEnv, platform, env),
-    authRedirectUri: resolveAuthRedirectUri(appEnv, env),
-    supabaseUrl: required('EXPO_PUBLIC_SUPABASE_URL', env.EXPO_PUBLIC_SUPABASE_URL),
-    supabaseAnonKey: required('EXPO_PUBLIC_SUPABASE_ANON_KEY', env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
+    apiBaseUrl: resolveApiBaseUrl(appEnv, platform, env.apiBaseUrl),
+    authRedirectUri: resolveAuthRedirectUri(appEnv, env.authRedirectUri),
+    supabaseUrl: required('EXPO_PUBLIC_SUPABASE_URL', env.supabaseUrl),
+    supabaseAnonKey: required('EXPO_PUBLIC_SUPABASE_ANON_KEY', env.supabaseAnonKey),
     revenueCat: resolveRevenueCat(platform, appEnv, env),
   };
 }
@@ -134,7 +161,7 @@ let cachedEnv: ResolvedMobileEnv | null = null;
 
 export function getMobileEnv(): ResolvedMobileEnv {
   if (!cachedEnv) {
-    cachedEnv = resolveMobileEnvFromProcess(process.env, Platform.OS);
+    cachedEnv = resolveMobileEnv(readExpoPublicEnv(), Platform.OS);
   }
 
   return cachedEnv;

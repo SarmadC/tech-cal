@@ -14,7 +14,11 @@ export default defineConfig({
     testTimeout: 10000,
     include: [
       'packages/domain/src/**/*.test.ts',
+      'packages/mobile-client/src/**/*.test.ts',
       'src/app/api/mobile/**/*.test.ts',
+      'src/app/api/blocks/**/*.test.ts',
+      'src/app/api/follows/**/*.test.ts',
+      'src/app/api/profile/**/*.test.ts',
       'src/lib/apiAuth.test.ts',
       'src/lib/mobileSubscriptions.test.ts',
     ],

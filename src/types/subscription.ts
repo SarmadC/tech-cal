@@ -26,17 +26,10 @@ export type {
 // Type aliases for cleaner usage
 export type PlanType = Database['public']['Enums']['plan_type'];
 
-type SubscriptionProviderFields = {
-  billing_provider?: BillingProvider | null;
-  revenuecat_customer_id?: string | null;
-  revenuecat_entitlement_id?: string | null;
-  revenuecat_product_id?: string | null;
-};
-
 // Subscription row type
-export type Subscription = Database['public']['Tables']['subscriptions']['Row'] & SubscriptionProviderFields;
-export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'] & SubscriptionProviderFields;
-export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'] & SubscriptionProviderFields;
+export type Subscription = Database['public']['Tables']['subscriptions']['Row'];
+export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'];
+export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'];
 
 // Feature names for gate checks (matches SubscriptionEntitlements keys)
 export type FeatureName = keyof SubscriptionEntitlements;

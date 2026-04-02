@@ -10,6 +10,8 @@ on:
       - 'src/app/api/mobile/**'
       - 'src/app/api/community/**'
       - 'src/app/api/blocks/**'
+      - 'src/app/api/follows/**'
+      - 'src/app/api/profile/**'
       - 'src/lib/apiAuth.ts'
       - 'src/lib/apiAuth.test.ts'
       - 'src/lib/mobileSubscriptions.ts'
@@ -18,6 +20,13 @@ on:
       - 'src/services/communityModerationService.ts'
       - 'src/services/communityMutationsService.ts'
       - 'src/services/communityReportService.ts'
+      - 'src/services/followService.ts'
+      - 'src/services/profileService.ts'
+      - 'src/services/socialProfileService.ts'
+      - 'src/services/trustLevelService.ts'
+      - 'src/types/subscription.ts'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.base.json'
@@ -32,6 +41,8 @@ on:
       - 'src/app/api/mobile/**'
       - 'src/app/api/community/**'
       - 'src/app/api/blocks/**'
+      - 'src/app/api/follows/**'
+      - 'src/app/api/profile/**'
       - 'src/lib/apiAuth.ts'
       - 'src/lib/apiAuth.test.ts'
       - 'src/lib/mobileSubscriptions.ts'
@@ -40,6 +51,13 @@ on:
       - 'src/services/communityModerationService.ts'
       - 'src/services/communityMutationsService.ts'
       - 'src/services/communityReportService.ts'
+      - 'src/services/followService.ts'
+      - 'src/services/profileService.ts'
+      - 'src/services/socialProfileService.ts'
+      - 'src/services/trustLevelService.ts'
+      - 'src/types/subscription.ts'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.base.json'
@@ -117,3 +135,6 @@ jobs:
 
       - name: Run Expo tests
         run: npm run test:mobile
+
+      - name: Run Expo release readiness checks
+        run: npm run mobile:release:check
