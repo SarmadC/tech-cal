@@ -13,14 +13,15 @@ vi.mock('@/services/blockService', () => ({
 }));
 
 function createCircleMembersChain(data: Array<{ circle_id: string }>) {
-  return {
-    select: vi.fn(function () {
-      return this;
-    }),
-    eq: vi.fn(async function () {
-      return { data, error: null };
-    }),
-  };
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.eq = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
 }
 
 function createCirclesChain(
@@ -32,54 +33,51 @@ function createCirclesChain(
 }
 
 function createPostsChain(data: unknown[]) {
-  return {
-    select: vi.fn(function () {
-      return this;
-    }),
-    in: vi.fn(function () {
-      return this;
-    }),
-    eq: vi.fn(function () {
-      return this;
-    }),
-    order: vi.fn(function () {
-      return this;
-    }),
-    limit: vi.fn(async function () {
-      return { data, error: null };
-    }),
-  };
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.in = vi.fn(() => chain);
+  chain.eq = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
 }
 
 function createCommentsChain(data: unknown[]) {
-  return {
-    select: vi.fn(function () {
-      return this;
-    }),
-    in: vi.fn(function () {
-      return this;
-    }),
-    eq: vi.fn(function () {
-      return this;
-    }),
-    order: vi.fn(function () {
-      return this;
-    }),
-    limit: vi.fn(async function () {
-      return { data, error: null };
-    }),
-  };
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.in = vi.fn(() => chain);
+  chain.eq = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
 }
 
 function createProfilesChain(data: unknown[]) {
-  return {
-    select: vi.fn(function () {
-      return this;
-    }),
-    in: vi.fn(async function () {
-      return { data, error: null };
-    }),
-  };
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.in = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
 }
 
 describe('CommunityHubService', () => {

@@ -2,7 +2,7 @@ import type {
   CommunityCommentDraft,
   CommunityPostDraft,
   CommunityVoteInput,
-} from '@kurecal/domain';
+} from '@/lib/communitySchemas';
 import type { SupabaseClientType } from '@/types';
 import { CommunityModerationService } from '@/services/communityModerationService';
 

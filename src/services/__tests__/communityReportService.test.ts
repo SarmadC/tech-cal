@@ -19,34 +19,35 @@ function createChain<T>(terminal: {
   maybeSingle?: () => Promise<T>;
   select?: () => Promise<T>;
 }) {
-  return {
-    select: vi.fn(function () {
-      if (terminal.select) {
-        return terminal.select();
-      }
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    maybeSingle: ReturnType<typeof vi.fn>;
+  } = {} as never;
 
-      return this;
-    }),
-    eq: vi.fn(function () {
-      return this;
-    }),
-    in: vi.fn(function () {
-      return this;
-    }),
-    update: vi.fn(function () {
-      return this;
-    }),
-    insert: vi.fn(function () {
-      return this;
-    }),
-    maybeSingle: vi.fn(async () => {
+  chain.select = vi.fn(() => {
+    if (terminal.select) {
+      return terminal.select();
+    }
+
+    return chain;
+  });
+  chain.eq = vi.fn(() => chain);
+  chain.in = vi.fn(() => chain);
+  chain.update = vi.fn(() => chain);
+  chain.insert = vi.fn(() => chain);
+  chain.maybeSingle = vi.fn(async () => {
       if (!terminal.maybeSingle) {
         throw new Error('maybeSingle was not configured for this chain.');
       }
 
       return terminal.maybeSingle();
-    }),
-  };
+  });
+
+  return chain;
 }
 
 describe('CommunityReportService', () => {

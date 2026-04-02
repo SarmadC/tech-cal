@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
-import { communityPostDraftSchema } from '@kurecal/domain';
-import { getApiAuthContext } from '@/lib/apiAuth';
+import { NextResponse, type NextRequest } from 'next/server';
+import { communityPostDraftSchema } from '@/lib/communitySchemas';
 import { CommunityMutationsService } from '@/services/communityMutationsService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 export async function POST(request: Request) {
   try {
-    const { supabase, user } = await getApiAuthContext(request);
-    if (!user) {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -14,7 +14,11 @@ export async function POST(request: Request) {
     }
 
     const payload = communityPostDraftSchema.parse(await request.json());
-    const post = await CommunityMutationsService.createPost(user.id, payload, supabase);
+    const post = await CommunityMutationsService.createPost(
+      authContext.user.id,
+      payload,
+      authContext.supabase
+    );
     return NextResponse.json({ success: true, data: post });
   } catch (error) {
     return NextResponse.json(

@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import type {
   CommunityReportInput,
   CommunityReportRecord,
-} from '@kurecal/domain';
+} from '@/lib/communitySchemas';
 import type { SupabaseClientType } from '@/types';
 import { CommunityModerationService } from '@/services/communityModerationService';
 

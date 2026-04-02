@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from './route';
 
 const mocks = vi.hoisted(() => ({
-  getApiAuthContext: vi.fn(),
+  getAuthenticatedRequestContext: vi.fn(),
   createReport: vi.fn(),
 }));
 
-vi.mock('@/lib/apiAuth', () => ({
-  getApiAuthContext: (...args: unknown[]) => mocks.getApiAuthContext(...args),
+vi.mock('@/utils/supabase/requestAuth', () => ({
+  getAuthenticatedRequestContext: (...args: unknown[]) =>
+    mocks.getAuthenticatedRequestContext(...args),
 }));
 
 vi.mock('@/services/communityReportService', () => ({
@@ -22,10 +23,7 @@ describe('POST /api/community/reports', () => {
   });
 
   it('returns 401 when authentication is missing', async () => {
-    mocks.getApiAuthContext.mockResolvedValue({
-      supabase: {},
-      user: null,
-    });
+    mocks.getAuthenticatedRequestContext.mockResolvedValue(null);
 
     const response = await POST(
       new Request('http://localhost/api/community/reports', {
@@ -46,7 +44,7 @@ describe('POST /api/community/reports', () => {
 
   it('submits a parsed report for the authenticated user', async () => {
     const supabase = { from: vi.fn() };
-    mocks.getApiAuthContext.mockResolvedValue({
+    mocks.getAuthenticatedRequestContext.mockResolvedValue({
       supabase,
       user: { id: '66666666-6666-4666-8666-666666666666' },
     });

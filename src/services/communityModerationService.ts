@@ -1,4 +1,4 @@
-import type { CommunityReportInput } from '@kurecal/domain';
+import type { CommunityReportInput } from '@/lib/communitySchemas';
 import type { SupabaseClientType } from '@/types';
 
 type SubjectType = CommunityReportInput['subjectType'];

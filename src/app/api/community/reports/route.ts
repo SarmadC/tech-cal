@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
-import { communityReportSchema } from '@kurecal/domain';
-import { getApiAuthContext } from '@/lib/apiAuth';
+import { NextResponse, type NextRequest } from 'next/server';
+import { communityReportSchema } from '@/lib/communitySchemas';
 import { CommunityReportService } from '@/services/communityReportService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 export async function POST(request: Request) {
   try {
-    const { supabase, user } = await getApiAuthContext(request);
-    if (!user) {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -14,7 +14,11 @@ export async function POST(request: Request) {
     }
 
     const payload = communityReportSchema.parse(await request.json());
-    const report = await CommunityReportService.createReport(user.id, payload, supabase);
+    const report = await CommunityReportService.createReport(
+      authContext.user.id,
+      payload,
+      authContext.supabase
+    );
     return NextResponse.json({
       success: true,
       data: report,
