@@ -1,47 +1,28 @@
+import {
+  DEFAULT_ENTITLEMENTS as DOMAIN_DEFAULT_ENTITLEMENTS,
+  FREE_TIER_LIMITS,
+  GRACE_PERIOD_DAYS,
+  type FeatureName,
+  type SubscriptionEntitlements,
+} from '@kurecal/domain';
+
 import type { Database } from './supabase';
 
 // Type aliases for cleaner usage
 export type SubscriptionTier = Database['public']['Enums']['subscription_tier'];
 export type SubscriptionStatus = Database['public']['Enums']['subscription_status'];
 export type PlanType = Database['public']['Enums']['plan_type'];
+export type { FeatureName, SubscriptionEntitlements };
+export { FREE_TIER_LIMITS, GRACE_PERIOD_DAYS };
 
 // Subscription row type
 export type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 export type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert'];
 export type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update'];
 
-// Entitlements structure (matches the jsonb column default)
-export interface SubscriptionEntitlements {
-  calendar_sync: boolean;
-  full_history: boolean;
-  full_recommendations: boolean;
-  unlimited_bookmarks: boolean;
-}
-
 // Default entitlements by tier
-export const DEFAULT_ENTITLEMENTS: Record<SubscriptionTier, SubscriptionEntitlements> = {
-  free: {
-    calendar_sync: false,
-    full_history: false,
-    full_recommendations: false,
-    unlimited_bookmarks: false,
-  },
-  pro: {
-    calendar_sync: true,
-    full_history: true,
-    full_recommendations: true,
-    unlimited_bookmarks: true,
-  },
-  team: {
-    calendar_sync: true,
-    full_history: true,
-    full_recommendations: true,
-    unlimited_bookmarks: true,
-  },
-};
-
-// Feature names for gate checks (matches SubscriptionEntitlements keys)
-export type FeatureName = keyof SubscriptionEntitlements;
+export const DEFAULT_ENTITLEMENTS: Record<SubscriptionTier, SubscriptionEntitlements> =
+  DOMAIN_DEFAULT_ENTITLEMENTS;
 
 // Subscription context state
 export interface SubscriptionState {
@@ -52,13 +33,6 @@ export interface SubscriptionState {
   isTrialing: boolean;
   trialDaysLeft: number | null;
 }
-
-// Subscription limits for free tier
-export const FREE_TIER_LIMITS = {
-  maxBookmarks: 5,
-  historyDays: 30,
-  maxRecommendations: 3,
-} as const;
 
 // Paddle webhook event types
 export type PaddleWebhookEventType =
@@ -127,9 +101,6 @@ export function getTrialDaysLeft(subscription: Subscription | null): number | nu
 
   return Math.max(0, diffDays);
 }
-
-// Grace period duration in days
-export const GRACE_PERIOD_DAYS = 7;
 
 // Helper to check if subscription is in grace period (7 days for past_due)
 export function isInGracePeriod(subscription: Subscription | null): boolean {

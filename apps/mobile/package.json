@@ -6,19 +6,21 @@
   "scripts": {
     "start": "expo start --dev-client",
     "doctor": "expo-doctor",
+    "build:preview": "npx eas-cli build --profile preview --non-interactive",
+    "build:production": "npx eas-cli build --profile production --non-interactive",
     "ios": "expo run:ios",
     "prebuild:ios": "expo prebuild --platform ios --clean",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.1",
-    "expo": "~55.0.8",
-    "expo-constants": "~55.0.9",
-    "expo-linear-gradient": "~55.0.9",
-    "expo-linking": "~55.0.9",
-    "expo-router": "~55.0.8",
-    "expo-secure-store": "~55.0.9",
-    "expo-status-bar": "~55.0.4",
+    "expo": "~55.0.11",
+    "expo-constants": "~55.0.11",
+    "expo-linear-gradient": "~55.0.11",
+    "expo-linking": "~55.0.11",
+    "expo-router": "~55.0.10",
+    "expo-secure-store": "~55.0.11",
+    "expo-status-bar": "~55.0.5",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.4",
@@ -26,12 +28,14 @@
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-web": "~0.21.0"
+    "react-native-web": "~0.21.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
     "@types/react": "~19.2.7",
     "babel-preset-expo": "~55.0.13",
+    "expo-doctor": "^1.18.15",
     "typescript": "~5.9.3"
   },
   "expo": {

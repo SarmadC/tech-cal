@@ -22,10 +22,12 @@ import {
   submitEventSubmission,
   type SubmitEventFormState,
   validateSubmitEventForm,
-} from '../src/lib/eventSubmission';
-import { useAuth } from '../src/context/AuthProvider';
+} from '../../src/lib/eventSubmission';
+import { useAuth } from '../../src/context/AuthProvider';
 
-type FormErrors = Partial<Record<keyof SubmitEventFormState, string>> & { submit?: string };
+type FormErrors = Partial<Record<keyof SubmitEventFormState, string>> & {
+  submit?: string;
+};
 
 function Field({
   children,
@@ -49,8 +51,10 @@ function Field({
 }
 
 export default function SubmitEventScreen() {
-  const { loading, session, signOut } = useAuth();
-  const [form, setForm] = useState<SubmitEventFormState>(() => createInitialSubmitEventState());
+  const { loading, session } = useAuth();
+  const [form, setForm] = useState<SubmitEventFormState>(() =>
+    createInitialSubmitEventState()
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -69,7 +73,10 @@ export default function SubmitEventScreen() {
     return <Redirect href="/login" />;
   }
 
-  const update = <Key extends keyof SubmitEventFormState>(field: Key, value: SubmitEventFormState[Key]) => {
+  const update = <Key extends keyof SubmitEventFormState>(
+    field: Key,
+    value: SubmitEventFormState[Key]
+  ) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -84,11 +91,15 @@ export default function SubmitEventScreen() {
     setErrors({});
 
     try {
-      const id = await submitEventSubmission(session.access_token, buildSubmitEventPayload(form));
+      const id = await submitEventSubmission(
+        session.access_token,
+        buildSubmitEventPayload(form)
+      );
       setSubmissionId(id);
     } catch (error) {
       setErrors({
-        submit: error instanceof Error ? error.message : 'Failed to submit event',
+        submit:
+          error instanceof Error ? error.message : 'Failed to submit event',
       });
     } finally {
       setSubmitting(false);
@@ -104,7 +115,7 @@ export default function SubmitEventScreen() {
               <Text style={styles.successEyebrow}>Submission received</Text>
               <Text style={styles.successTitle}>The event is now in the shared admin review queue.</Text>
               <Text style={styles.successBody}>
-                Submission ID: {submissionId}. The backend contract and moderation flow are the same ones used on web.
+                Submission ID: {submissionId}. The same server-side contract is reused by web and mobile.
               </Text>
 
               <Pressable
@@ -113,16 +124,12 @@ export default function SubmitEventScreen() {
                   setErrors({});
                   setSubmissionId(null);
                 }}
-                style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryButtonPressed : null]}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed ? styles.primaryButtonPressed : null,
+                ]}
               >
                 <Text style={styles.primaryButtonLabel}>Submit another event</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={signOut}
-                style={({ pressed }) => [styles.secondaryButton, pressed ? styles.secondaryButtonPressed : null]}
-              >
-                <Text style={styles.secondaryButtonLabel}>Sign out</Text>
               </Pressable>
             </View>
           </View>
@@ -138,22 +145,18 @@ export default function SubmitEventScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.header}>
               <View style={styles.headerCopy}>
-                <Text style={styles.eyebrow}>Authenticated Submit Flow</Text>
-                <Text style={styles.title}>Mobile event submission wired to the production review pipeline.</Text>
+                <Text style={styles.eyebrow}>Shared Submit Contract</Text>
+                <Text style={styles.title}>Mobile event submission stays aligned with production review.</Text>
                 <Text style={styles.subtitle}>
-                  This sends the same JSON payload to <Text style={styles.code}>/api/events/submit</Text>, but authenticates with your Supabase bearer token instead of a browser cookie.
+                  The form builds the same JSON contract backed by <Text style={styles.code}>packages/domain</Text> and posts it to <Text style={styles.code}>/api/events/submit</Text>.
                 </Text>
               </View>
-
-              <Pressable
-                onPress={signOut}
-                style={({ pressed }) => [styles.chipButton, pressed ? styles.secondaryButtonPressed : null]}
-              >
-                <Text style={styles.chipButtonLabel}>Sign out</Text>
-              </Pressable>
             </View>
 
             <View style={styles.card}>
@@ -169,7 +172,10 @@ export default function SubmitEventScreen() {
                 />
               </Field>
 
-              <Field hint="Choose the nearest content type used by the shared moderation queue." label="Event type">
+              <Field
+                hint="Choose the nearest content type used by the shared moderation queue."
+                label="Event type"
+              >
                 <View style={styles.optionWrap}>
                   {EVENT_SUBMISSION_TYPE_OPTIONS.map((option) => {
                     const active = form.eventType === option.value;
@@ -183,7 +189,12 @@ export default function SubmitEventScreen() {
                           pressed && !active ? styles.optionChipPressed : null,
                         ]}
                       >
-                        <Text style={[styles.optionChipLabel, active ? styles.optionChipLabelActive : null]}>
+                        <Text
+                          style={[
+                            styles.optionChipLabel,
+                            active ? styles.optionChipLabelActive : null,
+                          ]}
+                        >
                           {option.label}
                         </Text>
                       </Pressable>
@@ -275,7 +286,9 @@ export default function SubmitEventScreen() {
               <View style={styles.toggleRow}>
                 <View style={styles.toggleCopy}>
                   <Text style={styles.label}>Virtual event</Text>
-                  <Text style={styles.hint}>If enabled, the backend clears the physical location before insert.</Text>
+                  <Text style={styles.hint}>
+                    If enabled, the backend clears the physical location before insert.
+                  </Text>
                 </View>
                 <Switch
                   onValueChange={(value) => update('isVirtual', value)}
@@ -364,23 +377,14 @@ const styles = StyleSheet.create({
     gap: 18,
     padding: 22,
   },
-  chipButton: {
-    alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.22)',
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 38,
-    paddingHorizontal: 16,
-  },
-  chipButtonLabel: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   code: {
     color: '#e2e8f0',
     fontWeight: '700',
+  },
+  errorText: {
+    color: '#fda4af',
+    fontSize: 13,
+    lineHeight: 18,
   },
   eyebrow: {
     color: '#7dd3fc',
@@ -388,11 +392,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.8,
     textTransform: 'uppercase',
-  },
-  errorText: {
-    color: '#fda4af',
-    fontSize: 13,
-    lineHeight: 18,
   },
   field: {
     gap: 8,
@@ -404,12 +403,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
     gap: 12,
-    justifyContent: 'space-between',
   },
   headerCopy: {
-    flex: 1,
     gap: 10,
   },
   hint: {
@@ -513,23 +509,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.24)',
-    borderRadius: 18,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
-  },
-  secondaryButtonLabel: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  secondaryButtonPressed: {
-    opacity: 0.8,
   },
   submitError: {
     color: '#fda4af',

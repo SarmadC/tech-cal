@@ -17,6 +17,7 @@ export default defineConfig({
         exclude: ['**/node_modules/**', '**/tests/**/*.spec.ts'],
         alias: {
             '@': path.resolve(__dirname, './src'),
+            '@kurecal/domain': path.resolve(__dirname, './packages/domain/src/index.ts'),
         },
 
         env: {

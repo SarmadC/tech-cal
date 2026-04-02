@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  EVENT_SUBMISSION_TYPE_OPTIONS as MOBILE_EVENT_SUBMISSION_TYPE_OPTIONS,
+  EVENT_SUBMISSION_TYPE_OPTIONS,
   buildSubmitEventPayload,
   createInitialSubmitEventState,
   submitEventSubmission,
   validateSubmitEventForm,
 } from './eventSubmission';
-import { EVENT_SUBMISSION_TYPE_OPTIONS as SHARED_EVENT_SUBMISSION_TYPE_OPTIONS } from '../../../../src/lib/eventSubmission';
+import { EVENT_SUBMISSION_TYPE_OPTIONS as DOMAIN_EVENT_SUBMISSION_TYPE_OPTIONS } from '@kurecal/domain';
 
 describe('mobile event submission helpers', () => {
-  it('keeps mobile event type options aligned with the shared backend contract', () => {
-    expect(MOBILE_EVENT_SUBMISSION_TYPE_OPTIONS).toEqual(SHARED_EVENT_SUBMISSION_TYPE_OPTIONS);
+  it('consumes the shared event type contract from the domain package', () => {
+    expect(EVENT_SUBMISSION_TYPE_OPTIONS).toEqual(DOMAIN_EVENT_SUBMISSION_TYPE_OPTIONS);
   });
 
   it('builds the submission payload with normalized optional fields and deduplicated tags', () => {
