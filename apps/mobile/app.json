@@ -29,6 +29,13 @@
       "infoPlist": {
         "NSFaceIDUsageDescription": "Allow KureCal Dev to securely unlock saved sessions."
       }
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "788fd018-fbcd-4809-9760-9fed5af7d221"
+      }
+    },
+    "owner": "kure-cals-organization"
   }
 }
