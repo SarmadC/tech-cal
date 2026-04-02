@@ -6,6 +6,8 @@
   "scripts": {
     "start": "expo start --dev-client",
     "doctor": "expo-doctor",
+    "build:preview": "npx eas-cli build --profile preview --non-interactive",
+    "build:production": "npx eas-cli build --profile production --non-interactive",
     "ios": "expo run:ios",
     "prebuild:ios": "expo prebuild --platform ios --clean",
     "type-check": "tsc --noEmit"
