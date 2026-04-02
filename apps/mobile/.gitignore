@@ -1,0 +1,12 @@
+.expo/
+.env
+expo-env.d.ts
+node_modules/
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+ios/*.xcworkspace/xcuserdata/
+ios/**/*.xcuserstate
+dist/
+web-build/
+coverage/

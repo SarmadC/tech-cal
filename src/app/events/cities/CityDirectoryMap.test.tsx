@@ -141,6 +141,9 @@ describe('CityDirectoryMap', () => {
         });
 
         expect(geometry.type).toBe('MultiPolygon');
+        if (geometry.type !== 'MultiPolygon') {
+            throw new Error(`Expected MultiPolygon geometry, received ${geometry.type}`);
+        }
         expect(geometry.coordinates[0][0]).toEqual([
             [-180, -16.06],
             [-179.79, -16.02],

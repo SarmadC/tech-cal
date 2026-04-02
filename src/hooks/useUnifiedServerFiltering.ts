@@ -180,7 +180,7 @@ export function useUnifiedServerFiltering(
 
   // Track typing state for fast search mode
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // When search term changes, mark as typing and set timeout to settle
   useEffect(() => {

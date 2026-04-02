@@ -4,16 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { EVENT_SUBMISSION_TYPE_OPTIONS } from '@/lib/eventSubmission';
 import { cn } from '@/lib/utils';
-
-const EVENT_TYPES = [
-    { value: 'tech_event', label: 'Tech Event' },
-    { value: 'hackathon', label: 'Hackathon' },
-    { value: 'meetup', label: 'Meetup' },
-    { value: 'conference', label: 'Conference' },
-    { value: 'workshop', label: 'Workshop' },
-    { value: 'other', label: 'Other' },
-];
 
 interface FormState {
     title: string;
@@ -189,7 +181,7 @@ export default function SubmitEventForm() {
 
                 <Field label="Event type" required>
                     <div className="flex flex-wrap gap-2">
-                        {EVENT_TYPES.map((t) => (
+                        {EVENT_SUBMISSION_TYPE_OPTIONS.map((t) => (
                             <button
                                 key={t.value}
                                 type="button"

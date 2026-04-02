@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "KureCal Dev",
+    "slug": "kurecal-mobile",
+    "scheme": "kurecal-dev",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#05070c"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.kurecal.mobile.dev",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow KureCal Dev to securely unlock saved sessions."
+      }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "788fd018-fbcd-4809-9760-9fed5af7d221"
+      }
+    },
+    "owner": "kure-cals-organization"
+  }
+}

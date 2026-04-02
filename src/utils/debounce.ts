@@ -15,7 +15,7 @@ export function debounce<F extends (...args: unknown[]) => unknown>(
   func: F,
   wait: number
 ): (...args: Parameters<F>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   
   return function executedFunction(...args: Parameters<F>) {
     const later = () => {
@@ -41,7 +41,7 @@ export function throttle<F extends (...args: unknown[]) => unknown>(
   func: F,
   wait: number
 ): (...args: Parameters<F>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   let previous = 0;
   
   return function executedFunction(...args: Parameters<F>) {
@@ -77,7 +77,7 @@ export function createDebouncedCallback<F extends (...args: unknown[]) => unknow
   callback: F,
   wait: number
 ) {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   
   const debouncedCallback = (...args: Parameters<F>) => {
     if (timeout) {

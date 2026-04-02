@@ -13,7 +13,8 @@ import {
     HACKATHON_FEATURE_VERSION,
     buildRecommendationFeatures,
     extractFeatureSignalsFromPayload,
-    mergeStoredAndExtractedTags
+    mergeStoredAndExtractedTags,
+    serializeRecommendationFeatures
 } from '@/services/hackathonFeatureService';
 
 async function getAuthenticatedAdmin() {
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
             prize_description: prize_description || null,
             prizes: prizes || [],
             tags: normalizedTags,
-            recommendation_features: recommendationFeatures,
+            recommendation_features: serializeRecommendationFeatures(recommendationFeatures),
             feature_version: HACKATHON_FEATURE_VERSION,
         })
         .select()

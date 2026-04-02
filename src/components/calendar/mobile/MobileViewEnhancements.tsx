@@ -30,7 +30,7 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
     const [isScrolling, setIsScrolling] = useState(false);
     const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         return () => {

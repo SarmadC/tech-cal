@@ -44,6 +44,7 @@ function createMockProfile(overrides: Partial<AppProfile> = {}): AppProfile {
 function createEvent(id: string): Event {
   return {
     id,
+    createdAt: '2026-03-31T09:00:00.000Z',
     title: `Event ${id}`,
     description: '',
     startTime: '2026-04-01T10:00:00.000Z',
@@ -52,9 +53,9 @@ function createEvent(id: string): Event {
     organizer: 'Test Organizer',
     location: 'Remote',
     status: 'confirmed',
-    sourceUrl: null,
+    sourceUrl: 'https://example.com/events/test',
     livestreamUrl: null,
-    eventTypeId: null,
+    eventTypeId: 'general',
     agendaUrl: null,
   };
 }
@@ -160,7 +161,7 @@ describe('useUnifiedServerFiltering personalization', () => {
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
     await waitFor(() => {
-      const queryKeys = getFilteredQueryKeys(queryClient) as readonly unknown[][];
+      const queryKeys = getFilteredQueryKeys(queryClient) as unknown as readonly unknown[][];
       expect(queryKeys.some((queryKey) => getPersonalizationPayload(queryKey).userId === 'user-2')).toBe(true);
     });
   });

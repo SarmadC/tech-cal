@@ -89,7 +89,7 @@ export default function HackathonsListClient({
         [fetchHackathons]
     );
 
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const handleSearchChange = useCallback(
         (value: string) => {
             setSearchValue(value);

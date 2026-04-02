@@ -34,7 +34,7 @@ export function EventNotesEditor({
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Update notes when tracked event data changes
     useEffect(() => {

@@ -86,8 +86,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     // Fetch complete event details with agenda
     useEffect(() => {
         let isMounted = true;
-        let timeoutId: NodeJS.Timeout;
-        let transitionTimeoutId: NodeJS.Timeout;
+        let timeoutId: ReturnType<typeof setTimeout>;
+        let transitionTimeoutId: ReturnType<typeof setTimeout>;
 
         const fetchEventWithAgenda = async () => {
             const alreadyHasAgenda = Array.isArray(event.agenda) && event.agenda.length > 0;

@@ -88,8 +88,8 @@ export function ChaosToOrderSection() {
         };
 
         // 2. Set up a debounced resize handler for position recalculations
-        let resizeTimeoutId: NodeJS.Timeout;
-        const cardTimeoutIds: NodeJS.Timeout[] = [];
+        let resizeTimeoutId: ReturnType<typeof setTimeout>;
+        const cardTimeoutIds: ReturnType<typeof setTimeout>[] = [];
 
         const handleResize = () => {
             // Clear any existing timeout
