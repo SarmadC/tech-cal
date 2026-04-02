@@ -52,6 +52,7 @@ import {
     type CrawlPlanner,
 } from './AgenticCrawlService';
 import type { ExtractionProvider } from './providers/ExtractionProvider';
+import { validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
 const MAX_RETRIES = 3;
@@ -234,7 +235,7 @@ export class LLMEnrichmentService {
                 return { eventId, title: eventTitle, status: 'failed', error: 'Missing source_url' };
             }
 
-            this.validateSourceUrl(sourceUrl);
+            await this.validateSourceUrl(sourceUrl);
 
             const metadata = this.normalizeMetadata(event);
             await this.markProcessing(eventId, metadata);
@@ -1221,15 +1222,10 @@ export class LLMEnrichmentService {
         return diffs;
     }
 
-    private validateSourceUrl(url: string) {
-        let parsed: URL | null = null;
-        try {
-            parsed = new URL(url);
-        } catch {
-            throw new Error('Invalid source_url');
-        }
-        if (!['http:', 'https:'].includes(parsed.protocol)) {
-            throw new Error('Unsupported source_url protocol');
+    private async validateSourceUrl(url: string) {
+        const validation = await validateUrlForServerFetch(url);
+        if (!validation.valid) {
+            throw new Error(`Unsafe source_url: ${validation.reason}`);
         }
     }
 

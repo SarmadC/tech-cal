@@ -21,9 +21,22 @@ export interface SubmissionItem {
     end_date: string | null;
     location: string | null;
     is_virtual: boolean;
+    event_format: 'Online' | 'In-person' | 'Hybrid' | null;
+    source_url: string | null;
     registration_url: string | null;
+    registration_mode: 'external' | 'native';
     organizer_name: string | null;
     tags: string[];
+    risk_flags: string[];
+    validation_summary: {
+        schema_version?: number;
+        normalized_at?: string;
+        duplicate_event_count?: number;
+        repeated_submission_count?: number;
+        warnings?: string[];
+    } | null;
+    submitted_payload: Record<string, unknown> | null;
+    approved_payload: Record<string, unknown> | null;
     status: 'pending' | 'approved' | 'declined';
     admin_notes: string | null;
     reviewed_at: string | null;
@@ -63,8 +76,9 @@ export default async function SubmissionsPage() {
         .select(
             `
             id, title, description, event_type,
-            start_date, end_date, location, is_virtual,
-            registration_url, organizer_name, tags,
+            start_date, end_date, location, is_virtual, event_format,
+            source_url, registration_url, registration_mode, organizer_name, tags,
+            risk_flags, validation_summary, submitted_payload, approved_payload,
             status, admin_notes, reviewed_at, event_id, created_at,
             submitter:user_id(id, email, raw_user_meta_data)
             `,

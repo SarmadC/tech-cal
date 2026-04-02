@@ -22,9 +22,24 @@ export const mobileQueryKeys = {
       ['event-engagement', userId ?? null, eventId ?? null] as const,
   },
   community: {
+    root: () => ['community'] as const,
+    home: () => ['community', 'home'] as const,
+    circle: (slug: string | undefined | null) => ['community', 'circle', slug ?? null] as const,
+    post: (postId: string | undefined | null) => ['community', 'post', postId ?? null] as const,
     feed: () => ['community-feed'] as const,
     joinedCircles: (userId: string | undefined | null) => ['joined-circles', userId ?? null] as const,
     blockedUsers: () => ['blocked-users'] as const,
+  },
+  profile: {
+    root: () => ['profile'] as const,
+    public: (username: string | undefined | null) => ['profile', 'public', username ?? null] as const,
+    followStatus: (userId: string | undefined | null) =>
+      ['profile', 'follow-status', userId ?? null] as const,
+    social: () => ['profile', 'social'] as const,
+  },
+  speaker: {
+    root: () => ['speaker'] as const,
+    detail: (speakerId: string | undefined | null) => ['speaker', 'detail', speakerId ?? null] as const,
   },
   subscription: {
     status: () => ['subscription-status'] as const,

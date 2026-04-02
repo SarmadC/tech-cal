@@ -55,7 +55,10 @@ export function createRateLimiter(
  */
 export async function checkRateLimit(
   ratelimit: Ratelimit,
-  identifier: string
+  identifier: string,
+  options?: {
+    failOpen?: boolean
+  }
 ): Promise<{ success: boolean; error?: unknown }> {
   try {
     const { success } = await ratelimit.limit(identifier);
@@ -73,7 +76,16 @@ export async function checkRateLimit(
     return { success: true };
   } catch (error) {
     console.error('Rate limit check failed:', error);
-    // Fail open - don't block users if rate limiting service is down
+    if (options?.failOpen === false) {
+      return {
+        success: false,
+        error: {
+          message: 'Rate limiting is temporarily unavailable. Please try again later.',
+          status: 503
+        }
+      };
+    }
+
     return { success: true };
   }
 }

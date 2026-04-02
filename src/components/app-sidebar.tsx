@@ -149,6 +149,14 @@ export function AppSidebar() {
     const { open, toggle } = useSidebar();
     const pathname = usePathname();
     const { user, profile, signOut } = useAuth();
+    const navigationItems = [
+        ...items,
+        {
+            title: 'Submit Event',
+            url: user ? '/submit-event' : '/login?redirect=%2Fsubmit-event',
+            icon: () => <MaterialIcon name="add" size={18} />,
+        },
+    ];
 
     const displayName = profile?.fullName?.trim() || user?.email?.trim() || 'Account';
     const email = user?.email?.trim() || null;
@@ -184,7 +192,7 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                {items.map((item) => (
+                                {navigationItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton asChild>
                                             <Link
@@ -232,7 +240,7 @@ export function AppSidebar() {
                             <MaterialIcon name="menu" size={16} />
                         </button>
                         <SidebarMenu className="items-center gap-6">
-                            {items.map((item) => (
+                        {navigationItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild>
                                         <Link

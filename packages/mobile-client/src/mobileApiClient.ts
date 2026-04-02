@@ -14,12 +14,18 @@ import type {
   MobileCareerOnboardingBootstrap,
   MobileCareerOnboardingCompletePayload,
   MobileCareerOnboardingSkipPayload,
+  MobileCommunityCirclePage,
+  MobileCommunityNetworkingHome,
+  MobileCommunityPostPage,
   MobileDiscoverFeedRequest,
   MobileDashboardHome,
   MobileDiscoverFeed,
   MobileEventDetail,
   MobileEventEngagement,
   MobileEventEngagementUpdate,
+  MobileFollowStatus,
+  MobilePublicProfile,
+  MobileSpeakerDetail,
   NormalizedSubscription,
   RevenueCatReconcileInput,
   SubscriptionOffering,
@@ -28,6 +34,19 @@ import type {
 export interface MobileApiClientOptions {
   baseUrl: string;
   getAccessToken: () => Promise<string | null>;
+}
+
+export type MobileSocialProfileVisibility = 'private' | 'connections' | 'public';
+
+export interface MobileSocialProfile {
+  id: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  username: string | null;
+  headline: string | null;
+  profileVisibility: MobileSocialProfileVisibility;
+  showAttendance: boolean;
+  trustLevel?: string;
 }
 
 function summarizeResponseBody(body: string): string | undefined {
@@ -122,6 +141,24 @@ export class MobileApiClient {
     });
   }
 
+  getSocialProfile() {
+    return this.request<MobileSocialProfile>('/api/profile/social');
+  }
+
+  updateSocialProfile(
+    payload: Partial<{
+      username: string | null;
+      headline: string | null;
+      profileVisibility: MobileSocialProfileVisibility;
+      showAttendance: boolean;
+    }>
+  ) {
+    return this.request<MobileSocialProfile>('/api/profile/social', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
   getDashboardHome() {
     return this.request<MobileDashboardHome>('/api/mobile/dashboard/summary');
   }
@@ -174,8 +211,57 @@ export class MobileApiClient {
     return this.request<CommunityFeedSnapshot>('/api/mobile/community/feed');
   }
 
+  getCommunityHome() {
+    return this.request<MobileCommunityNetworkingHome>('/api/mobile/community/home');
+  }
+
+  getCommunityCircle(slug: string) {
+    return this.request<MobileCommunityCirclePage>(`/api/mobile/community/circles/${slug}`);
+  }
+
+  getCommunityPost(postId: string) {
+    return this.request<MobileCommunityPostPage>(`/api/mobile/community/posts/${postId}`);
+  }
+
   getJoinedCircles() {
     return this.request<CommunityCircleSummary[]>('/api/mobile/community/circles');
+  }
+
+  joinCommunityCircle(circleId: string) {
+    return this.request<{ success: true; message?: string }>(`/api/community/circles/${circleId}/join`, {
+      method: 'POST',
+    });
+  }
+
+  leaveCommunityCircle(circleId: string) {
+    return this.request<{ success: true; message?: string }>(`/api/community/circles/${circleId}/join`, {
+      method: 'DELETE',
+    });
+  }
+
+  getPublicProfile(username: string) {
+    return this.request<MobilePublicProfile>(`/api/mobile/profiles/${encodeURIComponent(username)}`);
+  }
+
+  getSpeaker(id: string) {
+    return this.request<MobileSpeakerDetail>(`/api/mobile/speakers/${encodeURIComponent(id)}`);
+  }
+
+  getFollowStatus(userId: string) {
+    return this.request<MobileFollowStatus>(`/api/follows/status/${userId}`);
+  }
+
+  followUser(userId: string) {
+    return this.request<{ success: true; message?: string }>('/api/follows', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  unfollowUser(userId: string) {
+    return this.request<{ success: true; message?: string }>(`/api/follows/${userId}`, {
+      method: 'DELETE',
+    });
   }
 
   getSubscriptionStatus() {

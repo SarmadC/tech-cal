@@ -46,6 +46,10 @@ function getSubmitterName(sub: SubmissionItem['submitter']) {
     return sub.raw_user_meta_data?.full_name || sub.raw_user_meta_data?.name || sub.email;
 }
 
+function formatRiskFlag(flag: string) {
+    return flag.replace(/_/g, ' ');
+}
+
 export default function SubmissionsClient({
     initialSubmissions,
     initialTotal,
@@ -229,7 +233,22 @@ export default function SubmissionsClient({
                                         onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
                                     >
                                         <td className="px-4 py-3">
-                                            <span className="text-foreground-primary font-medium line-clamp-1">{sub.title}</span>
+                                            <div className="space-y-1">
+                                                <span className="text-foreground-primary font-medium line-clamp-1">{sub.title}</span>
+                                                {sub.risk_flags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {sub.risk_flags.map((flag) => (
+                                                            <Badge
+                                                                key={flag}
+                                                                variant="outline"
+                                                                className="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-300"
+                                                            >
+                                                                {formatRiskFlag(flag)}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 hidden sm:table-cell text-foreground-tertiary">
                                             {EVENT_TYPE_LABELS[sub.event_type] ?? sub.event_type}
@@ -279,6 +298,18 @@ export default function SubmissionsClient({
                                         <tr key={`${sub.id}-detail`} className="bg-accent-primary-light/10">
                                             <td colSpan={6} className="px-6 py-4">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-[13px]">
+                                                    {sub.validation_summary?.warnings?.length ? (
+                                                        <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                                                            <div className="text-amber-300 text-[11px] uppercase tracking-wide mb-2">
+                                                                Submission warnings
+                                                            </div>
+                                                            <div className="space-y-1 text-amber-100/85">
+                                                                {sub.validation_summary.warnings.map((warning) => (
+                                                                    <p key={warning}>{warning}</p>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
                                                     {sub.description && (
                                                         <div className="sm:col-span-2 lg:col-span-3">
                                                             <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">Description</div>
@@ -295,8 +326,13 @@ export default function SubmissionsClient({
                                                     <div>
                                                         <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">Location</div>
                                                         <p className="text-foreground-secondary">
-                                                            {sub.is_virtual ? 'Virtual' : sub.location || '—'}
+                                                            {sub.event_format ?? (sub.is_virtual ? 'Online' : 'In-person')}
+                                                            {sub.location ? ` · ${sub.location}` : ''}
                                                         </p>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">Registration</div>
+                                                        <p className="text-foreground-secondary capitalize">{sub.registration_mode}</p>
                                                     </div>
                                                     {sub.organizer_name && (
                                                         <div>
@@ -304,9 +340,23 @@ export default function SubmissionsClient({
                                                             <p className="text-foreground-secondary">{sub.organizer_name}</p>
                                                         </div>
                                                     )}
+                                                    {sub.source_url && (
+                                                        <div>
+                                                            <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">Website</div>
+                                                            <a
+                                                                href={sub.source_url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-accent-primary hover:underline truncate block"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {sub.source_url}
+                                                            </a>
+                                                        </div>
+                                                    )}
                                                     {sub.registration_url && (
                                                         <div>
-                                                            <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">URL</div>
+                                                            <div className="text-foreground-muted text-[11px] uppercase tracking-wide mb-1">Registration URL</div>
                                                             <a
                                                                 href={sub.registration_url}
                                                                 target="_blank"

@@ -202,7 +202,7 @@ export default function EventListView({
     const isDark = theme === 'dark';
     const posthog = usePostHog();
     const searchParams = useSearchParams();
-    const { profile: authProfile } = useAuth();
+    const { user, profile: authProfile } = useAuth();
     const activeProfile = authProfile ?? profile;
 
     const startOfToday = useMemo(() => {
@@ -604,14 +604,25 @@ export default function EventListView({
         }
     }, [filters.sortBy, filters.sortDirection]);
 
-    const cityDirectoryLink = cityDirectoryHref ? (
-        <Link
-            href={cityDirectoryHref}
-            className="inline-flex items-center rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:text-foreground-primary"
-        >
-            Browse cities
-        </Link>
-    ) : undefined;
+    const submitEventHref = user ? '/submit-event' : '/login?redirect=%2Fsubmit-event';
+    const actionControls = (
+        <div className="flex items-center gap-2">
+            {cityDirectoryHref ? (
+                <Link
+                    href={cityDirectoryHref}
+                    className="inline-flex items-center rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:text-foreground-primary"
+                >
+                    Browse cities
+                </Link>
+            ) : null}
+            <Link
+                href={submitEventHref}
+                className="inline-flex items-center rounded-lg bg-foreground-primary px-3 py-2 text-sm font-medium text-background-main transition-colors hover:bg-foreground-secondary"
+            >
+                Submit event
+            </Link>
+        </div>
+    );
 
     return (
         <SidebarProvider>
@@ -649,6 +660,12 @@ export default function EventListView({
                                                         Cities
                                                     </Link>
                                                 ) : null}
+                                                <Link
+                                                    href={submitEventHref}
+                                                    className="inline-flex items-center rounded-lg bg-foreground-primary px-3 py-2 text-xs font-medium text-background-main transition-colors hover:bg-foreground-secondary"
+                                                >
+                                                    Submit
+                                                </Link>
                                                 <button
                                                     onClick={() => setIsFilterOpen(true)}
                                                     className="p-2 rounded-lg transition-colors text-foreground-secondary hover:text-foreground-primary hover:bg-white/5"
@@ -943,7 +960,7 @@ export default function EventListView({
                                             suggestions={suggestions}
                                             searchHistory={searchHistory}
                                             isAutocompletLoading={isSuggestionsLoading}
-                                            actionControls={cityDirectoryLink}
+                                            actionControls={actionControls}
                                         />
                                     </div>
 

@@ -13,7 +13,7 @@ appId: com.kurecal.mobile
 - tapOn: "Calendar"
 - assertVisible: "Plan the month"
 - tapOn: "Community"
-- assertVisible: "Start a conversation"
+- assertVisible: "Suggested for You"
 - tapOn: "Dashboard"
 - assertVisible: "Recommended next"
 - tapOn: "Settings"

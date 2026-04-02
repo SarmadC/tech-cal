@@ -130,12 +130,19 @@ export function MobileEventDetailScreen({
   const canOpenEventPage = Boolean(detail.sourceUrl);
   const primaryLabel = hasPrimaryUrl ? 'Register' : 'Add to calendar';
   const isLocationInteractive = hasMappableLocation(detail.location);
-  const attendanceLabel = engagement?.status === 'attending' ? 'Remove RSVP' : 'Mark attending';
-  const bookmarkLabel = engagement?.isBookmarked ? 'Saved' : 'Bookmark';
+  const isAttending = engagement?.status === 'attending';
+  const attendanceLabel = isAttending ? 'Attending' : 'Attend';
+  const attendanceAccessibilityLabel = isAttending
+    ? 'Remove attending status'
+    : 'Mark attending';
   const isBookmarked = Boolean(engagement?.isBookmarked);
+  const bookmarkAccessibilityLabel = isBookmarked
+    ? 'Remove saved event'
+    : 'Save event';
   const bookmarkAccentColor = tokens.colors.warning;
   const bookmarkAccentForeground =
     tokens.mode === 'dark' ? tokens.colors.textInverse : tokens.colors.textPrimary;
+  const attendanceAccentColor = tokens.colors.accent;
 
   function toggleAgendaDay(dayKey: string) {
     setExpandedAgendaDays((current) =>
@@ -209,6 +216,34 @@ export function MobileEventDetailScreen({
 
             <View style={styles.headerActions}>
               <Pressable
+                accessibilityLabel={bookmarkAccessibilityLabel}
+                disabled={isBookmarkPending}
+                onPress={onToggleBookmark}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  styles.iconStateButton,
+                  {
+                    backgroundColor: isBookmarked
+                      ? bookmarkAccentColor
+                      : pressed
+                        ? tokens.colors.surfaceStrong
+                        : tokens.colors.surface,
+                    borderColor: isBookmarked
+                      ? bookmarkAccentColor
+                      : tokens.colors.border,
+                    opacity: isBookmarkPending ? 0.45 : 1,
+                  },
+                ]}
+                testID="event-detail-bookmark-action"
+              >
+                <FontAwesome
+                  name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+                  size={15}
+                  color={isBookmarked ? bookmarkAccentForeground : tokens.colors.textSecondary}
+                />
+              </Pressable>
+
+              <Pressable
                 accessibilityLabel="More actions"
                 onPress={() => setShowMenu((current) => !current)}
                 style={({ pressed }) => [
@@ -248,21 +283,23 @@ export function MobileEventDetailScreen({
                     </Text>
                   </Pressable>
 
-                  <Pressable
-                    onPress={() => {
-                      setShowMenu(false);
-                      onAddToCalendar();
-                    }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
-                    ]}
-                  >
-                    <FontAwesome name="calendar-plus-o" size={14} color={tokens.colors.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      Add to calendar
-                    </Text>
-                  </Pressable>
+                  {hasPrimaryUrl ? (
+                    <Pressable
+                      onPress={() => {
+                        setShowMenu(false);
+                        onAddToCalendar();
+                      }}
+                      style={({ pressed }) => [
+                        styles.menuItem,
+                        { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
+                      ]}
+                    >
+                      <FontAwesome name="calendar-plus-o" size={14} color={tokens.colors.textSecondary} />
+                      <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                        Add to calendar
+                      </Text>
+                    </Pressable>
+                  ) : null}
 
                   {canOpenEventPage ? (
                     <Pressable
@@ -281,27 +318,6 @@ export function MobileEventDetailScreen({
                       </Text>
                     </Pressable>
                   ) : null}
-
-                  <Pressable
-                    disabled={isAttendancePending}
-                    onPress={() => {
-                      setShowMenu(false);
-                      onToggleAttendance();
-                    }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      {
-                        backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent',
-                        opacity: isAttendancePending ? 0.45 : 1,
-                      },
-                    ]}
-                    testID="event-detail-attendance-action"
-                  >
-                    <FontAwesome name="check-circle-o" size={14} color={tokens.colors.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      {attendanceLabel}
-                    </Text>
-                  </Pressable>
                 </View>
               ) : null}
             </View>
@@ -840,37 +856,37 @@ export function MobileEventDetailScreen({
             </Pressable>
 
             <Pressable
-              testID="event-detail-bookmark-action"
-              disabled={isBookmarkPending}
-              onPress={onToggleBookmark}
+              accessibilityLabel={attendanceAccessibilityLabel}
+              testID="event-detail-attendance-action"
+              disabled={isAttendancePending}
+              onPress={onToggleAttendance}
               style={({ pressed }) => [
                 styles.secondaryButton,
                 {
-                  backgroundColor: isBookmarked
-                    ? bookmarkAccentColor
+                  backgroundColor: isAttending
+                    ? attendanceAccentColor
                     : tokens.colors.surface,
-                  borderColor: isBookmarked
-                    ? bookmarkAccentColor
+                  borderColor: isAttending
+                    ? attendanceAccentColor
                     : tokens.colors.border,
-                  opacity: isBookmarkPending ? 0.45 : pressed ? 0.82 : 1,
+                  opacity: isAttendancePending ? 0.45 : pressed ? 0.82 : 1,
                 },
               ]}
             >
               <FontAwesome
-                name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+                name={isAttending ? 'check-circle' : 'check-circle-o'}
                 size={15}
-                color={isBookmarked ? bookmarkAccentForeground : tokens.colors.textSecondary}
+                color={isAttending ? tokens.colors.textInverse : tokens.colors.textSecondary}
               />
               <Text
-                testID="event-detail-bookmark-label"
                 style={{
-                  color: isBookmarked ? bookmarkAccentForeground : tokens.colors.textPrimary,
+                  color: isAttending ? tokens.colors.textInverse : tokens.colors.textPrimary,
                   fontFamily: tokens.typography.sans,
                   fontSize: 14,
                   fontWeight: '700',
                 }}
               >
-                {bookmarkLabel}
+                {attendanceLabel}
               </Text>
             </Pressable>
           </View>
@@ -910,6 +926,9 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   iconButton: {
     width: 40,
@@ -917,6 +936,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconStateButton: {
+    borderWidth: 1,
   },
   menu: {
     position: 'absolute',

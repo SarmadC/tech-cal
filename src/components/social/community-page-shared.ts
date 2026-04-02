@@ -1,6 +1,6 @@
-import type { CommunityFeedPageData } from '@/types/community';
+import type { CommunityNetworkingHomeData } from '@/types/community';
 
-export interface CommunityFeedPageViewModel extends CommunityFeedPageData {
+export interface CommunityNetworkingHomeViewModel extends CommunityNetworkingHomeData {
   isSignedIn: boolean;
 }
 

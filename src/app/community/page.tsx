@@ -6,7 +6,7 @@ import { SITE_URL } from '@/config/site';
 import AdaptiveCommunityPage from '@/components/social/AdaptiveCommunityPage';
 import CommunityAppShell from '@/components/layout/CommunityAppShell';
 import { resolveLegacyCommunityRedirect } from '@/components/social/community-page-shared';
-import { CommunityHubService } from '@/services/communityHubService';
+import { CommunityNetworkingHomeService } from '@/services/communityNetworkingHomeService';
 
 interface CommunityPageProps {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -21,7 +21,7 @@ function getSingleParam(
 export const metadata: Metadata = {
   title: 'Community | Kure-Cal',
   description:
-    'Follow the latest community conversations and keep your circles close.',
+    'See which events are best for meeting people, who you can meet there, and who to follow up with after.',
   alternates: {
     canonical: `${SITE_URL}/community`,
   },
@@ -55,14 +55,16 @@ export default async function CommunityPage({
   } = await viewerSupabase.auth.getUser();
 
   const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
-  const feedPageData = await CommunityHubService.getFeedPageData({
-    viewerId: user?.id ?? null,
-    readClient: readSupabase,
-  });
+  const homeData = user
+    ? await CommunityNetworkingHomeService.getHomeData({
+        viewerId: user.id,
+        readClient: readSupabase,
+      })
+    : CommunityNetworkingHomeService.createEmptyData(false);
 
   const viewModel = {
     isSignedIn: Boolean(user),
-    ...feedPageData,
+    ...homeData,
   };
 
   return (

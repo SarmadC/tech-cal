@@ -8,6 +8,7 @@ interface DirectoryProfileRow {
   avatar_url: string | null;
   username: string | null;
   headline: string | null;
+  location: string | null;
   created_at: string | null;
 }
 
@@ -35,6 +36,7 @@ export interface CommunityDirectoryProfile {
   avatarUrl: string | null;
   username: string;
   headline: string | null;
+  location: string | null;
   joinedAt: string | null;
   followerCount: number;
   followingCount: number;
@@ -210,6 +212,7 @@ export class CommunityDirectoryService {
           avatarUrl: row.avatar_url,
           username: row.username || '',
           headline: row.headline,
+          location: row.location,
           joinedAt: row.created_at,
           followerCount: stats?.follower_count ?? 0,
           followingCount: stats?.following_count ?? 0,
@@ -245,7 +248,7 @@ export class CommunityDirectoryService {
     return this.applySearchFilter(
       readClient
         .from('profiles')
-        .select('id, full_name, avatar_url, username, headline, created_at')
+        .select('id, full_name, avatar_url, username, headline, location, created_at')
         .eq('profile_visibility', 'public')
         .not('username', 'is', null)
         .not('created_at', 'is', null)

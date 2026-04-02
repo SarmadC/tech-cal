@@ -1,12 +1,8 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import DesktopCommunityHomePage from '@/components/social/DesktopCommunityHomePage';
-import type { CommunityFeedPageViewModel } from '@/components/social/community-page-shared';
-
-const mockRefresh = vi.fn();
-const mockShowSuccess = vi.fn();
-const mockShowError = vi.fn();
+import type { CommunityNetworkingHomeViewModel } from '@/components/social/community-page-shared';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -23,127 +19,192 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mockRefresh }),
-}));
-
-vi.mock('@/contexts/SnackbarContext', () => ({
-  useSnackbar: () => ({
-    showSuccess: mockShowSuccess,
-    showError: mockShowError,
-  }),
-}));
-
-vi.mock('@/components/social/FeedPostItem', () => ({
-  default: ({ post, variant }: { post: { id: string }; variant?: string }) => (
-    <div>{`feed-post:${post.id}:${variant || 'list'}`}</div>
-  ),
-}));
-
-vi.mock('@/components/ui/Icon', () => ({
-  MaterialIcon: ({ name }: { name: string }) => <span>{`icon:${name}`}</span>,
+vi.mock('@/components/social/FollowButton', () => ({
+  default: ({ userId }: { userId: string }) => <button>{`follow:${userId}`}</button>,
 }));
 
 function createViewModel(
-  overrides: Partial<CommunityFeedPageViewModel> = {}
-): CommunityFeedPageViewModel {
+  overrides: Partial<CommunityNetworkingHomeViewModel> = {}
+): CommunityNetworkingHomeViewModel {
   return {
-    isSignedIn: false,
-    feed: [
+    isSignedIn: true,
+    summary: {
+      trackedUpcomingCount: 2,
+      visibleOpportunityCount: 2,
+      followUpCount: 1,
+      attendanceVisibilityEnabled: true,
+    },
+    priorityEvents: [
       {
-        id: 'post-1',
-        content: 'Hello world',
-        createdAt: '2026-03-18T12:00:00.000Z',
-        author: { id: 'author-1', fullName: 'Ada', avatarUrl: null },
-        circle: { slug: 'design', name: 'Design Systems' },
-        commentCount: 5,
-        isTrending: true,
-      },
-      {
-        id: 'post-2',
-        content: 'Another post',
-        createdAt: '2026-03-18T13:00:00.000Z',
-        author: { id: 'author-2', fullName: 'Taylor', avatarUrl: null },
-        circle: { slug: 'mobile', name: 'Mobile Builders' },
-        commentCount: 2,
-        isTrending: false,
+        id: 'event-1',
+        slug: 'demo-night',
+        title: 'Demo Night',
+        startTime: '2026-04-10T18:00:00.000Z',
+        location: 'Calgary',
+        format: 'in_person',
+        viewerContext: 'attending',
+        totalAttendeeCount: 8,
+        visibleAttendeeCount: 4,
+        networkAttendingCount: 2,
+        relationshipAttendeeCount: 1,
+        attendeePreview: [
+          {
+            id: 'person-1',
+            fullName: 'Ada Lovelace',
+            username: 'ada',
+            avatarUrl: null,
+            isInNetwork: true,
+            followsViewer: false,
+            isMutualFollow: false,
+          },
+        ],
       },
     ],
-    circles: [],
-    upcomingEvents: [],
+    meetPeople: [
+      {
+        id: 'person-1',
+        fullName: 'Ada Lovelace',
+        username: 'ada',
+        avatarUrl: null,
+        headline: 'Staff Engineer',
+        location: 'San Francisco, CA',
+        currentRole: 'Staff Engineer',
+        industry: 'Developer tools',
+        companySize: 'medium',
+        mutualConnectionsCount: 12,
+        isInNetwork: true,
+        followsViewer: false,
+        isMutualFollow: false,
+        sharedUpcomingEventCount: 2,
+        soonestSharedEventStartTime: '2026-04-10T18:00:00.000Z',
+        sharedEvents: [
+          {
+            id: 'event-1',
+            slug: 'demo-night',
+            title: 'Demo Night',
+            startTime: '2026-04-10T18:00:00.000Z',
+            location: 'Calgary',
+            format: 'in_person',
+            viewerContext: 'attending',
+          },
+        ],
+      },
+    ],
+    followUps: [
+      {
+        id: 'person-2',
+        fullName: 'Grace Hopper',
+        username: 'grace',
+        avatarUrl: null,
+        headline: 'Platform Lead',
+        location: 'Edmonton, AB',
+        currentRole: 'Platform Lead',
+        industry: 'Infrastructure',
+        companySize: 'large',
+        mutualConnectionsCount: 4,
+        isInNetwork: false,
+        followsViewer: true,
+        isMutualFollow: false,
+        sharedPastEventCount: 1,
+        mostRecentSharedEventStartTime: '2026-03-23T18:00:00.000Z',
+        sharedEvents: [
+          {
+            id: 'event-2',
+            slug: 'spring-summit',
+            title: 'Spring Summit',
+            startTime: '2026-03-23T18:00:00.000Z',
+            location: 'Edmonton',
+            format: 'in_person',
+          },
+        ],
+      },
+    ],
     ...overrides,
   };
 }
 
 describe('DesktopCommunityHomePage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  it('renders a signed-out feed preview without circles links', () => {
+  it('renders the new event-networking community layout for signed-in users', () => {
     render(<DesktopCommunityHomePage viewModel={createViewModel()} />);
 
     expect(
       screen.getByRole('heading', {
-        name: 'See what the community is discussing right now.',
+        name: "Meet people through the events you're already tracking.",
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('feed-post:post-1:featured')).toBeInTheDocument();
-    expect(screen.getByText('feed-post:post-2:list')).toBeInTheDocument();
     expect(
-      screen.getByText('Sign in to personalize the feed and join the replies.')
+      screen.getByRole('heading', { name: 'Best Events to Meet People' })
     ).toBeInTheDocument();
-    expect(document.querySelector('a[href="/community/circles"]')).not.toBeInTheDocument();
-    expect(screen.queryByText('Your circles')).not.toBeInTheDocument();
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'People You Can Meet' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Follow Up After Events' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /View event/i })).toHaveAttribute(
+      'href',
+      '/events/demo-night'
+    );
+    expect(screen.getAllByRole('link', { name: /View profile/i })[0]).toHaveAttribute(
+      'href',
+      '/u/ada'
+    );
+    expect(screen.getByText('follow:person-1')).toBeInTheDocument();
+    expect(screen.queryByText('Circles')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('See what the community is discussing right now.')
+    ).not.toBeInTheDocument();
   });
 
-  it('renders joined and discover circles inline and uses the join api', async () => {
-    const fetchMock = vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-    } as Response);
-
+  it('shows sign-in and networking empty states for signed-out users', () => {
     render(
       <DesktopCommunityHomePage
         viewModel={createViewModel({
-          isSignedIn: true,
-          circles: [
-            {
-              id: 'circle-1',
-              name: 'AI Circle',
-              description: 'Applied ML teams.',
-              href: '/circle/ai',
-              isJoined: true,
-              memberCount: 11,
-            },
-            {
-              id: 'circle-2',
-              name: 'Product Circle',
-              description: 'Product operators.',
-              href: '/circle/product',
-              isJoined: false,
-              memberCount: 10,
-            },
-          ],
+          isSignedIn: false,
+          summary: {
+            trackedUpcomingCount: 0,
+            visibleOpportunityCount: 0,
+            followUpCount: 0,
+            attendanceVisibilityEnabled: false,
+          },
+          priorityEvents: [],
+          meetPeople: [],
+          followUps: [],
         })}
       />
     );
 
-    expect(screen.getByText('Your circles')).toBeInTheDocument();
-    expect(screen.getByText('Discover circles')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /AI/i })).toHaveAttribute('href', '/circle/ai');
+    expect(
+      screen.getByText('Turn Community into your event networking desk.')
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Log in' })[0]).toHaveAttribute(
+      'href',
+      '/login?redirect=%2Fcommunity'
+    );
+    expect(
+      screen.getByText('Sign in to see which events are best for meeting people.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('No public attendee matches yet.')).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+  it('prompts signed-in users to enable attendance visibility when it is off', () => {
+    render(
+      <DesktopCommunityHomePage
+        viewModel={createViewModel({
+          summary: {
+            trackedUpcomingCount: 2,
+            visibleOpportunityCount: 2,
+            followUpCount: 1,
+            attendanceVisibilityEnabled: false,
+          },
+        })}
+      />
+    );
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/community/circles/circle-2/join', {
-        method: 'POST',
-      });
-    });
-
-    expect(mockShowSuccess).toHaveBeenCalledWith('Joined circle!');
-    expect(mockRefresh).toHaveBeenCalled();
-    expect(document.querySelector('a[href="/community/circles"]')).not.toBeInTheDocument();
+    expect(screen.getByText('Turn on attendance visibility.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open settings/i })).toHaveAttribute(
+      'href',
+      '/dashboard/settings'
+    );
   });
 });

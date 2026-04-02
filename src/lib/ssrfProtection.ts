@@ -10,6 +10,14 @@ const BLOCKED_HOSTNAMES = new Set([
     'metadata.google.internal',
 ]);
 
+function normalizeHostLiteral(host: string): string {
+    const normalized = host.toLowerCase();
+    if (normalized.startsWith('[') && normalized.endsWith(']')) {
+        return normalized.slice(1, -1);
+    }
+    return normalized;
+}
+
 function isPrivateIPv4(ip: string): boolean {
     const parts = ip.split('.').map(Number);
     if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
@@ -24,9 +32,36 @@ function isPrivateIPv4(ip: string): boolean {
     return false;
 }
 
+function isPrivateMappedIPv6(ip: string): boolean {
+    const normalized = normalizeHostLiteral(ip);
+    if (!normalized.startsWith('::ffff:')) return false;
+
+    const mapped = normalized.slice('::ffff:'.length);
+    if (net.isIP(mapped) === 4) {
+        return isPrivateIPv4(mapped);
+    }
+
+    const parts = mapped.split(':');
+    if (parts.length !== 2) return true;
+
+    const first = Number.parseInt(parts[0], 16);
+    const second = Number.parseInt(parts[1], 16);
+    if (Number.isNaN(first) || Number.isNaN(second)) return true;
+
+    const ipv4 = [
+        (first >> 8) & 0xff,
+        first & 0xff,
+        (second >> 8) & 0xff,
+        second & 0xff,
+    ].join('.');
+
+    return isPrivateIPv4(ipv4);
+}
+
 function isPrivateIPv6(ip: string): boolean {
-    const normalized = ip.toLowerCase();
+    const normalized = normalizeHostLiteral(ip);
     if (normalized === '::1') return true;
+    if (isPrivateMappedIPv6(normalized)) return true;
     if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true; // ULA
     if (normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) {
         return true; // link local
@@ -35,13 +70,17 @@ function isPrivateIPv6(ip: string): boolean {
 }
 
 function isPrivateIp(ip: string): boolean {
-    const version = net.isIP(ip);
-    if (version === 4) return isPrivateIPv4(ip);
-    if (version === 6) return isPrivateIPv6(ip);
+    const normalized = normalizeHostLiteral(ip);
+    const version = net.isIP(normalized);
+    if (version === 4) return isPrivateIPv4(normalized);
+    if (version === 6) return isPrivateIPv6(normalized);
     return true;
 }
 
-export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid: true; url: URL } | { valid: false; reason: string }> {
+export async function validateUrlForServerFetch(
+    rawUrl: string,
+    options?: { allowUnresolvedHostnames?: boolean }
+): Promise<{ valid: true; url: URL } | { valid: false; reason: string }> {
     let parsedUrl: URL;
     try {
         parsedUrl = new URL(rawUrl);
@@ -61,7 +100,7 @@ export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid
         return { valid: false, reason: 'Non-standard ports are not allowed' };
     }
 
-    const hostname = parsedUrl.hostname.toLowerCase();
+    const hostname = normalizeHostLiteral(parsedUrl.hostname);
     if (BLOCKED_HOSTNAMES.has(hostname) || hostname.endsWith('.local')) {
         return { valid: false, reason: 'Host is not allowed' };
     }
@@ -77,6 +116,9 @@ export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid
     try {
         const resolved = await dns.lookup(hostname, { all: true, verbatim: true });
         if (!resolved.length) {
+            if (options?.allowUnresolvedHostnames) {
+                return { valid: true, url: parsedUrl };
+            }
             return { valid: false, reason: 'Hostname could not be resolved' };
         }
 
@@ -86,6 +128,9 @@ export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid
             }
         }
     } catch {
+        if (options?.allowUnresolvedHostnames) {
+            return { valid: true, url: parsedUrl };
+        }
         return { valid: false, reason: 'Hostname resolution failed' };
     }
 

@@ -53,6 +53,8 @@ interface PublicEvent {
     location: string | null;
     source_url: string | null;
     registration_url: string | null;
+    registration_mode: 'external' | 'native' | null;
+    ingestion_provenance: string | null;
     livestream_url: string | null;
     event_image_url: string | null;
     price_range: string | null;
@@ -94,6 +96,8 @@ const EVENT_SELECT_QUERY = `
     location,
     source_url,
     registration_url,
+    registration_mode,
+    ingestion_provenance,
     livestream_url,
     event_image_url,
     price_min,
@@ -302,6 +306,9 @@ export default async function PublicEventPage({ params }: EventPageProps) {
     } : null;
 
     const eventUrl = `${SITE_URL}/events/${event.slug}`;
+    const isNativeRsvpEvent = event.ingestion_provenance === 'user_submitted' && event.registration_mode === 'native';
+    const primaryExternalUrl = event.registration_url || event.source_url;
+    const externalCtaLabel = event.registration_url ? 'Register on website' : 'Visit event website';
 
     return (
         <>
@@ -435,29 +442,40 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                         <div className="rounded-lg border border-border-subtle bg-background-secondary/80 p-3 shadow-sm space-y-6">
                             {/* Primary & Secondary Actions Combined */}
                             <div className="flex flex-col gap-3">
-                                {event.registration_url && (
+                                {!isNativeRsvpEvent && primaryExternalUrl && (
                                     <a
-                                        href={event.registration_url}
+                                        href={primaryExternalUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex w-full items-center justify-between h-10 px-3 rounded-md bg-[var(--accent-tertiary)] text-white hover:bg-[var(--accent-tertiary-hover)] text-[13px] font-semibold transition-colors"
                                     >
                                         <div className="flex items-center gap-2">
-                                            Register on website
+                                            {externalCtaLabel}
                                             <ArrowSquareOut className="w-3.5 h-3.5 opacity-60" />
                                         </div>
                                         <span className="text-[10px] font-medium rounded-sm border border-white/15 bg-white/10 text-white/90 px-1.5 min-w-[18px] text-center shadow-sm">R</span>
                                     </a>
                                 )}
+                                {isNativeRsvpEvent && (
+                                    <AttendanceEventButton
+                                        eventId={event.id}
+                                        loginRedirect={`/events/${event.slug}`}
+                                        variant="primary"
+                                        label="RSVP on Kure-Cal"
+                                        activeLabel="RSVP'd on Kure-Cal"
+                                    />
+                                )}
 
                                 <div className="flex items-center gap-2">
-                                    <div className="relative group">
-                                        <AttendanceEventButton
-                                            eventId={event.id}
-                                            loginRedirect={`/events/${event.slug}`}
-                                        />
-                                        <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] rounded w-3 h-3 border border-border-subtle bg-background-main text-foreground-tertiary pointer-events-none">A</span>
-                                    </div>
+                                    {!isNativeRsvpEvent && (
+                                        <div className="relative group">
+                                            <AttendanceEventButton
+                                                eventId={event.id}
+                                                loginRedirect={`/events/${event.slug}`}
+                                            />
+                                            <span className="absolute -bottom-1 -right-1 hidden group-hover:flex items-center justify-center text-[8px] rounded w-3 h-3 border border-border-subtle bg-background-main text-foreground-tertiary pointer-events-none">A</span>
+                                        </div>
+                                    )}
                                     <div className="relative group">
                                         <BookmarkEventButton
                                             eventId={event.id}
@@ -476,7 +494,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                                     <PublicEventShortcuts
                                         eventId={event.id}
                                         slug={event.slug}
-                                        registrationUrl={event.registration_url}
+                                        registrationUrl={primaryExternalUrl}
                                         eventData={{
                                             id: event.id,
                                             title: event.title,
@@ -621,15 +639,17 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                             eventId={event.id}
                             loginRedirect={`/events/${event.slug}`}
                             variant="mobile"
+                            label={isNativeRsvpEvent ? 'RSVP on Kure-Cal' : undefined}
+                            activeLabel={isNativeRsvpEvent ? "RSVP'd" : undefined}
                         />
-                        {event.source_url && (
+                        {!isNativeRsvpEvent && primaryExternalUrl && (
                             <a
-                                href={event.source_url}
+                                href={primaryExternalUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="h-11 px-4 flex items-center justify-center border border-border-default rounded-lg text-foreground-secondary text-[14px]"
                             >
-                                Website
+                                {event.registration_url ? 'Register' : 'Website'}
                             </a>
                         )}
                         <a

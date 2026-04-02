@@ -2,21 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from './route';
 
 const mocks = vi.hoisted(() => ({
-  authGetUser: vi.fn(),
+  getApiAuthContext: vi.fn(),
   createRateLimiter: vi.fn(),
   checkRateLimit: vi.fn(),
   evaluateTrustLevel: vi.fn(),
   followUser: vi.fn(),
 }));
 
-const userScopedSupabase = {
-  auth: {
-    getUser: (...args: unknown[]) => mocks.authGetUser(...args),
-  },
-};
+const userScopedSupabase = { kind: 'user-scoped-supabase' };
 
-vi.mock('@/utils/supabase/server', () => ({
-  createClient: vi.fn(async () => userScopedSupabase),
+vi.mock('@/lib/apiAuth', () => ({
+  getApiAuthContext: (...args: unknown[]) => mocks.getApiAuthContext(...args),
 }));
 
 vi.mock('@/utils/rateLimit', () => ({
@@ -48,9 +44,9 @@ describe('POST /api/follows', () => {
   });
 
   it('returns 401 when user is unauthenticated', async () => {
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      supabase: userScopedSupabase,
+      user: null,
     });
 
     const response = await POST({
@@ -64,9 +60,9 @@ describe('POST /api/follows', () => {
   });
 
   it('returns 403 when trust level is below follow threshold', async () => {
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: { id: viewerId } },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      supabase: userScopedSupabase,
+      user: { id: viewerId },
     });
     mocks.evaluateTrustLevel.mockResolvedValue({
       level: 0,
@@ -86,9 +82,9 @@ describe('POST /api/follows', () => {
   });
 
   it('follows target user when request is valid and trust-gated', async () => {
-    mocks.authGetUser.mockResolvedValue({
-      data: { user: { id: viewerId } },
-      error: null,
+    mocks.getApiAuthContext.mockResolvedValue({
+      supabase: userScopedSupabase,
+      user: { id: viewerId },
     });
     mocks.evaluateTrustLevel.mockResolvedValue({
       level: 1,

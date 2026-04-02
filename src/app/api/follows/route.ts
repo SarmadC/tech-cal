@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
+import { getApiAuthContext } from '@/lib/apiAuth';
 import { FollowService } from '@/services/followService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
@@ -29,10 +29,8 @@ const getStatusForError = (error: unknown): number => {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const { supabase, user } = await getApiAuthContext(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }

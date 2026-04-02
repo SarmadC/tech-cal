@@ -112,3 +112,141 @@ export interface CommunityFeedPageData {
   circles: CommunityLaunchpadCircle[];
   upcomingEvents: CommunityUpcomingEvent[];
 }
+
+// ── Community Networking Hub ───────────────────────────────────
+
+export interface CommunityNetworkingSummary {
+  trackedUpcomingCount: number;
+  visibleOpportunityCount: number;
+  followUpCount: number;
+  attendanceVisibilityEnabled: boolean;
+}
+
+export interface CommunityNetworkingAmbientActivity {
+  publicTrackersToday: number;
+  newPublicProfilesThisWeek: number;
+  roomsWithFreshTrackingCount: number;
+}
+
+export interface NetworkingSharedEvent {
+  id: string;
+  slug: string;
+  title: string;
+  startTime: string;
+  location: string | null;
+  format: string | null;
+  viewerContext?: 'attending' | 'saved';
+}
+
+export interface NetworkingAttendeePreview {
+  id: string;
+  fullName: string | null;
+  username: string;
+  avatarUrl: string | null;
+  isInNetwork: boolean;
+  followsViewer: boolean;
+  isMutualFollow: boolean;
+}
+
+export interface NetworkingSpeakerPreview {
+  id: string;
+  name: string;
+  title: string | null;
+  company: string | null;
+  photoUrl: string | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  websiteUrl: string | null;
+}
+
+export interface NetworkingSpeakerMatch {
+  speaker: NetworkingSpeakerPreview;
+  event: NetworkingSharedEvent;
+  matchReason: string;
+  isPastEvent: true;
+}
+
+export interface NetworkingOpportunityEvent {
+  id: string;
+  slug: string;
+  title: string;
+  startTime: string;
+  imageUrl?: string | null;
+  location: string | null;
+  format: string | null;
+  viewerContext: 'attending' | 'saved';
+  contextLabel?: string;
+  recentTrackerCount?: number;
+  totalAttendeeCount: number;
+  visibleAttendeeCount: number;
+  networkAttendingCount: number;
+  relationshipAttendeeCount: number;
+  attendeePreview: NetworkingAttendeePreview[];
+  speakers?: NetworkingSpeakerPreview[];
+}
+
+export interface NetworkingPersonCard {
+  id: string;
+  fullName: string | null;
+  username: string;
+  avatarUrl: string | null;
+  headline: string | null;
+  company?: string | null;
+  bio?: string | null;
+  location: string | null;
+  currentRole: string | null;
+  industry: string | null;
+  companySize: string | null;
+  mutualConnectionsCount: number;
+  isInNetwork: boolean;
+  followsViewer: boolean;
+  isMutualFollow: boolean;
+  sharedUpcomingEventCount: number;
+  soonestSharedEventStartTime: string | null;
+  sharedEvents: NetworkingSharedEvent[];
+}
+
+export interface NetworkingFollowUpCard {
+  id: string;
+  fullName: string | null;
+  username: string;
+  avatarUrl: string | null;
+  headline: string | null;
+  company?: string | null;
+  bio?: string | null;
+  location: string | null;
+  currentRole: string | null;
+  industry: string | null;
+  companySize: string | null;
+  mutualConnectionsCount: number;
+  isInNetwork: boolean;
+  followsViewer: boolean;
+  isMutualFollow: boolean;
+  sharedPastEventCount: number;
+  mostRecentSharedEventStartTime: string | null;
+  sharedEvents: NetworkingSharedEvent[];
+}
+
+export interface NetworkingStarterProfile {
+  id: string;
+  fullName: string | null;
+  username: string;
+  avatarUrl: string | null;
+  headline: string | null;
+  location: string | null;
+  currentRole: string | null;
+  industry: string | null;
+  followerCount: number;
+  followingCount: number;
+}
+
+export interface CommunityNetworkingHomeData {
+  summary: CommunityNetworkingSummary;
+  priorityEvents: NetworkingOpportunityEvent[];
+  meetPeople: NetworkingPersonCard[];
+  followUps: NetworkingFollowUpCard[];
+  speakerMatches?: NetworkingSpeakerMatch[];
+  starterProfiles?: NetworkingStarterProfile[];
+  publicProfileCount?: number;
+  ambientActivity?: CommunityNetworkingAmbientActivity;
+}

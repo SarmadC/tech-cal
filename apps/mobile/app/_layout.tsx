@@ -71,6 +71,10 @@ function RootNavigation() {
         <Stack.Screen name="auth/callback" />
         <Stack.Screen name="auth/reset-password" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile/[username]" />
+        <Stack.Screen name="speaker/[id]" />
+        <Stack.Screen name="community/[slug]" />
+        <Stack.Screen name="community/post/[postId]" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="event/[id]" />

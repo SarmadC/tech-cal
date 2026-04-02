@@ -18,6 +18,8 @@ interface MobilePageProps extends PropsWithChildren {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  headerHidden?: boolean;
+  showAccentGlow?: boolean;
   footerInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
 }
@@ -27,6 +29,8 @@ export function MobilePage({
   title,
   subtitle,
   action,
+  headerHidden = false,
+  showAccentGlow = true,
   children,
   footerInset,
   contentStyle,
@@ -38,10 +42,10 @@ export function MobilePage({
   const bottomInset = footerInset ?? tokens.spacing.tabBarBottom;
 
   const fallbackHeaderOffset = useMemo(
-    () => insets.top + (subtitle ? 148 : 120),
-    [insets.top, subtitle]
+    () => (headerHidden ? insets.top + 12 : insets.top + (subtitle ? 148 : 120)),
+    [headerHidden, insets.top, subtitle]
   );
-  const headerOffset = headerHeight ?? fallbackHeaderOffset;
+  const headerOffset = headerHidden ? fallbackHeaderOffset : headerHeight ?? fallbackHeaderOffset;
 
   function handleHeaderLayout(event: LayoutChangeEvent) {
     const nextHeight = event.nativeEvent.layout.height;
@@ -53,70 +57,74 @@ export function MobilePage({
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]} edges={['left', 'right']}>
       <LinearGradient colors={tokens.gradients.page} style={StyleSheet.absoluteFill} />
-      <LinearGradient
-        colors={tokens.gradients.accent}
-        style={styles.accentGlow}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-      <View
-        onLayout={handleHeaderLayout}
-        style={[
-          styles.headerWrap,
-          {
-            backgroundColor: tokens.colors.header,
-            borderBottomColor: tokens.colors.headerBorder,
-            paddingTop: insets.top + 12,
-          },
-        ]}
-      >
-        <View style={styles.headerTopRow}>
-          <View style={styles.headerCopy}>
-            {eyebrow ? (
+      {showAccentGlow ? (
+        <LinearGradient
+          colors={tokens.gradients.accent}
+          style={styles.accentGlow}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      ) : null}
+      {!headerHidden ? (
+        <View
+          onLayout={handleHeaderLayout}
+          style={[
+            styles.headerWrap,
+            {
+              backgroundColor: tokens.colors.header,
+              borderBottomColor: tokens.colors.headerBorder,
+              paddingTop: insets.top + 12,
+            },
+          ]}
+        >
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerCopy}>
+              {eyebrow ? (
+                <Text
+                  style={[
+                    styles.eyebrow,
+                    {
+                      color: tokens.colors.textTertiary,
+                      fontFamily: tokens.typography.sans,
+                      opacity: compact ? 0.4 : 1,
+                    },
+                  ]}
+                >
+                  {eyebrow.toUpperCase()}
+                </Text>
+              ) : null}
               <Text
                 style={[
-                  styles.eyebrow,
+                  styles.title,
                   {
-                    color: tokens.colors.textTertiary,
+                    color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
-                    opacity: compact ? 0.4 : 1,
+                    fontSize: compact ? 24 : tokens.typography.display,
+                    lineHeight: compact ? 28 : 36,
                   },
                 ]}
               >
-                {eyebrow.toUpperCase()}
+                {title}
               </Text>
-            ) : null}
-            <Text
-              style={[
-                styles.title,
-                {
-                  color: tokens.colors.textPrimary,
-                  fontFamily: tokens.typography.sans,
-                  fontSize: compact ? 24 : tokens.typography.display,
-                  lineHeight: compact ? 28 : 36,
-                },
-              ]}
-            >
-              {title}
-            </Text>
-            {subtitle ? (
-              <Text
-                style={[
-                  styles.subtitle,
-                  {
-                    color: tokens.colors.textSecondary,
-                    fontFamily: tokens.typography.sans,
-                    opacity: compact ? 0.75 : 1,
-                  },
-                ]}
-              >
-                {subtitle}
-              </Text>
-            ) : null}
+              {subtitle ? (
+                <Text
+                  style={[
+                    styles.subtitle,
+                    {
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      opacity: compact ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+            {action ? <View style={styles.headerAction}>{action}</View> : null}
           </View>
-          {action ? <View style={styles.headerAction}>{action}</View> : null}
         </View>
-      </View>
+      ) : null}
       <ScrollView
         contentContainerStyle={[
           styles.content,

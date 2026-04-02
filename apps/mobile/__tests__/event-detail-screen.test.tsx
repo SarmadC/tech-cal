@@ -203,7 +203,7 @@ describe('EventDetailScreen', () => {
     expect(screen.getByTestId('event-detail-speakers-toggle')).toBeTruthy();
   });
 
-  it('uses the primary CTA to open registration and mark attendance', async () => {
+  it('uses the primary CTA to open registration without changing attendance', async () => {
     renderWithProviders(<EventDetailScreen />);
 
     fireEvent.press(await screen.findByTestId('event-detail-primary-action'));
@@ -211,13 +211,7 @@ describe('EventDetailScreen', () => {
     await waitFor(() =>
       expect(Linking.openURL).toHaveBeenCalledWith('https://tickets.example.com/expo-event-detail')
     );
-    await waitFor(() =>
-      expect(mockUpdateEventAttendance).toHaveBeenCalledWith(
-        '22222222-2222-4222-8222-222222222222',
-        '11111111-1111-4111-8111-111111111111',
-        'attending'
-      )
-    );
+    expect(mockUpdateEventAttendance).not.toHaveBeenCalled();
   });
 
   it('falls back to device calendar when no external registration exists', async () => {
@@ -252,6 +246,20 @@ describe('EventDetailScreen', () => {
     );
   });
 
+  it('updates attendance state from the footer action', async () => {
+    renderWithProviders(<EventDetailScreen />);
+
+    fireEvent.press(await screen.findByTestId('event-detail-attendance-action'));
+
+    await waitFor(() =>
+      expect(mockUpdateEventAttendance).toHaveBeenCalledWith(
+        '22222222-2222-4222-8222-222222222222',
+        '11111111-1111-4111-8111-111111111111',
+        'attending'
+      )
+    );
+  });
+
   it('renders a yellow saved bookmark state when the event is already bookmarked', async () => {
     mockGetEventEngagement.mockResolvedValueOnce({
       isBookmarked: true,
@@ -267,7 +275,7 @@ describe('EventDetailScreen', () => {
         : bookmarkButton.props.style
     );
 
-    expect(screen.getByTestId('event-detail-bookmark-label').props.children).toBe('Saved');
+    expect(bookmarkButton.props.accessibilityLabel).toBe('Remove saved event');
     expect(bookmarkStyles.backgroundColor).toBe(getThemeTokens('light').colors.warning);
     expect(bookmarkStyles.borderColor).toBe(getThemeTokens('light').colors.warning);
   });

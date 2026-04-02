@@ -208,10 +208,6 @@ export default function EventDetailScreen() {
     const primaryUrl = detail.registrationUrl ?? detail.sourceUrl;
     if (primaryUrl) {
       await openUrl(primaryUrl);
-
-      if (user && currentEngagement?.status == null) {
-        void attendanceMutation.mutateAsync('attending').catch(() => undefined);
-      }
       return;
     }
 

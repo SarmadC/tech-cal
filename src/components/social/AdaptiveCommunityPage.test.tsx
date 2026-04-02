@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdaptiveCommunityPage from '@/components/social/AdaptiveCommunityPage';
-import type { CommunityFeedPageViewModel } from '@/components/social/community-page-shared';
+import type { CommunityNetworkingHomeViewModel } from '@/components/social/community-page-shared';
 
 const mockUseDeviceDetection = vi.fn();
 
@@ -35,22 +35,28 @@ vi.mock('@/hooks/useDeviceDetection', () => ({
 }));
 
 vi.mock('./DesktopCommunityHomePage', () => ({
-  default: ({ viewModel }: { viewModel: CommunityFeedPageViewModel }) => (
-    <div>desktop:{viewModel.feed.length}</div>
+  default: ({ viewModel }: { viewModel: CommunityNetworkingHomeViewModel }) => (
+    <div>desktop:{viewModel.priorityEvents.length}</div>
   ),
 }));
 
 vi.mock('./mobile/MobileCommunityHomePage', () => ({
-  default: ({ viewModel }: { viewModel: CommunityFeedPageViewModel }) => (
-    <div>mobile:{viewModel.feed.length}</div>
+  default: ({ viewModel }: { viewModel: CommunityNetworkingHomeViewModel }) => (
+    <div>mobile:{viewModel.priorityEvents.length}</div>
   ),
 }));
 
-const viewModel: CommunityFeedPageViewModel = {
+const viewModel: CommunityNetworkingHomeViewModel = {
   isSignedIn: false,
-  feed: [],
-  circles: [],
-  upcomingEvents: [],
+  summary: {
+    trackedUpcomingCount: 0,
+    visibleOpportunityCount: 0,
+    followUpCount: 0,
+    attendanceVisibilityEnabled: false,
+  },
+  priorityEvents: [],
+  meetPeople: [],
+  followUps: [],
 };
 
 describe('AdaptiveCommunityPage', () => {

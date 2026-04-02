@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import type { CommunityFeedPageViewModel } from '@/components/social/community-page-shared';
+import type { CommunityNetworkingHomeViewModel } from '@/components/social/community-page-shared';
 
 const DesktopCommunityHomePage = dynamic(
   () => import('./DesktopCommunityHomePage'),
@@ -19,7 +19,7 @@ const MobileCommunityHomePage = dynamic(
 );
 
 interface AdaptiveCommunityPageProps {
-  viewModel: CommunityFeedPageViewModel;
+  viewModel: CommunityNetworkingHomeViewModel;
 }
 
 function CommunityFeedSkeleton() {

@@ -46,6 +46,15 @@ export default function UnifiedMobileNavbar({
         () => true,
         () => false
     );
+    const effectiveNavItems = variant === 'app'
+        ? [
+            ...navItems,
+            {
+                name: 'Submit Event',
+                href: user ? '/submit-event' : '/login?redirect=%2Fsubmit-event',
+            },
+        ]
+        : navItems;
     const currentPath = pathname ?? '';
     const isMobileMenuOpen = mobileMenuRoute === currentPath;
 
@@ -148,7 +157,7 @@ export default function UnifiedMobileNavbar({
                 >
                     {/* Main Navigation Links */}
                     <div className="flex flex-col gap-8 mb-12">
-                        {navItems.map((item, idx) => (
+                        {effectiveNavItems.map((item, idx) => (
                             <a
                                 key={`mobile-link-${idx}`}
                                 href={item.href}

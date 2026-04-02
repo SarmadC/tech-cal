@@ -11,12 +11,15 @@ import { renderWithProviders } from './renderWithProviders';
 const mockRouterPush: any = jest.fn();
 const mockRouterBack: any = jest.fn();
 const mockUseMobileAuth: any = jest.fn();
+const mockUseLocalSearchParams: any = jest.fn();
 const mockMobileApi: any = {
   getDiscoverFeed: jest.fn(),
   getCalendarFeed: jest.fn(),
   getDashboardHome: jest.fn(),
   getSubscriptionStatus: jest.fn(),
   getBlockedUsers: jest.fn(),
+  getSocialProfile: jest.fn(),
+  updateSocialProfile: jest.fn(),
   unblockUser: jest.fn(),
 };
 
@@ -25,6 +28,7 @@ jest.mock('expo-router', () => ({
     push: (...args: unknown[]) => mockRouterPush(...args),
     back: (...args: unknown[]) => mockRouterBack(...args),
   },
+  useLocalSearchParams: () => mockUseLocalSearchParams(),
 }));
 
 jest.mock('@/lib/mobileApi', () => ({
@@ -211,6 +215,7 @@ function createCalendarFeed(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseLocalSearchParams.mockReturnValue({});
   mockUseMobileAuth.mockReturnValue({
     profile: { fullName: 'Ada Lovelace', timezone: 'America/Edmonton' },
     user: { id: '22222222-2222-4222-8222-222222222222', email: 'ada@example.com' },
@@ -221,6 +226,32 @@ beforeEach(() => {
     data: { tier: 'pro', provider: 'revenuecat' },
   });
   mockMobileApi.getBlockedUsers.mockResolvedValue({ success: true, data: [] });
+  mockMobileApi.getSocialProfile.mockResolvedValue({
+    success: true,
+    data: {
+      id: '22222222-2222-4222-8222-222222222222',
+      fullName: 'Ada Lovelace',
+      avatarUrl: null,
+      username: 'ada',
+      headline: 'Staff engineer',
+      profileVisibility: 'public',
+      showAttendance: true,
+      trustLevel: 'trusted',
+    },
+  });
+  mockMobileApi.updateSocialProfile.mockImplementation(async (payload: Record<string, unknown>) => ({
+    success: true,
+    data: {
+      id: '22222222-2222-4222-8222-222222222222',
+      fullName: 'Ada Lovelace',
+      avatarUrl: null,
+      username: 'ada',
+      headline: 'Staff engineer',
+      profileVisibility: (payload.profileVisibility as string) ?? 'public',
+      showAttendance: (payload.showAttendance as boolean | undefined) ?? true,
+      trustLevel: 'trusted',
+    },
+  }));
   mockMobileApi.unblockUser.mockResolvedValue({ success: true });
 });
 
@@ -703,5 +734,14 @@ describe('signed-in mobile screens', () => {
     fireEvent.press(screen.getByText('Done'));
 
     await waitFor(() => expect(mockRouterBack).toHaveBeenCalled());
+  });
+
+  it('renders networking visibility controls in settings', async () => {
+    renderWithProviders(<SettingsScreen />);
+
+    expect(await screen.findByText('Networking visibility')).toBeTruthy();
+    await waitFor(() => expect(mockMobileApi.getSocialProfile).toHaveBeenCalled());
+    expect(screen.getByText('Show my attendance')).toBeTruthy();
+    expect(screen.getByLabelText('Toggle attendance visibility')).toBeTruthy();
   });
 });

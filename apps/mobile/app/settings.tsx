@@ -1,6 +1,6 @@
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { Alert, Linking, StyleSheet, Switch, Text, View } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router, useLocalSearchParams } from 'expo-router';
 import { HeaderActionButton, MobilePage } from '@/components/chrome/MobilePage';
 import { InlineNotice } from '@/components/chrome/InlineNotice';
 import { ListRow } from '@/components/chrome/ListRow';
@@ -14,12 +14,15 @@ import { mobileQueryKeys } from '@/lib/queryKeys';
 import { mobileQueryStaleTimes } from '@/lib/queryClient';
 import { useAppTheme } from '@/providers/ThemeProvider';
 import type { ThemePreference } from '@/theme/tokens';
+import type { MobileSocialProfileVisibility } from '@kurecal/mobile-client';
 
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
   const { preference, setThemePreference, tokens } = useAppTheme();
   const { profile, user, signOut } = useMobileAuth();
   const apiClient = getMobileApiClient();
+  const params = useLocalSearchParams<{ focus?: string }>();
+  const focus = typeof params.focus === 'string' ? params.focus : null;
 
   const subscriptionQuery = useQuery({
     queryKey: mobileQueryKeys.subscription.status(),
@@ -41,6 +44,46 @@ export default function SettingsScreen() {
     },
   });
 
+  const socialProfileQuery = useQuery({
+    queryKey: mobileQueryKeys.profile.social(),
+    staleTime: mobileQueryStaleTimes.medium,
+    queryFn: async () => {
+      const result = await apiClient.getSocialProfile();
+      if (!result.success) throw new Error(result.error ?? 'Unable to load networking visibility.');
+      return result.data;
+    },
+  });
+
+  const socialProfileMutation = useMutation({
+    mutationFn: async (
+      payload: Partial<{
+        profileVisibility: MobileSocialProfileVisibility;
+        showAttendance: boolean;
+      }>
+    ) => {
+      const result = await apiClient.updateSocialProfile(payload);
+      if (!result.success) throw new Error(result.error ?? 'Unable to update networking visibility.');
+      return result.data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: mobileQueryKeys.profile.social() }),
+        queryClient.invalidateQueries({ queryKey: mobileQueryKeys.community.home() }),
+      ]);
+    },
+    onError: (error: Error) => {
+      Alert.alert('Update failed', error.message);
+    },
+  });
+
+  const socialProfile = socialProfileQuery.data;
+  const visibilitySubtitle =
+    socialProfile?.showAttendance && socialProfile.profileVisibility === 'public'
+      ? "Attendees can find you on events you're attending."
+      : socialProfile?.showAttendance
+        ? 'Attendance visibility is on, but your profile still needs to be Public.'
+        : "Attendees won't see you until this is enabled.";
+
   return (
     <MobilePage
       eyebrow="Settings"
@@ -51,6 +94,51 @@ export default function SettingsScreen() {
     >
       <SectionCard title={profile?.fullName ?? 'KureCal member'} detail={user?.email ?? 'Signed in'}>
         <Text style={[styles.meta, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>Timezone: {profile?.timezone ?? 'Not set'}</Text>
+      </SectionCard>
+
+      <SectionCard
+        title="Networking visibility"
+        detail="Controls whether people can find you around the events you're attending."
+        style={focus === 'visibility' ? { borderColor: tokens.colors.accent, borderWidth: 1 } : undefined}
+      >
+        {focus === 'visibility' ? (
+          <InlineNotice
+            title="Fix your community visibility"
+            description="To appear in attendee lists and Community networking, make your profile Public and turn on attendance visibility."
+          />
+        ) : null}
+
+        <MobileSegmentedControl<MobileSocialProfileVisibility>
+          options={[
+            { id: 'private', label: 'Private' },
+            { id: 'connections', label: 'Connections' },
+            { id: 'public', label: 'Public' },
+          ]}
+          value={socialProfile?.profileVisibility ?? 'private'}
+          onChange={(nextValue) => {
+            void socialProfileMutation.mutateAsync({ profileVisibility: nextValue });
+          }}
+        />
+
+        <ListRow
+          title="Show my attendance"
+          subtitle={visibilitySubtitle}
+          trailing={
+            <Switch
+              accessibilityLabel="Toggle attendance visibility"
+              disabled={socialProfileQuery.isLoading || socialProfileMutation.isPending}
+              onValueChange={(value) => {
+                void socialProfileMutation.mutateAsync({ showAttendance: value });
+              }}
+              thumbColor={tokens.mode === 'dark' ? tokens.colors.surface : undefined}
+              trackColor={{
+                false: tokens.colors.border,
+                true: tokens.colors.accent,
+              }}
+              value={socialProfile?.showAttendance ?? false}
+            />
+          }
+        />
       </SectionCard>
 
       <SectionCard
