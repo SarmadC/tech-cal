@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '../src/context/AuthProvider';
+import { useAuth } from '../../src/context/AuthProvider';
 
 export default function LoginScreen() {
   const { loading, session, signIn } = useAuth();
@@ -29,8 +29,7 @@ export default function LoginScreen() {
   );
 
   if (session) {
-    router.replace('/submit-event');
-    return null;
+    return <Redirect href="/dashboard" />;
   }
 
   const handleSignIn = async () => {
@@ -52,7 +51,7 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('/submit-event');
+    router.replace('/dashboard');
     setSubmitting(false);
   };
 
@@ -66,9 +65,9 @@ export default function LoginScreen() {
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={styles.hero}>
               <Text style={styles.eyebrow}>KureCal Mobile</Text>
-              <Text style={styles.title}>Submit events from the same flow we ship to production.</Text>
+              <Text style={styles.title}>Signed-in mobile foundation for the shared KureCal backend.</Text>
               <Text style={styles.subtitle}>
-                Sign in with your existing account to send community event submissions directly into the shared review queue.
+                Phase 1 keeps auth, routing, env access, and event submission in Expo while shared contracts live in the new domain package.
               </Text>
             </View>
 
@@ -116,7 +115,7 @@ export default function LoginScreen() {
                 {submitting ? (
                   <ActivityIndicator color="#03111d" />
                 ) : (
-                  <Text style={styles.primaryButtonLabel}>Sign in and continue</Text>
+                  <Text style={styles.primaryButtonLabel}>Sign in</Text>
                 )}
               </Pressable>
             </View>

@@ -1,58 +1,24 @@
+import {
+  escapeLikePattern as escapeDomainLikePattern,
+  isReservedUsername as isReservedDomainUsername,
+  isValidUsernameFormat as isValidDomainUsernameFormat,
+  normalizeUsername as normalizeDomainUsername,
+  type ProfileVisibility,
+  type SocialProfile,
+  type SocialProfileUpdateInput,
+  type UsernameAvailabilityReason,
+  type UsernameAvailabilityResult,
+} from '@kurecal/domain';
+
 import type { SupabaseClientType } from '@/types';
 
-export type ProfileVisibility = 'private' | 'connections' | 'public';
-
-export interface SocialProfile {
-  id: string;
-  fullName: string | null;
-  avatarUrl: string | null;
-  username: string | null;
-  headline: string | null;
-  profileVisibility: ProfileVisibility;
-  showAttendance: boolean;
-}
-
-export interface SocialProfileUpdateInput {
-  username?: string | null;
-  headline?: string | null;
-  profileVisibility?: ProfileVisibility;
-  showAttendance?: boolean;
-}
-
-export type UsernameAvailabilityReason = 'taken' | 'invalid' | 'reserved';
-
-export interface UsernameAvailabilityResult {
-  username: string;
-  available: boolean;
-  reason?: UsernameAvailabilityReason;
-  message: string;
-}
-
-const USERNAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{2,29}$/;
-const RESERVED_USERNAMES = new Set<string>([
-  'admin',
-  'api',
-  'about',
-  'blog',
-  'calendar',
-  'community',
-  'circles',
-  'contact',
-  'dashboard',
-  'discover',
-  'events',
-  'feed',
-  'login',
-  'logout',
-  'pricing',
-  'settings',
-  'signup',
-  'u',
-  'user',
-  'users',
-  'null',
-  'undefined',
-]);
+export type {
+  ProfileVisibility,
+  SocialProfile,
+  SocialProfileUpdateInput,
+  UsernameAvailabilityReason,
+  UsernameAvailabilityResult,
+};
 
 type SocialProfileRow = {
   id: string;
@@ -66,19 +32,19 @@ type SocialProfileRow = {
 
 export class SocialProfileService {
   static normalizeUsername(input: string): string {
-    return input.trim();
+    return normalizeDomainUsername(input);
   }
 
   static escapeLikePattern(input: string): string {
-    return input.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    return escapeDomainLikePattern(input);
   }
 
   static isReservedUsername(username: string): boolean {
-    return RESERVED_USERNAMES.has(username.toLowerCase());
+    return isReservedDomainUsername(username);
   }
 
   static isValidUsernameFormat(username: string): boolean {
-    return USERNAME_PATTERN.test(username);
+    return isValidDomainUsernameFormat(username);
   }
 
   static mapSocialProfile(row: SocialProfileRow): SocialProfile {

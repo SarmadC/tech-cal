@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
-import { SocialProfileService, type ProfileVisibility } from '@/services/socialProfileService';
+import { socialProfileUpdateSchema } from '@kurecal/domain';
+
+import { SocialProfileService } from '@/services/socialProfileService';
 import { TrustLevelService } from '@/services/trustLevelService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
-const PROFILE_VISIBILITY_VALUES = ['private', 'connections', 'public'] as const satisfies readonly ProfileVisibility[];
-
-const SocialProfileUpdateSchema = z.object({
-  username: z.string().trim().max(30).nullable().optional(),
-  headline: z.string().trim().max(120).nullable().optional(),
-  profileVisibility: z.enum(PROFILE_VISIBILITY_VALUES).optional(),
-  showAttendance: z.boolean().optional(),
-});
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -26,8 +16,8 @@ export async function GET() {
     }
 
     const [socialProfile, trust] = await Promise.all([
-      SocialProfileService.getSocialProfile(user.id, supabase),
-      TrustLevelService.evaluateAndPersistTrustLevel(user.id, supabase),
+      SocialProfileService.getSocialProfile(authContext.user.id, authContext.supabase),
+      TrustLevelService.evaluateAndPersistTrustLevel(authContext.user.id, authContext.supabase),
     ]);
 
     return NextResponse.json({
@@ -48,10 +38,8 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -59,7 +47,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validation = SocialProfileUpdateSchema.safeParse(body);
+    const validation = socialProfileUpdateSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -69,12 +57,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const socialProfile = await SocialProfileService.updateSocialProfile(
-      user.id,
+      authContext.user.id,
       validation.data,
-      supabase
+      authContext.supabase
     );
 
-    const trust = await TrustLevelService.evaluateAndPersistTrustLevel(user.id, supabase);
+    const trust = await TrustLevelService.evaluateAndPersistTrustLevel(
+      authContext.user.id,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

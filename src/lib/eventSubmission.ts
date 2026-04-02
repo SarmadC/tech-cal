@@ -1,137 +1,24 @@
+import {
+    EVENT_SUBMISSION_TYPE_OPTIONS,
+    normalizeEventSubmissionRequest,
+    type EventSubmissionRequest,
+    type EventSubmissionType,
+    type NormalizedEventSubmissionRequest,
+} from '@kurecal/domain';
+
 import type { Database } from '@/types/supabase';
 
-export const EVENT_SUBMISSION_TYPE_OPTIONS = [
-    { value: 'tech_event', label: 'Tech Event' },
-    { value: 'hackathon', label: 'Hackathon' },
-    { value: 'meetup', label: 'Meetup' },
-    { value: 'conference', label: 'Conference' },
-    { value: 'workshop', label: 'Workshop' },
-    { value: 'other', label: 'Other' },
-] as const;
-
-export type EventSubmissionType = typeof EVENT_SUBMISSION_TYPE_OPTIONS[number]['value'];
-
-export interface EventSubmissionRequest {
-    title: string;
-    description?: string | null;
-    event_type?: string | null;
-    start_date: string;
-    end_date?: string | null;
-    is_virtual?: boolean;
-    location?: string | null;
-    registration_url?: string | null;
-    organizer_name?: string | null;
-    tags?: string[];
-}
-
-export interface NormalizedEventSubmissionRequest {
-    title: string;
-    description: string | null;
-    event_type: EventSubmissionType;
-    start_date: string;
-    end_date: string | null;
-    is_virtual: boolean;
-    location: string | null;
-    registration_url: string | null;
-    organizer_name: string | null;
-    tags: string[];
-}
+export {
+    EVENT_SUBMISSION_TYPE_OPTIONS,
+    normalizeEventSubmissionRequest,
+};
+export type {
+    EventSubmissionRequest,
+    EventSubmissionType,
+    NormalizedEventSubmissionRequest,
+};
 
 export type UserSubmittedEventInsert = Database['public']['Tables']['user_submitted_events']['Insert'];
-
-const ALLOWED_EVENT_TYPES = new Set<EventSubmissionType>(
-    EVENT_SUBMISSION_TYPE_OPTIONS.map((option) => option.value)
-);
-
-function normalizeOptionalString(value: unknown): string | null {
-    if (typeof value !== 'string') {
-        return null;
-    }
-
-    const trimmed = value.trim();
-    return trimmed === '' ? null : trimmed;
-}
-
-function normalizeDateTime(
-    value: unknown,
-    fieldName: 'start_date' | 'end_date'
-): { value: string | null; error: string | null } {
-    const normalized = normalizeOptionalString(value);
-
-    if (!normalized) {
-        return {
-            value: null,
-            error: fieldName === 'start_date' ? 'Start date is required' : null,
-        };
-    }
-
-    const parsed = new Date(normalized);
-    if (Number.isNaN(parsed.getTime())) {
-        return {
-            value: null,
-            error: `${fieldName === 'start_date' ? 'Start date' : 'End date'} must be a valid datetime`,
-        };
-    }
-
-    return { value: parsed.toISOString(), error: null };
-}
-
-export function normalizeEventSubmissionRequest(
-    payload: Record<string, unknown>
-): { data: NormalizedEventSubmissionRequest | null; error: string | null } {
-    const normalizedTitle = normalizeOptionalString(payload.title);
-    if (!normalizedTitle) {
-        return { data: null, error: 'Title is required' };
-    }
-
-    const rawEventType = typeof payload.event_type === 'string' ? payload.event_type.trim() : 'other';
-    if (!ALLOWED_EVENT_TYPES.has(rawEventType as EventSubmissionType)) {
-        return { data: null, error: 'Event type is invalid' };
-    }
-
-    const normalizedStartDate = normalizeDateTime(payload.start_date, 'start_date');
-    if (normalizedStartDate.error) {
-        return { data: null, error: normalizedStartDate.error };
-    }
-
-    const normalizedEndDate = normalizeDateTime(payload.end_date, 'end_date');
-    if (normalizedEndDate.error) {
-        return { data: null, error: normalizedEndDate.error };
-    }
-
-    const isVirtual = payload.is_virtual === true;
-    const location = normalizeOptionalString(payload.location);
-    if (!isVirtual && !location) {
-        return { data: null, error: 'Location is required for in-person events' };
-    }
-
-    const tags = Array.isArray(payload.tags)
-        ? Array.from(
-            new Set(
-                payload.tags
-                    .filter((tag): tag is string => typeof tag === 'string')
-                    .map((tag) => tag.trim())
-                    .filter(Boolean)
-            )
-        )
-        : [];
-
-    return {
-        data: {
-            title: normalizedTitle,
-            description: normalizeOptionalString(payload.description),
-            event_type: rawEventType as EventSubmissionType,
-            start_date: normalizedStartDate.value!,
-            end_date: normalizedEndDate.value,
-            is_virtual: isVirtual,
-            location: isVirtual ? null : location,
-            registration_url: normalizeOptionalString(payload.registration_url),
-            organizer_name: normalizeOptionalString(payload.organizer_name),
-            tags,
-        },
-        error: null,
-    };
-}
 
 export function toUserSubmittedEventInsert(
     userId: string,

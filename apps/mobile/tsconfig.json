@@ -1,13 +1,19 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "paths": {
+      "@kurecal/domain": [
+        "../../packages/domain/src/index.ts"
+      ]
+    },
     "strict": true
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "../../packages/domain/src/**/*.ts"
   ],
   "exclude": [
     "**/*.test.ts",

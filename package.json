@@ -43,8 +43,9 @@
     "validate:analytics": "tsx scripts/validate-analytics.ts",
     "verify:paddle": "tsx scripts/verify-paddle-setup.ts",
     "verify:all": "npm run verify:production && npm run test:budget && npm run validate:analytics",
-    "test:mobile:contracts": "npm exec vitest run apps/mobile/src/lib/eventSubmission.test.ts src/app/api/events/submit/route.test.ts",
-    "mobile:ci": "npm run type-check:src && npm run test:mobile:contracts && npm run type-check:mobile && npm --prefix apps/mobile run doctor"
+    "test:domain:contracts": "npm exec vitest run packages/domain/src/eventSubmission.test.ts packages/domain/src/socialProfile.test.ts",
+    "test:mobile:contracts": "npm exec vitest run apps/mobile/src/lib/env.test.ts apps/mobile/src/lib/eventSubmission.test.ts src/app/api/events/submit/route.test.ts src/app/api/profile/social/route.test.ts",
+    "mobile:ci": "npm run type-check:src && npm run test:domain:contracts && npm run test:mobile:contracts && npm run type-check:mobile && npm --prefix apps/mobile run doctor"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
