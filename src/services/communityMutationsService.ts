@@ -42,6 +42,15 @@ export class CommunityMutationsService {
     await Promise.all([
       CommunityModerationService.assertUserCanParticipate(userId, supabase),
       CommunityModerationService.assertPostAllowsReplies(payload.postId, supabase),
+      ...(payload.parentId
+        ? [
+            CommunityModerationService.assertReplyParentMatchesPost(
+              payload.postId,
+              payload.parentId,
+              supabase
+            ),
+          ]
+        : []),
     ]);
 
     const { data, error } = await supabase

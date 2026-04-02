@@ -213,6 +213,13 @@ export async function deleteCirclePost(postId: string, circleSlug: string, redir
             return { success: false, error: 'You must be logged in to delete' };
         }
 
+        await CommunityModerationService.assertOwnContentCanBeDeleted(
+            'post',
+            postId,
+            user.id,
+            supabase
+        );
+
         const { error } = await supabase
             .from('circle_posts')
             .delete()
@@ -294,6 +301,13 @@ export async function deleteCircleComment(commentId: string, circleSlug: string)
         if (!user) {
             return { success: false, error: 'You must be logged in to delete' };
         }
+
+        await CommunityModerationService.assertOwnContentCanBeDeleted(
+            'comment',
+            commentId,
+            user.id,
+            supabase
+        );
 
         const { error } = await supabase
             .from('circle_comments')

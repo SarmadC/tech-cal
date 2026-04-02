@@ -102,6 +102,30 @@ export class CommunityModerationService {
     }
   }
 
+  static async assertReplyParentMatchesPost(
+    postId: string,
+    parentCommentId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const { data, error } = await supabase
+      .from('circle_comments')
+      .select('id, post_id')
+      .eq('id', parentCommentId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? 'Unable to load the parent comment.');
+    }
+
+    if (!data) {
+      throw new Error('The comment you replied to is no longer available.');
+    }
+
+    if (data.post_id !== postId) {
+      throw new Error('Replies must belong to the same discussion.');
+    }
+  }
+
   static async assertVoteTargetIsActive(
     entityType: 'post' | 'comment',
     entityId: string,
@@ -291,5 +315,34 @@ export class CommunityModerationService {
       moderated_at: new Date().toISOString(),
       moderated_by: reviewerId,
     };
+  }
+
+  static async assertOwnContentCanBeDeleted(
+    entityType: 'post' | 'comment',
+    entityId: string,
+    userId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const table = entityType === 'post' ? 'circle_posts' : 'circle_comments';
+    const noun = entityType === 'post' ? 'post' : 'comment';
+
+    const { data, error } = await (supabase as any)
+      .from(table)
+      .select('id, moderation_status')
+      .eq('id', entityId)
+      .eq('author_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? `Unable to load the ${noun}.`);
+    }
+
+    if (!data) {
+      throw new Error(`Failed to delete ${noun}. You may not have permission.`);
+    }
+
+    if (data.moderation_status !== 'active') {
+      throw new Error(`Removed ${noun}s cannot be deleted.`);
+    }
   }
 }
