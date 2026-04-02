@@ -5,6 +5,7 @@ import type {
   CommunityUpcomingEvent,
 } from '@/types/community';
 import type { SupabaseClientType } from '@/types/database';
+import { BlockService } from '@/services/blockService';
 
 // ── Row types for DB results ────────────────────────────────────
 
@@ -14,6 +15,15 @@ interface FeedPostRow {
   created_at: string;
   author_id: string;
   circle_id: string;
+  moderation_status: 'active' | 'removed';
+}
+
+interface FeedCommentRow {
+  id: string;
+  post_id: string;
+  content: string;
+  created_at: string;
+  author_id: string;
 }
 
 interface ProfileRow {
@@ -33,6 +43,8 @@ interface CircleRow {
 // ── Constants ────────────────────────────────────────────────────
 
 const FEED_LIMIT = 20;
+const FEED_FETCH_LIMIT = FEED_LIMIT * 3;
+const FEED_COMMENT_PREVIEW_LIMIT = 2;
 const TRENDING_THRESHOLD = 8; // ≥8 comments = trending
 const UPCOMING_EVENTS_LIMIT = 5;
 
@@ -108,10 +120,11 @@ export class CommunityHubService {
       if (normalizedJoinedCircleIds.length > 0) {
         const { data: joinedPosts } = await readClient
           .from('circle_posts')
-          .select('id, content, created_at, author_id, circle_id')
+          .select('id, content, created_at, author_id, circle_id, moderation_status')
           .in('circle_id', normalizedJoinedCircleIds)
+          .eq('moderation_status', 'active')
           .order('created_at', { ascending: false })
-          .limit(FEED_LIMIT);
+          .limit(FEED_FETCH_LIMIT);
 
         posts = (joinedPosts || []) as FeedPostRow[];
       }
@@ -121,12 +134,13 @@ export class CommunityHubService {
         const existingIds = new Set(posts.map((p) => p.id));
         const { data: globalPosts } = await readClient
           .from('circle_posts')
-          .select('id, content, created_at, author_id, circle_id')
+          .select('id, content, created_at, author_id, circle_id, moderation_status')
+          .eq('moderation_status', 'active')
           .order('created_at', { ascending: false })
-          .limit(FEED_LIMIT);
+          .limit(FEED_FETCH_LIMIT);
 
         for (const gp of (globalPosts || []) as FeedPostRow[]) {
-          if (!existingIds.has(gp.id) && posts.length < FEED_LIMIT) {
+          if (!existingIds.has(gp.id) && posts.length < FEED_FETCH_LIMIT) {
             posts.push(gp);
           }
         }
@@ -134,8 +148,56 @@ export class CommunityHubService {
 
       if (posts.length === 0) return [];
 
+      const commentCandidatePostIds = posts.map((post) => post.id);
+      const { data: commentRows } = await readClient
+        .from('circle_comments')
+        .select('id, post_id, content, created_at, author_id')
+        .in('post_id', commentCandidatePostIds)
+        .eq('moderation_status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(5_000);
+
+      const blockedUserIds =
+        viewerId
+          ? await BlockService.getBlockedUserIdsForViewer(
+              viewerId,
+              [
+                ...new Set([
+                  ...posts.map((post) => post.author_id),
+                  ...((commentRows as FeedCommentRow[] | null) ?? []).map(
+                    (comment) => comment.author_id
+                  ),
+                ]),
+              ],
+              readClient
+            )
+          : new Set<string>();
+
+      posts = posts
+        .filter(
+          (post) =>
+            post.moderation_status === 'active' &&
+            !blockedUserIds.has(post.author_id)
+        )
+        .slice(0, FEED_LIMIT);
+
+      if (posts.length === 0) {
+        return [];
+      }
+
+      const postIds = posts.map((p) => p.id);
+      const filteredComments = ((commentRows as FeedCommentRow[] | null) ?? []).filter(
+        (comment) =>
+          postIds.includes(comment.post_id) && !blockedUserIds.has(comment.author_id)
+      );
+
       // Resolve authors
-      const authorIds = [...new Set(posts.map((p) => p.author_id))];
+      const authorIds = [
+        ...new Set([
+          ...posts.map((p) => p.author_id),
+          ...filteredComments.map((comment) => comment.author_id),
+        ]),
+      ];
       const { data: profiles } = await readClient
         .from('profiles')
         .select('id, full_name, avatar_url')
@@ -148,18 +210,37 @@ export class CommunityHubService {
         ])
       );
 
-      // Count comments per post (fetch post_id only; tally in JS)
-      const postIds = posts.map((p) => p.id);
-      const { data: commentCounts } = await readClient
-        .from('circle_comments')
-        .select('post_id')
-        .in('post_id', postIds)
-        .limit(5000);
-
       // Tally counts manually
       const countMap = new Map<string, number>();
-      for (const row of (commentCounts || []) as { post_id: string }[]) {
+      const recentCommentsMap = new Map<
+        string,
+        Array<{
+          id: string;
+          content: string;
+          createdAt: string;
+          author: { id: string; fullName: string | null; avatarUrl: string | null };
+        }>
+      >();
+
+      for (const row of filteredComments) {
         countMap.set(row.post_id, (countMap.get(row.post_id) || 0) + 1);
+
+        const existingComments = recentCommentsMap.get(row.post_id) ?? [];
+        if (existingComments.length >= FEED_COMMENT_PREVIEW_LIMIT) {
+          continue;
+        }
+
+        existingComments.push({
+          id: row.id,
+          content: row.content,
+          createdAt: row.created_at,
+          author: profileMap.get(row.author_id) || {
+            id: row.author_id,
+            fullName: null,
+            avatarUrl: null,
+          },
+        });
+        recentCommentsMap.set(row.post_id, existingComments);
       }
 
       return posts.map((p) => ({
@@ -177,6 +258,7 @@ export class CommunityHubService {
         },
         commentCount: countMap.get(p.id) || 0,
         isTrending: (countMap.get(p.id) || 0) >= TRENDING_THRESHOLD,
+        recentComments: recentCommentsMap.get(p.id) ?? [],
       }));
     } catch (error) {
       console.error('Failed to load community feed:', error);

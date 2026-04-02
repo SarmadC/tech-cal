@@ -102,6 +102,11 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                         href: `${BASE_PATH}/utilities/reports`,
                         icon: <MaterialIcon name="bar-chart" size={20} />,
                     },
+                    {
+                        title: 'Community Reports',
+                        href: `${BASE_PATH}/community/reports`,
+                        icon: <MaterialIcon name="warning" size={20} />,
+                    },
                 ],
             },
         ],

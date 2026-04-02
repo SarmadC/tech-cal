@@ -3,6 +3,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { CommunityMutationsService } from '@/services/communityMutationsService';
+import { CommunityModerationService } from '@/services/communityModerationService';
 
 const MAX_POST_LENGTH = 10_000;
 const MAX_COMMENT_LENGTH = 5_000;
@@ -31,31 +33,22 @@ export async function createCirclePost(circleId: string, content: string, circle
             return { success: false, error: 'You must be logged in to post' };
         }
 
-        const { data, error } = await supabase
-            .from('circle_posts')
-            .insert({
-                circle_id: circleId,
-                author_id: user.id,
-                content: content.trim()
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error creating post:', error);
-            // Check for RLS policy violation which means they aren't a member
-            if (error.code === '42501') {
-                return { success: false, error: 'You must join this circle to post' };
-            }
-            return { success: false, error: 'Failed to create post. Please try again.' };
-        }
+        const data = await CommunityMutationsService.createPost(
+            user.id,
+            {
+                circleId,
+                circleSlug,
+                content: content.trim(),
+            },
+            supabase
+        );
 
         revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
         console.error('Exception creating post:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -78,31 +71,23 @@ export async function createCircleComment(postId: string, content: string, circl
             return { success: false, error: 'You must be logged in to comment' };
         }
 
-        const { data, error } = await supabase
-            .from('circle_comments')
-            .insert({
-                post_id: postId,
-                author_id: user.id,
+        const data = await CommunityMutationsService.createComment(
+            user.id,
+            {
+                postId,
+                circleSlug,
                 content: content.trim(),
-                ...(parentId ? { parent_id: parentId } : {})
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error creating comment:', error);
-            if (error.code === '42501') {
-                return { success: false, error: 'You must join this circle to comment' };
-            }
-            return { success: false, error: 'Failed to add comment. Please try again.' };
-        }
+                ...(parentId ? { parentId } : {}),
+            },
+            supabase
+        );
 
         revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true, data };
 
     } catch (error) {
         console.error('Exception creating comment:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -118,43 +103,23 @@ export async function votePost(postId: string, voteType: 1 | -1 | 0, circleSlug:
             return { success: false, error: 'You must be logged in to vote' };
         }
 
-        if (voteType === 0) {
-            // Remove vote
-            const { error } = await supabase
-                .from('circle_post_votes')
-                .delete()
-                .eq('post_id', postId)
-                .eq('user_id', user.id);
-            
-            if (error) {
-                console.error('Error removing vote on post:', error);
-                return { success: false, error: 'Failed to remove vote' };
-            }
-        } else {
-            // Upsert vote
-            const { error } = await supabase
-                .from('circle_post_votes')
-                .upsert({
-                    post_id: postId,
-                    user_id: user.id,
-                    vote_type: voteType
-                }, { onConflict: 'user_id,post_id' });
-
-            if (error) {
-                console.error('Error voting on post:', error);
-                if (error.code === '42501') {
-                    return { success: false, error: 'You must join this circle to vote' };
-                }
-                return { success: false, error: 'Failed to record vote' };
-            }
-        }
+        await CommunityMutationsService.submitVote(
+            user.id,
+            {
+                entityType: 'post',
+                entityId: postId,
+                circleSlug,
+                voteType,
+            },
+            supabase
+        );
 
         revalidatePath(`/circle/${circleSlug}`);
         return { success: true };
 
     } catch (error) {
         console.error('Exception voting on post:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -170,43 +135,23 @@ export async function voteComment(commentId: string, voteType: 1 | -1 | 0, circl
             return { success: false, error: 'You must be logged in to vote' };
         }
 
-        if (voteType === 0) {
-            // Remove vote
-            const { error } = await supabase
-                .from('circle_comment_votes')
-                .delete()
-                .eq('comment_id', commentId)
-                .eq('user_id', user.id);
-            
-            if (error) {
-                console.error('Error removing vote on comment:', error);
-                return { success: false, error: 'Failed to remove vote' };
-            }
-        } else {
-            // Upsert vote
-            const { error } = await supabase
-                .from('circle_comment_votes')
-                .upsert({
-                    comment_id: commentId,
-                    user_id: user.id,
-                    vote_type: voteType
-                }, { onConflict: 'user_id,comment_id' });
-
-            if (error) {
-                console.error('Error voting on comment:', error);
-                if (error.code === '42501') {
-                    return { success: false, error: 'You must join this circle to vote' };
-                }
-                return { success: false, error: 'Failed to record vote' };
-            }
-        }
+        await CommunityMutationsService.submitVote(
+            user.id,
+            {
+                entityType: 'comment',
+                entityId: commentId,
+                circleSlug,
+                voteType,
+            },
+            supabase
+        );
 
         revalidatePath(`/circle/${circleSlug}`, 'layout');
         return { success: true };
 
     } catch (error) {
         console.error('Exception voting on comment:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -229,10 +174,13 @@ export async function editCirclePost(postId: string, content: string, circleSlug
             return { success: false, error: 'You must be logged in to edit' };
         }
 
+        await CommunityModerationService.assertUserCanParticipate(user.id, supabase);
+
         const { data, error } = await supabase
             .from('circle_posts')
             .update({ content: content.trim() })
             .eq('id', postId)
+            .eq('moderation_status', 'active')
             .eq('author_id', user.id) // Extra safety, RLS handles this too
             .select()
             .single();
@@ -247,7 +195,7 @@ export async function editCirclePost(postId: string, content: string, circleSlug
 
     } catch (error) {
         console.error('Exception editing post:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -265,6 +213,13 @@ export async function deleteCirclePost(postId: string, circleSlug: string, redir
             return { success: false, error: 'You must be logged in to delete' };
         }
 
+        await CommunityModerationService.assertOwnContentCanBeDeleted(
+            'post',
+            postId,
+            user.id,
+            supabase
+        );
+
         const { error } = await supabase
             .from('circle_posts')
             .delete()
@@ -281,7 +236,7 @@ export async function deleteCirclePost(postId: string, circleSlug: string, redir
 
     } catch (error) {
         console.error('Exception deleting post:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 
     if (didDelete && redirectTo) {
@@ -310,10 +265,13 @@ export async function editCircleComment(commentId: string, content: string, circ
             return { success: false, error: 'You must be logged in to edit' };
         }
 
+        await CommunityModerationService.assertUserCanParticipate(user.id, supabase);
+
         const { data, error } = await supabase
             .from('circle_comments')
             .update({ content: content.trim() })
             .eq('id', commentId)
+            .eq('moderation_status', 'active')
             .eq('author_id', user.id) // Extra safety, RLS handles this too
             .select()
             .single();
@@ -328,7 +286,7 @@ export async function editCircleComment(commentId: string, content: string, circ
 
     } catch (error) {
         console.error('Exception editing comment:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }
 
@@ -343,6 +301,13 @@ export async function deleteCircleComment(commentId: string, circleSlug: string)
         if (!user) {
             return { success: false, error: 'You must be logged in to delete' };
         }
+
+        await CommunityModerationService.assertOwnContentCanBeDeleted(
+            'comment',
+            commentId,
+            user.id,
+            supabase
+        );
 
         const { error } = await supabase
             .from('circle_comments')
@@ -360,6 +325,6 @@ export async function deleteCircleComment(commentId: string, circleSlug: string)
 
     } catch (error) {
         console.error('Exception deleting comment:', error);
-        return { success: false, error: 'An unexpected error occurred' };
+        return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 }

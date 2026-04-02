@@ -1,0 +1,29 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { communityPostDraftSchema } from '@/lib/communitySchemas';
+import { CommunityMutationsService } from '@/services/communityMutationsService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
+
+export async function POST(request: Request) {
+  try {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const payload = communityPostDraftSchema.parse(await request.json());
+    const post = await CommunityMutationsService.createPost(
+      authContext.user.id,
+      payload,
+      authContext.supabase
+    );
+    return NextResponse.json({ success: true, data: post });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Failed to create post' },
+      { status: 400 }
+    );
+  }
+}

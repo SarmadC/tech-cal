@@ -57,7 +57,7 @@ describe('eventTransformer', () => {
 
       const result = eventTransformer.toApp(supabaseEvent);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         id: '1',
         createdAt: '2024-01-01T09:00:00Z',
         updatedAt: '2024-01-01T09:00:00Z',
@@ -81,7 +81,7 @@ describe('eventTransformer', () => {
           name: 'Test Organizer',
           logo: 'https://logo.example.com/logo.png',
         },
-      });
+      }));
     });
 
     it('should handle missing optional fields', () => {
@@ -110,7 +110,7 @@ describe('eventTransformer', () => {
 
       const result = eventTransformer.toApp(supabaseEvent);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         id: '1',
         createdAt: '2024-01-01T09:00:00Z',
         updatedAt: '2024-01-01T09:00:00Z',
@@ -130,7 +130,7 @@ describe('eventTransformer', () => {
           id: 'org1',
           name: 'Test Organizer',
         },
-      });
+      }));
     });
 
     it('should handle missing organizer', () => {

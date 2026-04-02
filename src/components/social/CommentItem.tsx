@@ -77,6 +77,7 @@ export default function CommentItem({
 
     const indentIncrement = getIndentIncrement(depth);
     const replies = comment.replies ?? [];
+    const isRemoved = Boolean(comment.isRemoved);
 
     const handleReplySubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -170,7 +171,9 @@ export default function CommentItem({
         }
     };
 
-    const isAuthor = Boolean(currentUser?.id && comment.author?.id && currentUser.id === comment.author.id);
+    const isAuthor = Boolean(
+        !isRemoved && currentUser?.id && comment.author?.id && currentUser.id === comment.author.id
+    );
 
     return (
         <article className="group/comment" data-thread-depth={depth}>
@@ -308,45 +311,53 @@ export default function CommentItem({
                             )}
 
                             <div className="mt-3 flex flex-wrap items-center gap-3">
-                                <VoteControls
-                                    score={localScore}
-                                    vote={localVote}
-                                    onVote={handleVote}
-                                    density="sm"
-                                />
+                                {!isRemoved ? (
+                                    <>
+                                        <VoteControls
+                                            score={localScore}
+                                            vote={localVote}
+                                            onVote={handleVote}
+                                            density="sm"
+                                        />
 
-                                {isJoined && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsReplying(prev => !prev)}
-                                        className={actionLinkClasses}
-                                    >
-                                        Reply
-                                    </button>
+                                        {isJoined && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsReplying(prev => !prev)}
+                                                className={actionLinkClasses}
+                                            >
+                                                Reply
+                                            </button>
+                                        )}
+
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={actionLinkClasses}
+                                                    aria-label="More comment actions"
+                                                >
+                                                    <DotsThree size={14} weight="bold" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-28">
+                                                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                                                    Share
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                                                    Report
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </>
+                                ) : (
+                                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                                        Moderation hold
+                                    </span>
                                 )}
-
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className={actionLinkClasses}
-                                            aria-label="More comment actions"
-                                        >
-                                            <DotsThree size={14} weight="bold" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-28">
-                                        <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                                            Share
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                                            Report
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
                             </div>
 
-                            {isReplying && isJoined && currentUser && (
+                            {!isRemoved && isReplying && isJoined && currentUser && (
                                 <form
                                     onSubmit={handleReplySubmit}
                                     className="mt-3 overflow-hidden border border-zinc-200/80 dark:border-zinc-800"
