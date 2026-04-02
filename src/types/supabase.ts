@@ -559,8 +559,8 @@ export type Database = {
           seniority: Database["public"]["Enums"]["seniority_level"]
           skill_tags: Json
           skills_to_learn: string[]
-          timeframe: Database["public"]["Enums"]["career_timeframe_enum"] | null
           target_path: string | null
+          timeframe: Database["public"]["Enums"]["career_timeframe_enum"] | null
           updated_at: string
           user_id: string
         }
@@ -582,10 +582,10 @@ export type Database = {
           seniority: Database["public"]["Enums"]["seniority_level"]
           skill_tags?: Json
           skills_to_learn?: string[]
+          target_path?: string | null
           timeframe?:
             | Database["public"]["Enums"]["career_timeframe_enum"]
             | null
-          target_path?: string | null
           updated_at?: string
           user_id: string
         }
@@ -607,10 +607,10 @@ export type Database = {
           seniority?: Database["public"]["Enums"]["seniority_level"]
           skill_tags?: Json
           skills_to_learn?: string[]
+          target_path?: string | null
           timeframe?:
             | Database["public"]["Enums"]["career_timeframe_enum"]
             | null
-          target_path?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -694,6 +694,11 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           parent_id: string | null
           post_id: string
           updated_at: string
@@ -703,6 +708,11 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           parent_id?: string | null
           post_id: string
           updated_at?: string
@@ -712,6 +722,11 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           parent_id?: string | null
           post_id?: string
           updated_at?: string
@@ -734,6 +749,27 @@ export type Database = {
           {
             foreignKeyName: "circle_comments_author_id_fkey"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_comments_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_comments_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_comments_moderated_by_fkey"
+            columns: ["moderated_by"]
             isOneToOne: false
             referencedRelation: "user_event_stats"
             referencedColumns: ["user_id"]
@@ -837,6 +873,11 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_reason: string | null
+          moderation_status: string
           updated_at: string
         }
         Insert: {
@@ -845,6 +886,11 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           updated_at?: string
         }
         Update: {
@@ -853,6 +899,11 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_reason?: string | null
+          moderation_status?: string
           updated_at?: string
         }
         Relationships: [
@@ -883,6 +934,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "circles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_posts_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_posts_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_posts_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -915,6 +987,97 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      community_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          resolution: string | null
+          resolution_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          resolution?: string | null
+          resolution_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          resolution?: string | null
+          resolution_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "community_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "community_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "community_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       event_agenda: {
         Row: {
@@ -1891,6 +2054,7 @@ export type Database = {
           pricing_type: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available: boolean | null
           registration_deadline: string | null
+          registration_mode: string
           registration_url: string | null
           series_id: string | null
           slug: string
@@ -1955,6 +2119,7 @@ export type Database = {
           pricing_type?: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available?: boolean | null
           registration_deadline?: string | null
+          registration_mode?: string
           registration_url?: string | null
           series_id?: string | null
           slug: string
@@ -2019,6 +2184,7 @@ export type Database = {
           pricing_type?: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available?: boolean | null
           registration_deadline?: string | null
+          registration_mode?: string
           registration_url?: string | null
           series_id?: string | null
           slug?: string
@@ -2242,6 +2408,7 @@ export type Database = {
           created_at: string | null
           hackathon_id: string
           id: string
+          match_score: number | null
           mentorship_preference: string | null
           preferred_team_role: string | null
           project_type_preferences: string[] | null
@@ -2260,6 +2427,7 @@ export type Database = {
           created_at?: string | null
           hackathon_id: string
           id?: string
+          match_score?: number | null
           mentorship_preference?: string | null
           preferred_team_role?: string | null
           project_type_preferences?: string[] | null
@@ -2278,6 +2446,7 @@ export type Database = {
           created_at?: string | null
           hackathon_id?: string
           id?: string
+          match_score?: number | null
           mentorship_preference?: string | null
           preferred_team_role?: string | null
           project_type_preferences?: string[] | null
@@ -2428,6 +2597,7 @@ export type Database = {
           description: string | null
           end_date: string
           event_id: string | null
+          feature_version: number
           header_image_url: string | null
           id: string
           is_virtual: boolean | null
@@ -2442,12 +2612,15 @@ export type Database = {
           platform_url: string | null
           prize_description: string | null
           prize_pool: string | null
+          prizes: Json | null
+          recommendation_features: Json | null
           registration_deadline: string | null
           registration_url: string | null
           source_url: string | null
           start_date: string
           status: string | null
           submission_deadline: string | null
+          tags: string[]
           title: string
           updated_at: string | null
           website_url: string | null
@@ -2457,6 +2630,7 @@ export type Database = {
           description?: string | null
           end_date: string
           event_id?: string | null
+          feature_version?: number
           header_image_url?: string | null
           id?: string
           is_virtual?: boolean | null
@@ -2471,12 +2645,15 @@ export type Database = {
           platform_url?: string | null
           prize_description?: string | null
           prize_pool?: string | null
+          prizes?: Json | null
+          recommendation_features?: Json | null
           registration_deadline?: string | null
           registration_url?: string | null
           source_url?: string | null
           start_date: string
           status?: string | null
           submission_deadline?: string | null
+          tags?: string[]
           title: string
           updated_at?: string | null
           website_url?: string | null
@@ -2486,6 +2663,7 @@ export type Database = {
           description?: string | null
           end_date?: string
           event_id?: string | null
+          feature_version?: number
           header_image_url?: string | null
           id?: string
           is_virtual?: boolean | null
@@ -2500,12 +2678,15 @@ export type Database = {
           platform_url?: string | null
           prize_description?: string | null
           prize_pool?: string | null
+          prizes?: Json | null
+          recommendation_features?: Json | null
           registration_deadline?: string | null
           registration_url?: string | null
           source_url?: string | null
           start_date?: string
           status?: string | null
           submission_deadline?: string | null
+          tags?: string[]
           title?: string
           updated_at?: string | null
           website_url?: string | null
@@ -2735,6 +2916,113 @@ export type Database = {
           source_type?: string
           source_url?: string
           trust_score?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      onboarding_interest_options: {
+        Row: {
+          created_at: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      onboarding_role_skill_suggestions: {
+        Row: {
+          created_at: string
+          is_active: boolean
+          kind: string
+          rank: number
+          role: string
+          skill_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_active?: boolean
+          kind: string
+          rank?: number
+          role: string
+          skill_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_active?: boolean
+          kind?: string
+          rank?: number
+          role?: string
+          skill_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      onboarding_skill_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          skill_name: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          skill_name: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          skill_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_skill_aliases_skill_name_fkey"
+            columns: ["skill_name"]
+            isOneToOne: false
+            referencedRelation: "onboarding_skills"
+            referencedColumns: ["name"]
+          },
+        ]
+      }
+      onboarding_skills: {
+        Row: {
+          category: string
+          created_at: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
@@ -2981,6 +3269,11 @@ export type Database = {
           analytics_consent_date: string | null
           avatar_url: string | null
           bookmark_count_today: number | null
+          community_moderated_at: string | null
+          community_moderated_by: string | null
+          community_moderation_notes: string | null
+          community_moderation_reason: string | null
+          community_moderation_status: string
           created_at: string | null
           full_name: string | null
           headline: string | null
@@ -3003,6 +3296,11 @@ export type Database = {
           analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
+          community_moderated_at?: string | null
+          community_moderated_by?: string | null
+          community_moderation_notes?: string | null
+          community_moderation_reason?: string | null
+          community_moderation_status?: string
           created_at?: string | null
           full_name?: string | null
           headline?: string | null
@@ -3025,6 +3323,11 @@ export type Database = {
           analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
+          community_moderated_at?: string | null
+          community_moderated_by?: string | null
+          community_moderation_notes?: string | null
+          community_moderation_reason?: string | null
+          community_moderation_status?: string
           created_at?: string | null
           full_name?: string | null
           headline?: string | null
@@ -3042,7 +3345,29 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_community_moderated_by_fkey"
+            columns: ["community_moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_community_moderated_by_fkey"
+            columns: ["community_moderated_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profiles_community_moderated_by_fkey"
+            columns: ["community_moderated_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       recommendation_batches: {
         Row: {
@@ -3402,6 +3727,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_provider: string
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -3412,6 +3738,9 @@ export type Database = {
           paddle_subscription_id: string | null
           past_due_at: string | null
           plan_type: Database["public"]["Enums"]["plan_type"] | null
+          revenuecat_customer_id: string | null
+          revenuecat_entitlement_id: string | null
+          revenuecat_product_id: string | null
           seats_included: number
           seats_used: number
           status: Database["public"]["Enums"]["subscription_status"]
@@ -3422,6 +3751,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_provider?: string
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -3432,6 +3762,9 @@ export type Database = {
           paddle_subscription_id?: string | null
           past_due_at?: string | null
           plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          revenuecat_customer_id?: string | null
+          revenuecat_entitlement_id?: string | null
+          revenuecat_product_id?: string | null
           seats_included?: number
           seats_used?: number
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -3442,6 +3775,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_provider?: string
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -3452,6 +3786,9 @@ export type Database = {
           paddle_subscription_id?: string | null
           past_due_at?: string | null
           plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          revenuecat_customer_id?: string | null
+          revenuecat_entitlement_id?: string | null
+          revenuecat_product_id?: string | null
           seats_included?: number
           seats_used?: number
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -3502,6 +3839,162 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      team_invites: {
+        Row: {
+          created_at: string
+          hackathon_id: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          match_score: number | null
+          message: string | null
+          status: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hackathon_id: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+          match_score?: number | null
+          message?: string | null
+          status?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hackathon_id?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          match_score?: number | null
+          message?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_team_invite_team_hackathon"
+            columns: ["team_id", "hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_teams"
+            referencedColumns: ["id", "hackathon_id"]
+          },
+          {
+            foreignKeyName: "team_invites_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_invites_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_messages_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "team_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       telemetry_events: {
         Row: {
@@ -3921,6 +4414,202 @@ export type Database = {
           },
         ]
       }
+      user_submitted_events: {
+        Row: {
+          accessibility_features: Json | null
+          admin_notes: string | null
+          agenda_url: string | null
+          approved_payload: Json | null
+          attendee_count: number | null
+          capacity: number | null
+          certificate_offered: boolean | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          difficulty_level: string | null
+          end_date: string | null
+          event_format: string | null
+          event_id: string | null
+          event_image_url: string | null
+          event_pattern: string | null
+          event_type: string
+          id: string
+          is_multi_day: boolean | null
+          is_virtual: boolean
+          language: string | null
+          livestream_url: string | null
+          location: string | null
+          location_city: string | null
+          location_country: string | null
+          location_state: string | null
+          organizer_details: Json | null
+          organizer_name: string | null
+          prerequisites: string | null
+          price_max: number | null
+          price_min: number | null
+          pricing_type: string | null
+          recording_available: boolean | null
+          registration_deadline: string | null
+          registration_mode: string
+          registration_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_flags: string[] | null
+          series_details: Json | null
+          social_media_hashtag: string | null
+          source_url: string | null
+          speaker_lineup: Json | null
+          start_date: string
+          status: string
+          submission_fingerprint: string | null
+          submitted_payload: Json | null
+          tags: string[]
+          target_audience: string | null
+          timezone: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          validation_summary: Json | null
+          virtual_platform: string | null
+        }
+        Insert: {
+          accessibility_features?: Json | null
+          admin_notes?: string | null
+          agenda_url?: string | null
+          approved_payload?: Json | null
+          attendee_count?: number | null
+          capacity?: number | null
+          certificate_offered?: boolean | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          end_date?: string | null
+          event_format?: string | null
+          event_id?: string | null
+          event_image_url?: string | null
+          event_pattern?: string | null
+          event_type?: string
+          id?: string
+          is_multi_day?: boolean | null
+          is_virtual?: boolean
+          language?: string | null
+          livestream_url?: string | null
+          location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          organizer_details?: Json | null
+          organizer_name?: string | null
+          prerequisites?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          pricing_type?: string | null
+          recording_available?: boolean | null
+          registration_deadline?: string | null
+          registration_mode?: string
+          registration_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_flags?: string[] | null
+          series_details?: Json | null
+          social_media_hashtag?: string | null
+          source_url?: string | null
+          speaker_lineup?: Json | null
+          start_date: string
+          status?: string
+          submission_fingerprint?: string | null
+          submitted_payload?: Json | null
+          tags?: string[]
+          target_audience?: string | null
+          timezone?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          validation_summary?: Json | null
+          virtual_platform?: string | null
+        }
+        Update: {
+          accessibility_features?: Json | null
+          admin_notes?: string | null
+          agenda_url?: string | null
+          approved_payload?: Json | null
+          attendee_count?: number | null
+          capacity?: number | null
+          certificate_offered?: boolean | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          end_date?: string | null
+          event_format?: string | null
+          event_id?: string | null
+          event_image_url?: string | null
+          event_pattern?: string | null
+          event_type?: string
+          id?: string
+          is_multi_day?: boolean | null
+          is_virtual?: boolean
+          language?: string | null
+          livestream_url?: string | null
+          location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          organizer_details?: Json | null
+          organizer_name?: string | null
+          prerequisites?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          pricing_type?: string | null
+          recording_available?: boolean | null
+          registration_deadline?: string | null
+          registration_mode?: string
+          registration_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_flags?: string[] | null
+          series_details?: Json | null
+          social_media_hashtag?: string | null
+          source_url?: string | null
+          speaker_lineup?: Json | null
+          start_date?: string
+          status?: string
+          submission_fingerprint?: string | null
+          submitted_payload?: Json | null
+          tags?: string[]
+          target_audience?: string | null
+          timezone?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          validation_summary?: Json | null
+          virtual_platform?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_submitted_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_submitted_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_submitted_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string | null
@@ -4087,7 +4776,7 @@ export type Database = {
           abbrev: string | null
           is_dst: boolean | null
           name: string | null
-          utc_offset: unknown
+          utc_offset: string | null
         }
         Relationships: []
       }
@@ -4186,6 +4875,9 @@ export type Database = {
           language: string | null
           livestream_url: string | null
           location: string | null
+          location_city: string | null
+          location_country: string | null
+          location_state: string | null
           organizer_id: string | null
           organizer_logo_url: string | null
           organizer_name: string | null
@@ -4200,6 +4892,7 @@ export type Database = {
           "Remote/In-person": string | null
           series_id: string | null
           series_name: string | null
+          slug: string | null
           social_media_hashtag: string | null
           source_url: string | null
           speaker_lineup: Json | null
@@ -4408,7 +5101,37 @@ export type Database = {
       }
     }
     Functions: {
+      accept_team_invite: {
+        Args: { p_invite_id: string; p_user_id: string }
+        Returns: Json
+      }
       antigravity_exec_sql: { Args: { query: string }; Returns: undefined }
+      apply_event_update_queue_approval: {
+        Args: {
+          p_agenda_updates?: Json
+          p_approved_field_ids?: string[]
+          p_queue_id: string
+          p_reject_remaining_pending?: boolean
+          p_rejected_field_ids?: string[]
+          p_relationship_updates?: Json
+          p_reviewed_by: string
+          p_sanitized_field_updates?: Json
+          p_scalar_updates?: Json
+          p_speaker_updates?: Json
+        }
+        Returns: Json
+      }
+      approve_user_submitted_event: {
+        Args: {
+          p_admin_notes: string
+          p_approved_payload: Json
+          p_enrichment_metadata: Json
+          p_reviewed_by: string
+          p_submission_fingerprint: string
+          p_submission_id: string
+        }
+        Returns: string
+      }
       backfill_location_normalization: {
         Args: never
         Returns: {
@@ -4645,19 +5368,33 @@ export type Database = {
           title: string
         }[]
       }
-      find_similar_events: {
-        Args: {
-          p_organizer_id?: string
-          p_similarity_threshold?: number
-          p_start_time: string
-          p_title: string
-        }
-        Returns: {
-          event_id: string
-          similarity: number
-          title: string
-        }[]
-      }
+      find_similar_events:
+        | {
+            Args: {
+              p_organizer_id?: string
+              p_similarity_threshold?: number
+              p_start_time: string
+              p_title: string
+            }
+            Returns: {
+              event_id: string
+              similarity: number
+              title: string
+            }[]
+          }
+        | {
+            Args: {
+              p_organizer_id?: string
+              p_similarity_threshold?: number
+              p_start_time: string
+              p_title: string
+            }
+            Returns: {
+              event_id: string
+              similarity: number
+              title: string
+            }[]
+          }
       get_analytics_health: { Args: never; Returns: Json }
       get_event_types_with_counts: {
         Args: never
@@ -4736,6 +5473,10 @@ export type Database = {
       }
       refresh_analytics_data: { Args: never; Returns: undefined }
       refresh_timezone_cache: { Args: never; Returns: undefined }
+      replace_event_agenda: {
+        Args: { p_event_id: string; p_items?: Json }
+        Returns: string[]
+      }
       set_attendance_status: {
         Args: {
           p_event_id: string

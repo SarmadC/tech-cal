@@ -47,7 +47,7 @@ const MobileAdvancedGestures: FC<MobileAdvancedGesturesProps> = ({
     const [pullDistance, setPullDistance] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [lastTap, setLastTap] = useState(0);
-    const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+    const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
     const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
 

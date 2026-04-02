@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const formData = await request.formData();
+        const formData = (await request.formData()) as unknown as globalThis.FormData;
         const hackathonId = formData.get('hackathonId') as string;
         const file = formData.get('file') as File;
 
@@ -55,4 +55,3 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
-

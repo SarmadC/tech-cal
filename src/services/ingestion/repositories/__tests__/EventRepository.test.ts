@@ -145,6 +145,7 @@ describe('EventRepository.upsertEvent', () => {
         const result = await EventRepository.upsertEvent(
             supabaseClient as never,
             {
+                slug: 'canonical-event',
                 title: 'Canonical Event',
                 start_time: '2026-03-26T18:00:00.000Z',
                 source_url: 'https://example.com/events/canonical',
@@ -231,6 +232,7 @@ describe('EventRepository.upsertEvent', () => {
         const result = await EventRepository.upsertEvent(
             supabaseClient as never,
             {
+                slug: 'canonical-event',
                 title: 'Canonical Event',
                 start_time: '2026-03-26T18:00:00.000Z',
                 registration_url: 'https://tickets.example.com/canonical',

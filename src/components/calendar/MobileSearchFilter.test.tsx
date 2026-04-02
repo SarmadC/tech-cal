@@ -98,10 +98,10 @@ describe('MobileSearchFilter', () => {
             sourceUrl: 'https://example.com',
             livestreamUrl: null,
             eventTypeId: 'hackathons',
-            tags: [{ id: 'tag-1', name: 'AI', category: 'Topic' }],
+            tags: [{ id: 'tag-1', name: 'AI', color: '#00d4ff', category: 'Topic' }],
           },
         ]}
-        categories={[{ id: 'hackathons', name: 'Hackathons' }]}
+        categories={[{ id: 'hackathons', name: 'Hackathons', color: '#00d4ff', description: 'Build-focused events' }]}
       />
     );
 
@@ -128,7 +128,7 @@ describe('MobileSearchFilter', () => {
             sourceUrl: 'https://example.com',
             livestreamUrl: null,
             eventTypeId: 'summits',
-            tags: [{ id: 'tag-1', name: 'AI', category: 'Topic' }],
+            tags: [{ id: 'tag-1', name: 'AI', color: '#00d4ff', category: 'Topic' }],
           },
         ]}
       />

@@ -12,14 +12,14 @@ const {
   mockLoadFilteredEventsData,
   mockBuildUserLocationFromProfileContext,
 } = vi.hoisted(() => ({
-  mockDiscoverClientView: vi.fn(() => null),
+  mockDiscoverClientView: vi.fn((_props: unknown) => null),
   mockGetUser: vi.fn(),
   mockProfileSingle: vi.fn(),
   mockGetEventTypes: vi.fn(),
   mockGetProfile: vi.fn(),
   mockGetCareerProfile: vi.fn(),
   mockLoadFilteredEventsData: vi.fn(),
-  mockBuildUserLocationFromProfileContext: vi.fn(() => ({
+  mockBuildUserLocationFromProfileContext: vi.fn((_profileContext?: unknown) => ({
     country: 'Canada',
     timezone: 'America/Edmonton',
   })),

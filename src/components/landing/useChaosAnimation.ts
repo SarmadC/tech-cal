@@ -33,7 +33,7 @@ export function useCardPositions(
     events: { date: string }[]
 ): [AllCardPositions, (container: HTMLElement) => void] {
     const [positions, setPositions] = useState<AllCardPositions>({ chaos: [], order: [] });
-    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const calculatePositions = useCallback((container: HTMLElement) => {
         // Clear any existing retry timeout
@@ -180,7 +180,7 @@ export function useScrollAnimation(
     scrollProgressRef: MutableRefObject<number>
 ) {
     const hasAnimatedRef = useRef(false);
-    const initialVisibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const initialVisibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!sectionRef.current || !containerRef.current || !domCacheRef.current.cards || positions.order.length === 0) return;

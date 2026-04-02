@@ -14,7 +14,8 @@ import {
     HACKATHON_FEATURE_VERSION,
     buildRecommendationFeatures,
     extractFeatureSignalsFromPayload,
-    mergeStoredAndExtractedTags
+    mergeStoredAndExtractedTags,
+    serializeRecommendationFeatures
 } from '@/services/hackathonFeatureService';
 
 interface ExistingHackathonForFeatures {
@@ -230,7 +231,7 @@ export async function PUT(
     if (prize_description !== undefined) updatePayload.prize_description = prize_description || null;
     if (prizes !== undefined) updatePayload.prizes = prizes || [];
     updatePayload.tags = effectiveTags;
-    updatePayload.recommendation_features = recommendationFeatures;
+    updatePayload.recommendation_features = serializeRecommendationFeatures(recommendationFeatures);
     updatePayload.feature_version = HACKATHON_FEATURE_VERSION;
 
     const { data, error: updateError } = await serviceClient

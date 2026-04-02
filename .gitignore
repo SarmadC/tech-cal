@@ -17,6 +17,9 @@
 # misc
 .DS_Store
 *.pem
+.expo/
+.tmp-apple-auth/
+.tmp-google-brand/
 
 # debug
 npm-debug.log*
@@ -30,6 +33,7 @@ yarn-error.log*
 .env.development
 .env.test
 .env.production
+apps/mobile/.env
 
 # vercel
 .vercel
@@ -70,3 +74,11 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Expo / React Native
+apps/mobile/.expo/
+apps/mobile/expo-env.d.ts
+apps/mobile/ios/.derived/
+apps/mobile/ios/build/
+apps/mobile/ios/Pods/
+apps/mobile/ios/.xcode.env.local

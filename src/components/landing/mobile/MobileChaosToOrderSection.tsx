@@ -322,7 +322,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
 
     // Optimized resize handler with debouncing
     useEffect(() => {
-        let resizeTimeout: NodeJS.Timeout;
+        let resizeTimeout: ReturnType<typeof setTimeout>;
 
         const onResize = () => {
             if (!finalizedRef.current) return;

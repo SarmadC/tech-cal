@@ -337,8 +337,8 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
       };
     });
     mockGetRecommendedEventsByTags.mockResolvedValueOnce([configEvent]);
-    mockEnrichEventsWithCareerImpact.mockImplementationOnce(async (events: Array<{ id: string }>) => (
-      events.map((event, index) => ({
+    mockEnrichEventsWithCareerImpact.mockImplementationOnce(async (events: unknown[]) => (
+      (events as Array<{ id: string }>).map((event, index) => ({
         ...event,
         careerImpact: {
           overall: event.id === configEventId ? 99 : 80 - index,

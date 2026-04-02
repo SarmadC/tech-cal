@@ -27,7 +27,7 @@ const MobileCalendarControls: React.FC<MobileCalendarControlsProps> = ({
 }) => {
     const monthName = currentDate.toLocaleDateString('en-US', { month: 'long' });
     const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
-    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLongPressRef = useRef(false);
 
     // Long-press handler for month button

@@ -530,13 +530,13 @@ export class CircleDiscussionService {
         id,
         content,
         created_at,
-        author: author_id(id, full_name, avatar_url),
+        author:profiles!circle_posts_author_id_fkey(id, full_name, avatar_url),
         comments: circle_comments(
           id,
           parent_id,
           content,
           created_at,
-          author: author_id(id, full_name, avatar_url),
+          author:profiles!circle_comments_author_id_fkey(id, full_name, avatar_url),
           votes: circle_comment_votes(user_id, vote_type)
         ),
         votes: circle_post_votes(user_id, vote_type)

@@ -46,7 +46,7 @@ export function useDeviceDetection(): DeviceInfo {
   });
 
   useEffect(() => {
-    let orientationTimeoutId: NodeJS.Timeout | null = null;
+    let orientationTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const updateDeviceInfo = () => {
       const width = window.innerWidth;

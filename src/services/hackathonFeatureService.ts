@@ -1,6 +1,7 @@
 // src/services/hackathonFeatureService.ts
 // Persistent feature extraction for hackathon recommendation quality.
 
+import type { Json } from '@/types/supabase';
 import type {
   HackathonCompetitionLevel,
   HackathonCommitmentLevel,
@@ -498,4 +499,10 @@ export function buildRecommendationFeatures(input: HackathonFeatureInput): Hacka
     eligibilityText: input.eligibilityText || null,
     featureVersion: HACKATHON_FEATURE_VERSION,
   };
+}
+
+export function serializeRecommendationFeatures(
+  features: HackathonRecommendationFeatures
+): Json {
+  return features as unknown as Json;
 }
