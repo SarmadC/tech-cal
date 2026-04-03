@@ -3,6 +3,7 @@ import {
   communityPostDraftSchema,
   communityReportSchema,
   communityVoteSchema,
+  normalizedSubscriptionSchema,
   mobileCalendarFeedRequestSchema,
   mobileCalendarFeedSchema,
   mobileCareerOnboardingBootstrapSchema,
@@ -20,6 +21,8 @@ import {
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
   mobileSavedEventsFeedSchema,
+  revenueCatReconcileSchema,
+  subscriptionOfferingSchema,
   type CommunityCommentDraft,
   type CommunityPostDraft,
   type CommunityReportInput,
@@ -41,6 +44,9 @@ import {
   type MobileProfileState,
   type MobileProfileUpdate,
   type MobileSavedEventsFeed,
+  type NormalizedSubscription,
+  type RevenueCatReconcileInput,
+  type SubscriptionOffering,
 } from '@kurecal/domain';
 import type { ZodType } from 'zod';
 
@@ -108,17 +114,50 @@ async function fetchMobileEnvelope(
     .json()
     .catch(() => ({}))) as MobileApiEnvelope<unknown>;
 
-  if (!response.ok || !payload.success || payload.data == null) {
+  if (!response.ok || payload.success === false) {
     throw new Error(payload.error || 'Mobile request failed');
   }
 
-  return payload.data;
+  return Object.prototype.hasOwnProperty.call(payload, 'data')
+    ? payload.data
+    : payload;
 }
 
 export async function loadMobileDashboardSummary(): Promise<MobileDashboardSummary> {
   return fetchMobileContract(
     '/api/mobile/dashboard/summary',
     mobileDashboardSummarySchema
+  );
+}
+
+export async function loadMobileSubscriptionStatus(): Promise<NormalizedSubscription> {
+  return fetchMobileContract(
+    '/api/mobile/subscription/status',
+    normalizedSubscriptionSchema
+  );
+}
+
+export async function loadMobileSubscriptionOfferings(): Promise<
+  SubscriptionOffering[]
+> {
+  return fetchMobileContract(
+    '/api/mobile/subscription/offerings',
+    subscriptionOfferingSchema.array()
+  );
+}
+
+export async function reconcileMobileRevenueCatSubscription(
+  input: RevenueCatReconcileInput
+): Promise<NormalizedSubscription> {
+  const payload = revenueCatReconcileSchema.parse(input);
+
+  return fetchMobileContract(
+    '/api/mobile/subscription/reconcile',
+    normalizedSubscriptionSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
   );
 }
 

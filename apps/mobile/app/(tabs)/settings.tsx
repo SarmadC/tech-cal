@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import {
@@ -14,11 +14,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { MobileProfileUpdate, ProfileVisibility } from '@kurecal/domain';
+import type {
+  MobileProfileUpdate,
+  NormalizedSubscription,
+  ProfileVisibility,
+} from '@kurecal/domain';
 
 import { ScreenStateView } from '../../src/components/ScreenStateView';
 import { useAuth } from '../../src/context/AuthProvider';
-import { updateMobileProfile } from '../../src/lib/mobileApi';
+import {
+  loadMobileSubscriptionStatus,
+  updateMobileProfile,
+} from '../../src/lib/mobileApi';
 
 const VISIBILITY_OPTIONS: Array<{
   description: string;
@@ -42,6 +49,42 @@ const VISIBILITY_OPTIONS: Array<{
   },
 ];
 
+function hasPaidAccess(subscription: NormalizedSubscription | null): boolean {
+  if (!subscription || subscription.tier === 'free') {
+    return false;
+  }
+
+  if (
+    subscription.status === 'active' ||
+    subscription.status === 'trialing' ||
+    subscription.status === 'past_due'
+  ) {
+    return true;
+  }
+
+  if (subscription.status === 'canceled' && subscription.currentPeriodEnd) {
+    return new Date(subscription.currentPeriodEnd).getTime() > Date.now();
+  }
+
+  return false;
+}
+
+function formatSubscriptionSummary(
+  subscription: NormalizedSubscription | null
+): string {
+  if (!subscription) {
+    return 'Checking your subscription access.';
+  }
+
+  const tier = subscription.tier === 'free' ? 'Free' : 'KureCal Pro';
+  const status =
+    subscription.status === 'trialing'
+      ? 'Trialing'
+      : subscription.status.replace(/_/g, ' ');
+
+  return `${tier} · ${status}`;
+}
+
 export default function SettingsScreen() {
   const {
     hasCompletedOnboarding,
@@ -62,6 +105,11 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<NormalizedSubscription | null>(
+    null
+  );
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     if (!profile) {
@@ -77,6 +125,32 @@ export default function SettingsScreen() {
       showAttendance: profile.socialProfile.showAttendance,
     });
   }, [profile]);
+
+  const refreshSubscription = useCallback(async () => {
+    setSubscriptionLoading(true);
+
+    try {
+      const nextSubscription = await loadMobileSubscriptionStatus();
+      setSubscription(nextSubscription);
+      setSubscriptionError(null);
+    } catch (nextError) {
+      setSubscriptionError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to refresh your subscription'
+      );
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!profile) {
+      return;
+    }
+
+    void refreshSubscription();
+  }, [profile, refreshSubscription]);
 
   const careerSummary = useMemo(() => {
     if (!profile?.careerProfile) {
@@ -97,7 +171,7 @@ export default function SettingsScreen() {
     setError(null);
 
     try {
-      await refreshProfile();
+      await Promise.all([refreshProfile(), refreshSubscription()]);
     } catch (nextError) {
       setError(
         nextError instanceof Error
@@ -189,6 +263,47 @@ export default function SettingsScreen() {
                 'Update your identity, privacy, and career setup for the mobile app.'}
             </Text>
             <Text style={styles.meta}>{session?.user.email ?? 'Unknown email'}</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Subscription</Text>
+            <Text style={styles.subscriptionLabel}>
+              {subscriptionLoading && !subscription
+                ? 'Checking access…'
+                : formatSubscriptionSummary(subscription)}
+            </Text>
+            <Text style={styles.cardBody}>
+              {subscriptionError
+                ? subscriptionError
+                : hasPaidAccess(subscription)
+                  ? 'Your mobile upgrade flow is active. Manage renewals, restore access, or review your plan from the native paywall.'
+                  : 'Upgrade to unlock full recommendations, calendar sync, and unlimited saved events inside the Expo app.'}
+            </Text>
+            <Pressable
+              onPress={() => router.push('../paywall')}
+              style={({ pressed }) => [
+                hasPaidAccess(subscription)
+                  ? styles.secondaryButton
+                  : styles.primaryButton,
+                pressed
+                  ? hasPaidAccess(subscription)
+                    ? styles.secondaryButtonPressed
+                    : styles.primaryButtonPressed
+                  : null,
+              ]}
+            >
+              <Text
+                style={
+                  hasPaidAccess(subscription)
+                    ? styles.secondaryButtonLabel
+                    : styles.primaryButtonLabel
+                }
+              >
+                {hasPaidAccess(subscription)
+                  ? 'Manage subscription'
+                  : 'Unlock KureCal Pro'}
+              </Text>
+            </Pressable>
           </View>
 
           <View style={styles.card}>
@@ -507,6 +622,11 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 15,
     lineHeight: 22,
+  },
+  subscriptionLabel: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '700',
   },
   switchCopy: {
     flex: 1,
