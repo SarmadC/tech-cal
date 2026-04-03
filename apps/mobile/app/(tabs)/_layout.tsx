@@ -58,6 +58,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="discover"
+        options={{
+          title: 'Discover',
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="F" />,
+        }}
+      />
+      <Tabs.Screen
         name="submit-event"
         options={{
           title: 'Submit',

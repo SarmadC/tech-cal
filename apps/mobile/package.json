@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --dev-client",
-    "doctor": "expo-doctor",
+    "doctor": "node ./scripts/run-expo-doctor.mjs",
     "build:preview": "npx eas-cli build --profile preview --non-interactive",
     "build:production": "npx eas-cli build --profile production --non-interactive",
     "ios": "expo run:ios",
@@ -40,6 +40,9 @@
   },
   "expo": {
     "doctor": {
+      "reactNativeDirectoryCheck": {
+        "enabled": false
+      },
       "appConfigFieldsNotSyncedCheck": {
         "enabled": false
       }
