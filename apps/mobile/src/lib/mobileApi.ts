@@ -1,6 +1,11 @@
 import {
+  mobileCalendarFeedRequestSchema,
+  mobileCalendarFeedSchema,
   mobileCareerOnboardingBootstrapSchema,
   mobileCareerOnboardingDataSchema,
+  mobileDashboardSummarySchema,
+  mobileDiscoverFeedRequestSchema,
+  mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
   mobileEventEngagementSchema,
   mobileEventEngagementUpdateSchema,
@@ -8,9 +13,8 @@ import {
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
   mobileSavedEventsFeedSchema,
-  mobileDashboardSummarySchema,
-  mobileDiscoverFeedRequestSchema,
-  mobileDiscoverFeedSchema,
+  type MobileCalendarFeed,
+  type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
   type MobileCareerOnboardingData,
   type MobileDashboardSummary,
@@ -93,6 +97,24 @@ export async function loadMobileDashboardSummary(): Promise<MobileDashboardSumma
   return fetchMobileContract(
     '/api/mobile/dashboard/summary',
     mobileDashboardSummarySchema
+  );
+}
+
+export async function loadMobileCalendarFeed(
+  input: MobileCalendarFeedRequest = {}
+): Promise<MobileCalendarFeed> {
+  const payload = mobileCalendarFeedRequestSchema.parse(input);
+  const searchParams = new URLSearchParams();
+
+  if (payload.monthStart) {
+    searchParams.set('monthStart', payload.monthStart);
+  }
+
+  const search = searchParams.toString();
+
+  return fetchMobileContract(
+    `/api/mobile/calendar${search ? `?${search}` : ''}`,
+    mobileCalendarFeedSchema
   );
 }
 

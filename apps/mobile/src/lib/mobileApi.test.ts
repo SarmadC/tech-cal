@@ -13,6 +13,7 @@ vi.mock('./supabase', () => ({
 }));
 
 import {
+  loadMobileCalendarFeed,
   completeMobileCareerOnboarding,
   loadMobileDashboardSummary,
   loadMobileCareerOnboardingBootstrap,
@@ -158,6 +159,75 @@ describe('mobile api helpers', () => {
     expect(result.recommendationCount).toBe(18);
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mobile.kurecal.test/api/mobile/dashboard/summary',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads calendar month feeds through the mobile calendar contract', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            header: {
+              eyebrow: 'Calendar',
+              title: 'Plan your month',
+            },
+            month: {
+              monthStart: '2026-05-01',
+              monthEnd: '2026-05-31',
+              label: 'May 2026',
+            },
+            today: '2026-05-12',
+            metrics: {
+              totalCount: 1,
+              savedCount: 1,
+              attendingCount: 1,
+            },
+            days: Array.from({ length: 42 }, (_, index) => ({
+              dateKey:
+                index < 31
+                  ? `2026-05-${String(index + 1).padStart(2, '0')}`
+                  : `2026-06-${String(index - 30).padStart(2, '0')}`,
+              dayNumber: index < 31 ? index + 1 : index - 30,
+              inCurrentMonth: index < 31,
+              isToday: index === 11,
+              eventCount: index === 11 ? 1 : 0,
+              savedCount: index === 11 ? 1 : 0,
+              attendingCount: index === 11 ? 1 : 0,
+            })),
+            events: [
+              {
+                id: 'event-1',
+                title: 'Calendar event',
+                startTime: '2026-05-12T18:00:00.000Z',
+                dateKey: '2026-05-12',
+              },
+            ],
+            emptyState: {
+              title: 'No events this month',
+              description: 'Move to another month.',
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const result = await loadMobileCalendarFeed({
+      monthStart: '2026-05-01',
+    });
+
+    expect(result.month.label).toBe('May 2026');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/calendar?monthStart=2026-05-01',
       expect.objectContaining({
         headers: expect.any(Headers),
       })

@@ -1,8 +1,14 @@
 import {
+  mobileCalendarEventSchema,
+  mobileCalendarFeedSchema,
+  type MobileCalendarDaySummary,
+  type MobileCalendarEvent,
+  type MobileCalendarFeed,
   mobileDashboardSummarySchema,
   mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
   mobileEventSummarySchema,
+  type LocalCalendarDateKey,
   type MobileDashboardSummary,
   type MobileDiscoverFeed,
   type MobileEventDetail,
@@ -15,6 +21,100 @@ import {
 
 import type { AgendaItem, Event } from '@/types';
 import { isEventFreeFromPricing, normalizeEventFormat } from '@/utils/filterCountUtils';
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function formatLocalDateKey(date: Date): LocalCalendarDateKey {
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+function buildDateKeyFromParts(
+  date: Date,
+  options?: {
+    timeZone?: string | null;
+    useUtc?: boolean;
+  }
+): LocalCalendarDateKey {
+  if (options?.useUtc) {
+    return `${date.getUTCFullYear()}-${padDatePart(date.getUTCMonth() + 1)}-${padDatePart(date.getUTCDate())}`;
+  }
+
+  if (options?.timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: options.timeZone,
+      }).formatToParts(date);
+
+      const year = parts.find((part) => part.type === 'year')?.value;
+      const month = parts.find((part) => part.type === 'month')?.value;
+      const day = parts.find((part) => part.type === 'day')?.value;
+
+      if (year && month && day) {
+        return `${year}-${month}-${day}`;
+      }
+    } catch {
+      // Fall back to local formatting when the timezone is invalid.
+    }
+  }
+
+  return formatLocalDateKey(date);
+}
+
+function isUtcMidnightTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  return (
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0
+  );
+}
+
+function isDateOnlyEvent(
+  startTime: string,
+  endTime?: string | null,
+  timeZone?: string | null
+) {
+  if (timeZone?.trim()) {
+    return false;
+  }
+
+  if (!isUtcMidnightTimestamp(startTime)) {
+    return false;
+  }
+
+  return !endTime || isUtcMidnightTimestamp(endTime);
+}
+
+function formatEventDateKey(
+  startTime: string,
+  endTime?: string | null,
+  timeZone?: string | null
+): LocalCalendarDateKey {
+  const date = new Date(startTime);
+  if (Number.isNaN(date.getTime())) {
+    return formatLocalDateKey(new Date());
+  }
+
+  if (isDateOnlyEvent(startTime, endTime, timeZone)) {
+    return buildDateKeyFromParts(date, { useUtc: true });
+  }
+
+  return buildDateKeyFromParts(date, { timeZone });
+}
 
 function deriveEventSlug(event: Event): string {
   const pathCandidate = event.sourceUrl
@@ -250,6 +350,24 @@ export function toMobileEventDetail(
   });
 }
 
+export function toMobileCalendarEvent(
+  event: Event,
+  engagement?: MobileEventEngagement | null
+): MobileCalendarEvent {
+  const summary = toMobileEventSummary(event, engagement);
+
+  return mobileCalendarEventSchema.parse({
+    ...summary,
+    dateKey: formatEventDateKey(event.startTime, event.endTime, event.timezone),
+    timezone: event.timezone?.trim() || null,
+    eventTypeName: event.category?.name?.trim() || null,
+    eventTypeColor:
+      event.category?.color?.trim() ||
+      (typeof event.color === 'string' ? event.color.trim() : null),
+    isAllDay: isDateOnlyEvent(event.startTime, event.endTime, event.timezone),
+  });
+}
+
 export function buildDiscoverFeed({
   header,
   events,
@@ -296,5 +414,54 @@ export function buildDashboardSummary({
     heroEvent: heroEvent ?? null,
     upcomingEvents: upcomingEvents ?? [],
     recommendedEvents: recommendedEvents ?? [],
+  });
+}
+
+export function buildCalendarFeed({
+  header,
+  monthStart,
+  monthEnd,
+  today,
+  days,
+  events,
+  totalCount,
+  savedCount,
+  attendingCount,
+}: {
+  header: MobileSurfaceHeader;
+  monthStart: LocalCalendarDateKey;
+  monthEnd: LocalCalendarDateKey;
+  today: LocalCalendarDateKey;
+  days: MobileCalendarDaySummary[];
+  events: MobileCalendarEvent[];
+  totalCount: number;
+  savedCount: number;
+  attendingCount: number;
+}): MobileCalendarFeed {
+  const monthDate = new Date(`${monthStart}T12:00:00.000Z`);
+
+  return mobileCalendarFeedSchema.parse({
+    header,
+    month: {
+      monthStart,
+      monthEnd,
+      label: monthDate.toLocaleDateString(undefined, {
+        month: 'long',
+        year: 'numeric',
+      }),
+    },
+    today,
+    metrics: {
+      totalCount,
+      savedCount,
+      attendingCount,
+    },
+    days,
+    events,
+    emptyState: {
+      title: 'No events this month',
+      description:
+        'Try another month or head back to Discover to save new events into your plan.',
+    },
   });
 }

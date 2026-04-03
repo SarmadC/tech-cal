@@ -60,6 +60,10 @@ export const mobileDiscoverFeedRequestSchema = z.object({
   page: z.number().int().positive().optional(),
 });
 
+export const localCalendarDateKeySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/);
+
 const pagedEventFeedShape = {
   header: mobileSurfaceHeaderSchema,
   totalCount: z.number().int().nonnegative(),
@@ -70,6 +74,49 @@ const pagedEventFeedShape = {
 export const mobileDiscoverFeedSchema = z.object(pagedEventFeedShape);
 
 export const mobileSavedEventsFeedSchema = z.object(pagedEventFeedShape);
+
+export const mobileCalendarFeedRequestSchema = z.object({
+  monthStart: localCalendarDateKeySchema.optional(),
+});
+
+export const mobileCalendarDaySummarySchema = z.object({
+  dateKey: localCalendarDateKeySchema,
+  dayNumber: z.number().int().min(1).max(31),
+  inCurrentMonth: z.boolean(),
+  isToday: z.boolean(),
+  eventCount: z.number().int().nonnegative(),
+  savedCount: z.number().int().nonnegative(),
+  attendingCount: z.number().int().nonnegative(),
+});
+
+export const mobileCalendarEventSchema = mobileEventSummarySchema.extend({
+  dateKey: localCalendarDateKeySchema,
+  timezone: z.string().nullable().optional(),
+  eventTypeName: z.string().nullable().optional(),
+  eventTypeColor: z.string().nullable().optional(),
+  isAllDay: z.boolean().optional(),
+});
+
+export const mobileCalendarFeedSchema = z.object({
+  header: mobileSurfaceHeaderSchema,
+  month: z.object({
+    monthStart: localCalendarDateKeySchema,
+    monthEnd: localCalendarDateKeySchema,
+    label: z.string(),
+  }),
+  today: localCalendarDateKeySchema,
+  metrics: z.object({
+    totalCount: z.number().int().nonnegative(),
+    savedCount: z.number().int().nonnegative(),
+    attendingCount: z.number().int().nonnegative(),
+  }),
+  days: z.array(mobileCalendarDaySummarySchema).length(42),
+  events: z.array(mobileCalendarEventSchema),
+  emptyState: z.object({
+    title: z.string(),
+    description: z.string(),
+  }),
+});
 
 export const mobileDashboardSummarySchema = z.object({
   header: mobileSurfaceHeaderSchema,
@@ -272,6 +319,15 @@ export type MobileDiscoverFeedRequest = z.infer<
 >;
 export type MobileDiscoverFeed = z.infer<typeof mobileDiscoverFeedSchema>;
 export type MobileSavedEventsFeed = z.infer<typeof mobileSavedEventsFeedSchema>;
+export type LocalCalendarDateKey = z.infer<typeof localCalendarDateKeySchema>;
+export type MobileCalendarFeedRequest = z.infer<
+  typeof mobileCalendarFeedRequestSchema
+>;
+export type MobileCalendarDaySummary = z.infer<
+  typeof mobileCalendarDaySummarySchema
+>;
+export type MobileCalendarEvent = z.infer<typeof mobileCalendarEventSchema>;
+export type MobileCalendarFeed = z.infer<typeof mobileCalendarFeedSchema>;
 export type MobileDashboardSummary = z.infer<
   typeof mobileDashboardSummarySchema
 >;
