@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  getRevenueCatApiKey,
+  getRevenueCatProductIds,
+  getRevenueCatProEntitlementId,
+  getRevenueCatRuntimeConfig,
   getMobileApiBaseUrl,
   getMobileRuntimeMetadata,
   getRequiredMobileEnv,
@@ -35,6 +39,32 @@ describe('mobile env helpers', () => {
     expect(getSupabaseRuntimeConfig()).toEqual({
       anonKey: 'anon-key',
       url: 'https://supabase.example.test',
+    });
+  });
+
+  it('resolves RevenueCat keys and product metadata per platform', () => {
+    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS = 'ios-key';
+    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID = 'android-key';
+    process.env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID = 'pro-access';
+    process.env.EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID =
+      'kurecal_pro_monthly';
+    process.env.EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID =
+      'kurecal_pro_annual';
+
+    expect(getRevenueCatApiKey('ios')).toBe('ios-key');
+    expect(getRevenueCatApiKey('android')).toBe('android-key');
+    expect(getRevenueCatApiKey('web')).toBeNull();
+    expect(getRevenueCatProductIds()).toEqual({
+      annual: 'kurecal_pro_annual',
+      monthly: 'kurecal_pro_monthly',
+    });
+    expect(getRevenueCatProEntitlementId()).toBe('pro-access');
+    expect(getRevenueCatRuntimeConfig('ios')).toMatchObject({
+      annualProductId: 'kurecal_pro_annual',
+      iosApiKey: 'ios-key',
+      monthlyProductId: 'kurecal_pro_monthly',
+      platformApiKey: 'ios-key',
+      proEntitlementId: 'pro-access',
     });
   });
 

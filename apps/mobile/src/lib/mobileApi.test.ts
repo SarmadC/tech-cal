@@ -28,6 +28,9 @@ import {
   loadMobileEventDetail,
   loadMobileProfileState,
   loadMobileSavedEvents,
+  loadMobileSubscriptionOfferings,
+  loadMobileSubscriptionStatus,
+  reconcileMobileRevenueCatSubscription,
   skipMobileCareerOnboarding,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
@@ -389,13 +392,11 @@ describe('mobile api helpers', () => {
       .mockImplementation(() =>
         Promise.resolve(
           new Response(
-          JSON.stringify({
-            success: true,
-            data: {
+            JSON.stringify({
               success: true,
-            },
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
+              message: 'Mutation applied',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
           )
         )
       );
@@ -444,6 +445,118 @@ describe('mobile api helpers', () => {
     );
     expect(fetchSpy.mock.calls[8]?.[0]).toBe(
       'https://mobile.kurecal.test/api/community/reports'
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads subscription state, offerings, and reconciles RevenueCat payloads', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: '11111111-1111-4111-8111-111111111111',
+              userId: '22222222-2222-4222-8222-222222222222',
+              provider: 'manual',
+              tier: 'free',
+              status: 'canceled',
+              planType: null,
+              entitlements: {
+                calendar_sync: false,
+                full_history: false,
+                full_recommendations: false,
+                unlimited_bookmarks: false,
+              },
+              trialEndsAt: null,
+              currentPeriodEnd: null,
+              providerCustomerId: null,
+              providerProductId: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                identifier: 'pro-monthly',
+                productIdentifier: 'kurecal_pro_monthly',
+                title: 'Pro Monthly',
+                description: 'Monthly access',
+                tier: 'pro',
+                planType: 'monthly',
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: '33333333-3333-4333-8333-333333333333',
+              userId: '22222222-2222-4222-8222-222222222222',
+              provider: 'revenuecat',
+              tier: 'pro',
+              status: 'active',
+              planType: 'monthly',
+              entitlements: {
+                calendar_sync: true,
+                full_history: true,
+                full_recommendations: true,
+                unlimited_bookmarks: true,
+              },
+              trialEndsAt: null,
+              currentPeriodEnd: '2026-05-01T00:00:00.000Z',
+              providerCustomerId: 'customer-1',
+              providerProductId: 'kurecal_pro_monthly',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const subscription = await loadMobileSubscriptionStatus();
+    const offerings = await loadMobileSubscriptionOfferings();
+    const reconciled = await reconcileMobileRevenueCatSubscription({
+      customerId: 'customer-1',
+      entitlementId: 'kure_cal_pro',
+      productId: 'kurecal_pro_monthly',
+      tier: 'pro',
+      status: 'active',
+      planType: 'monthly',
+      currentPeriodStart: null,
+      currentPeriodEnd: '2026-05-01T00:00:00.000Z',
+      trialStartedAt: null,
+      trialEndsAt: null,
+      pastDueAt: null,
+      entitlements: {
+        calendar_sync: true,
+        full_history: true,
+        full_recommendations: true,
+        unlimited_bookmarks: true,
+      },
+    });
+
+    expect(subscription.tier).toBe('free');
+    expect(offerings[0]?.identifier).toBe('pro-monthly');
+    expect(reconciled.provider).toBe('revenuecat');
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/subscription/status'
+    );
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/subscription/offerings'
+    );
+    expect(fetchSpy.mock.calls[2]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/subscription/reconcile'
     );
 
     fetchSpy.mockRestore();

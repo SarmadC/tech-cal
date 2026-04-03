@@ -11,12 +11,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { MobileDashboardSummary } from '@kurecal/domain';
+import type {
+  MobileDashboardSummary,
+  NormalizedSubscription,
+} from '@kurecal/domain';
 
 import { EventSummaryCard } from '../../src/components/EventSummaryCard';
 import { ScreenStateView } from '../../src/components/ScreenStateView';
 import { useAuth } from '../../src/context/AuthProvider';
-import { loadMobileDashboardSummary } from '../../src/lib/mobileApi';
+import {
+  loadMobileDashboardSummary,
+  loadMobileSubscriptionStatus,
+} from '../../src/lib/mobileApi';
 
 function MetricCard({
   label,
@@ -48,12 +54,35 @@ function SectionHeader({
   );
 }
 
+function hasPaidAccess(subscription: NormalizedSubscription | null): boolean {
+  if (!subscription || subscription.tier === 'free') {
+    return false;
+  }
+
+  if (
+    subscription.status === 'active' ||
+    subscription.status === 'trialing' ||
+    subscription.status === 'past_due'
+  ) {
+    return true;
+  }
+
+  if (subscription.status === 'canceled' && subscription.currentPeriodEnd) {
+    return new Date(subscription.currentPeriodEnd).getTime() > Date.now();
+  }
+
+  return false;
+}
+
 export default function DashboardScreen() {
   const { session } = useAuth();
   const [data, setData] = useState<MobileDashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [subscription, setSubscription] = useState<NormalizedSubscription | null>(
+    null
+  );
 
   async function loadSummary(mode: 'initial' | 'refresh' = 'initial') {
     if (mode === 'refresh') {
@@ -63,8 +92,19 @@ export default function DashboardScreen() {
     }
 
     try {
-      const nextData = await loadMobileDashboardSummary();
-      setData(nextData);
+      const [summaryResult, subscriptionResult] = await Promise.allSettled([
+        loadMobileDashboardSummary(),
+        loadMobileSubscriptionStatus(),
+      ]);
+
+      if (summaryResult.status === 'rejected') {
+        throw summaryResult.reason;
+      }
+
+      setData(summaryResult.value);
+      if (subscriptionResult.status === 'fulfilled') {
+        setSubscription(subscriptionResult.value);
+      }
       setError(null);
     } catch (nextError) {
       setError(
@@ -160,6 +200,49 @@ export default function DashboardScreen() {
               value={data?.recommendationCount ?? 0}
             />
           </View>
+
+          {subscription ? (
+            hasPaidAccess(subscription) ? (
+              <View style={styles.subscriptionCard}>
+                <Text style={styles.subscriptionEyebrow}>Pro active</Text>
+                <Text style={styles.subscriptionTitle}>
+                  Your upgraded planning tools are unlocked
+                </Text>
+                <Text style={styles.subscriptionDescription}>
+                  Calendar sync, unlimited saved events, and the full recommendation
+                  engine are available on this device.
+                </Text>
+                <Pressable
+                  onPress={() => router.push('../paywall')}
+                  style={({ pressed }) => [
+                    styles.secondaryAction,
+                    pressed ? styles.secondaryActionPressed : null,
+                  ]}
+                >
+                  <Text style={styles.secondaryActionLabel}>Manage plan</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => router.push('../paywall')}
+                style={({ pressed }) => [
+                  styles.subscriptionCard,
+                  styles.subscriptionCardHighlight,
+                  pressed ? styles.subscriptionCardPressed : null,
+                ]}
+              >
+                <Text style={styles.subscriptionEyebrow}>Upgrade</Text>
+                <Text style={styles.subscriptionTitle}>
+                  Unlock the full KureCal mobile system
+                </Text>
+                <Text style={styles.subscriptionDescription}>
+                  Upgrade to Pro for calendar sync, unlimited saved events, and
+                  the full recommendation engine.
+                </Text>
+                <Text style={styles.subscriptionLink}>Open paywall</Text>
+              </Pressable>
+            )
+          ) : null}
 
           <View style={styles.actionRow}>
             <Pressable
@@ -368,6 +451,43 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 15,
     lineHeight: 22,
+  },
+  subscriptionCard: {
+    backgroundColor: 'rgba(7, 15, 23, 0.88)',
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 10,
+    padding: 18,
+  },
+  subscriptionCardHighlight: {
+    borderColor: 'rgba(45, 212, 191, 0.3)',
+    backgroundColor: 'rgba(6, 78, 59, 0.34)',
+  },
+  subscriptionCardPressed: {
+    opacity: 0.92,
+  },
+  subscriptionDescription: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  subscriptionEyebrow: {
+    color: '#7dd3fc',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  subscriptionLink: {
+    color: '#7dd3fc',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  subscriptionTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '700',
   },
   title: {
     color: '#f8fafc',

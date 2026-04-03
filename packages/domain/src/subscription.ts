@@ -62,7 +62,7 @@ export const GRACE_PERIOD_DAYS = 7;
 export const normalizedSubscriptionSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  provider: billingProviderSchema.default('paddle'),
+  provider: billingProviderSchema,
   tier: subscriptionTierSchema,
   status: subscriptionStatusSchema,
   planType: subscriptionPlanTypeSchema.nullable().optional(),

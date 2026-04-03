@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { loadMobileProfileState } from '../lib/mobileApi';
+import { syncRevenueCatIdentity } from '../lib/revenuecat';
 import { supabase } from '../lib/supabase';
 
 interface SignInCredentials {
@@ -74,6 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(data.session);
         setAuthLoading(false);
+        void syncRevenueCatIdentity(data.session?.user.id ?? null).catch(
+          (error) => {
+            console.error('Failed to sync RevenueCat identity.', error);
+          }
+        );
 
         if (data.session) {
           await refreshProfile();
@@ -102,6 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(nextSession);
       setAuthLoading(false);
+      void syncRevenueCatIdentity(nextSession?.user.id ?? null).catch((error) => {
+        console.error('Failed to sync RevenueCat identity.', error);
+      });
 
       if (nextSession) {
         void refreshProfile();

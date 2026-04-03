@@ -17,7 +17,15 @@ export default function RootLayout() {
             },
             headerShown: false,
           }}
-        />
+        >
+          <Stack.Screen
+            name="paywall"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+        </Stack>
       </AuthProvider>
     </SafeAreaProvider>
   );
