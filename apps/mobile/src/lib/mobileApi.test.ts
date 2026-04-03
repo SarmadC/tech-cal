@@ -13,9 +13,16 @@ vi.mock('./supabase', () => ({
 }));
 
 import {
+  completeMobileCareerOnboarding,
   loadMobileDashboardSummary,
+  loadMobileCareerOnboardingBootstrap,
   loadMobileDiscoverFeed,
   loadMobileEventDetail,
+  loadMobileProfileState,
+  loadMobileSavedEvents,
+  skipMobileCareerOnboarding,
+  updateMobileEventEngagement,
+  updateMobileProfile,
 } from './mobileApi';
 
 describe('mobile api helpers', () => {
@@ -154,6 +161,246 @@ describe('mobile api helpers', () => {
       expect.objectContaining({
         headers: expect.any(Headers),
       })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads the combined mobile profile state', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            profile: {
+              id: 'user-1',
+              email: 'user@example.com',
+              fullName: 'Ada Lovelace',
+              avatarUrl: null,
+              timezone: 'America/Edmonton',
+            },
+            socialProfile: {
+              id: 'user-1',
+              fullName: 'Ada Lovelace',
+              avatarUrl: null,
+              username: 'ada',
+              headline: 'Builder',
+              profileVisibility: 'connections',
+              showAttendance: true,
+            },
+            onboarding: {
+              onboarded: true,
+              source: 'career_profiles',
+            },
+            careerProfile: null,
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const result = await loadMobileProfileState();
+
+    expect(result.socialProfile.username).toBe('ada');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/profile',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('supports saved feeds, engagement updates, and profile updates', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              header: { eyebrow: 'Saved', title: 'Your shortlist' },
+              totalCount: 1,
+              nextPage: null,
+              events: [
+                {
+                  id: 'event-1',
+                  title: 'Saved event',
+                  startTime: '2026-04-20T18:00:00.000Z',
+                },
+              ],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              isBookmarked: true,
+              status: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              profile: {
+                id: 'user-1',
+                email: 'user@example.com',
+                fullName: 'Ada Lovelace',
+                avatarUrl: null,
+                timezone: 'America/Edmonton',
+              },
+              socialProfile: {
+                id: 'user-1',
+                fullName: 'Ada Lovelace',
+                avatarUrl: null,
+                username: 'ada',
+                headline: 'Builder',
+                profileVisibility: 'connections',
+                showAttendance: true,
+              },
+              onboarding: {
+                onboarded: true,
+                source: 'career_profiles',
+              },
+              careerProfile: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const saved = await loadMobileSavedEvents(2);
+    const engagement = await updateMobileEventEngagement('event-1', {
+      isBookmarked: true,
+    });
+    const profile = await updateMobileProfile({
+      fullName: 'Ada Lovelace',
+      username: 'ada',
+    });
+
+    expect(saved.totalCount).toBe(1);
+    expect(engagement.isBookmarked).toBe(true);
+    expect(profile.profile.fullName).toBe('Ada Lovelace');
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/saved?page=2'
+    );
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/events/event-1/engagement'
+    );
+    expect(fetchSpy.mock.calls[2]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/profile'
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads and submits mobile onboarding payloads', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              status: {
+                onboarded: false,
+                source: 'none',
+              },
+              initialData: null,
+              taxonomy: {
+                roleGroups: [],
+                skillOptions: [],
+                interestOptions: [],
+                roleSuggestions: {},
+              },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              onboarded: true,
+              source: 'career_profiles',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              onboarded: true,
+              source: 'legacy',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const bootstrap = await loadMobileCareerOnboardingBootstrap();
+    const complete = await completeMobileCareerOnboarding({
+      step1_role: {
+        currentRole: 'Software Engineer',
+        seniority: 'mid-level',
+        industry: 'Technology',
+        companySize: 'medium',
+      },
+      step2_skills: {
+        primarySkills: ['TypeScript', 'React'],
+        skillsToLearn: [],
+        interests: [],
+      },
+      step3_goals: {
+        careerGoals: ['skill-development'],
+        timeframe: 'medium-term',
+      },
+      step4_preferences: {
+        targetPath: '',
+        learningStyle: [],
+        availableTime: 'moderate',
+        budget: 'moderate',
+      },
+      step5_networking: {
+        networkingGoals: [],
+        preferredEventTypes: [],
+      },
+      step6_teamBuilding: {
+        teamRole: 'flexible',
+        collaborationStyle: [],
+        teamSizePreference: 'flexible',
+        communicationPreferences: [],
+        teamGoals: [],
+        mentorshipPreference: 'neither',
+        availabilityPattern: null,
+        projectTypePreferences: [],
+      },
+    });
+    const skipped = await skipMobileCareerOnboarding();
+
+    expect(bootstrap.status.onboarded).toBe(false);
+    expect(complete.source).toBe('career_profiles');
+    expect(skipped.source).toBe('legacy');
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/onboarding/career'
     );
 
     fetchSpy.mockRestore();

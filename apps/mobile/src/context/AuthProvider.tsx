@@ -1,6 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
+import type { MobileProfileState } from '@kurecal/domain';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -8,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { loadMobileProfileState } from '../lib/mobileApi';
 import { supabase } from '../lib/supabase';
 
 interface SignInCredentials {
@@ -20,7 +23,10 @@ interface SignInResult {
 }
 
 interface AuthContextValue {
+  hasCompletedOnboarding: boolean;
   loading: boolean;
+  profile: MobileProfileState | null;
+  refreshProfile: () => Promise<void>;
   session: Session | null;
   signIn: (credentials: SignInCredentials) => Promise<SignInResult>;
   signOut: () => Promise<void>;
@@ -29,21 +35,52 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<MobileProfileState | null>(null);
+
+  const refreshProfile = useCallback(async () => {
+    const {
+      data: { session: nextSession },
+    } = await supabase.auth.getSession();
+
+    if (!nextSession) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const nextProfile = await loadMobileProfileState();
+      setProfile(nextProfile);
+    } catch {
+      setProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!mounted) {
           return;
         }
 
         setSession(data.session);
-        setLoading(false);
+        setAuthLoading(false);
+
+        if (data.session) {
+          await refreshProfile();
+        } else {
+          setProfile(null);
+          setProfileLoading(false);
+        }
       })
       .catch(() => {
         if (!mounted) {
@@ -51,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setSession(null);
-        setLoading(false);
+        setProfile(null);
+        setAuthLoading(false);
+        setProfileLoading(false);
       });
 
     const {
@@ -62,34 +101,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setSession(nextSession);
-      setLoading(false);
+      setAuthLoading(false);
+
+      if (nextSession) {
+        void refreshProfile();
+      } else {
+        setProfile(null);
+        setProfileLoading(false);
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshProfile]);
 
-  const value = useMemo<AuthContextValue>(() => ({
-    loading,
-    session,
-    signIn: async ({ email, password }) => {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      hasCompletedOnboarding: profile?.onboarding.onboarded ?? false,
+      loading: authLoading || (session ? profileLoading : false),
+      profile,
+      refreshProfile,
+      session,
+      signIn: async ({ email, password }) => {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) {
-        return { error: error.message };
-      }
+        if (error) {
+          return { error: error.message };
+        }
 
-      return {};
-    },
-    signOut: async () => {
-      await supabase.auth.signOut();
-    },
-  }), [loading, session]);
+        return {};
+      },
+      signOut: async () => {
+        await supabase.auth.signOut();
+        setProfile(null);
+      },
+    }),
+    [authLoading, profile, profileLoading, refreshProfile, session]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  mobileCareerOnboardingBootstrapSchema,
   mobileDashboardSummarySchema,
   mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
+  mobileEventEngagementUpdateSchema,
+  mobileProfileStateSchema,
+  mobileSavedEventsFeedSchema,
 } from './mobile';
 
 describe('mobile domain contracts', () => {
@@ -108,5 +112,109 @@ describe('mobile domain contracts', () => {
     expect(parsed.host?.name).toBe('KureCal');
     expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
     expect(parsed.agenda?.[0]?.title).toBe('Opening keynote');
+  });
+
+  it('parses saved feeds and profile state payloads for phase 3 surfaces', () => {
+    const saved = mobileSavedEventsFeedSchema.parse({
+      header: {
+        eyebrow: 'Saved',
+        title: 'Your shortlist',
+      },
+      totalCount: 1,
+      nextPage: null,
+      events: [
+        {
+          id: 'event-1',
+          title: 'Saved event',
+          startTime: '2026-04-20T18:00:00.000Z',
+          engagement: {
+            isBookmarked: true,
+            status: null,
+          },
+        },
+      ],
+    });
+    const profile = mobileProfileStateSchema.parse({
+      profile: {
+        id: 'user-1',
+        email: 'user@example.com',
+        fullName: 'Ada Lovelace',
+        avatarUrl: null,
+        timezone: 'America/Edmonton',
+      },
+      socialProfile: {
+        id: 'user-1',
+        fullName: 'Ada Lovelace',
+        avatarUrl: null,
+        username: 'ada',
+        headline: 'Builder',
+        profileVisibility: 'connections',
+        showAttendance: true,
+      },
+      onboarding: {
+        onboarded: true,
+        source: 'career_profiles',
+      },
+      careerProfile: {
+        currentRole: 'Software Engineer',
+        seniority: 'senior',
+        industry: 'Technology',
+        primarySkills: ['TypeScript', 'React'],
+        skillsToLearn: ['AI'],
+        interests: ['Developer tools'],
+        careerGoals: ['skill-development'],
+        timeframe: 'medium-term',
+        learningStyle: ['hands-on'],
+        networkingGoals: ['find-peers'],
+        preferredEventTypes: ['conference'],
+      },
+    });
+
+    expect(saved.events[0]?.engagement?.isBookmarked).toBe(true);
+    expect(profile.socialProfile.username).toBe('ada');
+  });
+
+  it('parses onboarding bootstrap payloads and engagement mutations', () => {
+    const bootstrap = mobileCareerOnboardingBootstrapSchema.parse({
+      status: {
+        onboarded: false,
+        source: 'none',
+      },
+      initialData: null,
+      taxonomy: {
+        roleGroups: [
+          {
+            key: 'engineering',
+            label: 'Engineering',
+            roles: ['Software Engineer'],
+          },
+        ],
+        skillOptions: [
+          {
+            value: 'TypeScript',
+            label: 'TypeScript',
+            category: 'Programming Languages',
+          },
+        ],
+        interestOptions: [
+          {
+            value: 'Developer tools',
+            label: 'Developer tools',
+          },
+        ],
+        roleSuggestions: {
+          'Software Engineer': {
+            current: ['TypeScript'],
+            learn: ['AI'],
+          },
+        },
+      },
+    });
+    const mutation = mobileEventEngagementUpdateSchema.parse({
+      isBookmarked: true,
+    });
+
+    expect(bootstrap.taxonomy.roleGroups[0]?.roles[0]).toBe('Software Engineer');
+    expect(mutation.isBookmarked).toBe(true);
   });
 });
