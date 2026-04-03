@@ -163,16 +163,16 @@ export default function DashboardScreen() {
 
           <View style={styles.actionRow}>
             <Pressable
-              onPress={() => router.push('./discover')}
+              onPress={() => router.push('./calendar')}
               style={({ pressed }) => [
                 styles.primaryAction,
                 pressed ? styles.primaryActionPressed : null,
               ]}
             >
-              <Text style={styles.primaryActionLabel}>Explore discover</Text>
+              <Text style={styles.primaryActionLabel}>Open calendar</Text>
             </Pressable>
             <Pressable
-              onPress={() => router.push('/submit-event')}
+              onPress={() => router.push('./submit-event')}
               style={({ pressed }) => [
                 styles.secondaryAction,
                 pressed ? styles.secondaryActionPressed : null,

@@ -1,105 +1,135 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextResponse, type NextRequest } from 'next/server';
+
+import type { SupabaseClientType } from '@/types/database';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
+
+async function resolveCircle(
+  circleId: string,
+  supabase: SupabaseClientType
+) {
+  const { data, error } = await supabase
+    .from('circles')
+    .select('id')
+    .eq('id', circleId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message ?? 'Failed to load circle.');
+  }
+
+  return data;
+}
 
 export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id: circleId } = await params;
-        if (!circleId) {
-            return NextResponse.json({ error: 'Missing circle ID' }, { status: 400 });
-        }
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Verify the circle exists before inserting membership
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: circleExists } = await (supabase as any)
-            .from('circles')
-            .select('id')
-            .eq('id', circleId)
-            .single();
-
-        if (!circleExists) {
-            return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-            .from('circle_members')
-            .insert({
-                circle_id: circleId,
-                user_id: user.id
-            });
-
-        if (error) {
-            // Handle unique violation if they are already a member
-            if (error.code === '23505') {
-                 return NextResponse.json({ success: true, message: 'Already a member' });
-            }
-            console.error('Error joining circle:', error);
-            return NextResponse.json({ error: 'Failed to join circle' }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, message: 'Joined circle' });
-    } catch (e) {
-        console.error('Unexpected error joining circle:', e);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  try {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
     }
+
+    const { id: circleId } = await params;
+    if (!circleId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing circle ID' },
+        { status: 400 }
+      );
+    }
+
+    const circle = await resolveCircle(circleId, authContext.supabase);
+    if (!circle) {
+      return NextResponse.json(
+        { success: false, error: 'Circle not found' },
+        { status: 404 }
+      );
+    }
+
+    const { error } = await authContext.supabase.from('circle_members').insert({
+      circle_id: circleId,
+      user_id: authContext.user.id,
+    });
+
+    if (error && error.code !== '23505') {
+      return NextResponse.json(
+        { success: false, error: error.message ?? 'Failed to join circle' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: error?.code === '23505' ? 'Already a member' : 'Joined circle',
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to join circle',
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id: circleId } = await params;
-        if (!circleId) {
-            return NextResponse.json({ error: 'Missing circle ID' }, { status: 400 });
-        }
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Verify the circle exists before attempting membership removal
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: circleExists } = await (supabase as any)
-            .from('circles')
-            .select('id')
-            .eq('id', circleId)
-            .single();
-
-        if (!circleExists) {
-            return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-            .from('circle_members')
-            .delete()
-            .match({
-                circle_id: circleId,
-                user_id: user.id
-            });
-
-        if (error) {
-            console.error('Error leaving circle:', error);
-            return NextResponse.json({ error: 'Failed to leave circle' }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, message: 'Left circle' });
-    } catch (e) {
-        console.error('Unexpected error leaving circle:', e);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  try {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
     }
+
+    const { id: circleId } = await params;
+    if (!circleId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing circle ID' },
+        { status: 400 }
+      );
+    }
+
+    const circle = await resolveCircle(circleId, authContext.supabase);
+    if (!circle) {
+      return NextResponse.json(
+        { success: false, error: 'Circle not found' },
+        { status: 404 }
+      );
+    }
+
+    const { error } = await authContext.supabase
+      .from('circle_members')
+      .delete()
+      .match({
+        circle_id: circleId,
+        user_id: authContext.user.id,
+      });
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: error.message ?? 'Failed to leave circle' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'Left circle' });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to leave circle',
+      },
+      { status: 500 }
+    );
+  }
 }

@@ -62,10 +62,24 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Calendar',
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="C" />,
+        }}
+      />
+      <Tabs.Screen
         name="discover"
         options={{
           title: 'Discover',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="F" />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="M" />,
         }}
       />
       <Tabs.Screen
@@ -78,6 +92,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="submit-event"
         options={{
+          href: null,
           title: 'Submit',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="S" />,
         }}
@@ -86,7 +101,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="C" />,
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="P" />,
         }}
       />
     </Tabs>

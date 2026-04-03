@@ -13,14 +13,24 @@ vi.mock('./supabase', () => ({
 }));
 
 import {
+  createMobileCommunityComment,
+  createMobileCommunityPost,
+  joinMobileCommunityCircle,
+  leaveMobileCommunityCircle,
+  loadMobileCalendarFeed,
   completeMobileCareerOnboarding,
   loadMobileDashboardSummary,
   loadMobileCareerOnboardingBootstrap,
+  loadMobileCommunityCircle,
+  loadMobileCommunityHome,
+  loadMobileCommunityPost,
   loadMobileDiscoverFeed,
   loadMobileEventDetail,
   loadMobileProfileState,
   loadMobileSavedEvents,
   skipMobileCareerOnboarding,
+  submitMobileCommunityReport,
+  submitMobileCommunityVote,
   updateMobileEventEngagement,
   updateMobileProfile,
 } from './mobileApi';
@@ -166,6 +176,75 @@ describe('mobile api helpers', () => {
     fetchSpy.mockRestore();
   });
 
+  it('loads calendar month feeds through the mobile calendar contract', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            header: {
+              eyebrow: 'Calendar',
+              title: 'Plan your month',
+            },
+            month: {
+              monthStart: '2026-05-01',
+              monthEnd: '2026-05-31',
+              label: 'May 2026',
+            },
+            today: '2026-05-12',
+            metrics: {
+              totalCount: 1,
+              savedCount: 1,
+              attendingCount: 1,
+            },
+            days: Array.from({ length: 42 }, (_, index) => ({
+              dateKey:
+                index < 31
+                  ? `2026-05-${String(index + 1).padStart(2, '0')}`
+                  : `2026-06-${String(index - 30).padStart(2, '0')}`,
+              dayNumber: index < 31 ? index + 1 : index - 30,
+              inCurrentMonth: index < 31,
+              isToday: index === 11,
+              eventCount: index === 11 ? 1 : 0,
+              savedCount: index === 11 ? 1 : 0,
+              attendingCount: index === 11 ? 1 : 0,
+            })),
+            events: [
+              {
+                id: 'event-1',
+                title: 'Calendar event',
+                startTime: '2026-05-12T18:00:00.000Z',
+                dateKey: '2026-05-12',
+              },
+            ],
+            emptyState: {
+              title: 'No events this month',
+              description: 'Move to another month.',
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const result = await loadMobileCalendarFeed({
+      monthStart: '2026-05-01',
+    });
+
+    expect(result.month.label).toBe('May 2026');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/calendar?monthStart=2026-05-01',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
   it('loads the combined mobile profile state', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
@@ -210,6 +289,161 @@ describe('mobile api helpers', () => {
       expect.objectContaining({
         headers: expect.any(Headers),
       })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads mobile community read models and submits community mutations', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              header: {
+                eyebrow: 'Community',
+                title: 'Stay close to your circles',
+              },
+              feed: [],
+              circles: [
+                {
+                  id: 'circle-1',
+                  slug: 'ai-builders',
+                  name: 'AI Builders',
+                  description: 'A circle for AI builders.',
+                  memberCount: 42,
+                  isJoined: true,
+                },
+              ],
+              upcomingEvents: [],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              header: {
+                eyebrow: 'Circle',
+                title: 'AI Builders',
+              },
+              circle: {
+                id: 'circle-1',
+                slug: 'ai-builders',
+                name: 'AI Builders',
+                description: 'A circle for AI builders.',
+                memberCount: 42,
+                isJoined: true,
+              },
+              isJoined: true,
+              currentUser: null,
+              members: [],
+              upcomingEvents: [],
+              posts: [],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              header: {
+                eyebrow: 'Thread',
+                title: 'AI Builders',
+              },
+              circle: {
+                id: 'circle-1',
+                slug: 'ai-builders',
+                name: 'AI Builders',
+                description: 'A circle for AI builders.',
+                memberCount: 42,
+                isJoined: true,
+              },
+              isJoined: true,
+              currentUser: null,
+              upcomingEvents: [],
+              post: {
+                id: 'post-1',
+                content: 'What are you building?',
+                createdAt: '2026-04-03T00:00:00.000Z',
+                author: {
+                  id: 'user-2',
+                  fullName: 'Grace Hopper',
+                  avatarUrl: null,
+                },
+                comments: [],
+              },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              success: true,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+    const home = await loadMobileCommunityHome();
+    const circle = await loadMobileCommunityCircle('ai-builders');
+    const post = await loadMobileCommunityPost('post-1');
+    await joinMobileCommunityCircle('circle-1');
+    await leaveMobileCommunityCircle('circle-1');
+    await createMobileCommunityPost({
+      circleId: '11111111-1111-4111-8111-111111111111',
+      circleSlug: 'ai-builders',
+      content: 'Launching a new thread',
+    });
+    await createMobileCommunityComment({
+      postId: '22222222-2222-4222-8222-222222222222',
+      circleSlug: 'ai-builders',
+      content: 'Reply from mobile',
+    });
+    await submitMobileCommunityVote({
+      entityType: 'post',
+      entityId: '33333333-3333-4333-8333-333333333333',
+      circleSlug: 'ai-builders',
+      voteType: 1,
+    });
+    await submitMobileCommunityReport({
+      subjectType: 'post',
+      subjectId: '44444444-4444-4444-8444-444444444444',
+      reason: 'other',
+    });
+
+    expect(home.circles[0]?.slug).toBe('ai-builders');
+    expect(circle.circle.name).toBe('AI Builders');
+    expect(post.post.id).toBe('post-1');
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/community'
+    );
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/community/circles/ai-builders'
+    );
+    expect(fetchSpy.mock.calls[2]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/community/posts/post-1'
+    );
+    expect(fetchSpy.mock.calls[3]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/community/circles/circle-1/join'
+    );
+    expect(fetchSpy.mock.calls[8]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/community/reports'
     );
 
     fetchSpy.mockRestore();
