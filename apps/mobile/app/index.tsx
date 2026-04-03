@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../src/context/AuthProvider';
 
 export default function IndexScreen() {
-  const { loading, session } = useAuth();
+  const { hasCompletedOnboarding, loading, session } = useAuth();
 
   if (loading) {
     return (
@@ -21,5 +21,11 @@ export default function IndexScreen() {
     );
   }
 
-  return <Redirect href={session ? './(tabs)/dashboard' : '/login'} />;
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
+
+  return (
+    <Redirect href={hasCompletedOnboarding ? './(tabs)/dashboard' : './onboarding'} />
+  );
 }

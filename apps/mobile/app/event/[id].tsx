@@ -16,7 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { MobileEventDetail } from '@kurecal/domain';
 
 import { ScreenStateView } from '../../src/components/ScreenStateView';
-import { loadMobileEventDetail } from '../../src/lib/mobileApi';
+import {
+  loadMobileEventDetail,
+  updateMobileEventEngagement,
+} from '../../src/lib/mobileApi';
 
 function formatDateTime(value: string, timezone?: string | null) {
   return new Date(value).toLocaleString(undefined, {
@@ -35,6 +38,7 @@ export default function EventDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function loadDetail(mode: 'initial' | 'refresh' = 'initial') {
     if (!eventId) {
@@ -81,6 +85,42 @@ export default function EventDetailScreen() {
         'Unable to open link',
         nextError instanceof Error ? nextError.message : 'Link failed to open.'
       );
+    }
+  }
+
+  async function toggleSavedState() {
+    if (!data || saving) {
+      return;
+    }
+
+    const nextValue = !(data.event.engagement?.isBookmarked ?? false);
+    setSaving(true);
+
+    try {
+      const engagement = await updateMobileEventEngagement(event.id, {
+        isBookmarked: nextValue,
+      });
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              event: {
+                ...current.event,
+                engagement,
+              },
+            }
+          : current
+      );
+    } catch (nextError) {
+      Alert.alert(
+        'Unable to update saved state',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Please try again.'
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -199,6 +239,23 @@ export default function EventDetailScreen() {
             ) : null}
 
             <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => {
+                  void toggleSavedState();
+                }}
+                style={({ pressed }) => [
+                  styles.secondaryAction,
+                  pressed ? styles.secondaryActionPressed : null,
+                ]}
+              >
+                <Text style={styles.secondaryActionLabel}>
+                  {saving
+                    ? 'Updating…'
+                    : event.engagement?.isBookmarked
+                      ? 'Unsave event'
+                      : 'Save event'}
+                </Text>
+              </Pressable>
               {event.registrationUrl ? (
                 <Pressable
                   onPress={() => {

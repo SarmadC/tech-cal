@@ -14,7 +14,7 @@ function TabGlyph({ label, focused }: { focused: boolean; label: string }) {
 }
 
 export default function TabsLayout() {
-  const { loading, session } = useAuth();
+  const { hasCompletedOnboarding, loading, session } = useAuth();
 
   if (loading) {
     return (
@@ -26,6 +26,10 @@ export default function TabsLayout() {
 
   if (!session) {
     return <Redirect href="/login" />;
+  }
+
+  if (!hasCompletedOnboarding) {
+    return <Redirect href="../onboarding" />;
   }
 
   return (
@@ -65,6 +69,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="saved"
+        options={{
+          title: 'Saved',
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="V" />,
+        }}
+      />
+      <Tabs.Screen
         name="submit-event"
         options={{
           title: 'Submit',
@@ -74,7 +85,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: 'Profile',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="C" />,
         }}
       />
