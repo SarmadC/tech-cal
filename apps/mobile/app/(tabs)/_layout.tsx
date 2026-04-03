@@ -76,6 +76,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="M" />,
+        }}
+      />
+      <Tabs.Screen
         name="saved"
         options={{
           title: 'Saved',
@@ -85,6 +92,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="submit-event"
         options={{
+          href: null,
           title: 'Submit',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} label="S" />,
         }}

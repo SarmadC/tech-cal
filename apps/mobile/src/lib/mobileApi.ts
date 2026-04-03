@@ -1,8 +1,15 @@
 import {
+  communityCommentDraftSchema,
+  communityPostDraftSchema,
+  communityReportSchema,
+  communityVoteSchema,
   mobileCalendarFeedRequestSchema,
   mobileCalendarFeedSchema,
   mobileCareerOnboardingBootstrapSchema,
   mobileCareerOnboardingDataSchema,
+  mobileCommunityCirclePageSchema,
+  mobileCommunityHomeSchema,
+  mobileCommunityPostPageSchema,
   mobileDashboardSummarySchema,
   mobileDiscoverFeedRequestSchema,
   mobileDiscoverFeedSchema,
@@ -13,10 +20,17 @@ import {
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
   mobileSavedEventsFeedSchema,
+  type CommunityCommentDraft,
+  type CommunityPostDraft,
+  type CommunityReportInput,
+  type CommunityVoteInput,
   type MobileCalendarFeed,
   type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
   type MobileCareerOnboardingData,
+  type MobileCommunityCirclePage,
+  type MobileCommunityHome,
+  type MobileCommunityPostPage,
   type MobileDashboardSummary,
   type MobileDiscoverFeed,
   type MobileDiscoverFeedRequest,
@@ -65,6 +79,14 @@ async function fetchMobileContract<T>(
   schema: ZodType<T>,
   init?: RequestInit
 ): Promise<T> {
+  const payload = await fetchMobileEnvelope(path, init);
+  return schema.parse(payload);
+}
+
+async function fetchMobileEnvelope(
+  path: string,
+  init?: RequestInit
+): Promise<unknown> {
   const accessToken = await getAccessToken();
   const headers = new Headers(init?.headers);
 
@@ -90,7 +112,7 @@ async function fetchMobileContract<T>(
     throw new Error(payload.error || 'Mobile request failed');
   }
 
-  return schema.parse(payload.data);
+  return payload.data;
 }
 
 export async function loadMobileDashboardSummary(): Promise<MobileDashboardSummary> {
@@ -115,6 +137,36 @@ export async function loadMobileCalendarFeed(
   return fetchMobileContract(
     `/api/mobile/calendar${search ? `?${search}` : ''}`,
     mobileCalendarFeedSchema
+  );
+}
+
+export async function loadMobileCommunityHome(): Promise<MobileCommunityHome> {
+  return fetchMobileContract('/api/mobile/community', mobileCommunityHomeSchema);
+}
+
+export async function loadMobileCommunityCircle(
+  slug: string
+): Promise<MobileCommunityCirclePage> {
+  if (!slug.trim()) {
+    throw new Error('Circle slug is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/community/circles/${encodeURIComponent(slug.trim())}`,
+    mobileCommunityCirclePageSchema
+  );
+}
+
+export async function loadMobileCommunityPost(
+  postId: string
+): Promise<MobileCommunityPostPage> {
+  if (!postId.trim()) {
+    throw new Error('Post id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/community/posts/${encodeURIComponent(postId.trim())}`,
+    mobileCommunityPostPageSchema
   );
 }
 
@@ -173,6 +225,76 @@ export async function updateMobileEventEngagement(
       body: JSON.stringify(payload),
     }
   );
+}
+
+export async function joinMobileCommunityCircle(circleId: string): Promise<void> {
+  if (!circleId.trim()) {
+    throw new Error('Circle id is required');
+  }
+
+  await fetchMobileEnvelope(
+    `/api/community/circles/${encodeURIComponent(circleId.trim())}/join`,
+    {
+      method: 'POST',
+    }
+  );
+}
+
+export async function leaveMobileCommunityCircle(circleId: string): Promise<void> {
+  if (!circleId.trim()) {
+    throw new Error('Circle id is required');
+  }
+
+  await fetchMobileEnvelope(
+    `/api/community/circles/${encodeURIComponent(circleId.trim())}/join`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function createMobileCommunityPost(
+  input: CommunityPostDraft
+): Promise<void> {
+  const payload = communityPostDraftSchema.parse(input);
+
+  await fetchMobileEnvelope('/api/community/posts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createMobileCommunityComment(
+  input: CommunityCommentDraft
+): Promise<void> {
+  const payload = communityCommentDraftSchema.parse(input);
+
+  await fetchMobileEnvelope('/api/community/comments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitMobileCommunityVote(
+  input: CommunityVoteInput
+): Promise<void> {
+  const payload = communityVoteSchema.parse(input);
+
+  await fetchMobileEnvelope('/api/community/votes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitMobileCommunityReport(
+  input: CommunityReportInput
+): Promise<void> {
+  const payload = communityReportSchema.parse(input);
+
+  await fetchMobileEnvelope('/api/community/reports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function loadMobileProfileState(): Promise<MobileProfileState> {
