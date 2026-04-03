@@ -21,5 +21,5 @@ export default function IndexScreen() {
     );
   }
 
-  return <Redirect href={session ? '/dashboard' : '/login'} />;
+  return <Redirect href={session ? './(tabs)/dashboard' : '/login'} />;
 }

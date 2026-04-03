@@ -29,7 +29,7 @@ export default function LoginScreen() {
   );
 
   if (session) {
-    return <Redirect href="/dashboard" />;
+    return <Redirect href="../(tabs)/dashboard" />;
   }
 
   const handleSignIn = async () => {
@@ -51,7 +51,7 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('/dashboard');
+    router.replace('../(tabs)/dashboard');
     setSubmitting(false);
   };
 
