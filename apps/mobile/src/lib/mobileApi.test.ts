@@ -13,11 +13,13 @@ vi.mock('./supabase', () => ({
 }));
 
 import {
+  blockMobileUser,
   createMobileCommunityComment,
   createMobileCommunityPost,
   joinMobileCommunityCircle,
   leaveMobileCommunityCircle,
   loadMobileCalendarFeed,
+  loadMobileBlockedUsers,
   completeMobileCareerOnboarding,
   loadMobileDashboardSummary,
   loadMobileCareerOnboardingBootstrap,
@@ -26,14 +28,19 @@ import {
   loadMobileCommunityPost,
   loadMobileDiscoverFeed,
   loadMobileEventDetail,
+  loadMobileFollowStatus,
   loadMobileProfileState,
+  loadMobilePublicProfile,
   loadMobileSavedEvents,
+  loadMobileSpeakerDetail,
   loadMobileSubscriptionOfferings,
   loadMobileSubscriptionStatus,
+  followMobileUser,
   reconcileMobileRevenueCatSubscription,
   skipMobileCareerOnboarding,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
+  unfollowMobileUser,
   updateMobileEventEngagement,
   updateMobileProfile,
 } from './mobileApi';
@@ -71,13 +78,72 @@ describe('mobile api helpers', () => {
               eyebrow: 'Discover',
               title: 'Find your next event',
             },
-            totalCount: 12,
-            nextPage: 2,
+            controls: {
+              rankingModes: [
+                {
+                  id: 'best-match',
+                  label: 'Best match',
+                  description: 'Prioritize strongest career alignment.',
+                },
+              ],
+              activeRankingMode: 'best-match',
+            },
+            activeState: {
+              resultLabel: '12 ranked picks',
+              supportingText: 'Career-impact ranking tuned to mobile discovery.',
+            },
+            results: {
+              returnedCount: 1,
+              totalCount: 12,
+              hasMore: true,
+            },
+            filters: {
+              searchTerm: 'expo',
+              categories: [],
+              tags: ['expo'],
+              location: null,
+              dateRange: {
+                start: null,
+                end: null,
+              },
+              format: 'all',
+              cost: 'all',
+              activeCount: 2,
+            },
+            availableFilters: {
+              categories: [],
+              tags: [
+                {
+                  value: 'expo',
+                  label: 'Expo',
+                  count: 8,
+                },
+              ],
+            },
+            counts: {
+              format: {
+                virtual: 2,
+                'in-person': 8,
+                hybrid: 2,
+              },
+              cost: {
+                free: 6,
+                paid: 6,
+              },
+              categories: {},
+              tags: {
+                expo: 8,
+              },
+            },
+            topPicks: null,
             events: [
               {
                 id: 'event-1',
                 title: 'Expo Meetup',
+                slug: 'expo-meetup',
                 startTime: '2026-04-12T18:00:00.000Z',
+                organizerLogoUrl: 'https://example.com/logo.png',
+                insight: 'Fits your goals',
               },
             ],
           },
@@ -90,17 +156,21 @@ describe('mobile api helpers', () => {
     );
 
     const result = await loadMobileDiscoverFeed({
+      rankingMode: 'best-match',
       searchTerm: 'expo',
       tags: ['expo'],
       page: 1,
     });
 
-    expect(result.totalCount).toBe(12);
+    expect(result.results.totalCount).toBe(12);
+    expect(result.controls.activeRankingMode).toBe('best-match');
+    expect(result.events[0]?.slug).toBe('expo-meetup');
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mobile.kurecal.test/api/mobile/discover',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
+          rankingMode: 'best-match',
           searchTerm: 'expo',
           tags: ['expo'],
           page: 1,
@@ -143,20 +213,168 @@ describe('mobile api helpers', () => {
         JSON.stringify({
           success: true,
           data: {
-            header: {
+            hero: {
               eyebrow: 'Dashboard',
-              title: 'Your event runway',
+              title: 'Your momentum, in one pass.',
+              subtitle: 'A mobile-first overview of recommendations and plans.',
+              highlight: 'Hero event',
             },
-            upcomingCount: 2,
-            savedCount: 3,
-            recommendationCount: 18,
-            heroEvent: {
-              id: 'event-hero',
-              title: 'Hero event',
-              startTime: '2026-04-12T18:00:00.000Z',
+            metrics: [
+              {
+                id: 'saved',
+                label: 'Saved',
+                value: '3',
+                detail: 'Bookmarks ready for calendar review.',
+              },
+            ],
+            recommendationsLabel: 'Recommended next',
+            recommendations: [
+              {
+                id: 'event-rec',
+                title: 'Recommended Event',
+                slug: 'recommended-event',
+                startTime: '2026-04-14T18:00:00.000Z',
+              },
+            ],
+            upcomingLabel: 'Planned next',
+            upcoming: [
+              {
+                id: 'event-hero',
+                title: 'Hero event',
+                slug: 'hero-event',
+                startTime: '2026-04-12T18:00:00.000Z',
+              },
+            ],
+            onboardingState: {
+              hasCompleted: true,
+              title: 'Profile calibrated',
+              body: 'Your ranking model is using the richer career profile.',
+              ctaLabel: 'View onboarding',
             },
-            upcomingEvents: [],
-            recommendedEvents: [],
+            topRecommendation: {
+              event: {
+                id: 'event-rec',
+                title: 'Recommended Event',
+                slug: 'recommended-event',
+                startTime: '2026-04-14T18:00:00.000Z',
+                score: 84,
+              },
+              daysUntil: 4,
+              impactLabel: 'High Impact',
+              reason: 'Strong fit for your goals',
+            },
+            upcomingCommitments: [
+              {
+                trackingId: 'tracking-1',
+                daysUntil: 2,
+                event: {
+                  id: 'event-hero',
+                  title: 'Hero event',
+                  slug: 'hero-event',
+                  startTime: '2026-04-12T18:00:00.000Z',
+                },
+              },
+            ],
+            showOpenCommitmentSlot: true,
+            insights: {
+              pipeline: {
+                trackedUpcomingCount: 3,
+                scoredUpcomingCount: 2,
+                avgScore: 76,
+                highFitCount: 1,
+                topEvents: [
+                  {
+                    eventId: 'event-hero',
+                    title: 'Hero event',
+                    score: 81,
+                  },
+                ],
+              },
+              funnel: {
+                savedOnly: 2,
+                rsvped: 1,
+                attended: 1,
+              },
+            },
+            monthlyPulse: {
+              currentCount: 2,
+              deltaLabel: '+1 vs prev 30d',
+              trend: [
+                { label: 'W1', value: 0 },
+                { label: 'W2', value: 1 },
+                { label: 'W3', value: 0 },
+                { label: 'W4', value: 1 },
+              ],
+            },
+            performance: {
+              summary: {
+                attendedCount: 4,
+                ratedCount: 3,
+                connectionsMade: 7,
+              },
+              recentWins: [
+                {
+                  event: {
+                    id: 'event-win',
+                    title: 'Product Forum',
+                    slug: 'product-forum',
+                    startTime: '2026-04-01T18:00:00.000Z',
+                  },
+                  score: 78,
+                  trackedAt: '2026-03-18T00:00:00.000Z',
+                  attendedDate: '2026-04-01T18:00:00.000Z',
+                  matchedSkills: ['Product Strategy'],
+                  matchedGoals: ['networking'],
+                  bookmarkedLeadDays: 10,
+                  feedbackSubmitted: true,
+                  actualValueRating: 4,
+                },
+              ],
+              hiddenCount: 0,
+            },
+            careerImpact: {
+              totalEvents: 3,
+              skillAlignedCount: 2,
+              skillAlignedPercentage: 67,
+              goalAlignedCount: 2,
+              goalAlignedPercentage: 67,
+              networkingCount: 1,
+              networkingPercentage: 33,
+              skillProgress: [
+                {
+                  skill: 'Product Strategy',
+                  eventsAttended: 2,
+                  progressLevel: 'building',
+                  nextMilestone: '3 more events to become a regular',
+                },
+              ],
+              insights: [
+                {
+                  tone: 'success',
+                  message:
+                    'Product Strategy is showing up consistently across 2 attended events.',
+                },
+              ],
+            },
+            careerOutcomes: {
+              state: 'mature',
+              attendedCount: 3,
+              upcomingCount: 1,
+              feedbackCount: 5,
+              unratedAttendedCount: 1,
+              ratingsRemaining: 0,
+              nextEventToRate: {
+                id: 'event-win',
+                title: 'Product Forum',
+                slug: 'product-forum',
+                startTime: '2026-04-01T18:00:00.000Z',
+              },
+              averageRating: 4.2,
+              recommendationRate: 80,
+              totalConnectionsMade: 7,
+              uniqueSkillsCount: 5,
+              teaserMessage: 'You are building expertise in Product Strategy',
+            },
           },
         }),
         {
@@ -168,10 +386,81 @@ describe('mobile api helpers', () => {
 
     const result = await loadMobileDashboardSummary();
 
-    expect(result.recommendationCount).toBe(18);
+    expect(result.hero.highlight).toBe('Hero event');
+    expect(result.metrics[0]?.value).toBe('3');
+    expect(result.recommendations[0]?.id).toBe('event-rec');
+    expect(result.topRecommendation?.impactLabel).toBe('High Impact');
+    expect(result.upcomingCommitments?.[0]?.trackingId).toBe('tracking-1');
+    expect(result.insights?.pipeline.avgScore).toBe(76);
+    expect(result.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
+    expect(result.careerImpact?.insights[0]?.tone).toBe('success');
+    expect(result.careerOutcomes?.averageRating).toBe(4.2);
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mobile.kurecal.test/api/mobile/dashboard/summary',
       expect.objectContaining({
+        headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads blocked members and posts block actions through the shared mobile auth lane', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: '11111111-1111-4111-8111-111111111111',
+                fullName: 'Blocked Member',
+                avatarUrl: null,
+                username: 'blocked-member',
+                headline: 'ML Engineer',
+                blockedAt: '2026-04-04T00:00:00.000Z',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'User blocked successfully.',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      );
+
+    const blockedUsers = await loadMobileBlockedUsers();
+    await blockMobileUser('11111111-1111-4111-8111-111111111111');
+
+    expect(blockedUsers[0]?.username).toBe('blocked-member');
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      'https://mobile.kurecal.test/api/blocks',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      })
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      'https://mobile.kurecal.test/api/blocks',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          blockedUserId: '11111111-1111-4111-8111-111111111111',
+        }),
         headers: expect.any(Headers),
       })
     );
@@ -200,6 +489,45 @@ describe('mobile api helpers', () => {
               savedCount: 1,
               attendingCount: 1,
             },
+            results: {
+              returnedCount: 1,
+              totalCount: 1,
+            },
+            filters: {
+              tags: ['expo'],
+              location: 'Calgary',
+              dateRange: {
+                start: '2026-05-10',
+                end: '2026-05-20',
+              },
+              cost: 'free',
+              activeCount: 4,
+            },
+            availableFilters: {
+              tags: [
+                {
+                  value: 'expo',
+                  label: 'Expo',
+                  count: 1,
+                },
+              ],
+              eventTypes: [
+                {
+                  id: 'meetup',
+                  name: 'Meetup',
+                  color: '#2dd4bf',
+                },
+              ],
+            },
+            counts: {
+              cost: {
+                free: 1,
+                paid: 0,
+              },
+              tags: {
+                expo: 1,
+              },
+            },
             days: Array.from({ length: 42 }, (_, index) => ({
               dateKey:
                 index < 31
@@ -218,11 +546,14 @@ describe('mobile api helpers', () => {
                 title: 'Calendar event',
                 startTime: '2026-05-12T18:00:00.000Z',
                 dateKey: '2026-05-12',
+                eventTypeId: 'meetup',
+                isFree: true,
               },
             ],
             emptyState: {
               title: 'No events this month',
               description: 'Move to another month.',
+              body: 'Move to another month.',
             },
           },
         }),
@@ -235,12 +566,31 @@ describe('mobile api helpers', () => {
 
     const result = await loadMobileCalendarFeed({
       monthStart: '2026-05-01',
+      tags: ['expo'],
+      location: 'Calgary',
+      dateRange: {
+        start: '2026-05-10',
+        end: '2026-05-20',
+      },
+      cost: 'free',
     });
 
     expect(result.month.label).toBe('May 2026');
+    expect(result.filters.activeCount).toBe(4);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://mobile.kurecal.test/api/mobile/calendar?monthStart=2026-05-01',
+      'https://mobile.kurecal.test/api/mobile/calendar',
       expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          monthStart: '2026-05-01',
+          tags: ['expo'],
+          location: 'Calgary',
+          dateRange: {
+            start: '2026-05-10',
+            end: '2026-05-20',
+          },
+          cost: 'free',
+        }),
         headers: expect.any(Headers),
       })
     );
@@ -305,22 +655,47 @@ describe('mobile api helpers', () => {
           JSON.stringify({
             success: true,
             data: {
-              header: {
-                eyebrow: 'Community',
-                title: 'Stay close to your circles',
+              summary: {
+                trackedUpcomingCount: 2,
+                visibleOpportunityCount: 1,
+                followUpCount: 1,
+                attendanceVisibilityEnabled: true,
               },
-              feed: [],
-              circles: [
+              upcomingMoments: [
                 {
-                  id: 'circle-1',
-                  slug: 'ai-builders',
-                  name: 'AI Builders',
-                  description: 'A circle for AI builders.',
-                  memberCount: 42,
-                  isJoined: true,
+                  id: '11111111-1111-4111-8111-111111111111',
+                  slug: 'design-review-week',
+                  title: 'Design Review Week',
+                  startTime: '2026-04-02T18:00:00.000Z',
+                  imageUrl: 'https://example.com/event.png',
+                  location: 'Remote',
+                  format: 'virtual',
+                  viewerContext: 'attending',
+                  contextLabel: 'Tracked',
+                  recentTrackerCount: 3,
+                  totalAttendeeCount: 12,
+                  visibleAttendeeCount: 4,
+                  networkAttendingCount: 2,
+                  relationshipAttendeeCount: 1,
+                  attendeePreview: [
+                    {
+                      id: '99999999-9999-4999-8999-999999999999',
+                      fullName: 'Jordan',
+                      username: 'jordan',
+                      avatarUrl: null,
+                      isInNetwork: false,
+                      followsViewer: false,
+                      isMutualFollow: false,
+                    },
+                  ],
+                  primaryReason: 'Visible attendees are already here.',
+                  whyNow: 'The networking context is already warming up.',
+                  newVisibleAttendeeCount: 3,
+                  recommendedAction: 'expand_people',
                 },
               ],
-              upcomingEvents: [],
+              peopleToMeet: [],
+              followUpNow: [],
             },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -389,6 +764,90 @@ describe('mobile api helpers', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         )
       )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: '22222222-2222-4222-8222-222222222222',
+              fullName: 'Ada Lovelace',
+              avatarUrl: null,
+              username: 'ada',
+              headline: 'Staff engineer',
+              isViewerOwner: false,
+              followerCount: 12,
+              followingCount: 8,
+              relationship: {
+                isFollowing: true,
+                isFollowedBy: false,
+                isBlockedByUser: false,
+                hasBlockedUser: false,
+              },
+              recentAttendingEvents: [],
+              careerProfile: {
+                currentRole: 'Engineer',
+                seniority: 'staff',
+                industry: 'Developer tools',
+              },
+              mutualConnections: [],
+              mutualConnectionsCount: 0,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              isFollowing: true,
+              isFollowedBy: false,
+              isBlockedByUser: false,
+              hasBlockedUser: false,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Followed',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Unfollowed',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: 'speaker-1',
+              name: 'Dana Scully',
+              title: 'AI Research Lead',
+              company: 'Signal Labs',
+              bio: 'Leads applied AI research.',
+              photoUrl: null,
+              linkedinUrl: 'https://linkedin.com/in/dana',
+              twitterUrl: null,
+              websiteUrl: null,
+              events: [],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
       .mockImplementation(() =>
         Promise.resolve(
           new Response(
@@ -404,6 +863,13 @@ describe('mobile api helpers', () => {
     const home = await loadMobileCommunityHome();
     const circle = await loadMobileCommunityCircle('ai-builders');
     const post = await loadMobileCommunityPost('post-1');
+    const publicProfile = await loadMobilePublicProfile('ada');
+    const followStatus = await loadMobileFollowStatus(
+      '22222222-2222-4222-8222-222222222222'
+    );
+    await followMobileUser('22222222-2222-4222-8222-222222222222');
+    await unfollowMobileUser('22222222-2222-4222-8222-222222222222');
+    const speaker = await loadMobileSpeakerDetail('speaker-1');
     await joinMobileCommunityCircle('circle-1');
     await leaveMobileCommunityCircle('circle-1');
     await createMobileCommunityPost({
@@ -428,9 +894,12 @@ describe('mobile api helpers', () => {
       reason: 'other',
     });
 
-    expect(home.circles[0]?.slug).toBe('ai-builders');
+    expect(home.upcomingMoments[0]?.slug).toBe('design-review-week');
     expect(circle.circle.name).toBe('AI Builders');
     expect(post.post.id).toBe('post-1');
+    expect(publicProfile.username).toBe('ada');
+    expect(followStatus.isFollowing).toBe(true);
+    expect(speaker.name).toBe('Dana Scully');
     expect(fetchSpy.mock.calls[0]?.[0]).toBe(
       'https://mobile.kurecal.test/api/mobile/community'
     );
@@ -441,9 +910,24 @@ describe('mobile api helpers', () => {
       'https://mobile.kurecal.test/api/mobile/community/posts/post-1'
     );
     expect(fetchSpy.mock.calls[3]?.[0]).toBe(
-      'https://mobile.kurecal.test/api/community/circles/circle-1/join'
+      'https://mobile.kurecal.test/api/mobile/profiles/ada'
+    );
+    expect(fetchSpy.mock.calls[4]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/follows/status/22222222-2222-4222-8222-222222222222'
+    );
+    expect(fetchSpy.mock.calls[5]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/follows'
+    );
+    expect(fetchSpy.mock.calls[6]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/follows/22222222-2222-4222-8222-222222222222'
+    );
+    expect(fetchSpy.mock.calls[7]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/speakers/speaker-1'
     );
     expect(fetchSpy.mock.calls[8]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/community/circles/circle-1/join'
+    );
+    expect(fetchSpy.mock.calls[13]?.[0]).toBe(
       'https://mobile.kurecal.test/api/community/reports'
     );
 

@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { FollowService } from '@/services/followService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const ParamsSchema = z.object({
   userId: z.string().uuid(),
@@ -11,21 +11,22 @@ const ParamsSchema = z.object({
 const unfollowActionRateLimiter = createRateLimiter('social-unfollow-actions', 'FOLLOW_ACTIONS_DAILY');
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const rateLimitResult = await checkRateLimit(unfollowActionRateLimiter, user.id);
+    const rateLimitResult = await checkRateLimit(
+      unfollowActionRateLimiter,
+      authContext.user.id
+    );
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please try again later.' },
@@ -41,7 +42,11 @@ export async function DELETE(
       );
     }
 
-    await FollowService.unfollowUser(user.id, parsedParams.data.userId, supabase);
+    await FollowService.unfollowUser(
+      authContext.user.id,
+      parsedParams.data.userId,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

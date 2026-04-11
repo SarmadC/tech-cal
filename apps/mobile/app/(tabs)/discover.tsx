@@ -1,96 +1,198 @@
-import { startTransition, useEffect, useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { router } from 'expo-router';
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { MobileDiscoverFeed, MobileDiscoverFeedRequest } from '@kurecal/domain';
+import type {
+  MobileDiscoverFeed,
+  MobileDiscoverFeedRequest,
+  MobileDiscoverRankingMode,
+} from '@kurecal/domain';
 
-import { EventSummaryCard } from '../../src/components/EventSummaryCard';
-import { ScreenStateView } from '../../src/components/ScreenStateView';
+import { ScreenState } from '../../src/components/chrome/ScreenState';
+import { DiscoverChipRail, type DiscoverChip } from '../../src/components/discover/DiscoverChipRail';
+import { DiscoverEventCard } from '../../src/components/discover/DiscoverEventCard';
+import {
+  DiscoverFilterSheet,
+  type DiscoverDraftFilters,
+} from '../../src/components/discover/DiscoverFilterSheet';
+import { DiscoverRankingRail } from '../../src/components/discover/DiscoverRankingRail';
+import { DiscoverSearchBar } from '../../src/components/discover/DiscoverSearchBar';
+import { DiscoverShell } from '../../src/components/discover/DiscoverShell';
+import { DiscoverTopPicksSection } from '../../src/components/discover/DiscoverTopPicksSection';
+import { useAuth } from '../../src/context/AuthProvider';
+import { mergeDiscoverFeedPage } from '../../src/lib/discoverState';
 import { loadMobileDiscoverFeed } from '../../src/lib/mobileApi';
+import { useAppTheme } from '../../src/providers/ThemeProvider';
 
-interface DiscoverDraftState {
-  dateFrom: string;
-  dateTo: string;
-  location: string;
-  searchTerm: string;
-  tagsInput: string;
-}
+const DEFAULT_RANKING_MODE: MobileDiscoverRankingMode = 'best-match';
 
-const DEFAULT_DRAFT: DiscoverDraftState = {
-  dateFrom: '',
-  dateTo: '',
+const DEFAULT_FILTERS: DiscoverDraftFilters = {
+  tags: [],
   location: '',
-  searchTerm: '',
-  tagsInput: '',
+  dateRange: {
+    start: null,
+    end: null,
+  },
+  cost: 'all',
 };
 
-function parseTags(tagsInput: string): string[] {
-  return Array.from(
-    new Set(
-      tagsInput
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean)
-    )
-  );
+const FALLBACK_RANKING_OPTIONS = [
+  {
+    id: 'best-match' as const,
+    label: 'Best match',
+    description: 'Prioritize strongest career alignment.',
+  },
+  {
+    id: 'trending' as const,
+    label: 'Trending',
+    description: 'Prioritize momentum and attendance.',
+  },
+  {
+    id: 'soonest' as const,
+    label: 'Soonest',
+    description: 'Ordered by upcoming start time.',
+  },
+];
+
+function formatDateLabel(value: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  return new Date(`${value}T12:00:00.000Z`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
-function buildRequest(
-  draft: DiscoverDraftState,
-  page = 1
-): MobileDiscoverFeedRequest {
-  return {
-    searchTerm: draft.searchTerm.trim() || undefined,
-    tags: parseTags(draft.tagsInput),
-    location: draft.location.trim() || null,
-    dateFrom: draft.dateFrom.trim() || null,
-    dateTo: draft.dateTo.trim() || null,
-    page,
-  };
+function buildDateRangeLabel(start: string | null, end: string | null) {
+  if (!start && !end) {
+    return '';
+  }
+
+  if (start && end) {
+    return `${formatDateLabel(start)} - ${formatDateLabel(end)}`;
+  }
+
+  if (start) {
+    return `From ${formatDateLabel(start)}`;
+  }
+
+  return `Until ${formatDateLabel(end)}`;
 }
 
-function countActiveFilters(request: MobileDiscoverFeedRequest) {
+function labelForCost(cost: DiscoverDraftFilters['cost']) {
+  if (cost === 'free') return 'Cost: Free';
+  if (cost === 'paid') return 'Cost: Paid';
+  return '';
+}
+
+function countActiveFilters(searchTerm: string, filters: DiscoverDraftFilters) {
   let count = 0;
 
-  if (request.searchTerm?.trim()) count += 1;
-  if (request.tags?.length) count += 1;
-  if (request.location?.trim()) count += 1;
-  if (request.dateFrom || request.dateTo) count += 1;
+  if (searchTerm.trim()) count += 1;
+  if (filters.tags.length > 0) count += 1;
+  if (filters.location.trim()) count += 1;
+  if (filters.dateRange.start || filters.dateRange.end) count += 1;
+  if (filters.cost !== 'all') count += 1;
 
   return count;
 }
 
+function cloneFilters(filters: DiscoverDraftFilters): DiscoverDraftFilters {
+  return {
+    tags: [...filters.tags],
+    location: filters.location,
+    dateRange: {
+      start: filters.dateRange.start,
+      end: filters.dateRange.end,
+    },
+    cost: filters.cost,
+  };
+}
+
+function buildRequest(
+  rankingMode: MobileDiscoverRankingMode,
+  searchTerm: string,
+  filters: DiscoverDraftFilters,
+  page = 1
+): MobileDiscoverFeedRequest {
+  return {
+    rankingMode,
+    searchTerm,
+    categories: [],
+    tags: filters.tags,
+    location: filters.location.trim() || null,
+    dateRange: filters.dateRange,
+    format: 'all',
+    cost: filters.cost,
+    page,
+  };
+}
+
 export default function DiscoverScreen() {
-  const [draft, setDraft] = useState<DiscoverDraftState>(DEFAULT_DRAFT);
+  const { tokens } = useAppTheme();
+  const { profile } = useAuth();
+  const [rankingMode, setRankingMode] = useState<MobileDiscoverRankingMode>(DEFAULT_RANKING_MODE);
+  const [searchText, setSearchText] = useState('');
+  const deferredSearchText = useDeferredValue(searchText);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<DiscoverDraftFilters>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<DiscoverDraftFilters>(DEFAULT_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [feed, setFeed] = useState<MobileDiscoverFeed | null>(null);
+  const [previewFeed, setPreviewFeed] = useState<MobileDiscoverFeed | null>(null);
   const [events, setEvents] = useState<MobileDiscoverFeed['events']>([]);
-  const [activeRequest, setActiveRequest] = useState<MobileDiscoverFeedRequest>({
-    page: 1,
-  });
   const [error, setError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const requestSequenceRef = useRef(0);
 
-  const activeFilterCount = useMemo(
-    () => countActiveFilters(activeRequest),
-    [activeRequest]
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(deferredSearchText.trim());
+    }, 220);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [deferredSearchText]);
+
+  const appliedRequest = useMemo(
+    () => buildRequest(rankingMode, searchTerm, filters),
+    [filters, rankingMode, searchTerm]
+  );
+  const previewRequest = useMemo(
+    () => buildRequest(rankingMode, searchTerm, draftFilters),
+    [draftFilters, rankingMode, searchTerm]
   );
 
   async function runDiscoverRequest(
     request: MobileDiscoverFeedRequest,
     mode: 'initial' | 'more' | 'refresh' = 'initial'
   ) {
+    const requestSequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestSequence;
+
     if (mode === 'more') {
       setLoadingMore(true);
     } else if (mode === 'refresh') {
@@ -101,18 +203,32 @@ export default function DiscoverScreen() {
 
     try {
       const nextFeed = await loadMobileDiscoverFeed(request);
-      setFeed(nextFeed);
-      setEvents((current) =>
-        mode === 'more' ? [...current, ...nextFeed.events] : nextFeed.events
-      );
+
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
+      }
+
+      const mergedFeed = mergeDiscoverFeedPage(mode, feed, events, nextFeed);
+      setFeed(mergedFeed.feed);
+      setEvents(mergedFeed.events);
+      setCurrentPage(request.page ?? 1);
+      setHasMorePages(mergedFeed.hasMorePages);
       setError(null);
     } catch (nextError) {
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
+      }
+
       setError(
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to load discover feed'
+          : 'Unable to load discovery'
       );
     } finally {
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
+      }
+
       setLoading(false);
       setLoadingMore(false);
       setRefreshing(false);
@@ -120,380 +236,426 @@ export default function DiscoverScreen() {
   }
 
   useEffect(() => {
-    const initialRequest = buildRequest(DEFAULT_DRAFT, 1);
-    setActiveRequest(initialRequest);
-    void runDiscoverRequest(initialRequest);
-  }, []);
+    void runDiscoverRequest(appliedRequest);
+  }, [appliedRequest]);
 
-  function applyFilters() {
-    const nextRequest = buildRequest(draft, 1);
-    startTransition(() => {
-      setActiveRequest(nextRequest);
-    });
-    void runDiscoverRequest(nextRequest);
-  }
-
-  function clearFilters() {
-    startTransition(() => {
-      setDraft(DEFAULT_DRAFT);
-    });
-
-    const nextRequest = buildRequest(DEFAULT_DRAFT, 1);
-    startTransition(() => {
-      setActiveRequest(nextRequest);
-    });
-    void runDiscoverRequest(nextRequest);
-  }
-
-  function loadMore() {
-    if (!feed?.nextPage || loadingMore) {
+  useEffect(() => {
+    if (!isFilterOpen) {
+      setPreviewFeed(null);
+      setPreviewError(null);
       return;
     }
 
-    const nextRequest = {
-      ...activeRequest,
-      page: feed.nextPage,
-    };
+    let cancelled = false;
+    setPreviewLoading(true);
 
+    void loadMobileDiscoverFeed(previewRequest)
+      .then((nextFeed) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPreviewFeed(nextFeed);
+        setPreviewError(null);
+      })
+      .catch((nextError) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPreviewFeed(null);
+        setPreviewError(
+          nextError instanceof Error
+            ? nextError.message
+            : 'Unable to preview discovery'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isFilterOpen, previewRequest]);
+
+  function clearAllFilters() {
+    setSearchText('');
+    setSearchTerm('');
     startTransition(() => {
-      setActiveRequest(nextRequest);
+      setFilters(DEFAULT_FILTERS);
+      setDraftFilters(DEFAULT_FILTERS);
     });
-    void runDiscoverRequest(nextRequest, 'more');
   }
 
-  const header = feed?.header ?? {
-    eyebrow: 'Discover',
-    title: 'Find your next event',
-    subtitle: 'Search the upcoming event catalog',
+  function openFilters() {
+    setDraftFilters(cloneFilters(filters));
+    setIsFilterOpen(true);
+  }
+
+  function applyFilters() {
+    startTransition(() => {
+      setFilters({
+        ...draftFilters,
+        location: draftFilters.location.trim(),
+      });
+    });
+    setIsFilterOpen(false);
+  }
+
+  function updateAppliedFilters(nextFilters: DiscoverDraftFilters) {
+    startTransition(() => {
+      setFilters(nextFilters);
+      setDraftFilters(nextFilters);
+    });
+  }
+
+  function removeChip(key: string, value?: string) {
+    if (key === 'search') {
+      setSearchText('');
+      setSearchTerm('');
+      return;
+    }
+
+    if (key === 'location') {
+      updateAppliedFilters({ ...filters, location: '' });
+      return;
+    }
+
+    if (key === 'dateRange') {
+      updateAppliedFilters({
+        ...filters,
+        dateRange: {
+          start: null,
+          end: null,
+        },
+      });
+      return;
+    }
+
+    if (key === 'cost') {
+      updateAppliedFilters({ ...filters, cost: 'all' });
+      return;
+    }
+
+    if (key === 'tag' && value) {
+      updateAppliedFilters({
+        ...filters,
+        tags: filters.tags.filter((entry) => entry !== value),
+      });
+    }
+  }
+
+  const tagLabelMap = new Map(
+    (feed?.availableFilters?.tags ?? []).map((tag) => [tag.value, tag.label])
+  );
+
+  const chips: DiscoverChip[] = [];
+  if (searchTerm) {
+    chips.push({
+      key: 'search',
+      label: `Search: ${searchTerm}`,
+      onRemove: () => removeChip('search'),
+    });
+  }
+  if (filters.location.trim()) {
+    chips.push({
+      key: 'location',
+      label: `Location: ${filters.location.trim()}`,
+      onRemove: () => removeChip('location'),
+    });
+  }
+  if (filters.dateRange.start || filters.dateRange.end) {
+    chips.push({
+      key: 'date-range',
+      label: buildDateRangeLabel(filters.dateRange.start, filters.dateRange.end),
+      onRemove: () => removeChip('dateRange'),
+    });
+  }
+  if (filters.cost !== 'all') {
+    chips.push({
+      key: 'cost',
+      label: labelForCost(filters.cost),
+      onRemove: () => removeChip('cost'),
+    });
+  }
+  filters.tags.forEach((tagValue) => {
+    chips.push({
+      key: `tag-${tagValue}`,
+      label: `Tag: ${tagLabelMap.get(tagValue) ?? tagValue}`,
+      onRemove: () => removeChip('tag', tagValue),
+    });
+  });
+
+  const rankingOptions = feed?.controls.rankingModes ?? FALLBACK_RANKING_OPTIONS;
+  const activeSheetFeed = previewFeed ?? feed;
+  const topPicks = feed?.topPicks ?? null;
+  const hasTopPicks = (topPicks?.cards.length ?? 0) > 0;
+  const previewResultCount = activeSheetFeed?.results.totalCount ?? feed?.results.totalCount ?? 0;
+  const appliedActiveFilterCount = countActiveFilters(searchTerm, filters);
+  const draftActiveFilterCount = countActiveFilters(searchTerm, draftFilters);
+  const isInitialLoading = loading && !feed;
+  const showEmptyState = !loading && !error && events.length === 0 && !hasTopPicks;
+  const showFeedHeading = hasTopPicks && events.length > 0;
+  const hasMore = hasMorePages;
+  const counts = activeSheetFeed?.counts ?? feed?.counts ?? {
+    format: {
+      virtual: 0,
+      'in-person': 0,
+      hybrid: 0,
+    },
+    cost: {
+      free: 0,
+      paid: 0,
+    },
+    categories: {},
+    tags: {},
   };
 
-  if (loading && events.length === 0) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="loading"
-              title="Loading discover"
-              description="Pulling upcoming events for the new mobile feed."
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
-
-  if (error && events.length === 0) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="error"
-              title="Discover unavailable"
-              description={error}
-              onRetry={() => {
-                void runDiscoverRequest(activeRequest);
-              }}
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
-
   return (
-    <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                void runDiscoverRequest(activeRequest, 'refresh');
+    <>
+      <DiscoverShell
+        header={(compact) => (
+          <View style={[styles.headerStack, compact && styles.headerStackCompact]}>
+            <DiscoverSearchBar
+              activeFilterCount={appliedActiveFilterCount}
+              compact={compact}
+              onChangeText={setSearchText}
+              onOpenFilters={openFilters}
+              value={searchText}
+            />
+            {!compact ? <DiscoverChipRail chips={chips} /> : null}
+            <DiscoverRankingRail
+              onChange={(nextValue) => {
+                startTransition(() => {
+                  setRankingMode(nextValue);
+                });
               }}
-              tintColor="#2dd4bf"
+              options={rankingOptions}
+              value={rankingMode}
             />
-          }
-        >
-          <View style={styles.hero}>
-            <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-            <Text style={styles.title}>{header.title}</Text>
-            {header.subtitle ? (
-              <Text style={styles.subtitle}>{header.subtitle}</Text>
-            ) : null}
           </View>
-
-          <View style={styles.filterPanel}>
-            <View style={styles.filterHeader}>
-              <Text style={styles.filterTitle}>Filter the feed</Text>
-              <Text style={styles.filterMeta}>
-                {activeFilterCount} active · {feed?.totalCount ?? events.length} result
-                {(feed?.totalCount ?? events.length) === 1 ? '' : 's'}
-              </Text>
-            </View>
-
-            <TextInput
-              onChangeText={(value) =>
-                setDraft((current) => ({ ...current, searchTerm: value }))
-              }
-              placeholder="Search by title or keyword"
-              placeholderTextColor="#64748b"
-              style={styles.input}
-              value={draft.searchTerm}
-            />
-
-            <View style={styles.row}>
-              <TextInput
-                onChangeText={(value) =>
-                  setDraft((current) => ({ ...current, location: value }))
-                }
-                placeholder="Location"
-                placeholderTextColor="#64748b"
-                style={[styles.input, styles.rowInput]}
-                value={draft.location}
-              />
-              <TextInput
-                onChangeText={(value) =>
-                  setDraft((current) => ({ ...current, tagsInput: value }))
-                }
-                placeholder="Tags (comma separated)"
-                placeholderTextColor="#64748b"
-                style={[styles.input, styles.rowInput]}
-                value={draft.tagsInput}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <TextInput
-                autoCapitalize="none"
-                onChangeText={(value) =>
-                  setDraft((current) => ({ ...current, dateFrom: value }))
-                }
-                placeholder="From YYYY-MM-DD"
-                placeholderTextColor="#64748b"
-                style={[styles.input, styles.rowInput]}
-                value={draft.dateFrom}
-              />
-              <TextInput
-                autoCapitalize="none"
-                onChangeText={(value) =>
-                  setDraft((current) => ({ ...current, dateTo: value }))
-                }
-                placeholder="To YYYY-MM-DD"
-                placeholderTextColor="#64748b"
-                style={[styles.input, styles.rowInput]}
-                value={draft.dateTo}
-              />
-            </View>
-
-            <View style={styles.actionRow}>
-              <Pressable
-                onPress={applyFilters}
-                style={({ pressed }) => [
-                  styles.primaryAction,
-                  pressed ? styles.primaryActionPressed : null,
-                ]}
+        )}
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => {
+              void runDiscoverRequest(appliedRequest, 'refresh');
+            }}
+            refreshing={refreshing}
+            tintColor={tokens.colors.accent}
+          />
+        }
+      >
+        {chips.length > 0 ? (
+          <View style={styles.clearFiltersRow}>
+            <Pressable onPress={clearAllFilters}>
+              <Text
+                style={{
+                  color: tokens.colors.discoverTextSoft,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 13,
+                  fontWeight: '700',
+                }}
               >
-                <Text style={styles.primaryActionLabel}>Apply filters</Text>
-              </Pressable>
-              <Pressable
-                onPress={clearFilters}
-                style={({ pressed }) => [
-                  styles.secondaryAction,
-                  pressed ? styles.secondaryActionPressed : null,
-                ]}
-              >
-                <Text style={styles.secondaryActionLabel}>Reset</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-          <View style={styles.results}>
-            {events.length > 0 ? (
-              events.map((event) => (
-                <EventSummaryCard
-                  key={event.id}
-                  event={event}
-                  onPress={() =>
-                    router.push({
-                      pathname: '../event/[id]',
-                      params: { id: event.id },
-                    })
-                  }
-                />
-              ))
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No events match yet"
-                description="Try widening the date range or removing a filter to see more of the catalog."
-              />
-            )}
-          </View>
-
-          {feed?.nextPage ? (
-            <Pressable
-              onPress={loadMore}
-              style={({ pressed }) => [
-                styles.loadMoreButton,
-                pressed ? styles.loadMorePressed : null,
-              ]}
-            >
-              <Text style={styles.loadMoreLabel}>
-                {loadingMore ? 'Loading more…' : 'Load more events'}
+                Clear all filters
               </Text>
             </Pressable>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+          </View>
+        ) : null}
+
+        {isInitialLoading ? (
+          <ScreenState
+            description="Ranking the next set of events for your current filters."
+            fullHeight
+            mode="loading"
+            title="Loading discovery"
+            variant="plain"
+          />
+        ) : null}
+
+        {error && !feed ? (
+          <ScreenState
+            description={error}
+            mode="error"
+            title="Discovery is unavailable"
+            variant="discover"
+          />
+        ) : null}
+
+        {topPicks ? (
+          <DiscoverTopPicksSection
+            onPressCard={(event) => router.push(`/event/${event.id}`)}
+            topPicks={topPicks}
+          />
+        ) : null}
+
+        {events.length > 0 ? (
+          <View style={showFeedHeading ? styles.feedSection : undefined}>
+            {showFeedHeading ? (
+              <View style={styles.feedHeadingRow}>
+                <Text
+                  style={{
+                    color: tokens.colors.discoverTextMuted,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 11,
+                    fontWeight: '700',
+                    letterSpacing: 0.1,
+                  }}
+                >
+                  Recommended events
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.feedList}>
+              {events.map((event, index) => (
+                <DiscoverEventCard
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push(`/event/${event.id}`)}
+                  showDivider={index < events.length - 1}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {loadingMore ? (
+          <View style={styles.loadMoreWrap}>
+            <ActivityIndicator color={tokens.colors.accent} />
+          </View>
+        ) : null}
+
+        {hasMore && !loadingMore ? (
+          <Pressable
+            onPress={() => {
+              void runDiscoverRequest(
+                { ...appliedRequest, page: currentPage + 1 },
+                'more'
+              );
+            }}
+            style={[
+              styles.loadMoreButton,
+              {
+                backgroundColor: tokens.colors.discoverToolbar,
+                borderColor: tokens.colors.discoverToolbarBorderStrong,
+              },
+            ]}
+          >
+            <Text
+              style={{
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+                fontSize: 14,
+                fontWeight: '700',
+              }}
+            >
+              Show more
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {showEmptyState ? (
+          <ScreenState
+            description="Broaden the search, remove a few filters, or switch the ranking mode to surface more options."
+            mode="empty"
+            title="Adjust the feed and try again"
+            variant="discover"
+          />
+        ) : null}
+
+        {error && feed ? (
+          <Text
+            style={{
+              color: tokens.colors.danger,
+              fontFamily: tokens.typography.sans,
+              fontSize: 13,
+              lineHeight: 18,
+            }}
+          >
+            {error}
+          </Text>
+        ) : null}
+      </DiscoverShell>
+
+      <DiscoverFilterSheet
+        activeFilterCount={draftActiveFilterCount}
+        counts={counts}
+        isPreviewLoading={previewLoading}
+        onApply={applyFilters}
+        onChange={setDraftFilters}
+        onClose={() => setIsFilterOpen(false)}
+        onReset={clearAllFilters}
+        profileTimezone={profile?.profile.timezone ?? null}
+        resultCount={previewResultCount}
+        tags={activeSheetFeed?.availableFilters?.tags ?? []}
+        value={draftFilters}
+        visible={isFilterOpen}
+      />
+
+      {previewError && isFilterOpen ? (
+        <View style={styles.previewErrorBanner}>
+          <Text
+            style={{
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+              fontSize: 13,
+              fontWeight: '600',
+            }}
+          >
+            {previewError}
+          </Text>
+        </View>
+      ) : null}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
+  clearFiltersRow: {
+    alignItems: 'flex-end',
   },
-  content: {
-    gap: 18,
-    padding: 22,
+  feedHeadingRow: {
+    paddingHorizontal: 2,
   },
-  eyebrow: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
+  feedList: {
+    gap: 0,
   },
-  filterHeader: {
+  feedSection: {
+    gap: 3,
+  },
+  headerStack: {
     gap: 4,
   },
-  filterMeta: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  filterPanel: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 18,
-  },
-  filterTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  gradient: {
-    flex: 1,
-  },
-  hero: {
-    gap: 10,
-  },
-  inlineError: {
-    color: '#fda4af',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: 'rgba(2, 6, 11, 0.52)',
-    borderColor: 'rgba(148, 163, 184, 0.16)',
-    borderRadius: 16,
-    borderWidth: 1,
-    color: '#f8fafc',
-    fontSize: 15,
-    minHeight: 52,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+  headerStackCompact: {
+    gap: 2,
   },
   loadMoreButton: {
     alignItems: 'center',
-    borderColor: 'rgba(45, 212, 191, 0.32)',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 18,
+    minHeight: 48,
   },
-  loadMoreLabel: {
-    color: '#99f6e4',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  loadMorePressed: {
-    opacity: 0.92,
-  },
-  primaryAction: {
+  loadMoreWrap: {
     alignItems: 'center',
-    backgroundColor: '#2dd4bf',
-    borderRadius: 18,
-    flex: 1,
     justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 16,
+    minHeight: 56,
   },
-  primaryActionLabel: {
-    color: '#042f2e',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  primaryActionPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
-  },
-  results: {
-    gap: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  rowInput: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  secondaryAction: {
-    alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.24)',
-    borderRadius: 18,
+  previewErrorBanner: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(120, 53, 15, 0.96)',
+    borderColor: 'rgba(251, 191, 36, 0.34)',
+    borderRadius: 14,
     borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 16,
-  },
-  secondaryActionLabel: {
-    color: '#dbeafe',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  secondaryActionPressed: {
-    opacity: 0.92,
-  },
-  stateWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 22,
-  },
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  title: {
-    color: '#f8fafc',
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.9,
-    lineHeight: 36,
+    bottom: 22,
+    left: 16,
+    maxWidth: 430,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    position: 'absolute',
+    right: 16,
   },
 });

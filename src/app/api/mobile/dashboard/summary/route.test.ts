@@ -5,9 +5,13 @@ import { mobileDashboardSummarySchema } from '@kurecal/domain';
 import { GET } from './route';
 
 const mocks = vi.hoisted(() => ({
+  fetchPersonalizedRecommendationCandidates: vi.fn(),
+  getCareerProfile: vi.fn(),
   getAuthenticatedRequestContext: vi.fn(),
+  getAllFeedbackForUser: vi.fn(),
   getEventCount: vi.fn(),
   getEvents: vi.fn(),
+  getProfile: vi.fn(),
   getTrackedEvents: vi.fn(),
   loadEngagementMap: vi.fn(),
 }));
@@ -23,11 +27,35 @@ vi.mock('@/services/userEventService', () => ({
   },
 }));
 
+vi.mock('@/services/careerProfileService', () => ({
+  CareerProfileService: {
+    getCareerProfile: (...args: unknown[]) => mocks.getCareerProfile(...args),
+  },
+}));
+
+vi.mock('@/services/profileService', () => ({
+  ProfileService: {
+    getProfile: (...args: unknown[]) => mocks.getProfile(...args),
+  },
+}));
+
+vi.mock('@/services/eventFeedbackService', () => ({
+  EventFeedbackService: {
+    getAllFeedbackForUser: (...args: unknown[]) =>
+      mocks.getAllFeedbackForUser(...args),
+  },
+}));
+
 vi.mock('@/services/eventServices', () => ({
   EventService: {
     getEvents: (...args: unknown[]) => mocks.getEvents(...args),
     getEventCount: (...args: unknown[]) => mocks.getEventCount(...args),
   },
+}));
+
+vi.mock('@/services/recommendations/recommendationPipeline', () => ({
+  fetchPersonalizedRecommendationCandidates: (...args: unknown[]) =>
+    mocks.fetchPersonalizedRecommendationCandidates(...args),
 }));
 
 vi.mock('@/app/api/mobile/engagement', () => ({
@@ -71,6 +99,39 @@ const trackedEvent = {
   },
 };
 
+const attendedTrackedEvent = {
+  trackingId: 'tracking-2',
+  userId: 'user-1',
+  eventId: 'event-3',
+  status: 'attended',
+  notes: null,
+  trackedAt: '2026-03-01T00:00:00.000Z',
+  isBookmarked: true,
+  bookmarkedAt: '2026-02-20T00:00:00.000Z',
+  event: {
+    id: 'event-3',
+    createdAt: '2026-02-01T00:00:00.000Z',
+    updatedAt: '2026-02-01T00:00:00.000Z',
+    title: 'Attended Event',
+    description: 'A completed event with useful career signal.',
+    organizer: 'KureCal',
+    location: 'Calgary',
+    status: 'confirmed',
+    startTime: '2026-03-10T18:00:00.000Z',
+    endTime: '2026-03-10T19:30:00.000Z',
+    sourceUrl: 'https://example.com/events/attended',
+    livestreamUrl: null,
+    registrationUrl: 'https://example.com/register',
+    eventTypeId: 'meetup',
+    eventFormat: 'In Person',
+    priceMin: 0,
+    priceRange: 'Free',
+    eventImageUrl: null,
+    organization: { id: 'org-1', name: 'KureCal', logo: null },
+    tags: [{ name: 'product-strategy' }, { name: 'networking' }],
+  },
+};
+
 const recommendedEvent = {
   id: 'event-2',
   createdAt: '2026-04-01T00:00:00.000Z',
@@ -102,9 +163,39 @@ describe('GET /api/mobile/dashboard/summary', () => {
       supabase: {},
       user: { id: 'user-1' },
     });
-    mocks.getTrackedEvents.mockResolvedValue([trackedEvent]);
-    mocks.getEvents.mockResolvedValue([recommendedEvent]);
-    mocks.getEventCount.mockResolvedValue(18);
+    mocks.getCareerProfile.mockResolvedValue({
+      currentRole: 'Engineer',
+      careerGoals: ['networking'],
+      skillsToLearn: ['Product Strategy'],
+      networkingGoals: ['Meet more product operators'],
+    });
+    mocks.getProfile.mockResolvedValue({
+      preferences: {
+        careerOnboardingCompleted: true,
+      },
+    });
+    mocks.getTrackedEvents.mockResolvedValue([trackedEvent, attendedTrackedEvent]);
+    mocks.fetchPersonalizedRecommendationCandidates.mockResolvedValue({
+      events: [recommendedEvent],
+      matchedTags: [],
+      candidateSources: new Map(),
+    });
+    mocks.getAllFeedbackForUser.mockResolvedValue([
+      {
+        id: 'feedback-1',
+        eventId: 'event-3',
+        userId: 'user-1',
+        actualValueRating: 4,
+        careerBenefit: 'Useful',
+        connectionsMade: 2,
+        eventAttended: true,
+        feedbackDate: '2026-03-11T00:00:00.000Z',
+        feedbackText: 'Great event',
+        predictedScore: 82,
+        skillsGained: ['Product Strategy'],
+        wouldRecommend: true,
+      },
+    ]);
     mocks.loadEngagementMap.mockResolvedValue(
       new Map([
         [
@@ -118,7 +209,7 @@ describe('GET /api/mobile/dashboard/summary', () => {
     );
   });
 
-  it('returns a typed dashboard summary with hero and section cards', async () => {
+  it('returns a typed dashboard summary with hero, metrics, and onboarding state', async () => {
     const response = await GET(
       new Request('http://localhost/api/mobile/dashboard/summary', {
         headers: { Authorization: 'Bearer mobile-token' },
@@ -130,10 +221,33 @@ describe('GET /api/mobile/dashboard/summary', () => {
     expect(payload.success).toBe(true);
 
     const parsed = mobileDashboardSummarySchema.parse(payload.data);
-    expect(parsed.heroEvent?.id).toBe('event-1');
-    expect(parsed.savedCount).toBe(1);
-    expect(parsed.upcomingEvents?.[0]?.engagement?.status).toBe('attending');
-    expect(parsed.recommendedEvents?.[0]?.id).toBe('event-2');
+    expect(parsed.hero.highlight).toBe('Recommended Event');
+    expect(parsed.metrics.find((metric) => metric.id === 'saved')?.value).toBe('2');
+    expect(parsed.upcoming[0]?.engagement?.status).toBe('attending');
+    expect(parsed.recommendations[0]?.id).toBe('event-2');
+    expect(parsed.onboardingState.hasCompleted).toBe(true);
+    expect(parsed.topRecommendation?.event.id).toBe('event-2');
+    expect(parsed.upcomingCommitments?.[0]?.trackingId).toBe('tracking-1');
+    expect(parsed.showOpenCommitmentSlot).toBe(true);
+    expect(parsed.insights?.pipeline.trackedUpcomingCount).toBe(1);
+    expect(parsed.monthlyPulse?.trend.length).toBe(4);
+    expect(parsed.performance?.summary.attendedCount).toBe(1);
+    expect(parsed.performance?.summary.ratedCount).toBe(1);
+    expect(parsed.performance?.summary.connectionsMade).toBe(2);
+    expect(parsed.performance?.recentWins[0]?.event.id).toBe('event-3');
+    expect(parsed.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
+    expect(parsed.engagementStreak?.recentWeeks.length).toBe(8);
+    expect(parsed.discoveryBreadth?.organizerCount).toBe(1);
+    expect(parsed.networkPulse?.topConnectingEvent?.eventId).toBe('event-3');
+    expect(parsed.predictionAccuracy?.sampleSize).toBe(1);
+    expect(parsed.careerImpact?.totalEvents).toBe(1);
+    expect(parsed.careerOutcomes?.feedbackCount).toBe(1);
+    expect(parsed.careerOutcomes?.nextEventToRate).toBeNull();
+    expect(payload.data.header.title).toBe('Your event runway');
+    expect(payload.data.upcomingCount).toBe(1);
+    expect(payload.data.savedCount).toBe(2);
+    expect(payload.data.recommendationCount).toBe(1);
+    expect(payload.data.heroEvent?.id).toBe('event-1');
   });
 
   it('returns 401 when the request is unauthenticated', async () => {

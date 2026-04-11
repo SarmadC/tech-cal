@@ -1,13 +1,15 @@
+import Constants from 'expo-constants';
+
 import appConfig from '../../app.json';
 
 export type MobilePlatform = 'android' | 'ios' | 'macos' | 'web' | 'windows';
 
 type RequiredMobileEnvName =
-  | 'EXPO_PUBLIC_API_URL'
   | 'EXPO_PUBLIC_SUPABASE_URL'
   | 'EXPO_PUBLIC_SUPABASE_ANON_KEY';
 
 type OptionalMobileEnvName =
+  | 'EXPO_PUBLIC_AUTH_REDIRECT_URI'
   | 'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID'
   | 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS'
   | 'EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID'
@@ -28,6 +30,7 @@ interface RevenueCatRuntimeConfig {
 interface MobileAppJson {
   expo?: {
     name?: string;
+    scheme?: string;
     slug?: string;
     extra?: {
       eas?: {
@@ -45,6 +48,9 @@ function getOptionalEnv(name: MobileEnvName): string | null {
   switch (name) {
     case 'EXPO_PUBLIC_API_URL':
       value = process.env.EXPO_PUBLIC_API_URL;
+      break;
+    case 'EXPO_PUBLIC_AUTH_REDIRECT_URI':
+      value = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URI;
       break;
     case 'EXPO_PUBLIC_SUPABASE_URL':
       value = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -83,7 +89,26 @@ export function getRequiredMobileEnv(name: RequiredMobileEnvName): string {
 }
 
 export function getMobileApiBaseUrl(): string {
-  return getRequiredMobileEnv('EXPO_PUBLIC_API_URL').replace(/\/$/, '');
+  const configured = getOptionalEnv('EXPO_PUBLIC_API_URL');
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+
+  if (__DEV__) {
+    // Derive the API host from Expo's bundler host so the URL stays correct
+    // across WiFi changes without needing to update .env manually.
+    const bundlerHost =
+      Constants.expoConfig?.hostUri ??
+      // @ts-expect-error — legacy Expo Go manifest field
+      (Constants.manifest as { debuggerHost?: string } | null)?.debuggerHost;
+
+    if (bundlerHost) {
+      const host = bundlerHost.split(':')[0];
+      return `http://${host}:3000`;
+    }
+  }
+
+  throw new Error('EXPO_PUBLIC_API_URL is missing from the mobile environment.');
 }
 
 export function getSupabaseRuntimeConfig() {
@@ -139,6 +164,7 @@ export function getMobileRuntimeMetadata() {
   return {
     appName: mobileAppConfig.expo?.name ?? 'KureCal Dev',
     easProjectId: mobileAppConfig.expo?.extra?.eas?.projectId ?? null,
+    scheme: mobileAppConfig.expo?.scheme ?? 'kurecal-dev',
     slug: mobileAppConfig.expo?.slug ?? 'kurecal-mobile',
   };
 }

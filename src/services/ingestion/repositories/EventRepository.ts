@@ -1,5 +1,6 @@
 import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
+import { SpeakerAvatarCacheService } from '@/services/speakerAvatarCacheService';
 import {
     buildEventIdentityKeys,
     type EventIdentityKey,
@@ -370,13 +371,13 @@ export class EventRepository {
         );
 
         const existingSpeakersMap = new Map<string, string>(); // linkedInUrl -> speakerId
-        const existingSpeakersByName = new Map<string, { id: string; linkedinUrl?: string | null }>(); // normalized name -> speaker metadata
-        const existingSpeakerMetadataById = new Map<string, { linkedinUrl?: string | null }>();
+        const existingSpeakersByName = new Map<string, { id: string; linkedinUrl?: string | null; photoUrl?: string | null }>(); // normalized name -> speaker metadata
+        const existingSpeakerMetadataById = new Map<string, { linkedinUrl?: string | null; photoUrl?: string | null }>();
 
         if (linkedInUrls.length > 0) {
             const { data: existingSpeakers } = await supabaseClient
                 .from('speakers')
-                .select('id, linkedin_url')
+                .select('id, linkedin_url, photo_url')
                 .in('linkedin_url', linkedInUrls);
 
             if (existingSpeakers) {
@@ -386,6 +387,7 @@ export class EventRepository {
                     }
                     existingSpeakerMetadataById.set(speaker.id, {
                         linkedinUrl: speaker.linkedin_url,
+                        photoUrl: speaker.photo_url,
                     });
                 }
             }
@@ -394,7 +396,7 @@ export class EventRepository {
         if (speakerNames.length > 0) {
             const { data: existingByName } = await supabaseClient
                 .from('speakers')
-                .select('id, name, linkedin_url')
+                .select('id, name, linkedin_url, photo_url')
                 .in('name', speakerNames);
 
             if (existingByName) {
@@ -403,9 +405,11 @@ export class EventRepository {
                         existingSpeakersByName.set(speaker.name.trim().toLowerCase(), {
                             id: speaker.id,
                             linkedinUrl: speaker.linkedin_url,
+                            photoUrl: speaker.photo_url,
                         });
                         existingSpeakerMetadataById.set(speaker.id, {
                             linkedinUrl: speaker.linkedin_url,
+                            photoUrl: speaker.photo_url,
                         });
                     }
                 }
@@ -493,6 +497,52 @@ export class EventRepository {
             }
 
             insertedSpeakerIds.push(...insertedSpeakers.map(s => s.id));
+        }
+
+        const avatarCandidates = resultOrder
+            .map((item, index) => {
+                const input = speakers[index];
+                if (!input?.linkedinUrl) {
+                    return null;
+                }
+
+                if (item.existingId) {
+                    const existingSpeaker = existingSpeakerMetadataById.get(item.existingId);
+                    return {
+                        id: item.existingId,
+                        name: input.name,
+                        linkedinUrl: input.linkedinUrl,
+                        currentPhotoUrl: input.photoUrl ?? existingSpeaker?.photoUrl ?? null,
+                    };
+                }
+
+                if (item.insertIndex !== undefined) {
+                    const insertedId = insertedSpeakerIds[item.insertIndex];
+                    if (!insertedId) {
+                        return null;
+                    }
+
+                    return {
+                        id: insertedId,
+                        name: input.name,
+                        linkedinUrl: input.linkedinUrl,
+                        currentPhotoUrl: input.photoUrl ?? null,
+                    };
+                }
+
+                return null;
+            })
+            .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
+
+        if (avatarCandidates.length > 0) {
+            try {
+                await SpeakerAvatarCacheService.cacheSpeakerAvatarsBatch({
+                    speakers: avatarCandidates,
+                    supabaseClient,
+                });
+            } catch (error) {
+                console.warn('[EventRepository] Speaker avatar caching failed', error);
+            }
         }
 
         // Step 5: Build result array in original order

@@ -17,7 +17,11 @@
     ],
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication",
+      "expo-location",
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
@@ -26,8 +30,10 @@
       "bundleIdentifier": "com.kurecal.mobile.dev",
       "buildNumber": "1",
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Allow KureCal Dev to securely unlock saved sessions."
+        "NSFaceIDUsageDescription": "Allow KureCal Dev to securely unlock saved sessions.",
+        "NSLocationWhenInUseUsageDescription": "Allow KureCal Dev to detect your location for nearby discovery results."
       }
     },
     "extra": {

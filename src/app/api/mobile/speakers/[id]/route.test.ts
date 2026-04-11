@@ -1,0 +1,111 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { mobileSpeakerDetailSchema } from '@kurecal/domain';
+
+import { GET } from './route';
+
+const mocks = vi.hoisted(() => ({
+  createServiceClient: vi.fn(),
+  getAuthenticatedRequestContext: vi.fn(),
+  getSpeakerDetail: vi.fn(),
+}));
+
+vi.mock('@/utils/supabase/requestAuth', () => ({
+  getAuthenticatedRequestContext: (...args: unknown[]) =>
+    mocks.getAuthenticatedRequestContext(...args),
+}));
+
+vi.mock('@/utils/supabase/service', () => ({
+  createServiceClient: (...args: unknown[]) => mocks.createServiceClient(...args),
+}));
+
+vi.mock('@/services/mobileSpeakerService', () => ({
+  MobileSpeakerService: {
+    getSpeakerDetail: (...args: unknown[]) => mocks.getSpeakerDetail(...args),
+  },
+}));
+
+describe('GET /api/mobile/speakers/[id]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    mocks.createServiceClient.mockReturnValue({ kind: 'read-supabase' });
+  });
+
+  it('returns the signed-in mobile speaker payload', async () => {
+    mocks.getAuthenticatedRequestContext.mockResolvedValue({
+      user: { id: '22222222-2222-4222-8222-222222222222' },
+    });
+    mocks.getSpeakerDetail.mockResolvedValue({
+      id: 'speaker-1',
+      name: 'Dana Scully',
+      title: 'AI Research Lead',
+      company: 'Signal Labs',
+      bio: 'Leads applied AI research.',
+      photoUrl: 'https://example.com/dana.jpg',
+      linkedinUrl: 'https://linkedin.com/in/dana',
+      twitterUrl: null,
+      websiteUrl: 'https://signals.example/dana',
+      events: [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          slug: 'design-review-week',
+          title: 'Design Review Week',
+          startTime: '2026-04-02T18:00:00.000Z',
+          location: 'Remote',
+          format: 'virtual',
+          isPastEvent: false,
+        },
+      ],
+    });
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/speakers/speaker-1') as never,
+      {
+        params: Promise.resolve({ id: 'speaker-1' }),
+      }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+    const parsed = mobileSpeakerDetailSchema.parse(payload.data);
+    expect(parsed.name).toBe('Dana Scully');
+    expect(parsed.events[0]?.title).toBe('Design Review Week');
+  });
+
+  it('returns 401 when the mobile user is not authenticated', async () => {
+    mocks.getAuthenticatedRequestContext.mockResolvedValue(null);
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/speakers/speaker-1') as never,
+      {
+        params: Promise.resolve({ id: 'speaker-1' }),
+      }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload.success).toBe(false);
+  });
+
+  it('returns 404 when the speaker does not exist', async () => {
+    mocks.getAuthenticatedRequestContext.mockResolvedValue({
+      user: { id: '22222222-2222-4222-8222-222222222222' },
+    });
+    mocks.getSpeakerDetail.mockResolvedValue(null);
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/speakers/missing') as never,
+      {
+        params: Promise.resolve({ id: 'missing' }),
+      }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.success).toBe(false);
+    expect(payload.error).toBe('Speaker not found');
+  });
+});

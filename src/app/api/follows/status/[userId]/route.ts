@@ -1,21 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { FollowService } from '@/services/followService';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const ParamsSchema = z.object({
   userId: z.string().uuid(),
 });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request as NextRequest);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -30,7 +28,11 @@ export async function GET(
       );
     }
 
-    const status = await FollowService.getFollowStatus(user.id, parsedParams.data.userId, supabase);
+    const status = await FollowService.getFollowStatus(
+      authContext.user.id,
+      parsedParams.data.userId,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

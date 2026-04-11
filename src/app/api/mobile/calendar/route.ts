@@ -12,8 +12,15 @@ import {
   buildCalendarFeed,
   toMobileCalendarEvent,
 } from '@/app/api/mobile/serializers';
-import { EventService } from '@/services/eventServices';
+import { EventTypeService } from '@/services/eventTypeService';
+import {
+  buildUserLocationFromProfileContext,
+  loadFilteredEventsData,
+  normalizeFilteredEventsRequest,
+} from '@/services/filteredEventsService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
+
+const DEFAULT_PAGE_SIZE = 100;
 
 function padDatePart(value: number) {
   return String(value).padStart(2, '0');
@@ -68,13 +75,39 @@ function resolveMonthEnd(monthStart: LocalCalendarDateKey): LocalCalendarDateKey
   );
 }
 
-function normalizeCalendarInput(
-  input: MobileCalendarFeedRequest | undefined
-): { monthStart: LocalCalendarDateKey } {
+function normalizeCalendarInput(input?: MobileCalendarFeedRequest) {
   const parsed = mobileCalendarFeedRequestSchema.parse(input ?? {});
 
   return {
     monthStart: parsed.monthStart ?? resolveCurrentMonthStart(),
+    tags: parsed.tags ?? [],
+    location: parsed.location?.trim() ? parsed.location.trim() : null,
+    dateRange: {
+      start: parsed.dateRange?.start ?? null,
+      end: parsed.dateRange?.end ?? null,
+    },
+    cost: parsed.cost ?? 'all',
+  };
+}
+
+function buildEffectiveDateRange(
+  input: ReturnType<typeof normalizeCalendarInput>
+) {
+  const monthEnd = resolveMonthEnd(input.monthStart);
+  const start =
+    input.dateRange.start && input.dateRange.start > input.monthStart
+      ? input.dateRange.start
+      : input.monthStart;
+  const end =
+    input.dateRange.end && input.dateRange.end < monthEnd
+      ? input.dateRange.end
+      : monthEnd;
+
+  return {
+    monthEnd,
+    start,
+    end,
+    hasOverlap: start <= end,
   };
 }
 
@@ -128,7 +161,7 @@ function buildGridDays(
 
 async function handleCalendar(
   request: Request,
-  input: MobileCalendarFeedRequest | undefined
+  input?: MobileCalendarFeedRequest
 ) {
   const authContext = await getAuthenticatedRequestContext(request as never);
   if (!authContext) {
@@ -139,26 +172,119 @@ async function handleCalendar(
   }
 
   const calendarInput = normalizeCalendarInput(input);
-  const monthEnd = resolveMonthEnd(calendarInput.monthStart);
-  const startDate = new Date(`${calendarInput.monthStart}T00:00:00.000Z`);
-  const endDate = new Date(`${monthEnd}T23:59:59.999Z`);
+  const effectiveRange = buildEffectiveDateRange(calendarInput);
   const today = formatDateKeyInTimezone(
     new Date(),
     request.headers.get('x-timezone')
   );
 
-  const events = await EventService.getCalendarEvents(authContext.supabase, {
-    startDate,
-    endDate,
-    limit: 600,
+  const [profileContext, eventTypes] = await Promise.all([
+    (async () => {
+      try {
+        const { data } = await authContext.supabase
+          .from('profiles')
+          .select('preferences, timezone, location')
+          .eq('id', authContext.user.id)
+          .single();
+
+        return data ?? null;
+      } catch {
+        return null;
+      }
+    })(),
+    EventTypeService.getEventTypes(authContext.supabase).catch(() => []),
+  ]);
+
+  const requestShape = {
+    tags: calendarInput.tags,
+    location: calendarInput.location,
+    dateRange: calendarInput.dateRange,
+    cost: calendarInput.cost,
+  };
+
+  if (!effectiveRange.hasOverlap) {
+    return NextResponse.json({
+      success: true,
+      data: buildCalendarFeed({
+        header: {
+          eyebrow: 'Calendar',
+          title: 'Plan your month',
+          subtitle: 'Your filtered event calendar for the current month.',
+        },
+        monthStart: calendarInput.monthStart,
+        monthEnd: effectiveRange.monthEnd,
+        today,
+        days: buildGridDays(calendarInput.monthStart, today, new Map()),
+        events: [],
+        totalCount: 0,
+        savedCount: 0,
+        attendingCount: 0,
+        request: requestShape,
+        data: null,
+        eventTypes,
+      }),
+    });
+  }
+
+  const userLocation = buildUserLocationFromProfileContext(
+    profileContext,
+    request.headers.get('x-timezone')
+  );
+  const baseRequest = normalizeFilteredEventsRequest({
+    tags: calendarInput.tags,
+    locations: calendarInput.location ? [calendarInput.location] : [],
+    dateRange: {
+      start: `${effectiveRange.start}T00:00:00.000`,
+      end: `${effectiveRange.end}T23:59:59.999`,
+    },
+    cost: calendarInput.cost,
+    page: 1,
+    pageSize: DEFAULT_PAGE_SIZE,
+    sortBy: 'date',
+    sortDirection: 'asc',
+    surface: 'calendar',
   });
+
+  const firstPage = await loadFilteredEventsData({
+    request: baseRequest,
+    supabase: authContext.supabase,
+    userId: authContext.user.id,
+    careerProfile: null,
+    userLocation,
+    requestId: 'mobile-calendar',
+    skipColdStart: false,
+  });
+
+  const allEvents = [...firstPage.events];
+  let currentPage = 1;
+  let hasMore = firstPage.pagination.hasMore;
+
+  while (hasMore) {
+    currentPage += 1;
+    const nextPage = await loadFilteredEventsData({
+      request: {
+        ...baseRequest,
+        page: currentPage,
+      },
+      supabase: authContext.supabase,
+      userId: authContext.user.id,
+      careerProfile: null,
+      userLocation,
+      requestId: 'mobile-calendar',
+      skipColdStart: false,
+    });
+
+    allEvents.push(...nextPage.events);
+    hasMore = nextPage.pagination.hasMore;
+  }
+
   const engagementMap = await loadEngagementMap(
     authContext.supabase,
     authContext.user.id,
-    events.map((event) => event.id)
+    allEvents.map((event) => event.id)
   );
 
-  const calendarEvents = events
+  const calendarEvents = allEvents
     .map((event) => toMobileCalendarEvent(event, engagementMap.get(event.id)))
     .sort(
       (left, right) =>
@@ -194,6 +320,12 @@ async function handleCalendar(
   const attendingCount = calendarEvents.filter(
     (event) => event.engagement?.status === 'attending'
   ).length;
+  const monthLabel = new Date(
+    `${calendarInput.monthStart}T12:00:00.000Z`
+  ).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
 
   return NextResponse.json({
     success: true,
@@ -203,19 +335,20 @@ async function handleCalendar(
         title: 'Plan your month',
         subtitle:
           calendarEvents.length > 0
-            ? `${calendarEvents.length} events across ${new Date(`${calendarInput.monthStart}T12:00:00.000Z`).toLocaleDateString(undefined, {
-                month: 'long',
-              })}`
+            ? `${calendarEvents.length} events across ${monthLabel}`
             : 'A month-first view for the events you are tracking and exploring',
       },
       monthStart: calendarInput.monthStart,
-      monthEnd,
+      monthEnd: effectiveRange.monthEnd,
       today,
       days: buildGridDays(calendarInput.monthStart, today, countsByDate),
       events: calendarEvents,
       totalCount: calendarEvents.length,
       savedCount,
       attendingCount,
+      request: requestShape,
+      data: firstPage,
+      eventTypes,
     }),
   });
 }

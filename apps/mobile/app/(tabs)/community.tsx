@@ -1,53 +1,287 @@
-import { useCallback, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome } from '@expo/vector-icons';
+import type {
+  MobileCommunityNetworkingEvent,
+  MobileCommunityNetworkingFollowUpCard,
+  MobileCommunityHome,
+  MobileCommunityNetworkingPersonCard,
+  MobileCommunityNetworkingSharedEvent,
+  MobileCommunityNetworkingSpeakerMatch,
+} from '@kurecal/domain';
 import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { MobileCommunityHome } from '@kurecal/domain';
-
-import { CommunityFeedCard } from '../../src/components/CommunityFeedCard';
-import { ScreenStateView } from '../../src/components/ScreenStateView';
+import { MobilePage } from '../../src/components/chrome/MobilePage';
+import { ScreenState } from '../../src/components/chrome/ScreenState';
+import { KureButton } from '../../src/components/chrome/KureButton';
+import { CommunityNetworkingEventCard } from '../../src/components/community/CommunityNetworkingEventCard';
+import { CommunityNetworkingPersonCard } from '../../src/components/community/CommunityNetworkingPersonCard';
+import { CommunityNetworkingSpeakerCard } from '../../src/components/community/CommunityNetworkingSpeakerCard';
+import { formatCommunityTabCount } from '../../src/components/community/presentation';
+import { useAppTheme } from '../../src/providers/ThemeProvider';
 import {
-  formatCompactCount,
-  formatCommunityRelativeTime,
-} from '../../src/lib/communityPresentation';
-import { loadMobileCommunityHome } from '../../src/lib/mobileApi';
+  followMobileUser,
+  loadMobileCommunityHome,
+  unfollowMobileUser,
+} from '../../src/lib/mobileApi';
+
+type LoadMode = 'initial' | 'refresh';
+type NetworkLens = 'for_you' | 'follows_you' | 'attending' | 'mutuals';
+type CommunitySpeakerPreview = NonNullable<
+  MobileCommunityNetworkingEvent['speakerPreview']
+>[number];
+
+interface CommunitySpeakerSurface {
+  speaker: CommunitySpeakerPreview;
+  event:
+    | MobileCommunityNetworkingEvent
+    | MobileCommunityNetworkingSpeakerMatch['event'];
+  matchReason?: string | null;
+  isPastEvent: boolean;
+}
+
+const NETWORK_LENSES: Array<{ id: NetworkLens; label: string }> = [
+  { id: 'for_you', label: 'For You' },
+  { id: 'follows_you', label: 'Follows You' },
+  { id: 'attending', label: 'Attending' },
+  { id: 'mutuals', label: 'Mutuals' },
+];
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function getPrimaryEvent(
+  person:
+    | MobileCommunityNetworkingPersonCard
+    | MobileCommunityNetworkingFollowUpCard
+): MobileCommunityNetworkingSharedEvent | null {
+  return person.strongestSharedEvent ?? person.sharedEvents[0] ?? null;
+}
+
+function matchesPersonSearch(
+  person:
+    | MobileCommunityNetworkingPersonCard
+    | MobileCommunityNetworkingFollowUpCard,
+  query: string
+): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const event = getPrimaryEvent(person);
+  const haystack = [
+    person.fullName,
+    person.username,
+    person.headline,
+    person.currentRole,
+    person.industry,
+    person.location,
+    person.whyNow,
+    event?.title,
+    event?.location,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
+function matchesMeetLens(
+  person: MobileCommunityNetworkingPersonCard,
+  lens: NetworkLens
+): boolean {
+  switch (lens) {
+    case 'follows_you':
+      return person.followsViewer || person.isMutualFollow;
+    case 'attending':
+      return person.sharedEvents.some((event) => event.viewerContext === 'attending');
+    case 'mutuals':
+      return person.isMutualFollow;
+    default:
+      return true;
+  }
+}
+
+function matchesEventSearch(
+  event: MobileCommunityNetworkingEvent,
+  query: string
+): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const haystack = [event.title, event.location, event.primaryReason, event.whyNow]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
+function matchesEventLens(
+  event: MobileCommunityNetworkingEvent,
+  lens: NetworkLens
+): boolean {
+  switch (lens) {
+    case 'follows_you':
+      return event.networkAttendingCount > 0 || event.relationshipAttendeeCount > 0;
+    case 'attending':
+      return event.viewerContext === 'attending';
+    case 'mutuals':
+      return event.relationshipAttendeeCount > 0;
+    default:
+      return true;
+  }
+}
+
+function matchesSpeakerSearch(
+  item: CommunitySpeakerSurface,
+  query: string
+): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const haystack = [
+    item.speaker.name,
+    item.speaker.title,
+    item.speaker.company,
+    item.event.title,
+    item.event.location,
+    item.matchReason,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
+function buildSpeakerSurfaces(
+  events: MobileCommunityNetworkingEvent[]
+): CommunitySpeakerSurface[] {
+  const surfaces = new Map<string, CommunitySpeakerSurface>();
+
+  for (const event of events) {
+    for (const speaker of event.speakerPreview ?? []) {
+      const key = speaker.id || `${speaker.name}:${event.id}`;
+      if (!surfaces.has(key)) {
+        surfaces.set(key, {
+          speaker,
+          event,
+          matchReason: null,
+          isPastEvent: false,
+        });
+      }
+    }
+  }
+
+  return Array.from(surfaces.values());
+}
+
+function buildSpeakerMatchSurfaces(
+  matches: MobileCommunityHome['speakerMatches'] = []
+): CommunitySpeakerSurface[] {
+  return matches.map((match) => ({
+    speaker: match.speaker,
+    event: match.event,
+    matchReason: match.matchReason,
+    isPastEvent: match.isPastEvent,
+  }));
+}
+
+function getVisibilityMessage(home: MobileCommunityHome): string | null {
+  const attendingCount = home.upcomingMoments.filter(
+    (event) => event.viewerContext === 'attending'
+  ).length;
+
+  if (!home.summary.attendanceVisibilityEnabled && attendingCount > 0) {
+    return 'Enable visibility so attendees can find you.';
+  }
+
+  return null;
+}
+
+function getCommunityLoadErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message) {
+      return message;
+    }
+  }
+
+  return 'The event networking view could not be loaded right now.';
+}
 
 export default function CommunityScreen() {
-  const [data, setData] = useState<MobileCommunityHome | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { tokens } = useAppTheme();
+  const requestSequenceRef = useRef(0);
+  const hasLoadedRef = useRef(false);
+  const homeRef = useRef<MobileCommunityHome | null>(null);
+
+  const [home, setHome] = useState<MobileCommunityHome | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [activeLens, setActiveLens] = useState<NetworkLens>('for_you');
+  const deferredSearch = useDeferredValue(searchText);
+  const normalizedSearch = normalizeSearch(deferredSearch);
 
   const loadCommunity = useCallback(
-    async (mode: 'initial' | 'refresh' = 'initial') => {
+    async (mode: LoadMode = 'initial') => {
+      const requestId = ++requestSequenceRef.current;
+      const existingHome = homeRef.current;
+
       if (mode === 'refresh') {
         setRefreshing(true);
-      } else {
+      } else if (!existingHome) {
         setLoading(true);
       }
 
       try {
-        const nextData = await loadMobileCommunityHome();
-        setData(nextData);
+        const nextHome = await loadMobileCommunityHome();
+        if (requestId !== requestSequenceRef.current) {
+          return;
+        }
+
+        setHome(nextHome);
+        homeRef.current = nextHome;
         setError(null);
+        setInlineError(null);
       } catch (nextError) {
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : 'Unable to load community'
-        );
+        if (requestId !== requestSequenceRef.current) {
+          return;
+        }
+
+        const message = getCommunityLoadErrorMessage(nextError);
+        if (mode === 'refresh' || existingHome) {
+          setInlineError(message);
+        } else {
+          setError(message);
+        }
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId !== requestSequenceRef.current) {
+          return;
+        }
+
+        if (mode === 'refresh') {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
       }
     },
     []
@@ -55,321 +289,840 @@ export default function CommunityScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadCommunity();
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        void loadCommunity('initial');
+      } else {
+        void loadCommunity('refresh');
+      }
     }, [loadCommunity])
   );
 
-  if (loading && !data) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="loading"
-              title="Loading community"
-              description="Pulling the latest circle conversations and upcoming moments."
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
+  const filteredSpeakers = useMemo(() => {
+    if (!home) {
+      return [];
+    }
 
-  if (error && !data) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="error"
-              title="Community unavailable"
-              description={error}
-              onRetry={() => {
-                void loadCommunity();
-              }}
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+    const hasUpcomingSpeakers = home.upcomingMoments.some(
+      (event) => (event.speakerPreview?.length ?? 0) > 0
     );
-  }
+    const baseSurfaces = hasUpcomingSpeakers
+      ? buildSpeakerSurfaces(
+          home.upcomingMoments.filter((event) => matchesEventLens(event, activeLens))
+        )
+      : buildSpeakerMatchSurfaces(home.speakerMatches);
 
-  const header = data?.header ?? {
-    eyebrow: 'Community',
-    title: 'Stay close to your circles',
-    subtitle: 'Recent conversations and upcoming moments',
-  };
+    return baseSurfaces.filter((item) => matchesSpeakerSearch(item, normalizedSearch));
+  }, [activeLens, home, normalizedSearch]);
+
+  const speakerSectionMode = useMemo(() => {
+    if (!home) {
+      return 'empty' as const;
+    }
+
+    if (home.upcomingMoments.some((event) => (event.speakerPreview?.length ?? 0) > 0)) {
+      return 'upcoming' as const;
+    }
+
+    if ((home.speakerMatches?.length ?? 0) > 0) {
+      return 'matched' as const;
+    }
+
+    return 'empty' as const;
+  }, [home]);
+
+  const filteredFollowUps = useMemo(() => {
+    if (!home) {
+      return [];
+    }
+
+    return home.followUpNow.filter((person) =>
+      matchesPersonSearch(person, normalizedSearch)
+    );
+  }, [home, normalizedSearch]);
+
+  const filteredPeopleToMeet = useMemo(() => {
+    if (!home) {
+      return [];
+    }
+
+    return home.peopleToMeet.filter(
+      (person) =>
+        matchesMeetLens(person, activeLens) &&
+        matchesPersonSearch(person, normalizedSearch)
+    );
+  }, [activeLens, home, normalizedSearch]);
+
+  const filteredEvents = useMemo(() => {
+    if (!home) {
+      return [];
+    }
+
+    return home.upcomingMoments.filter(
+      (event) =>
+        matchesEventLens(event, activeLens) &&
+        matchesEventSearch(event, normalizedSearch)
+    );
+  }, [activeLens, home, normalizedSearch]);
+
+  const visibilityMessage = home ? getVisibilityMessage(home) : null;
+  const attendingEvents = filteredEvents.filter(
+    (event) => event.viewerContext === 'attending'
+  );
+  const savedEvents = filteredEvents.filter((event) => event.viewerContext === 'saved');
+
+  async function handleToggleFollow(
+    userId: string,
+    username: string,
+    isFollowing: boolean
+  ) {
+    setPendingUserId(userId);
+
+    try {
+      if (isFollowing) {
+        await unfollowMobileUser(userId);
+      } else {
+        await followMobileUser(userId);
+      }
+
+      await loadCommunity('refresh');
+    } catch (nextError) {
+      Alert.alert(
+        isFollowing ? 'Disconnect failed' : 'Connect failed',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to update connection status.'
+      );
+    } finally {
+      setPendingUserId((current) => (current === userId ? null : current));
+    }
+  }
 
   return (
-    <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                void loadCommunity('refresh');
-              }}
-              tintColor="#2dd4bf"
+    <MobilePage
+      headerHidden
+      showAccentGlow={false}
+      title="Network"
+    >
+      <View style={styles.contentWrap}>
+        {loading && !home ? (
+          <ScreenState
+            mode="loading"
+            title="Loading network"
+            description="Pulling the people and events around your current calendar."
+          />
+        ) : null}
+
+        {error && !home ? (
+          <ScreenState
+            mode="error"
+            title="Network unavailable"
+            description={error}
+            action={
+              <KureButton
+                disabled={loading}
+                onPress={() => {
+                  void loadCommunity('initial');
+                }}
+              >
+                {loading ? 'Retrying...' : 'Try again'}
+              </KureButton>
+            }
+          />
+        ) : null}
+
+        {home ? (
+          <>
+            <NetworkToolbar
+              value={searchText}
+              onChangeText={setSearchText}
+              onOpenSettings={() => router.push('/settings?focus=visibility')}
             />
-          }
-        >
-          <View style={styles.hero}>
-            <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-            <Text style={styles.title}>{header.title}</Text>
-            {header.subtitle ? (
-              <Text style={styles.subtitle}>{header.subtitle}</Text>
-            ) : null}
-          </View>
 
-          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.lensRow}
+            >
+              {NETWORK_LENSES.map((lens) => (
+                <LensChip
+                  key={lens.id}
+                  active={activeLens === lens.id}
+                  label={lens.label}
+                  onPress={() => setActiveLens(lens.id)}
+                />
+              ))}
+            </ScrollView>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Circles</Text>
-              <Text style={styles.sectionTitle}>Your rooms</Text>
-            </View>
-
-            {data?.circles.length ? (
-              <View style={styles.stack}>
-                {data.circles.map((circle) => (
-                  <Pressable
-                    key={circle.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../community/[slug]',
-                        params: { slug: circle.slug },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.circleCard,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
-                    <View style={styles.circleHeader}>
-                      <Text style={styles.circleName}>{circle.name}</Text>
-                      {circle.isJoined ? (
-                        <View style={styles.joinedPill}>
-                          <Text style={styles.joinedLabel}>Joined</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.circleDescription}>{circle.description}</Text>
-                    <Text style={styles.circleMeta}>
-                      {formatCompactCount(circle.memberCount)} members
-                    </Text>
-                  </Pressable>
-                ))}
+            {inlineError ? (
+              <View
+                style={[
+                  styles.inlineError,
+                  {
+                    backgroundColor: tokens.colors.surfaceMuted,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.md,
+                  },
+                ]}
+              >
+                <FontAwesome
+                  name="warning"
+                  size={13}
+                  color={tokens.colors.warning}
+                />
+                <Text
+                  style={{
+                    color: tokens.colors.textSecondary,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    fontWeight: '600',
+                  }}
+                >
+                  {inlineError}
+                </Text>
               </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No circles yet"
-                description="Join a circle to keep its conversations and event moments close."
-              />
-            )}
-          </View>
+            ) : null}
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Feed</Text>
-              <Text style={styles.sectionTitle}>Recent conversations</Text>
-            </View>
-
-            {data?.feed.length ? (
-              <View style={styles.stack}>
-                {data.feed.map((post) => (
-                  <CommunityFeedCard
-                    key={post.id}
-                    post={post}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../community/[slug]/post/[postId]',
-                        params: { slug: post.circle.slug, postId: post.id },
-                      })
-                    }
+            <SectionHeader
+              icon="calendar-check-o"
+              title="Events you're attending"
+              meta={
+                attendingEvents.length > 0
+                  ? `${formatCommunityTabCount(attendingEvents.length)} upcoming`
+                  : undefined
+              }
+            />
+            {attendingEvents.length > 0 ? (
+              <View style={styles.eventStack}>
+                {attendingEvents.map((event, index) => (
+                  <CommunityNetworkingEventCard
+                    key={event.id}
+                    event={event}
+                    featured={index === 0}
+                    onOpenEvent={() => router.push(`/event/${event.id}`)}
                   />
                 ))}
               </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No posts yet"
-                description="The newest circle threads will show up here once the community starts moving."
+            ) : home.summary.trackedUpcomingCount > 0 ? (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No attending events in this view'
+                    : 'No attending events yet'
+                }
               />
+            ) : (
+              <InlineSectionNote title="No attending events yet" />
             )}
-          </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Upcoming</Text>
-              <Text style={styles.sectionTitle}>Moments around your community</Text>
-            </View>
+            {visibilityMessage ? (
+              <VisibilityNotice
+                message={visibilityMessage}
+                onOpenSettings={() => router.push('/settings?focus=visibility')}
+              />
+            ) : null}
 
-            {data?.upcomingEvents.length ? (
-              <View style={styles.stack}>
-                {data.upcomingEvents.map((event) => (
-                  <Pressable
+            <SectionHeader
+              icon="calendar-o"
+              title="Saved events worth going to"
+              meta={
+                savedEvents.length > 0
+                  ? `${formatCommunityTabCount(savedEvents.length)} saved events`
+                  : undefined
+              }
+            />
+            {savedEvents.length > 0 ? (
+              <View style={styles.eventStack}>
+                {savedEvents.map((event, index) => (
+                  <CommunityNetworkingEventCard
                     key={event.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../event/[id]',
-                        params: { id: event.id },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.eventCard,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventMeta}>
-                      {formatCommunityRelativeTime(event.startTime)} •{' '}
-                      {event.location || event.format || 'Online'}
-                    </Text>
-                  </Pressable>
+                    event={event}
+                    featured={attendingEvents.length === 0 && index === 0}
+                    onOpenEvent={() => router.push(`/event/${event.id}`)}
+                  />
                 ))}
               </View>
+            ) : home.summary.trackedUpcomingCount > 0 ? (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No saved events in this view'
+                    : 'No saved events yet'
+                }
+              />
             ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No upcoming community moments"
-                description="Save a few events or join circles and upcoming moments will show here."
+              <SectionEmptyState
+                icon="calendar-o"
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No events in this view'
+                    : 'No saved events yet'
+                }
+                primaryAction={{
+                  label: 'Explore events',
+                  onPress: () => router.push('/discover'),
+                }}
               />
             )}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+
+            <SectionHeader
+              icon="users"
+              title="People you can meet"
+              meta={
+                filteredPeopleToMeet.length > 0
+                  ? `${formatCommunityTabCount(filteredPeopleToMeet.length)} people`
+                  : undefined
+              }
+            />
+            {filteredPeopleToMeet.length > 0 ? (
+              <View style={styles.stack}>
+                {filteredPeopleToMeet.map((person) => (
+                  <CommunityNetworkingPersonCard
+                    key={person.id}
+                    person={person}
+                    mode="meet"
+                    isFollowing={person.isInNetwork}
+                    isPending={pendingUserId === person.id}
+                    onToggleFollow={() =>
+                      handleToggleFollow(person.id, person.username, person.isInNetwork)
+                    }
+                    onOpenProfile={() => router.push(`/profile/${person.username}`)}
+                    onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+                  />
+                ))}
+              </View>
+            ) : home.summary.trackedUpcomingCount === 0 ? (
+              <InlineSectionNote title="No people yet" />
+            ) : (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No people in this view'
+                    : 'No attendee matches yet'
+                }
+              />
+            )}
+
+            <SectionHeader
+              icon="microphone"
+              title={
+                speakerSectionMode === 'matched'
+                  ? 'Speakers to know'
+                  : 'Speakers on upcoming events'
+              }
+              meta={
+                filteredSpeakers.length > 0
+                  ? `${formatCommunityTabCount(filteredSpeakers.length)} speakers`
+                  : undefined
+              }
+            />
+            {filteredSpeakers.length > 0 ? (
+              <View style={styles.stack}>
+                {filteredSpeakers.map((item) => (
+                  <CommunityNetworkingSpeakerCard
+                    key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}`}
+                    speaker={item.speaker}
+                    onOpenSpeaker={() => router.push(`/speaker/${item.speaker.id}`)}
+                  />
+                ))}
+              </View>
+            ) : speakerSectionMode === 'upcoming' ? (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No speakers in this view'
+                    : 'No speakers yet'
+                }
+              />
+            ) : (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 ? 'No speakers in this view' : 'No speakers yet'
+                }
+              />
+            )}
+
+            <SectionHeader
+              icon="refresh"
+              title="Follow up after events"
+              meta={
+                filteredFollowUps.length > 0
+                  ? `${formatCommunityTabCount(filteredFollowUps.length)} people`
+                  : undefined
+              }
+            />
+            {filteredFollowUps.length > 0 ? (
+              <View style={styles.stack}>
+                {filteredFollowUps.map((person) => (
+                  <CommunityNetworkingPersonCard
+                    key={person.id}
+                    person={person}
+                    mode="follow-up"
+                    isFollowing={person.isInNetwork}
+                    isPending={pendingUserId === person.id}
+                    onToggleFollow={() =>
+                      handleToggleFollow(person.id, person.username, person.isInNetwork)
+                    }
+                    onOpenProfile={() => router.push(`/profile/${person.username}`)}
+                    onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+                  />
+                ))}
+              </View>
+            ) : home.summary.trackedUpcomingCount === 0 ? (
+              <InlineSectionNote title="No follow-up yet" />
+            ) : (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0
+                    ? 'No follow-up in this view'
+                    : 'No follow-up yet'
+                }
+              />
+            )}
+          </>
+        ) : null}
+      </View>
+    </MobilePage>
+  );
+}
+
+function NetworkToolbar({
+  value,
+  onChangeText,
+  onOpenSettings,
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  onOpenSettings: () => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.toolbarRow}>
+      <View
+        style={[
+          styles.searchBar,
+          styles.searchBarExpanded,
+          {
+            backgroundColor: tokens.colors.surfaceStrong,
+            borderColor: tokens.colors.border,
+            borderRadius: tokens.radius.sm,
+          },
+        ]}
+      >
+        <FontAwesome name="search" size={15} color={tokens.colors.textTertiary} />
+        <TextInput
+          accessibilityLabel="Search network"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Search people, speakers, or events"
+          placeholderTextColor={tokens.colors.textTertiary}
+          returnKeyType="search"
+          selectionColor={tokens.colors.accent}
+          style={[
+            styles.searchInput,
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+        />
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open network settings"
+        onPress={onOpenSettings}
+        style={({ pressed }) => [
+          styles.toolbarAction,
+          {
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border,
+            borderRadius: tokens.radius.sm,
+          },
+          pressed && styles.pressed,
+        ]}
+      >
+        <FontAwesome name="gear" size={14} color={tokens.colors.textPrimary} />
+      </Pressable>
+    </View>
+  );
+}
+
+function LensChip({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.lensChip,
+        {
+          backgroundColor: active
+            ? tokens.colors.accentSoft
+            : tokens.colors.surfaceStrong,
+          borderColor: active ? tokens.colors.accent : tokens.colors.border,
+          borderRadius: tokens.radius.sm,
+        },
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text
+        style={{
+          color: active ? tokens.colors.accent : tokens.colors.textSecondary,
+          fontFamily: tokens.typography.sans,
+          fontSize: 12,
+          lineHeight: 16,
+          fontWeight: '800',
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function VisibilityNotice({
+  message,
+  onOpenSettings,
+}: {
+  message: string;
+  onOpenSettings: () => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.notice,
+        {
+          backgroundColor: tokens.colors.surfaceMuted,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.md,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.noticeIcon,
+          {
+            backgroundColor: tokens.colors.warning,
+            borderRadius: tokens.radius.pill,
+          },
+        ]}
+      >
+        <FontAwesome name="eye-slash" size={12} color={tokens.colors.textInverse} />
+      </View>
+      <View style={styles.noticeBody}>
+        <Text
+          style={{
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 13,
+            lineHeight: 19,
+            fontWeight: '600',
+          }}
+        >
+          {message}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open visibility settings"
+          onPress={onOpenSettings}
+          style={({ pressed }) => [
+            styles.noticeAction,
+            {
+              backgroundColor: tokens.colors.surface,
+              borderColor: tokens.colors.border,
+              borderRadius: tokens.radius.sm,
+            },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text
+            style={{
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+              fontSize: 12,
+              lineHeight: 16,
+              fontWeight: '800',
+            }}
+          >
+            Open settings
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function SectionHeader({
+  icon,
+  meta,
+  title,
+}: {
+  icon: keyof typeof FontAwesome.glyphMap;
+  meta?: string;
+  title: string;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitleWrap}>
+        <View
+          style={[
+            styles.sectionIcon,
+            {
+              backgroundColor: tokens.colors.accentSoft,
+              borderColor: tokens.colors.border,
+              borderRadius: tokens.radius.pill,
+            },
+          ]}
+        >
+          <FontAwesome name={icon} size={12} color={tokens.colors.accent} />
+        </View>
+        <Text
+          style={{
+            color: tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 16,
+            lineHeight: 20,
+            fontWeight: '800',
+          }}
+        >
+          {title}
+        </Text>
+      </View>
+      {meta ? (
+        <Text
+          style={{
+            color: tokens.colors.textTertiary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 11,
+            lineHeight: 16,
+            fontWeight: '700',
+          }}
+        >
+          {meta}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function SectionEmptyState({
+  icon,
+  primaryAction,
+  title,
+}: {
+  icon: keyof typeof FontAwesome.glyphMap;
+  primaryAction: { label: string; onPress: () => void };
+  title: string;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.emptyState,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.lg,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.emptyIcon,
+          {
+            backgroundColor: tokens.colors.surfaceMuted,
+            borderColor: tokens.colors.border,
+            borderRadius: tokens.radius.pill,
+          },
+        ]}
+      >
+        <FontAwesome name={icon} size={16} color={tokens.colors.textTertiary} />
+      </View>
+      <Text
+        style={{
+          color: tokens.colors.textPrimary,
+          fontFamily: tokens.typography.sans,
+          fontSize: 16,
+          lineHeight: 20,
+          fontWeight: '800',
+        }}
+      >
+        {title}
+      </Text>
+      <View style={styles.emptyAction}>
+        <KureButton onPress={primaryAction.onPress}>{primaryAction.label}</KureButton>
+      </View>
+    </View>
+  );
+}
+
+function InlineSectionNote({ title }: { title: string }) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.inlineNote}>
+      <Text
+        style={{
+          color: tokens.colors.textPrimary,
+          fontFamily: tokens.typography.sans,
+          fontSize: 15,
+          lineHeight: 20,
+          fontWeight: '800',
+        }}
+      >
+        {title}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cardPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
+  contentWrap: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    gap: 12,
   },
-  circleCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 22,
+  emptyAction: {
+    width: '100%',
+    maxWidth: 180,
+  },
+  emptyIcon: {
+    width: 42,
+    height: 42,
     borderWidth: 1,
-    gap: 10,
-    padding: 18,
-  },
-  circleDescription: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  circleHeader: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'center',
   },
-  circleMeta: {
-    color: '#64748b',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  circleName: {
-    color: '#f8fafc',
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  content: {
-    gap: 18,
-    padding: 22,
-  },
-  eventCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 22,
+  emptyState: {
+    padding: 20,
+    gap: 12,
+    alignItems: 'center',
     borderWidth: 1,
+  },
+  eventStack: {
     gap: 8,
-    padding: 18,
-  },
-  eventMeta: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  eventTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  eyebrow: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-  },
-  gradient: {
-    flex: 1,
-  },
-  hero: {
-    gap: 10,
   },
   inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  joinedLabel: {
-    color: '#ccfbf1',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  joinedPill: {
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: 'rgba(45, 212, 191, 0.3)',
-    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
-  safeArea: {
+  inlineNote: {
+    gap: 6,
+    paddingBottom: 4,
+  },
+  lensChip: {
+    minHeight: 30,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  lensRow: {
+    gap: 6,
+    paddingRight: 4,
+  },
+  notice: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  noticeAction: {
+    alignSelf: 'flex-start',
+    minHeight: 32,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  noticeBody: {
+    flex: 1,
+    gap: 10,
+  },
+  noticeIcon: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.84,
+  },
+  searchBar: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+  },
+  searchBarExpanded: {
     flex: 1,
   },
-  section: {
-    gap: 14,
-  },
-  sectionEyebrow: {
-    color: '#2dd4bf',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
+    paddingVertical: 0,
   },
   sectionHeader: {
-    gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingTop: 4,
   },
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 20,
-    fontWeight: '700',
+  sectionIcon: {
+    width: 24,
+    height: 24,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   stack: {
     gap: 14,
   },
-  stateWrap: {
-    flex: 1,
+  toolbarAction: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: 22,
   },
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  title: {
-    color: '#f8fafc',
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.8,
+  toolbarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

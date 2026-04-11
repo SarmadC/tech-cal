@@ -1,4 +1,5 @@
 import {
+  blockedUserSummarySchema,
   communityCommentDraftSchema,
   communityPostDraftSchema,
   communityReportSchema,
@@ -17,16 +18,20 @@ import {
   mobileEventDetailSchema,
   mobileEventEngagementSchema,
   mobileEventEngagementUpdateSchema,
+  mobileFollowStatusSchema,
   mobileOnboardingStatusSchema,
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
+  mobilePublicProfileSchema,
   mobileSavedEventsFeedSchema,
+  mobileSpeakerDetailSchema,
   revenueCatReconcileSchema,
   subscriptionOfferingSchema,
   type CommunityCommentDraft,
   type CommunityPostDraft,
   type CommunityReportInput,
   type CommunityVoteInput,
+  type BlockedUserSummary,
   type MobileCalendarFeed,
   type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
@@ -40,10 +45,13 @@ import {
   type MobileEventDetail,
   type MobileEventEngagement,
   type MobileEventEngagementUpdate,
+  type MobileFollowStatus,
   type MobileOnboardingStatus,
   type MobileProfileState,
   type MobileProfileUpdate,
+  type MobilePublicProfile,
   type MobileSavedEventsFeed,
+  type MobileSpeakerDetail,
   type NormalizedSubscription,
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
@@ -165,17 +173,13 @@ export async function loadMobileCalendarFeed(
   input: MobileCalendarFeedRequest = {}
 ): Promise<MobileCalendarFeed> {
   const payload = mobileCalendarFeedRequestSchema.parse(input);
-  const searchParams = new URLSearchParams();
-
-  if (payload.monthStart) {
-    searchParams.set('monthStart', payload.monthStart);
-  }
-
-  const search = searchParams.toString();
-
   return fetchMobileContract(
-    `/api/mobile/calendar${search ? `?${search}` : ''}`,
-    mobileCalendarFeedSchema
+    '/api/mobile/calendar',
+    mobileCalendarFeedSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
   );
 }
 
@@ -206,6 +210,71 @@ export async function loadMobileCommunityPost(
   return fetchMobileContract(
     `/api/mobile/community/posts/${encodeURIComponent(postId.trim())}`,
     mobileCommunityPostPageSchema
+  );
+}
+
+export async function loadMobilePublicProfile(
+  username: string
+): Promise<MobilePublicProfile> {
+  const trimmed = username.trim();
+  if (!trimmed) {
+    throw new Error('Username is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/profiles/${encodeURIComponent(trimmed)}`,
+    mobilePublicProfileSchema
+  );
+}
+
+export async function loadMobileFollowStatus(
+  userId: string
+): Promise<MobileFollowStatus> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/follows/status/${encodeURIComponent(trimmed)}`,
+    mobileFollowStatusSchema
+  );
+}
+
+export async function followMobileUser(userId: string): Promise<void> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  await fetchMobileEnvelope('/api/follows', {
+    method: 'POST',
+    body: JSON.stringify({ userId: trimmed }),
+  });
+}
+
+export async function unfollowMobileUser(userId: string): Promise<void> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  await fetchMobileEnvelope(`/api/follows/${encodeURIComponent(trimmed)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function loadMobileSpeakerDetail(
+  speakerId: string
+): Promise<MobileSpeakerDetail> {
+  const trimmed = speakerId.trim();
+  if (!trimmed) {
+    throw new Error('Speaker id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/speakers/${encodeURIComponent(trimmed)}`,
+    mobileSpeakerDetailSchema
   );
 }
 
@@ -290,6 +359,23 @@ export async function leaveMobileCommunityCircle(circleId: string): Promise<void
       method: 'DELETE',
     }
   );
+}
+
+export async function loadMobileBlockedUsers(): Promise<BlockedUserSummary[]> {
+  return fetchMobileContract('/api/blocks', blockedUserSummarySchema.array());
+}
+
+export async function blockMobileUser(blockedUserId: string): Promise<void> {
+  if (!blockedUserId.trim()) {
+    throw new Error('Blocked user id is required');
+  }
+
+  await fetchMobileEnvelope('/api/blocks', {
+    method: 'POST',
+    body: JSON.stringify({
+      blockedUserId: blockedUserId.trim(),
+    }),
+  });
 }
 
 export async function createMobileCommunityPost(

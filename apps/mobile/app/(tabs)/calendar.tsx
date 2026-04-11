@@ -1,427 +1,590 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
+  LayoutAnimation,
+  LayoutChangeEvent,
+  Platform,
   StyleSheet,
   Text,
+  UIManager,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   LocalCalendarDateKey,
   MobileCalendarFeed,
+  MobileCalendarFeedRequest,
 } from '@kurecal/domain';
 
-import { CalendarMonthGrid } from '../../src/components/CalendarMonthGrid';
-import { EventSummaryCard } from '../../src/components/EventSummaryCard';
-import { ScreenStateView } from '../../src/components/ScreenStateView';
+import { CalendarAgendaList } from '../../src/components/calendar/CalendarAgendaList';
 import {
-  formatDayHeading,
-  formatMonthLabel,
-  groupCalendarEventsByDate,
-  isDateInMonth,
-  resolveCurrentMonthStartKey,
+  CalendarFilterSheet,
+  type CalendarDraftFilters,
+} from '../../src/components/calendar/CalendarFilterSheet';
+import { CalendarMonthGrid } from '../../src/components/calendar/CalendarMonthGrid';
+import { CalendarQuickDatePicker } from '../../src/components/calendar/CalendarQuickDatePicker';
+import { CalendarToolbar } from '../../src/components/calendar/CalendarToolbar';
+import { ScreenState } from '../../src/components/chrome/ScreenState';
+import { useAuth } from '../../src/context/AuthProvider';
+import {
+  formatLocalDateKey,
+  formatMonthButtonLabel,
+  resolveDateInMonth,
   resolveMonthStartKey,
   resolvePreferredSelectedDate,
-  resolveTodayDateKey,
   shiftMonthKey,
 } from '../../src/lib/calendarDateUtils';
+import {
+  resolveCalendarRenderState,
+  resolveCalendarSheetState,
+} from '../../src/lib/calendarState';
 import { loadMobileCalendarFeed } from '../../src/lib/mobileApi';
+import { useAppTheme } from '../../src/providers/ThemeProvider';
 
-function MetricCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
+const DEFAULT_FILTERS: CalendarDraftFilters = {
+  tags: [],
+  location: '',
+  dateRange: {
+    start: null,
+    end: null,
+  },
+  cost: 'all',
+};
+
+function resolveDefaultSelectedDate() {
+  return formatLocalDateKey(new Date());
+}
+
+function resolveDefaultVisibleMonth() {
+  return resolveMonthStartKey(new Date());
+}
+
+function buildRequest(
+  monthStart: LocalCalendarDateKey,
+  filters: CalendarDraftFilters
+): MobileCalendarFeedRequest {
+  return {
+    monthStart,
+    tags: filters.tags,
+    location: filters.location.trim() || null,
+    dateRange: filters.dateRange,
+    cost: filters.cost,
+  };
+}
+
+function cloneFilters(filters: CalendarDraftFilters): CalendarDraftFilters {
+  return {
+    tags: [...filters.tags],
+    location: filters.location,
+    dateRange: {
+      start: filters.dateRange.start,
+      end: filters.dateRange.end,
+    },
+    cost: filters.cost,
+  };
+}
+
+function countActiveFilters(filters: CalendarDraftFilters) {
+  let count = 0;
+
+  if (filters.tags.length > 0) count += 1;
+  if (filters.location.trim()) count += 1;
+  if (filters.dateRange.start || filters.dateRange.end) count += 1;
+  if (filters.cost !== 'all') count += 1;
+
+  return count;
 }
 
 export default function CalendarScreen() {
-  const [monthStart, setMonthStart] = useState<LocalCalendarDateKey>(
-    resolveCurrentMonthStartKey()
+  const { profile } = useAuth();
+  const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const [visibleMonthStart, setVisibleMonthStart] = useState<LocalCalendarDateKey>(
+    () => resolveDefaultVisibleMonth()
+  );
+  const [selectedDate, setSelectedDate] = useState<LocalCalendarDateKey | null>(
+    () => resolveDefaultSelectedDate()
+  );
+  const [isCalendarCollapsed, setIsCalendarCollapsed] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState<number | null>(null);
+  const [filters, setFilters] = useState<CalendarDraftFilters>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<CalendarDraftFilters>(
+    DEFAULT_FILTERS
   );
   const [feed, setFeed] = useState<MobileCalendarFeed | null>(null);
-  const [selectedDate, setSelectedDate] = useState<LocalCalendarDateKey | null>(
-    null
-  );
+  const [previewFeed, setPreviewFeed] = useState<MobileCalendarFeed | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const hasLoadedRef = useRef(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const requestSequenceRef = useRef(0);
 
-  const loadCalendar = useCallback(
-    async (
-      targetMonthStart: LocalCalendarDateKey,
-      mode: 'initial' | 'refresh' = 'initial'
-    ) => {
-      if (mode === 'refresh') {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+  useEffect(() => {
+    if (
+      Platform.OS === 'android' &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  const appliedRequest = useMemo(
+    () => buildRequest(visibleMonthStart, filters),
+    [filters, visibleMonthStart]
+  );
+  const previewRequest = useMemo(
+    () => buildRequest(visibleMonthStart, draftFilters),
+    [draftFilters, visibleMonthStart]
+  );
+
+  async function runCalendarRequest(
+    request: MobileCalendarFeedRequest,
+    mode: 'initial' | 'refresh' = 'initial'
+  ) {
+    const requestSequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestSequence;
+
+    if (mode === 'refresh') {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const nextFeed = await loadMobileCalendarFeed(request);
+
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
       }
 
-      try {
-        const nextFeed = await loadMobileCalendarFeed({
-          monthStart: targetMonthStart,
-        });
-
-        setFeed(nextFeed);
-        setSelectedDate((current) =>
-          resolvePreferredSelectedDate(nextFeed, current)
-        );
-        setError(null);
-      } catch (nextError) {
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : 'Unable to load the mobile calendar'
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+      setFeed(nextFeed);
+      setSelectedDate((current) => resolvePreferredSelectedDate(nextFeed, current));
+      setError(null);
+    } catch (nextError) {
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
       }
-    },
-    []
-  );
 
-  useFocusEffect(
-    useCallback(() => {
-      const mode = hasLoadedRef.current ? 'refresh' : 'initial';
-      hasLoadedRef.current = true;
-      void loadCalendar(monthStart, mode);
-    }, [loadCalendar, monthStart])
-  );
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to load calendar'
+      );
+    } finally {
+      if (requestSequence !== requestSequenceRef.current) {
+        return;
+      }
 
-  const eventsByDate = useMemo(
-    () => groupCalendarEventsByDate(feed?.events ?? []),
-    [feed?.events]
-  );
-  const activeDate = selectedDate ?? feed?.month.monthStart ?? monthStart;
-  const selectedEvents = activeDate ? eventsByDate.get(activeDate) ?? [] : [];
-
-  function changeMonth(offset: number) {
-    setMonthStart((current) => shiftMonthKey(current, offset));
-  }
-
-  function jumpToToday() {
-    const today = resolveTodayDateKey();
-    setSelectedDate(today);
-    setMonthStart(resolveMonthStartKey(today));
-  }
-
-  function handleSelectDate(dateKey: LocalCalendarDateKey) {
-    setSelectedDate(dateKey);
-
-    const activeMonthStart = feed?.month.monthStart ?? monthStart;
-    if (!isDateInMonth(dateKey, activeMonthStart)) {
-      setMonthStart(resolveMonthStartKey(dateKey));
+      setLoading(false);
+      setRefreshing(false);
     }
   }
 
-  if (loading && !feed) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="loading"
-              title="Loading calendar"
-              description="Building your month view from upcoming and tracked events."
-            />
+  useEffect(() => {
+    void runCalendarRequest(appliedRequest);
+  }, [appliedRequest]);
+
+  useEffect(() => {
+    if (!isFilterOpen) {
+      setPreviewFeed(null);
+      setPreviewError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+
+    void loadMobileCalendarFeed(previewRequest)
+      .then((nextFeed) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPreviewFeed(nextFeed);
+        setPreviewError(null);
+      })
+      .catch((nextError) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPreviewFeed(null);
+        setPreviewError(
+          nextError instanceof Error
+            ? nextError.message
+            : 'Unable to preview calendar'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isFilterOpen, previewRequest]);
+
+  const { activeSheetFeed, disableApply, previewResultCount } = useMemo(
+    () =>
+      resolveCalendarSheetState({
+        feed,
+        previewFeed,
+        previewError,
+      }),
+    [feed, previewError, previewFeed]
+  );
+  const { inlineError, showAgenda, showFatalError, showInitialLoading } = useMemo(
+    () =>
+      resolveCalendarRenderState({
+        error,
+        feed,
+        loading,
+      }),
+    [error, feed, loading]
+  );
+  const activeFilterCount = countActiveFilters(filters);
+  const draftActiveFilterCount = countActiveFilters(draftFilters);
+  const eventTypeColors = useMemo(
+    () =>
+      Object.fromEntries(
+        (feed?.availableFilters.eventTypes ?? []).map((eventType) => [
+          eventType.id,
+          eventType.color,
+        ])
+      ),
+    [feed?.availableFilters.eventTypes]
+  );
+  const headerOffset = (headerHeight ?? insets.top + 80) + 6;
+  const agendaHeader =
+    inlineError || !isCalendarCollapsed ? (
+      <View style={styles.agendaHeaderStack}>
+        {inlineError ? (
+          <View
+            style={[
+              styles.inlineErrorBanner,
+              {
+                backgroundColor: tokens.colors.discoverToolbar,
+                borderColor: tokens.colors.warning,
+              },
+            ]}
+          >
+            <View style={styles.inlineErrorCopy}>
+              <View
+                style={[
+                  styles.inlineErrorDot,
+                  { backgroundColor: tokens.colors.warning },
+                ]}
+              />
+              <View style={styles.inlineErrorTextWrap}>
+                <Text
+                  style={[
+                    styles.inlineErrorTitle,
+                    {
+                      color: tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
+                >
+                  Calendar refresh failed
+                </Text>
+                <Text
+                  style={[
+                    styles.inlineErrorDescription,
+                    {
+                      color: tokens.colors.discoverTextSoft,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
+                >
+                  {inlineError}
+                </Text>
+              </View>
+            </View>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
+        ) : null}
+
+        {!isCalendarCollapsed ? (
+          <CalendarMonthGrid
+            monthStart={feed?.month.monthStart ?? visibleMonthStart}
+            selectedDate={selectedDate}
+            events={feed?.events ?? []}
+            eventTypeColors={eventTypeColors}
+            onSelectDate={selectDate}
+            onJumpToDate={jumpToDate}
+            onChangeMonth={changeVisibleMonth}
+          />
+        ) : null}
+      </View>
+    ) : null;
+
+  function toggleCalendarCollapse() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsCalendarCollapsed((current) => !current);
   }
 
-  if (error && !feed) {
-    return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="error"
-              title="Calendar unavailable"
-              description={error}
-              onRetry={() => {
-                void loadCalendar(monthStart);
-              }}
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
+  function handleHeaderLayout(event: LayoutChangeEvent) {
+    const nextHeight = event.nativeEvent.layout.height;
+
+    if (Math.abs((headerHeight ?? 0) - nextHeight) > 1) {
+      setHeaderHeight(nextHeight);
+    }
   }
 
-  const header = feed?.header ?? {
-    eyebrow: 'Calendar',
-    title: 'Plan your month',
-    subtitle: 'A month-first view for your tracked and upcoming events',
-  };
-  const monthLabel = feed?.month.label ?? formatMonthLabel(monthStart);
+  function changeVisibleMonth(offset: number) {
+    const nextMonthStart = shiftMonthKey(visibleMonthStart, offset);
+    setVisibleMonthStart(nextMonthStart);
+    setSelectedDate((current) => resolveDateInMonth(current, nextMonthStart));
+  }
+
+  function jumpToDate(dateKey: LocalCalendarDateKey) {
+    const nextMonthStart = resolveMonthStartKey(dateKey);
+    setVisibleMonthStart(nextMonthStart);
+    setSelectedDate(dateKey);
+    setIsCalendarCollapsed(true);
+  }
+
+  function selectDate(dateKey: LocalCalendarDateKey) {
+    setSelectedDate(dateKey);
+  }
+
+  function openFilters() {
+    setDraftFilters(cloneFilters(filters));
+    setIsFilterOpen(true);
+  }
+
+  function resetFilters() {
+    startTransition(() => {
+      setFilters(DEFAULT_FILTERS);
+      setDraftFilters(DEFAULT_FILTERS);
+    });
+  }
+
+  function applyFilters() {
+    startTransition(() => {
+      setFilters({
+        ...draftFilters,
+        location: draftFilters.location.trim(),
+      });
+    });
+    setIsFilterOpen(false);
+  }
 
   return (
-    <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                void loadCalendar(monthStart, 'refresh');
-              }}
-              tintColor="#2dd4bf"
-            />
-          }
+    <>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: tokens.colors.discoverShell }]}
+        edges={['left', 'right']}
+      >
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: tokens.colors.discoverShell },
+          ]}
+        />
+
+        <View
+          onLayout={handleHeaderLayout}
+          style={[
+            styles.headerWrap,
+            {
+              backgroundColor: tokens.colors.discoverHeader,
+              borderBottomColor: tokens.colors.discoverToolbarBorderStrong,
+              paddingTop: insets.top + 8,
+              paddingBottom: 8,
+            },
+          ]}
         >
-          <View style={styles.hero}>
-            <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-            <Text style={styles.title}>{header.title}</Text>
-            <Text style={styles.subtitle}>{header.subtitle ?? monthLabel}</Text>
-            <Text style={styles.monthLabel}>{monthLabel}</Text>
-          </View>
-
-          <View style={styles.metricsRow}>
-            <MetricCard label="Events" value={feed?.metrics.totalCount ?? 0} />
-            <MetricCard label="Saved" value={feed?.metrics.savedCount ?? 0} />
-            <MetricCard
-              label="Attending"
-              value={feed?.metrics.attendingCount ?? 0}
+          <View style={styles.headerInner}>
+            <CalendarToolbar
+              monthLabel={formatMonthButtonLabel(
+                feed?.month.monthStart ?? visibleMonthStart
+              )}
+              isCollapsed={isCalendarCollapsed}
+              activeFilterCount={activeFilterCount}
+              onToggleCalendar={toggleCalendarCollapse}
+              onOpenMonthPicker={() => setIsMonthPickerOpen(true)}
+              onOpenFilters={openFilters}
             />
           </View>
+        </View>
 
-          <View style={styles.navigationRow}>
-            <Pressable
-              onPress={() => changeMonth(-1)}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                pressed ? styles.secondaryActionPressed : null,
-              ]}
-            >
-              <Text style={styles.secondaryActionLabel}>Previous</Text>
-            </Pressable>
-            <Pressable
-              onPress={jumpToToday}
-              style={({ pressed }) => [
-                styles.primaryAction,
-                pressed ? styles.primaryActionPressed : null,
-              ]}
-            >
-              <Text style={styles.primaryActionLabel}>Today</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => changeMonth(1)}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                pressed ? styles.secondaryActionPressed : null,
-              ]}
-            >
-              <Text style={styles.secondaryActionLabel}>Next</Text>
-            </Pressable>
-          </View>
-
-          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Month view</Text>
-              <Text style={styles.sectionTitle}>{monthLabel}</Text>
-            </View>
-            <CalendarMonthGrid
-              days={feed?.days ?? []}
-              selectedDate={activeDate}
-              onSelectDate={handleSelectDate}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Agenda</Text>
-              <Text style={styles.sectionTitle}>
-                {formatDayHeading(activeDate)}
-              </Text>
-            </View>
-
-            {selectedEvents.length > 0 ? (
-              <View style={styles.agendaStack}>
-                {selectedEvents.map((event) => (
-                  <EventSummaryCard
-                    key={event.id}
-                    event={event}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../event/[id]',
-                        params: { id: event.id },
-                      })
-                    }
-                  />
-                ))}
-              </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No events on this day"
-                description="Choose another day in the grid or explore Discover to save more events into your month."
+        {showInitialLoading ? (
+          <View
+            style={[
+              styles.stateWrap,
+              {
+                marginTop: headerOffset,
+                paddingBottom: tokens.spacing.tabBarBottom,
+              },
+            ]}
+          >
+            <View style={styles.stateInner}>
+              <ScreenState
+                mode="loading"
+                title="Loading calendar"
+                description="Preparing the month view and agenda."
+                variant="plain"
+                fullHeight
               />
-            )}
+            </View>
           </View>
-        </ScrollView>
+        ) : null}
+
+        {showFatalError ? (
+          <View
+            style={[
+              styles.stateWrap,
+              {
+                marginTop: headerOffset,
+                paddingBottom: tokens.spacing.tabBarBottom,
+              },
+            ]}
+          >
+            <View style={styles.stateInner}>
+              <ScreenState
+                mode="error"
+                title="Calendar unavailable"
+                description={error ?? undefined}
+                variant="discover"
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {showAgenda ? (
+          <CalendarAgendaList
+            events={feed?.events ?? []}
+            monthStart={feed?.month.monthStart ?? visibleMonthStart}
+            selectedDate={selectedDate}
+            onPressEvent={(eventId) => router.push(`/event/${eventId}`)}
+            header={agendaHeader}
+            emptyState={
+              feed ? (
+                <ScreenState
+                  mode="empty"
+                  title={feed.emptyState.title}
+                  description={
+                    feed.emptyState.body ??
+                    feed.emptyState.description ??
+                    'Try another month.'
+                  }
+                  variant="discover"
+                />
+              ) : null
+            }
+            refreshing={refreshing}
+            onRefresh={() => {
+              void runCalendarRequest(appliedRequest, 'refresh');
+            }}
+            topInset={headerOffset}
+            bottomInset={tokens.spacing.tabBarBottom}
+          />
+        ) : null}
       </SafeAreaView>
-    </LinearGradient>
+
+      <CalendarFilterSheet
+        visible={isFilterOpen}
+        value={draftFilters}
+        tags={activeSheetFeed?.availableFilters.tags ?? []}
+        counts={
+          activeSheetFeed?.counts ?? {
+            cost: {
+              free: 0,
+              paid: 0,
+            },
+            tags: {},
+          }
+        }
+        resultCount={previewResultCount}
+        activeFilterCount={draftActiveFilterCount}
+        profileTimezone={profile?.profile.timezone ?? null}
+        isPreviewLoading={previewLoading}
+        previewError={previewError}
+        disableApply={disableApply}
+        onChange={setDraftFilters}
+        onApply={applyFilters}
+        onClose={() => setIsFilterOpen(false)}
+        onReset={resetFilters}
+      />
+
+      <CalendarQuickDatePicker
+        mode="single"
+        visible={isMonthPickerOpen}
+        value={selectedDate}
+        onApply={(dateKey) => jumpToDate(dateKey ?? resolveDefaultSelectedDate())}
+        onClose={() => setIsMonthPickerOpen(false)}
+        title="Jump to date"
+        applyLabel="Go to date"
+        clearLabel="Today"
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  agendaStack: {
-    gap: 14,
-  },
-  content: {
-    gap: 18,
-    padding: 22,
-  },
-  eyebrow: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-  },
-  gradient: {
-    flex: 1,
-  },
-  hero: {
-    gap: 10,
-  },
-  inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  metricCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 20,
-    borderWidth: 1,
-    flex: 1,
-    gap: 6,
-    padding: 16,
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  metricValue: {
-    color: '#f8fafc',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  monthLabel: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  navigationRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  primaryAction: {
-    alignItems: 'center',
-    backgroundColor: '#2dd4bf',
-    borderRadius: 18,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 16,
-  },
-  primaryActionLabel: {
-    color: '#042f2e',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  primaryActionPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
-  },
   safeArea: {
     flex: 1,
   },
-  secondaryAction: {
-    alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderRadius: 18,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
+  headerWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
     paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  secondaryActionLabel: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  secondaryActionPressed: {
-    opacity: 0.88,
-  },
-  section: {
-    gap: 14,
-  },
-  sectionCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.66)',
-    borderColor: 'rgba(148, 163, 184, 0.1)',
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 16,
-    padding: 18,
-  },
-  sectionEyebrow: {
-    color: '#2dd4bf',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  sectionHeader: {
-    gap: 6,
-  },
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 20,
-    fontWeight: '700',
+  headerInner: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
   },
   stateWrap: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 22,
+    paddingHorizontal: 16,
   },
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
+  stateInner: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
   },
-  title: {
-    color: '#f8fafc',
-    fontSize: 32,
+  agendaHeaderStack: {
+    gap: 14,
+  },
+  inlineErrorBanner: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  inlineErrorCopy: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  inlineErrorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    marginTop: 6,
+  },
+  inlineErrorTextWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  inlineErrorTitle: {
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: -0.8,
+  },
+  inlineErrorDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });
