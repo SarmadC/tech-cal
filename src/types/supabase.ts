@@ -1258,6 +1258,189 @@ export type Database = {
           },
         ]
       }
+      event_networking_summary: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          last_outreach_logged_at: string | null
+          linkedin_requests_sent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          last_outreach_logged_at?: string | null
+          linkedin_requests_sent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          last_outreach_logged_at?: string | null
+          linkedin_requests_sent?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_networking_summary_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_networking_summary_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_networking_summary_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_networking_summary_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_networking_summary_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_networking_summary_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_networking_contacts: {
+        Row: {
+          confirmed_connected_at: string | null
+          created_at: string
+          id: string
+          linkedin_requested_at: string | null
+          source_event_id: string | null
+          target_kind: string
+          target_speaker_id: string | null
+          target_user_id: string | null
+          updated_at: string
+          viewer_user_id: string
+        }
+        Insert: {
+          confirmed_connected_at?: string | null
+          created_at?: string
+          id?: string
+          linkedin_requested_at?: string | null
+          source_event_id?: string | null
+          target_kind: string
+          target_speaker_id?: string | null
+          target_user_id?: string | null
+          updated_at?: string
+          viewer_user_id: string
+        }
+        Update: {
+          confirmed_connected_at?: string | null
+          created_at?: string
+          id?: string
+          linkedin_requested_at?: string | null
+          source_event_id?: string | null
+          target_kind?: string
+          target_speaker_id?: string | null
+          target_user_id?: string | null
+          updated_at?: string
+          viewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_networking_contacts_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_target_speaker_id_fkey"
+            columns: ["target_speaker_id"]
+            isOneToOne: false
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_viewer_user_id_fkey"
+            columns: ["viewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_viewer_user_id_fkey"
+            columns: ["viewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_networking_contacts_viewer_user_id_fkey"
+            columns: ["viewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       event_field_edits: {
         Row: {
           created_at: string

@@ -13,6 +13,7 @@ type SpeakerPreview = NonNullable<
 interface CommunityNetworkingSpeakerCardProps {
   speaker: SpeakerPreview;
   onOpenSpeaker?: () => void;
+  onOpenExternalLink?: (label: string, url: string) => void;
 }
 
 function getSpeakerHeadline(speaker: SpeakerPreview): string {
@@ -57,6 +58,7 @@ function getExternalAction(speaker: SpeakerPreview): {
 
 export function CommunityNetworkingSpeakerCard({
   onOpenSpeaker,
+  onOpenExternalLink,
   speaker,
 }: CommunityNetworkingSpeakerCardProps) {
   const { tokens } = useAppTheme();
@@ -127,6 +129,11 @@ export function CommunityNetworkingSpeakerCard({
           accessibilityLabel={`Open ${speaker.name} ${externalAction.label}`}
           accessibilityRole="button"
           onPress={() => {
+            if (onOpenExternalLink) {
+              onOpenExternalLink(externalAction.label, externalAction.url);
+              return;
+            }
+
             void Linking.openURL(externalAction.url);
           }}
           style={({ pressed }) => [

@@ -13,10 +13,16 @@ export function DashboardNetworkPulseCard({
   networkPulse,
   speakerMatches = [],
   onOpenSpeaker,
+  onOpenPendingContact,
 }: {
   networkPulse: MobileDashboardNetworkPulse;
   speakerMatches?: MobileCommunityNetworkingSpeakerMatch[];
-  onOpenSpeaker?: (speakerId: string) => void;
+  onOpenSpeaker?: (
+    speakerId: string,
+    eventId?: string,
+    eventTitle?: string
+  ) => void;
+  onOpenPendingContact?: () => void;
 }) {
   const { tokens, resolvedTheme } = useAppTheme();
   const cardFill =
@@ -24,18 +30,43 @@ export function DashboardNetworkPulseCard({
       ? '#D8F1E4'
       : 'rgba(13, 34, 24, 0.98)';
   const totalConnectionsLabel = `connection${
-    networkPulse.totalConnectionsMade === 1 ? '' : 's'
+    networkPulse.confirmedConnectionCount === 1 ? '' : 's'
   }`;
   const visibleSpeakerMatches = speakerMatches.slice(0, 3);
-  const footerText = visibleSpeakerMatches.length > 0
-    ? `${visibleSpeakerMatches.length} speaker connection${
+  const stateLabel =
+    networkPulse.pendingRequestCount > 0 &&
+    networkPulse.confirmedConnectionCount === 0
+      ? 'Requests pending'
+      : networkPulse.confirmedConnectionCount === 0
+      ? 'No momentum yet'
+      : networkPulse.pendingRequestCount > 0
+        ? 'Follow up now'
+        : networkPulse.confirmedConnectionCount >= 3
+          ? 'Connections growing'
+          : 'Building momentum';
+  const footerText = networkPulse.nextContactToConfirm
+    ? `Confirm with ${networkPulse.nextContactToConfirm.name}`
+    : visibleSpeakerMatches.length > 0
+    ? `${visibleSpeakerMatches.length} speaker intro${
         visibleSpeakerMatches.length === 1 ? '' : 's'
-      } to explore on LinkedIn.`
-    : networkPulse.topConnectingEvent
-    ? `Best event: ${networkPulse.topConnectingEvent?.title ?? ''} · ${
-        networkPulse.topConnectingEvent?.connectionsMade ?? 0
-      } ${networkPulse.topConnectingEvent?.connectionsMade === 1 ? 'connection' : 'connections'}`
-    : 'Attend + log 1 event to unlock networking insights.';
+      } ready`
+    : 'Open a speaker or profile to start tracking connections';
+  const footerMeta = networkPulse.nextContactToConfirm
+    ? networkPulse.nextContactToConfirm.sourceEvent?.title
+      ? `Requested after ${networkPulse.nextContactToConfirm.sourceEvent.title}`
+      : networkPulse.nextContactToConfirm.kind === 'speaker'
+        ? 'Speaker request still pending'
+        : 'Profile request still pending'
+    : visibleSpeakerMatches.length > 0
+    ? 'Recommended from your event graph'
+    : 'Requests and confirmed connections update this card';
+  const insightSurfaceColor =
+    resolvedTheme === 'light' ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.05)';
+  const chipBackgroundColor =
+    resolvedTheme === 'light' ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.08)';
+  const chipBorderColor =
+    resolvedTheme === 'light' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(52, 211, 153, 0.16)';
+  const glyphActiveColor = resolvedTheme === 'light' ? '#059669' : '#34D399';
 
   return (
     <DashboardCard surfaceColors={[cardFill, cardFill]}>
@@ -53,62 +84,90 @@ export function DashboardNetworkPulseCard({
           style={[
             styles.ratioBadge,
             {
-              backgroundColor: 'rgba(16, 185, 129, 0.14)',
-              borderColor: 'rgba(16, 185, 129, 0.24)',
+              backgroundColor: chipBackgroundColor,
+              borderColor: chipBorderColor,
             },
           ]}
         >
           <Text
             style={[
               styles.ratioText,
-              { color: '#059669', fontFamily: tokens.typography.sans },
+              { color: glyphActiveColor, fontFamily: tokens.typography.sans },
             ]}
           >
-            {networkPulse.networkingEventRatio}% networking
+            {stateLabel}
           </Text>
         </View>
       </View>
 
-      <View style={styles.heroMetricBlock}>
-        <View style={styles.heroMetricRow}>
+      <View style={styles.heroSection}>
+        <View style={styles.heroMetricBlock}>
+          <View style={styles.heroMetricRow}>
+            <Text
+              style={[
+                styles.heroValue,
+                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              ]}
+            >
+              {networkPulse.confirmedConnectionCount}
+            </Text>
+            <Text
+              style={[
+                styles.heroLabel,
+                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              ]}
+            >
+              {totalConnectionsLabel}
+            </Text>
+          </View>
           <Text
             style={[
-              styles.heroValue,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              styles.heroMeta,
+              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
             ]}
           >
-            {networkPulse.totalConnectionsMade}
-          </Text>
-          <Text
-            style={[
-              styles.heroLabel,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
-            ]}
-          >
-            {totalConnectionsLabel}
+            {networkPulse.pendingRequestCount > 0
+              ? `${networkPulse.pendingRequestCount} request${
+                  networkPulse.pendingRequestCount === 1 ? '' : 's'
+                } pending`
+              : networkPulse.confirmedConnectionCount > 0
+                ? 'Confirmed relationships tracked here'
+                : 'No confirmed connections yet'}
           </Text>
         </View>
-        <Text
-          style={[
-            styles.heroMeta,
-            { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
-          ]}
-        >
-          {networkPulse.connectionsPerEvent.toFixed(1)} per event
-        </Text>
       </View>
 
-      {visibleSpeakerMatches.length > 0 ? (
-        <View style={styles.footerRow}>
+      <Pressable
+        disabled={!onOpenPendingContact || !networkPulse.nextContactToConfirm}
+        onPress={onOpenPendingContact}
+        style={({ pressed }) => [
+          styles.insightStrip,
+          {
+            backgroundColor: insightSurfaceColor,
+            borderColor: resolvedTheme === 'light'
+              ? 'rgba(15, 23, 42, 0.05)'
+              : 'rgba(255, 255, 255, 0.04)',
+            opacity:
+              pressed &&
+              onOpenPendingContact &&
+              networkPulse.nextContactToConfirm
+                ? 0.92
+                : 1,
+          },
+        ]}
+      >
+        {!networkPulse.nextContactToConfirm && visibleSpeakerMatches.length > 0 ? (
           <View style={styles.avatarStack}>
-            {visibleSpeakerMatches.map((match, index) => (
+            {visibleSpeakerMatches.slice(0, 2).map((match, index) => (
               <Pressable
                 key={`${match.speaker.id}-${index}`}
-                onPress={() => onOpenSpeaker?.(match.speaker.id)}
+                onPress={() =>
+                  onOpenSpeaker?.(match.speaker.id, match.event.id, match.event.title)
+                }
                 style={({ pressed }) => [
                   styles.avatarWrap,
                   {
-                    marginLeft: index === 0 ? 0 : -10,
+                    marginLeft: index === 0 ? 0 : -8,
                   },
                   pressed && styles.avatarPressed,
                 ]}
@@ -116,40 +175,51 @@ export function DashboardNetworkPulseCard({
                 <CommunityAvatar
                   avatarUrl={match.speaker.photoUrl}
                   name={match.speaker.name}
-                  size={28}
+                  size={26}
                 />
               </Pressable>
             ))}
           </View>
-          <Text
-            style={[
-              styles.footerText,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
-            ]}
-            numberOfLines={2}
-          >
-            {footerText}
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.footerRow}>
+        ) : (
           <View
             style={[
               styles.footerDot,
-              { backgroundColor: tokens.colors.textTertiary },
+              { backgroundColor: glyphActiveColor },
             ]}
           />
+        )}
+
+        <View style={styles.insightTextBlock}>
           <Text
             style={[
               styles.footerText,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
             ]}
-            numberOfLines={2}
+            numberOfLines={1}
           >
             {footerText}
           </Text>
+          <Text
+            style={[
+              styles.footerMeta,
+              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+            ]}
+            numberOfLines={1}
+          >
+            {footerMeta}
+          </Text>
         </View>
-      )}
+        {networkPulse.nextContactToConfirm && onOpenPendingContact ? (
+          <Text
+            style={[
+              styles.insightAction,
+              { color: glyphActiveColor, fontFamily: tokens.typography.sans },
+            ]}
+          >
+            Confirm
+          </Text>
+        ) : null}
+      </Pressable>
     </DashboardCard>
   );
 }
@@ -163,57 +233,62 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 21,
+    lineHeight: 24,
     fontWeight: '800',
     letterSpacing: -0.7,
   },
   ratioBadge: {
-    minHeight: 28,
+    minHeight: 26,
     borderRadius: 999,
     borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   ratioText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.1,
+  },
+  heroSection: {
+    alignItems: 'flex-start',
   },
   heroMetricBlock: {
-    gap: 4,
+    gap: 2,
   },
   heroMetricRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   heroValue: {
-    fontSize: 46,
-    lineHeight: 48,
+    fontSize: 58,
+    lineHeight: 58,
     fontWeight: '800',
-    letterSpacing: -1.2,
+    letterSpacing: -1.8,
   },
   heroLabel: {
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '700',
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '800',
   },
   heroMeta: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 16,
   },
-  footerRow: {
+  insightStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   avatarStack: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 4,
+    minWidth: 44,
   },
   avatarWrap: {
     position: 'relative',
@@ -221,15 +296,28 @@ const styles = StyleSheet.create({
   avatarPressed: {
     opacity: 0.82,
   },
+  insightTextBlock: {
+    flex: 1,
+    gap: 1,
+  },
+  insightAction: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '800',
+  },
   footerDot: {
-    width: 6,
-    height: 6,
+    width: 8,
+    height: 8,
     borderRadius: 999,
-    marginTop: 1,
   },
   footerText: {
     flex: 1,
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 15,
+    fontWeight: '700',
+  },
+  footerMeta: {
+    fontSize: 11,
+    lineHeight: 14,
   },
 });

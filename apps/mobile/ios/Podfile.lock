@@ -2,7 +2,7 @@ PODS:
   - EXConstants (55.0.11):
     - ExpoModulesCore
   - EXJSONUtils (55.0.2)
-  - EXManifests (55.0.14):
+  - EXManifests (55.0.15):
     - ExpoModulesCore
   - Expo (55.0.11):
     - ExpoModulesCore
@@ -29,15 +29,15 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-client (55.0.23):
+  - expo-dev-client (55.0.27):
     - EXManifests
     - expo-dev-launcher
     - expo-dev-menu
     - expo-dev-menu-interface
     - EXUpdatesInterface
-  - expo-dev-launcher (55.0.24):
+  - expo-dev-launcher (55.0.28):
     - EXManifests
-    - expo-dev-launcher/Main (= 55.0.24)
+    - expo-dev-launcher/Main (= 55.0.28)
     - expo-dev-menu
     - expo-dev-menu-interface
     - ExpoModulesCore
@@ -66,7 +66,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-launcher/Main (55.0.24):
+  - expo-dev-launcher/Main (55.0.28):
     - EXManifests
     - expo-dev-launcher/Unsafe
     - expo-dev-menu
@@ -97,7 +97,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-launcher/Unsafe (55.0.24):
+  - expo-dev-launcher/Unsafe (55.0.28):
     - EXManifests
     - expo-dev-menu
     - expo-dev-menu-interface
@@ -127,8 +127,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - expo-dev-menu (55.0.20):
-    - expo-dev-menu/Main (= 55.0.20)
+  - expo-dev-menu (55.0.23):
+    - expo-dev-menu/Main (= 55.0.23)
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -151,7 +151,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - expo-dev-menu-interface (55.0.2)
-  - expo-dev-menu/Main (55.0.20):
+  - expo-dev-menu/Main (55.0.23):
     - EXManifests
     - expo-dev-menu-interface
     - ExpoModulesCore
@@ -2580,11 +2580,11 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   EXConstants: 9813b8a316e5b7bb562731c7a45e236f54195185
   EXJSONUtils: 04bc3807d351331a5fe154ce1da596ec15d99169
-  EXManifests: fe5a79ad6d01d3e681180e5767ccd9a30dc2dfd8
+  EXManifests: a4e214e6a66372e662ef38adf2afca773bbd0c18
   Expo: f298f7cafc2bfeb81997ddeae502ce98a672ae7f
-  expo-dev-client: 35b784b96f04f2db5868da61b1a622fed26859a2
-  expo-dev-launcher: cdbc51497ffb497dd3aa6c79ea39493e4c00d3dc
-  expo-dev-menu: 6d83d4aeffd36abcbaa5c1a150e33a6a2b799257
+  expo-dev-client: aadaa25520524f33ff54e9a94b285343f2be7a38
+  expo-dev-launcher: 1ddd052d53ba302d68739e4e37893f802f823785
+  expo-dev-menu: 35ddd9bf91d63179e40c0166d0dc0b0dca770b37
   expo-dev-menu-interface: 833795f4c98a674d36cbc12b11b21756c38e01e8
   ExpoAppleAuthentication: 4d1611362b8f42c3ac09ecefedee4c372c0f2ce7
   ExpoAsset: 63f22b029eb9aa68d5048f77ff9430f42c770d2c

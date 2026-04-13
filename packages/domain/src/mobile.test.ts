@@ -6,6 +6,8 @@ import {
   mobileDashboardSummarySchema,
   mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
+  mobileEventNetworkingFeedbackSchema,
+  mobileEventNetworkingFeedbackUpdateSchema,
   mobileEventEngagementUpdateSchema,
   mobileProfileStateSchema,
   mobileSavedEventsFeedSchema,
@@ -261,14 +263,25 @@ describe('mobile domain contracts', () => {
         breadthLabel: 'balanced',
       },
       networkPulse: {
-        totalConnectionsMade: 7,
-        connectionsPerEvent: 2.3,
-        topConnectingEvent: {
-          eventId: 'event-attended',
-          title: 'Product Forum',
-          connectionsMade: 4,
+        confirmedConnectionCount: 7,
+        pendingRequestCount: 2,
+        nextContactToConfirm: {
+          kind: 'speaker',
+          id: 'speaker-1',
+          username: null,
+          name: 'Jamie Chen',
+          avatarUrl: 'https://example.com/jamie.jpg',
+          headline: 'Product leader',
+          linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+          sourceEvent: {
+            id: '11111111-1111-4111-8111-111111111111',
+            slug: 'product-forum',
+            title: 'Product Forum',
+            startTime: '2026-04-02T18:00:00.000Z',
+            location: 'Remote',
+            format: 'Hybrid',
+          },
         },
-        networkingEventRatio: 33,
       },
       predictionAccuracy: {
         accuracy: 82,
@@ -314,6 +327,12 @@ describe('mobile domain contracts', () => {
           slug: 'product-forum',
           startTime: '2026-04-02T18:00:00.000Z',
         },
+        nextEventToConfirmConnections: {
+          id: 'event-follow-up',
+          title: 'AI Mixer',
+          slug: 'ai-mixer',
+          startTime: '2026-03-20T18:00:00.000Z',
+        },
         averageRating: 4.2,
         recommendationRate: 80,
         totalConnectionsMade: 7,
@@ -331,6 +350,8 @@ describe('mobile domain contracts', () => {
     expect(parsed.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
     expect(parsed.careerImpact?.skillProgress[0]?.progressLevel).toBe('building');
     expect(parsed.careerOutcomes?.state).toBe('mature');
+    expect(parsed.networkPulse?.pendingRequestCount).toBe(2);
+    expect(parsed.networkPulse?.nextContactToConfirm?.name).toBe('Jamie Chen');
   });
 
   it('parses calendar month feeds with grid days and agenda events', () => {
@@ -573,5 +594,22 @@ describe('mobile domain contracts', () => {
 
     expect(bootstrap.taxonomy.roleGroups[0]?.roles[0]).toBe('Software Engineer');
     expect(mutation.isBookmarked).toBe(true);
+  });
+
+  it('parses mobile networking feedback payloads', () => {
+    const parsed = mobileEventNetworkingFeedbackSchema.parse({
+      eventId: 'event-1',
+      connectionsMade: 2,
+      linkedinRequestsSent: 4,
+    });
+
+    expect(parsed.connectionsMade).toBe(2);
+    expect(parsed.linkedinRequestsSent).toBe(4);
+  });
+
+  it('requires at least one field when updating mobile networking feedback', () => {
+    expect(() => mobileEventNetworkingFeedbackUpdateSchema.parse({})).toThrow(
+      'At least one networking field must be provided.'
+    );
   });
 });

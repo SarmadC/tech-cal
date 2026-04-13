@@ -121,6 +121,36 @@ export interface EventFeedbackUpdate {
   feedback_date?: string;
 }
 
+export interface EventNetworkingSummaryRow {
+  id: string;
+  user_id: string;
+  event_id: string;
+  linkedin_requests_sent: number | null;
+  last_outreach_logged_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventNetworkingSummaryInsert {
+  id?: string;
+  user_id: string;
+  event_id: string;
+  linkedin_requests_sent?: number | null;
+  last_outreach_logged_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EventNetworkingSummaryUpdate {
+  id?: string;
+  user_id?: string;
+  event_id?: string;
+  linkedin_requests_sent?: number | null;
+  last_outreach_logged_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Career Profile Snapshots Table - TEMPORARY TYPES
 export interface CareerProfileSnapshotsRow {
   id: string;

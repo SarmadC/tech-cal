@@ -8,11 +8,14 @@ const mocks = vi.hoisted(() => ({
   fetchPersonalizedRecommendationCandidates: vi.fn(),
   getCareerProfile: vi.fn(),
   getAuthenticatedRequestContext: vi.fn(),
+  getAllContactsForViewer: vi.fn(),
   getAllFeedbackForUser: vi.fn(),
+  getAllSummariesForUser: vi.fn(),
   getEventCount: vi.fn(),
   getEvents: vi.fn(),
   getProfile: vi.fn(),
   getTrackedEvents: vi.fn(),
+  hydrateContacts: vi.fn(),
   loadEngagementMap: vi.fn(),
 }));
 
@@ -43,6 +46,21 @@ vi.mock('@/services/eventFeedbackService', () => ({
   EventFeedbackService: {
     getAllFeedbackForUser: (...args: unknown[]) =>
       mocks.getAllFeedbackForUser(...args),
+  },
+}));
+
+vi.mock('@/services/eventNetworkingSummaryService', () => ({
+  EventNetworkingSummaryService: {
+    getAllSummariesForUser: (...args: unknown[]) =>
+      mocks.getAllSummariesForUser(...args),
+  },
+}));
+
+vi.mock('@/services/userNetworkingContactService', () => ({
+  UserNetworkingContactService: {
+    getAllContactsForViewer: (...args: unknown[]) =>
+      mocks.getAllContactsForViewer(...args),
+    hydrateContacts: (...args: unknown[]) => mocks.hydrateContacts(...args),
   },
 }));
 
@@ -196,6 +214,94 @@ describe('GET /api/mobile/dashboard/summary', () => {
         wouldRecommend: true,
       },
     ]);
+    mocks.getAllSummariesForUser.mockResolvedValue([
+      {
+        id: 'summary-1',
+        eventId: 'event-3',
+        userId: 'user-1',
+        linkedinRequestsSent: 4,
+        lastOutreachLoggedAt: '2026-03-11T00:00:00.000Z',
+        createdAt: '2026-03-11T00:00:00.000Z',
+        updatedAt: '2026-03-11T00:00:00.000Z',
+      },
+    ]);
+    mocks.getAllContactsForViewer.mockResolvedValue([
+      {
+        id: 'contact-1',
+        viewerUserId: 'user-1',
+        targetKind: 'speaker',
+        targetUserId: null,
+        targetSpeakerId: 'speaker-1',
+        sourceEventId: 'event-3',
+        linkedinRequestedAt: '2026-03-11T00:00:00.000Z',
+        confirmedConnectedAt: null,
+        createdAt: '2026-03-11T00:00:00.000Z',
+        updatedAt: '2026-03-11T00:00:00.000Z',
+      },
+      {
+        id: 'contact-2',
+        viewerUserId: 'user-1',
+        targetKind: 'profile',
+        targetUserId: 'profile-1',
+        targetSpeakerId: null,
+        sourceEventId: null,
+        linkedinRequestedAt: '2026-03-01T00:00:00.000Z',
+        confirmedConnectedAt: '2026-03-12T00:00:00.000Z',
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-12T00:00:00.000Z',
+      },
+    ]);
+    mocks.hydrateContacts.mockResolvedValue([
+      {
+        row: {
+          id: 'contact-1',
+          updatedAt: '2026-03-11T00:00:00.000Z',
+        },
+        contact: {
+          kind: 'speaker',
+          id: 'speaker-1',
+          username: null,
+          name: 'Jamie Chen',
+          avatarUrl: null,
+          headline: 'Product leader',
+          linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+          sourceEvent: {
+            id: '11111111-1111-4111-8111-111111111111',
+            slug: 'attended-event',
+            title: 'Attended Event',
+            startTime: '2026-03-10T18:00:00.000Z',
+            location: 'Calgary',
+            format: 'In Person',
+          },
+        },
+        networkingState: {
+          status: 'requested',
+          linkedinRequestedAt: '2026-03-11T00:00:00.000Z',
+          confirmedConnectedAt: null,
+        },
+      },
+      {
+        row: {
+          id: 'contact-2',
+          updatedAt: '2026-03-12T00:00:00.000Z',
+        },
+        contact: {
+          kind: 'profile',
+          id: 'profile-1',
+          username: 'ada',
+          name: 'Ada Lovelace',
+          avatarUrl: null,
+          headline: 'ML Engineer',
+          linkedinUrl: null,
+          sourceEvent: null,
+        },
+        networkingState: {
+          status: 'connected',
+          linkedinRequestedAt: '2026-03-01T00:00:00.000Z',
+          confirmedConnectedAt: '2026-03-12T00:00:00.000Z',
+        },
+      },
+    ]);
     mocks.loadEngagementMap.mockResolvedValue(
       new Map([
         [
@@ -238,11 +344,14 @@ describe('GET /api/mobile/dashboard/summary', () => {
     expect(parsed.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
     expect(parsed.engagementStreak?.recentWeeks.length).toBe(8);
     expect(parsed.discoveryBreadth?.organizerCount).toBe(1);
-    expect(parsed.networkPulse?.topConnectingEvent?.eventId).toBe('event-3');
+    expect(parsed.networkPulse?.confirmedConnectionCount).toBe(1);
+    expect(parsed.networkPulse?.pendingRequestCount).toBe(1);
+    expect(parsed.networkPulse?.nextContactToConfirm?.id).toBe('speaker-1');
     expect(parsed.predictionAccuracy?.sampleSize).toBe(1);
     expect(parsed.careerImpact?.totalEvents).toBe(1);
     expect(parsed.careerOutcomes?.feedbackCount).toBe(1);
     expect(parsed.careerOutcomes?.nextEventToRate).toBeNull();
+    expect(parsed.careerOutcomes?.nextEventToConfirmConnections?.id).toBe('event-3');
     expect(payload.data.header.title).toBe('Your event runway');
     expect(payload.data.upcomingCount).toBe(1);
     expect(payload.data.savedCount).toBe(2);

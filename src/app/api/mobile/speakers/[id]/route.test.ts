@@ -7,6 +7,7 @@ import { GET } from './route';
 const mocks = vi.hoisted(() => ({
   createServiceClient: vi.fn(),
   getAuthenticatedRequestContext: vi.fn(),
+  getContactForTarget: vi.fn(),
   getSpeakerDetail: vi.fn(),
 }));
 
@@ -25,17 +26,49 @@ vi.mock('@/services/mobileSpeakerService', () => ({
   },
 }));
 
+vi.mock('@/services/userNetworkingContactService', () => ({
+  UserNetworkingContactService: {
+    getContactForTarget: (...args: unknown[]) => mocks.getContactForTarget(...args),
+    toNetworkingState: (contact: {
+      linkedinRequestedAt?: string | null;
+      confirmedConnectedAt?: string | null;
+    } | null) => ({
+      status: contact?.confirmedConnectedAt
+        ? 'connected'
+        : contact?.linkedinRequestedAt
+          ? 'requested'
+          : 'none',
+      linkedinRequestedAt: contact?.linkedinRequestedAt ?? null,
+      confirmedConnectedAt: contact?.confirmedConnectedAt ?? null,
+    }),
+  },
+}));
+
 describe('GET /api/mobile/speakers/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
     mocks.createServiceClient.mockReturnValue({ kind: 'read-supabase' });
+    mocks.getContactForTarget.mockResolvedValue(null);
   });
 
   it('returns the signed-in mobile speaker payload', async () => {
     mocks.getAuthenticatedRequestContext.mockResolvedValue({
+      supabase: { kind: 'viewer-supabase' },
       user: { id: '22222222-2222-4222-8222-222222222222' },
+    });
+    mocks.getContactForTarget.mockResolvedValue({
+      id: 'contact-1',
+      viewerUserId: '22222222-2222-4222-8222-222222222222',
+      targetKind: 'speaker',
+      targetUserId: null,
+      targetSpeakerId: 'speaker-1',
+      sourceEventId: null,
+      linkedinRequestedAt: '2026-04-10T12:00:00.000Z',
+      confirmedConnectedAt: null,
+      createdAt: '2026-04-10T12:00:00.000Z',
+      updatedAt: '2026-04-10T12:00:00.000Z',
     });
     mocks.getSpeakerDetail.mockResolvedValue({
       id: 'speaker-1',
@@ -73,6 +106,7 @@ describe('GET /api/mobile/speakers/[id]', () => {
     const parsed = mobileSpeakerDetailSchema.parse(payload.data);
     expect(parsed.name).toBe('Dana Scully');
     expect(parsed.events[0]?.title).toBe('Design Review Week');
+    expect(parsed.networkingState?.status).toBe('requested');
   });
 
   it('returns 401 when the mobile user is not authenticated', async () => {
@@ -92,6 +126,7 @@ describe('GET /api/mobile/speakers/[id]', () => {
 
   it('returns 404 when the speaker does not exist', async () => {
     mocks.getAuthenticatedRequestContext.mockResolvedValue({
+      supabase: { kind: 'viewer-supabase' },
       user: { id: '22222222-2222-4222-8222-222222222222' },
     });
     mocks.getSpeakerDetail.mockResolvedValue(null);

@@ -20,7 +20,7 @@
     "expo": "~55.0.11",
     "expo-apple-authentication": "~55.0.11",
     "expo-constants": "~55.0.11",
-    "expo-dev-client": "^55.0.23",
+    "expo-dev-client": "^55.0.27",
     "expo-font": "~55.0.6",
     "expo-linear-gradient": "~55.0.11",
     "expo-linking": "~55.0.11",

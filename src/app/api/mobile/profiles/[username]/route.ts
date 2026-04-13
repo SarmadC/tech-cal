@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { toMobilePublicProfile } from '@/app/api/mobile/communitySerializers';
 import { FollowService } from '@/services/followService';
 import { PublicProfileService } from '@/services/publicProfileService';
+import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -62,10 +63,24 @@ export async function GET(
           profile.id,
           authContext.supabase
         );
+    const networkingContact = profile.isViewerOwner
+      ? null
+      : await UserNetworkingContactService.getContactForTarget(
+          {
+            viewerUserId: authContext.user.id,
+            targetKind: 'profile',
+            targetId: profile.id,
+          },
+          authContext.supabase
+        );
 
     return NextResponse.json({
       success: true,
-      data: toMobilePublicProfile(profile, relationship),
+      data: toMobilePublicProfile(
+        profile,
+        relationship,
+        UserNetworkingContactService.toNetworkingState(networkingContact)
+      ),
     });
   } catch (error) {
     return NextResponse.json(

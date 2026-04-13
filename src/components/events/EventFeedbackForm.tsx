@@ -6,8 +6,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { EventFeedbackService } from '@/services/eventFeedbackService';
+import { EventNetworkingSummaryService } from '@/services/eventNetworkingSummaryService';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import type { Event } from '@/types';
+import { parseOptionalNonNegativeIntegerInput } from './eventFeedbackFormUtils';
 
 interface EventFeedbackFormProps {
     event: Event;
@@ -38,20 +40,33 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
     const [connectionsMade, setConnectionsMade] = useState<string>('');
+    const [linkedinRequestsSent, setLinkedinRequestsSent] = useState<string>('');
     const [skillsGained, setSkillsGained] = useState<string[]>([]);
     const [customSkill, setCustomSkill] = useState('');
     const [feedbackText, setFeedbackText] = useState('');
     const [careerBenefit, setCareerBenefit] = useState('');
 
-    // Fetch existing feedback
-    const { data: existingFeedback, isLoading: isFetchingFeedback } = useQuery({
-        queryKey: ['event-feedback', event.id, user?.id],
+    // Fetch existing feedback and outreach summary
+    const { data: existingData, isLoading: isFetchingFeedback } = useQuery({
+        queryKey: ['event-feedback-form', event.id, user?.id],
         queryFn: async () => {
             if (!user?.id || !supabase) return null;
-            return EventFeedbackService.getFeedbackForEvent(event.id, user.id, supabase);
+
+            const [feedback, networkingSummary] = await Promise.all([
+                EventFeedbackService.getFeedbackForEvent(event.id, user.id, supabase),
+                EventNetworkingSummaryService.getSummaryForEvent(event.id, user.id, supabase),
+            ]);
+
+            return {
+                feedback,
+                networkingSummary,
+            };
         },
         enabled: !!user?.id && !!supabase,
     });
+
+    const existingFeedback = existingData?.feedback ?? null;
+    const existingNetworkingSummary = existingData?.networkingSummary ?? null;
 
     // Populate form with existing feedback
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -60,38 +75,98 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             setRating(existingFeedback.actualValueRating || 0);
             setWouldRecommend(existingFeedback.wouldRecommend);
             setConnectionsMade(existingFeedback.connectionsMade?.toString() || '');
+            setLinkedinRequestsSent(existingNetworkingSummary?.linkedinRequestsSent?.toString() || '');
             setSkillsGained(existingFeedback.skillsGained || []);
             setFeedbackText(existingFeedback.feedbackText || '');
             setCareerBenefit(existingFeedback.careerBenefit || '');
+        } else if (existingNetworkingSummary) {
+            setLinkedinRequestsSent(existingNetworkingSummary.linkedinRequestsSent?.toString() || '');
         }
-    }, [existingFeedback]);
+    }, [existingFeedback, existingNetworkingSummary]);
     /* eslint-enable react-hooks/set-state-in-effect */
 
     // Submit mutation
     const submitMutation = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (feedbackData: {
+            eventId: string;
+            userId: string;
+            actualValueRating: number | null;
+            wouldRecommend: boolean | null;
+            connectionsMade: number | null;
+            linkedinRequestsSent: number | null;
+            skillsGained: string[] | null;
+            feedbackText: string | null;
+            careerBenefit: string | null;
+            predictedScore: number;
+        }) => {
             if (!user?.id || !supabase) throw new Error('Not authenticated');
 
-            const feedbackData = {
-                eventId: event.id,
-                userId: user.id,
-                actualValueRating: rating || null,
-                wouldRecommend,
-                connectionsMade: connectionsMade.trim() === '' ? null : Number(connectionsMade),
-                skillsGained: skillsGained.length > 0 ? skillsGained : null,
-                feedbackText: feedbackText || null,
-                careerBenefit: careerBenefit || null,
-                predictedScore: (event as { careerImpact?: { overall: number } }).careerImpact?.overall || 50,
-            };
+            const hasFeedbackValues =
+                feedbackData.actualValueRating != null ||
+                feedbackData.wouldRecommend != null ||
+                feedbackData.connectionsMade != null ||
+                (feedbackData.skillsGained?.length ?? 0) > 0 ||
+                feedbackData.feedbackText != null ||
+                feedbackData.careerBenefit != null;
 
-            if (existingFeedback) {
-                return EventFeedbackService.updateFeedback(existingFeedback.id, feedbackData, supabase);
-            } else {
-                return EventFeedbackService.submitFeedback(feedbackData, supabase);
+            const [feedback] = await Promise.all([
+                existingFeedback
+                    ? EventFeedbackService.updateFeedback(
+                        existingFeedback.id,
+                        {
+                            actualValueRating: feedbackData.actualValueRating,
+                            wouldRecommend: feedbackData.wouldRecommend,
+                            connectionsMade: feedbackData.connectionsMade,
+                            skillsGained: feedbackData.skillsGained,
+                            feedbackText: feedbackData.feedbackText,
+                            careerBenefit: feedbackData.careerBenefit,
+                        },
+                        supabase
+                    )
+                    : hasFeedbackValues
+                        ? EventFeedbackService.submitFeedback(
+                            {
+                                eventId: feedbackData.eventId,
+                                userId: feedbackData.userId,
+                                actualValueRating: feedbackData.actualValueRating,
+                                wouldRecommend: feedbackData.wouldRecommend,
+                                connectionsMade: feedbackData.connectionsMade,
+                                skillsGained: feedbackData.skillsGained,
+                                feedbackText: feedbackData.feedbackText,
+                                careerBenefit: feedbackData.careerBenefit,
+                                predictedScore: feedbackData.predictedScore,
+                            },
+                            supabase
+                        )
+                        : Promise.resolve(null),
+                feedbackData.linkedinRequestsSent != null || existingNetworkingSummary
+                    ? EventNetworkingSummaryService.setLinkedInRequestsSent(
+                        {
+                            eventId: feedbackData.eventId,
+                            userId: feedbackData.userId,
+                            linkedinRequestsSent: feedbackData.linkedinRequestsSent,
+                            lastOutreachLoggedAt:
+                                feedbackData.linkedinRequestsSent == null
+                                    ? null
+                                    : feedbackData.linkedinRequestsSent === existingNetworkingSummary?.linkedinRequestsSent
+                                        ? existingNetworkingSummary?.lastOutreachLoggedAt ?? null
+                                        : new Date().toISOString(),
+                        },
+                        supabase
+                    )
+                    : Promise.resolve(null),
+            ]);
+
+            if (feedback) {
+                return feedback;
             }
+
+            return existingFeedback;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['event-feedback'] });
+            queryClient.invalidateQueries({ queryKey: ['event-feedback-form'] });
+            queryClient.invalidateQueries({ queryKey: ['event-networking-summary'] });
             showSuccess(existingFeedback ? 'Feedback updated!' : 'Thank you for your feedback!');
             onSuccess?.();
         },
@@ -123,13 +198,32 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const parsedConnections = connectionsMade.trim() === '' ? null : Number(connectionsMade);
-        if (parsedConnections !== null && !Number.isFinite(parsedConnections)) {
-            showError('Please enter a valid number of connections');
+        try {
+            const parsedConnections = parseOptionalNonNegativeIntegerInput(
+                connectionsMade,
+                'real connections'
+            );
+            const parsedLinkedinRequests = parseOptionalNonNegativeIntegerInput(
+                linkedinRequestsSent,
+                'LinkedIn requests'
+            );
+
+            submitMutation.mutate({
+                eventId: event.id,
+                userId: user?.id || '',
+                actualValueRating: rating || null,
+                wouldRecommend,
+                connectionsMade: parsedConnections,
+                linkedinRequestsSent: parsedLinkedinRequests,
+                skillsGained: skillsGained.length > 0 ? skillsGained : null,
+                feedbackText: feedbackText || null,
+                careerBenefit: careerBenefit || null,
+                predictedScore: (event as { careerImpact?: { overall: number } }).careerImpact?.overall || 50,
+            });
+        } catch (error) {
+            showError(error instanceof Error ? error.message : 'Please review your networking feedback');
             return;
         }
-
-        submitMutation.mutate();
     };
 
     if (isFetchingFeedback) {
@@ -233,8 +327,11 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
             <div className="space-y-2">
                 <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" />
-                    Valuable connections made
+                    Real connections made
                 </label>
+                <p className="text-xs text-foreground-tertiary">
+                    Count confirmed professional connections from this event, including people who only exist on LinkedIn.
+                </p>
                 <input
                     type="number"
                     min="0"
@@ -248,6 +345,33 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                         }
                         const sanitized = raw.replace(/[^\d]/g, '');
                         setConnectionsMade(sanitized);
+                    }}
+                    placeholder="0"
+                    className="w-full px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"
+                />
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    LinkedIn requests sent
+                </label>
+                <p className="text-xs text-foreground-tertiary">
+                    Optional. We use this to remind you to confirm which requests turned into real connections later.
+                </p>
+                <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={linkedinRequestsSent}
+                    onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                            setLinkedinRequestsSent('');
+                            return;
+                        }
+                        const sanitized = raw.replace(/[^\d]/g, '');
+                        setLinkedinRequestsSent(sanitized);
                     }}
                     placeholder="0"
                     className="w-full px-3 py-2 bg-background-secondary border border-border-subtle rounded-md text-foreground-primary text-sm placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"

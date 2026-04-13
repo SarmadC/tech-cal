@@ -1,11 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildDashboardCareerOutcomes,
   buildDiscoveryBreadth,
   buildEngagementStreak,
   buildNetworkPulse,
   buildPredictionAccuracy,
 } from './dashboardMetrics';
+
+function makeNetworkingSummary({
+  eventId,
+  linkedinRequestsSent,
+  lastOutreachLoggedAt = '2026-03-02T00:00:00.000Z',
+}: {
+  eventId: string;
+  linkedinRequestsSent: number | null;
+  lastOutreachLoggedAt?: string | null;
+}) {
+  return {
+    id: `summary-${eventId}`,
+    eventId,
+    userId: 'user-1',
+    linkedinRequestsSent,
+    lastOutreachLoggedAt,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+  } as const;
+}
 
 function makeTrackedEvent({
   id,
@@ -166,60 +187,81 @@ describe('dashboardMetrics builders', () => {
     expect(result.breadthLabel).toBe('broad');
   });
 
-  it('joins top-connection feedback back to the attended event title', () => {
-    const trackedEvents = [
-      makeTrackedEvent({
-        id: 'event-1',
-        title: 'Builders Mixer',
-        startTime: '2026-03-01T18:00:00.000Z',
-        tags: [{ name: 'networking' }],
-      }),
-      makeTrackedEvent({
-        id: 'event-2',
-        title: 'AI Forum',
-        startTime: '2026-03-10T18:00:00.000Z',
-      }),
-    ];
-
+  it('builds person-first momentum from confirmed and pending contacts', () => {
     const result = buildNetworkPulse({
-      trackedEvents: trackedEvents as never,
-      feedbackList: [
+      contacts: [
         {
-          id: 'feedback-1',
-          eventId: 'event-1',
-          userId: 'user-1',
-          actualValueRating: 4,
-          careerBenefit: null,
-          connectionsMade: 5,
-          eventAttended: true,
-          feedbackDate: '2026-03-02T00:00:00.000Z',
-          feedbackText: null,
-          predictedScore: 81,
-          skillsGained: null,
-          wouldRecommend: true,
+          row: {
+            id: 'contact-1',
+            viewerUserId: 'user-1',
+            targetKind: 'speaker',
+            targetUserId: null,
+            targetSpeakerId: 'speaker-1',
+            sourceEventId: 'event-1',
+            linkedinRequestedAt: '2026-03-12T00:00:00.000Z',
+            confirmedConnectedAt: null,
+            createdAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:00.000Z',
+          },
+          contact: {
+            kind: 'speaker',
+            id: 'speaker-1',
+            username: null,
+            name: 'Jamie Chen',
+            avatarUrl: null,
+            headline: 'Product leader',
+            linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+            sourceEvent: {
+              id: 'event-1',
+              slug: 'builders-mixer',
+              title: 'Builders Mixer',
+              startTime: '2026-03-01T18:00:00.000Z',
+              location: 'Remote',
+              format: 'Online',
+            },
+          },
+          networkingState: {
+            status: 'requested',
+            linkedinRequestedAt: '2026-03-12T00:00:00.000Z',
+            confirmedConnectedAt: null,
+          },
         },
         {
-          id: 'feedback-2',
-          eventId: 'event-2',
-          userId: 'user-1',
-          actualValueRating: 3,
-          careerBenefit: null,
-          connectionsMade: 2,
-          eventAttended: true,
-          feedbackDate: '2026-03-11T00:00:00.000Z',
-          feedbackText: null,
-          predictedScore: 55,
-          skillsGained: null,
-          wouldRecommend: false,
+          row: {
+            id: 'contact-2',
+            viewerUserId: 'user-1',
+            targetKind: 'profile',
+            targetUserId: 'profile-1',
+            targetSpeakerId: null,
+            sourceEventId: null,
+            linkedinRequestedAt: '2026-03-01T00:00:00.000Z',
+            confirmedConnectedAt: '2026-03-20T00:00:00.000Z',
+            createdAt: '2026-03-01T00:00:00.000Z',
+            updatedAt: '2026-03-20T00:00:00.000Z',
+          },
+          contact: {
+            kind: 'profile',
+            id: 'profile-1',
+            username: 'ada',
+            name: 'Ada Lovelace',
+            avatarUrl: null,
+            headline: 'ML Engineer',
+            linkedinUrl: null,
+            sourceEvent: null,
+          },
+          networkingState: {
+            status: 'connected',
+            linkedinRequestedAt: '2026-03-01T00:00:00.000Z',
+            confirmedConnectedAt: '2026-03-20T00:00:00.000Z',
+          },
         },
       ],
-      now: new Date('2026-04-08T12:00:00.000Z'),
     });
 
-    expect(result.totalConnectionsMade).toBe(7);
-    expect(result.connectionsPerEvent).toBe(3.5);
-    expect(result.topConnectingEvent?.title).toBe('Builders Mixer');
-    expect(result.networkingEventRatio).toBe(50);
+    expect(result.confirmedConnectionCount).toBe(1);
+    expect(result.pendingRequestCount).toBe(1);
+    expect(result.nextContactToConfirm?.kind).toBe('speaker');
+    expect(result.nextContactToConfirm?.name).toBe('Jamie Chen');
   });
 
   it('gates prediction accuracy confidence by sample size', () => {
@@ -260,5 +302,75 @@ describe('dashboardMetrics builders', () => {
     expect(result.confidenceLabel).toBe('not_enough_data');
     expect(result.state).toBe('learning');
     expect(result.unlockMessage).toContain('1 more rated event');
+  });
+
+  it('surfaces the most recent event that still needs connection confirmation', () => {
+    const trackedEvents = [
+      makeTrackedEvent({
+        id: 'event-1',
+        title: 'AI Mixer',
+        startTime: '2026-03-20T18:00:00.000Z',
+      }),
+      makeTrackedEvent({
+        id: 'event-2',
+        title: 'Builders Night',
+        startTime: '2026-03-10T18:00:00.000Z',
+      }),
+    ];
+
+    const result = buildDashboardCareerOutcomes({
+      trackedEvents: trackedEvents as never,
+      feedbackList: [
+        {
+          id: 'feedback-1',
+          eventId: 'event-1',
+          userId: 'user-1',
+          actualValueRating: 4,
+          careerBenefit: null,
+          connectionsMade: 1,
+          eventAttended: true,
+          feedbackDate: '2026-03-21T00:00:00.000Z',
+          feedbackText: null,
+          predictedScore: 80,
+          skillsGained: null,
+          wouldRecommend: true,
+        },
+        {
+          id: 'feedback-2',
+          eventId: 'event-2',
+          userId: 'user-1',
+          actualValueRating: 4,
+          careerBenefit: null,
+          connectionsMade: 2,
+          eventAttended: true,
+          feedbackDate: '2026-03-11T00:00:00.000Z',
+          feedbackText: null,
+          predictedScore: 70,
+          skillsGained: null,
+          wouldRecommend: true,
+        },
+      ],
+      networkingSummaries: [
+        makeNetworkingSummary({
+          eventId: 'event-1',
+          linkedinRequestsSent: 3,
+          lastOutreachLoggedAt: '2026-03-21T00:00:00.000Z',
+        }),
+        makeNetworkingSummary({
+          eventId: 'event-2',
+          linkedinRequestsSent: 2,
+          lastOutreachLoggedAt: '2026-03-11T00:00:00.000Z',
+        }),
+      ],
+      now: new Date('2026-04-08T12:00:00.000Z'),
+      toSummary: (event) => ({
+        id: event.id,
+        title: event.title,
+        slug: event.title.toLowerCase().replace(/\s+/g, '-'),
+        startTime: event.startTime,
+      }),
+    });
+
+    expect(result.nextEventToConfirmConnections?.id).toBe('event-1');
   });
 });

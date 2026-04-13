@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -6,10 +6,11 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import type {
   MobileCommunityNetworkingSpeakerMatch,
+  MobileNetworkingContactReference,
   MobileDashboardSummary,
 } from '@kurecal/domain';
 
@@ -68,6 +69,7 @@ function formatHeroMeta(
 
 export default function DashboardScreen() {
   const { tokens, resolvedTheme } = useAppTheme();
+  const hasLoadedRef = useRef(false);
   const [data, setData] = useState<MobileDashboardSummary | null>(null);
   const [speakerMatches, setSpeakerMatches] = useState<
     MobileCommunityNetworkingSpeakerMatch[]
@@ -75,8 +77,10 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadSummary() {
-    setLoading(true);
+  const loadSummary = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+    if (mode === 'initial') {
+      setLoading(true);
+    }
 
     try {
       const [summaryResult, communityResult] = await Promise.allSettled([
@@ -94,10 +98,6 @@ export default function DashboardScreen() {
           ? (() => {
               const seen = new Set<string>();
               return (communityResult.value.speakerMatches ?? []).filter((match) => {
-                if (!match.speaker.linkedinUrl) {
-                  return false;
-                }
-
                 const key = match.speaker.id || match.speaker.name;
                 if (seen.has(key)) {
                   return false;
@@ -122,11 +122,15 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    void loadSummary();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const mode = hasLoadedRef.current ? 'refresh' : 'initial';
+      hasLoadedRef.current = true;
+      void loadSummary(mode);
+    }, [loadSummary])
+  );
 
   const dashboard = data;
   const pipelineScore = dashboard?.insights?.pipeline.avgScore ?? 0;
@@ -145,6 +149,32 @@ export default function DashboardScreen() {
       : 0;
   const unratedAttendedCount =
     dashboard?.careerOutcomes?.unratedAttendedCount ?? 0;
+  const nextNetworkingContact = dashboard?.networkPulse?.nextContactToConfirm ?? null;
+  const openNetworkingContact = useCallback(
+    (contact: MobileNetworkingContactReference) => {
+      if (contact.kind === 'speaker') {
+        router.push({
+          pathname: '/speaker/[id]',
+          params: {
+            id: contact.id,
+            ...(contact.sourceEvent?.id ? { eventId: contact.sourceEvent.id } : {}),
+            ...(contact.sourceEvent?.title
+              ? { eventTitle: contact.sourceEvent.title }
+              : {}),
+          },
+        });
+        return;
+      }
+
+      if (contact.username) {
+        router.push({
+          pathname: '/profile/[username]',
+          params: { username: contact.username },
+        });
+      }
+    },
+    []
+  );
 
   const attentionItems: DashboardAttentionItem[] = dashboard
     ? [
@@ -190,6 +220,20 @@ export default function DashboardScreen() {
                   pathname: '/event/[id]',
                   params: { id: dashboard.careerOutcomes?.nextEventToRate?.id ?? '' },
                 }),
+            }
+          : null,
+        nextNetworkingContact &&
+        (nextNetworkingContact.kind === 'speaker' ||
+          Boolean(nextNetworkingContact.username))
+          ? {
+              id: 'connections-follow-up',
+              tone: 'info' as const,
+              label: 'Confirm connection',
+              body: nextNetworkingContact.sourceEvent?.title
+                ? `${nextNetworkingContact.name} · ${nextNetworkingContact.sourceEvent.title}`
+                : nextNetworkingContact.name,
+              action: 'Open contact',
+              onPress: () => openNetworkingContact(nextNetworkingContact),
             }
           : null,
       ].filter((item): item is DashboardAttentionItem => item !== null)
@@ -826,11 +870,22 @@ export default function DashboardScreen() {
               <DashboardNetworkPulseCard
                 networkPulse={dashboard.networkPulse}
                 speakerMatches={speakerMatches}
-                onOpenSpeaker={(speakerId) =>
+                onOpenSpeaker={(speakerId, eventId, eventTitle) =>
                   router.push({
                     pathname: '/speaker/[id]',
-                    params: { id: speakerId },
+                    params: {
+                      id: speakerId,
+                      ...(eventId ? { eventId } : {}),
+                      ...(eventTitle ? { eventTitle } : {}),
+                    },
                   })
+                }
+                onOpenPendingContact={
+                  nextNetworkingContact &&
+                  (nextNetworkingContact.kind === 'speaker' ||
+                    Boolean(nextNetworkingContact.username))
+                    ? () => openNetworkingContact(nextNetworkingContact)
+                    : undefined
                 }
               />
             ) : null}

@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   ImageBackground,
   Linking,
   Pressable,
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 
 import { HeaderActionButton, MobilePage } from '../../src/components/chrome/MobilePage';
+import { KureButton } from '../../src/components/chrome/KureButton';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
 import { CommunityAvatar } from '../../src/components/community/CommunityAvatar';
 import { CommunitySection } from '../../src/components/community/CommunitySection';
@@ -23,7 +25,10 @@ import {
   getSafeExternalUrl,
 } from '../../src/components/community/presentation';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
-import { loadMobileSpeakerDetail } from '../../src/lib/mobileApi';
+import {
+  loadMobileSpeakerDetail,
+  updateMobileNetworkingContact,
+} from '../../src/lib/mobileApi';
 
 function getSpeakerHeadline(title: string | null, company: string | null): string {
   const parts = [title, company].filter(Boolean);
@@ -59,15 +64,67 @@ function getSocialLinks(speaker: MobileSpeakerDetail) {
   }>;
 }
 
+function resolveLinkedInFollowUpEvent(params: {
+  speaker: MobileSpeakerDetail;
+  routeEventId?: string;
+  routeEventTitle?: string;
+}) {
+  const trimmedRouteEventId = params.routeEventId?.trim() ?? '';
+  if (trimmedRouteEventId) {
+    const matchedEvent = params.speaker.events.find(
+      (event) => event.id === trimmedRouteEventId
+    );
+
+    return {
+      eventId: trimmedRouteEventId,
+      eventTitle:
+        matchedEvent?.title ?? params.routeEventTitle?.trim() ?? null,
+    };
+  }
+
+  const trimmedRouteEventTitle = params.routeEventTitle?.trim() ?? '';
+  if (trimmedRouteEventTitle) {
+    const matchedEvent = params.speaker.events.find(
+      (event) => event.title === trimmedRouteEventTitle
+    );
+
+    if (matchedEvent) {
+      return {
+        eventId: matchedEvent.id,
+        eventTitle: matchedEvent.title,
+      };
+    }
+  }
+
+  const pastEvents = params.speaker.events.filter((event) => event.isPastEvent);
+  if (pastEvents.length === 1) {
+    return {
+      eventId: pastEvents[0].id,
+      eventTitle: pastEvents[0].title,
+    };
+  }
+
+  return null;
+}
+
 export default function SpeakerScreen() {
   const { tokens } = useAppTheme();
-  const { id } = useLocalSearchParams<{ id: string | string[] }>();
+  const { id, eventId, eventTitle } = useLocalSearchParams<{
+    id: string | string[];
+    eventId?: string | string[];
+    eventTitle?: string | string[];
+  }>();
   const resolvedId = Array.isArray(id) ? id[0] : id;
+  const resolvedEventId = Array.isArray(eventId) ? eventId[0] : eventId;
+  const resolvedEventTitle = Array.isArray(eventTitle) ? eventTitle[0] : eventTitle;
   const requestSequenceRef = useRef(0);
 
   const [speaker, setSpeaker] = useState<MobileSpeakerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [networkingActionPending, setNetworkingActionPending] = useState<
+    'request' | 'confirm' | null
+  >(null);
 
   const loadSpeaker = useCallback(async () => {
     const trimmed = resolvedId?.trim();
@@ -110,6 +167,75 @@ export default function SpeakerScreen() {
     useCallback(() => {
       void loadSpeaker();
     }, [loadSpeaker])
+  );
+
+  const networkingSourceEvent = speaker
+    ? resolveLinkedInFollowUpEvent({
+        speaker,
+        routeEventId: resolvedEventId,
+        routeEventTitle: resolvedEventTitle,
+      })
+    : null;
+  const networkingState = speaker?.networkingState ?? {
+    status: 'none',
+    linkedinRequestedAt: null,
+    confirmedConnectedAt: null,
+  };
+
+  const handleNetworkingAction = useCallback(
+    async (action: 'mark_request_sent' | 'confirm_connection') => {
+      if (!speaker || networkingActionPending) {
+        return;
+      }
+
+      setNetworkingActionPending(
+        action === 'mark_request_sent' ? 'request' : 'confirm'
+      );
+
+      try {
+        const result = await updateMobileNetworkingContact({
+          target: {
+            kind: 'speaker',
+            id: speaker.id,
+            sourceEventId: networkingSourceEvent?.eventId ?? null,
+          },
+          action,
+        });
+
+        setSpeaker((current) =>
+          current
+            ? {
+                ...current,
+                networkingState: result.networkingState,
+              }
+            : current
+        );
+      } catch (nextError) {
+        Alert.alert(
+          action === 'mark_request_sent'
+            ? 'Unable to log request'
+            : 'Unable to confirm connection',
+          nextError instanceof Error ? nextError.message : 'Please try again.'
+        );
+      } finally {
+        setNetworkingActionPending(null);
+      }
+    },
+    [networkingActionPending, networkingSourceEvent?.eventId, speaker]
+  );
+
+  const handleOpenSocialLink = useCallback(
+    async (label: string, url: string) => {
+      try {
+        await Linking.openURL(url);
+      } catch (nextError) {
+        Alert.alert(
+          'Unable to open link',
+          nextError instanceof Error ? nextError.message : 'Link failed to open.'
+        );
+      }
+    },
+    []
   );
 
   const socialLinks = useMemo(() => (speaker ? getSocialLinks(speaker) : []), [speaker]);
@@ -252,7 +378,7 @@ export default function SpeakerScreen() {
                         accessibilityLabel={`Open ${speaker.name} ${link.label}`}
                         accessibilityRole="button"
                         onPress={() => {
-                          void Linking.openURL(link.url);
+                          void handleOpenSocialLink(link.label, link.url);
                         }}
                         style={({ pressed }) => [
                           styles.linkButton,
@@ -283,6 +409,109 @@ export default function SpeakerScreen() {
                     ))}
                   </View>
                 ) : null}
+
+                <View
+                  style={[
+                    styles.followUpCard,
+                    {
+                      backgroundColor: tokens.colors.surfaceStrong,
+                      borderColor: tokens.colors.border,
+                      borderRadius: tokens.radius.md,
+                    },
+                  ]}
+                >
+                  <View style={styles.followUpCopy}>
+                    <Text
+                      style={{
+                        color: tokens.colors.textPrimary,
+                        fontFamily: tokens.typography.sans,
+                        fontSize: 15,
+                        lineHeight: 20,
+                        fontWeight: '800',
+                      }}
+                    >
+                      Networking
+                    </Text>
+                    <Text
+                      style={{
+                        color: tokens.colors.textSecondary,
+                        fontFamily: tokens.typography.sans,
+                        fontSize: 13,
+                        lineHeight: 18,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {networkingState.status === 'connected'
+                        ? 'Confirmed as a real connection.'
+                        : networkingState.status === 'requested'
+                          ? 'LinkedIn request logged. Confirm once it becomes a real connection.'
+                          : 'Track outreach and confirmed connections from this speaker here.'}
+                    </Text>
+                    {networkingSourceEvent?.eventTitle ? (
+                      <Text
+                        style={{
+                          color: tokens.colors.textTertiary,
+                          fontFamily: tokens.typography.sans,
+                          fontSize: 12,
+                          lineHeight: 16,
+                          fontWeight: '600',
+                        }}
+                      >
+                        Source event: {networkingSourceEvent.eventTitle}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.followUpActions}>
+                    {speaker.linkedinUrl ? (
+                      <View style={styles.followUpAction}>
+                        <KureButton
+                          variant="secondary"
+                          onPress={() => {
+                            void handleOpenSocialLink('LinkedIn', speaker.linkedinUrl!);
+                          }}
+                        >
+                          Open LinkedIn
+                        </KureButton>
+                      </View>
+                    ) : null}
+                    {networkingState.status !== 'connected' ? (
+                      <View style={styles.followUpAction}>
+                        <KureButton
+                          variant={
+                            networkingState.status === 'requested'
+                              ? 'secondary'
+                              : 'primary'
+                          }
+                          onPress={() => {
+                            void handleNetworkingAction('mark_request_sent');
+                          }}
+                          disabled={Boolean(networkingActionPending)}
+                        >
+                          {networkingActionPending === 'request'
+                            ? 'Saving...'
+                            : 'Mark request sent'}
+                        </KureButton>
+                      </View>
+                    ) : null}
+                    <View style={styles.followUpAction}>
+                      <KureButton
+                        onPress={() => {
+                          void handleNetworkingAction('confirm_connection');
+                        }}
+                        disabled={
+                          Boolean(networkingActionPending) ||
+                          networkingState.status === 'connected'
+                        }
+                      >
+                        {networkingActionPending === 'confirm'
+                          ? 'Saving...'
+                          : networkingState.status === 'connected'
+                            ? 'Connection confirmed'
+                            : 'Confirm connection'}
+                      </KureButton>
+                    </View>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -347,6 +576,21 @@ const styles = StyleSheet.create({
   eventList: {
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  followUpAction: {
+    width: '100%',
+  },
+  followUpActions: {
+    gap: 10,
+  },
+  followUpCard: {
+    borderWidth: 1,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  followUpCopy: {
+    gap: 4,
   },
   heroBody: {
     gap: 10,

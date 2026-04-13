@@ -158,7 +158,10 @@ const AMBIENT_ACTIVITY_WINDOW_DAYS = 7;
 const STARTER_EVENT_CANDIDATE_LIMIT = 24;
 const SHOWCASE_SOURCE_DOMAIN = 'showcase.kurecal.local';
 const PAST_SPEAKER_WINDOW_DAYS = 365;
-const PAST_SPEAKER_CANDIDATE_LIMIT = 64;
+const PAST_SPEAKER_CANDIDATE_EVENT_TARGET = 64;
+const PAST_SPEAKER_FETCH_BATCH_SIZE = 64;
+const PAST_SPEAKER_FETCH_SCAN_LIMIT = 320;
+const SPEAKER_DETAIL_BATCH_SIZE = 250;
 const SPEAKER_MATCH_LIMIT = 6;
 const SHORT_KEYWORD_ALLOWLIST = new Set(['ai', 'ml', 'ux', 'ui', 'vr', 'ar']);
 
@@ -888,10 +891,12 @@ export class CommunityNetworkingHomeService {
     viewerId,
     readClient,
     now,
+    excludedSpeakerIds = new Set<string>(),
   }: {
     viewerId: string;
     readClient: SupabaseClientType;
     now: Date;
+    excludedSpeakerIds?: Set<string>;
   }): Promise<NetworkingSpeakerMatch[]> {
     const viewerCareerProfileResult = await readClient
       .from('career_profiles')
@@ -915,45 +920,18 @@ export class CommunityNetworkingHomeService {
       return [];
     }
 
-    const cutoff = new Date(
-      now.getTime() - PAST_SPEAKER_WINDOW_DAYS * 24 * 60 * 60 * 1000
-    );
-    const pastEventsResult = await readClient
-      .from('events')
-      .select(
-        'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status'
-      )
-      .eq('status', 'confirmed')
-      .lt('start_time', now.toISOString())
-      .gte('start_time', cutoff.toISOString())
-      .order('start_time', { ascending: false })
-      .limit(PAST_SPEAKER_CANDIDATE_LIMIT);
+    const { pastEvents, speakerRows } = await this.getPastSpeakerCandidateData({
+      readClient,
+      now,
+    });
 
-    if (pastEventsResult.error) {
-      throw new Error('Failed to load past speaker events.');
-    }
-
-    const pastEvents = ((pastEventsResult.data || []) as EventRow[]).filter(
-      (event) => Boolean(event.slug && event.title) && !isShowcaseEventSource(event)
-    );
-
-    if (pastEvents.length === 0) {
+    if (pastEvents.length === 0 || speakerRows.length === 0) {
       return [];
-    }
-
-    const eventIds = pastEvents.map((event) => event.id);
-    const speakerResult = await readClient
-      .from('event_speakers_flat')
-      .select('event_id, speaker_id, speaker_name')
-      .in('event_id', eventIds);
-
-    if (speakerResult.error || !speakerResult.data) {
-      throw new Error('Failed to load past speaker matches.');
     }
 
     const speakerIds = Array.from(
       new Set(
-        (speakerResult.data as Array<{ speaker_id: string | null }>)
+        (speakerRows as Array<{ speaker_id: string | null }>)
           .map((row) => row.speaker_id)
           .filter((id): id is string => Boolean(id))
       )
@@ -961,37 +939,40 @@ export class CommunityNetworkingHomeService {
 
     const speakerDetailsById = new Map<string, NetworkingSpeakerPreview>();
     if (speakerIds.length > 0) {
-      const detailResult = await readClient
-        .from('speakers')
-        .select(
-          'id, name, title, company, photo_url, linkedin_url, twitter_url, website_url'
-        )
-        .in('id', speakerIds);
+      for (let index = 0; index < speakerIds.length; index += SPEAKER_DETAIL_BATCH_SIZE) {
+        const detailBatch = speakerIds.slice(index, index + SPEAKER_DETAIL_BATCH_SIZE);
+        const detailResult = await readClient
+          .from('speakers')
+          .select(
+            'id, name, title, company, photo_url, linkedin_url, twitter_url, website_url'
+          )
+          .in('id', detailBatch);
 
-      if (detailResult.error) {
-        throw new Error('Failed to load speaker details.');
-      }
+        if (detailResult.error) {
+          throw new Error('Failed to load speaker details.');
+        }
 
-      for (const row of (detailResult.data || []) as Array<{
-        id: string;
-        name: string;
-        title: string | null;
-        company: string | null;
-        photo_url: string | null;
-        linkedin_url: string | null;
-        twitter_url: string | null;
-        website_url: string | null;
-      }>) {
-        speakerDetailsById.set(row.id, {
-          id: row.id,
-          name: row.name,
-          title: row.title,
-          company: row.company,
-          photoUrl: row.photo_url,
-          linkedinUrl: row.linkedin_url,
-          twitterUrl: row.twitter_url,
-          websiteUrl: row.website_url,
-        });
+        for (const row of (detailResult.data || []) as Array<{
+          id: string;
+          name: string;
+          title: string | null;
+          company: string | null;
+          photo_url: string | null;
+          linkedin_url: string | null;
+          twitter_url: string | null;
+          website_url: string | null;
+        }>) {
+          speakerDetailsById.set(row.id, {
+            id: row.id,
+            name: row.name,
+            title: row.title,
+            company: row.company,
+            photoUrl: row.photo_url,
+            linkedinUrl: row.linkedin_url,
+            twitterUrl: row.twitter_url,
+            websiteUrl: row.website_url,
+          });
+        }
       }
     }
 
@@ -1007,7 +988,7 @@ export class CommunityNetworkingHomeService {
       }
     >();
 
-    for (const row of speakerResult.data as Array<{
+    for (const row of speakerRows as Array<{
       event_id: string | null;
       speaker_id: string | null;
       speaker_name: string | null;
@@ -1023,6 +1004,10 @@ export class CommunityNetworkingHomeService {
 
       const speaker = speakerDetailsById.get(row.speaker_id);
       if (!speaker) {
+        continue;
+      }
+
+      if (excludedSpeakerIds.has(speaker.id)) {
         continue;
       }
 
@@ -1081,6 +1066,104 @@ export class CommunityNetworkingHomeService {
         matchReason: match.matchReason,
         isPastEvent: true,
       }));
+  }
+
+  private static async getPastSpeakerCandidateData({
+    readClient,
+    now,
+  }: {
+    readClient: SupabaseClientType;
+    now: Date;
+  }): Promise<{
+    pastEvents: EventRow[];
+    speakerRows: Array<{
+      event_id: string | null;
+      speaker_id: string | null;
+      speaker_name: string | null;
+    }>;
+  }> {
+    const cutoff = new Date(
+      now.getTime() - PAST_SPEAKER_WINDOW_DAYS * 24 * 60 * 60 * 1000
+    );
+    const pastEventsById = new Map<string, EventRow>();
+    const speakerRows: Array<{
+      event_id: string | null;
+      speaker_id: string | null;
+      speaker_name: string | null;
+    }> = [];
+    let offset = 0;
+
+    while (
+      pastEventsById.size < PAST_SPEAKER_CANDIDATE_EVENT_TARGET &&
+      offset < PAST_SPEAKER_FETCH_SCAN_LIMIT
+    ) {
+      const batchResult = await readClient
+        .from('events')
+        .select(
+          'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status'
+        )
+        .eq('status', 'confirmed')
+        .lt('start_time', now.toISOString())
+        .gte('start_time', cutoff.toISOString())
+        .order('start_time', { ascending: false })
+        .range(offset, offset + PAST_SPEAKER_FETCH_BATCH_SIZE - 1);
+
+      if (batchResult.error) {
+        throw new Error('Failed to load past speaker events.');
+      }
+
+      const batchEvents = ((batchResult.data || []) as EventRow[]).filter(
+        (event) => Boolean(event.slug && event.title) && !isShowcaseEventSource(event)
+      );
+
+      if (batchEvents.length === 0) {
+        break;
+      }
+
+      const batchEventIds = batchEvents.map((event) => event.id);
+      const speakerResult = await readClient
+        .from('event_speakers_flat')
+        .select('event_id, speaker_id, speaker_name')
+        .in('event_id', batchEventIds)
+        .not('speaker_id', 'is', null);
+
+      if (speakerResult.error || !speakerResult.data) {
+        throw new Error('Failed to load past speaker matches.');
+      }
+
+      const eventIdsWithSpeakers = new Set(
+        (speakerResult.data as Array<{ event_id: string | null }>)
+          .map((row) => row.event_id)
+          .filter((eventId): eventId is string => Boolean(eventId))
+      );
+
+      for (const row of speakerResult.data as Array<{
+        event_id: string | null;
+        speaker_id: string | null;
+        speaker_name: string | null;
+      }>) {
+        speakerRows.push(row);
+      }
+
+      for (const event of batchEvents) {
+        if (!eventIdsWithSpeakers.has(event.id) || pastEventsById.has(event.id)) {
+          continue;
+        }
+
+        pastEventsById.set(event.id, event);
+      }
+
+      if (batchEvents.length < PAST_SPEAKER_FETCH_BATCH_SIZE) {
+        break;
+      }
+
+      offset += PAST_SPEAKER_FETCH_BATCH_SIZE;
+    }
+
+    return {
+      pastEvents: Array.from(pastEventsById.values()),
+      speakerRows,
+    };
   }
 
   private static async getStarterProfiles({
@@ -1700,15 +1783,19 @@ export class CommunityNetworkingHomeService {
       events: rankedEvents,
       readClient,
     });
-    const speakerMatches = priorityEvents.some(
-      (event) => (event.speakers?.length ?? 0) > 0
-    )
-      ? []
-      : await this.getPastSpeakerMatches({
-          viewerId,
-          readClient,
-          now,
-        });
+    const visiblePrioritySpeakerIds = new Set(
+      priorityEvents.flatMap((event) =>
+        (event.speakers ?? [])
+          .map((speaker) => speaker.id)
+          .filter((speakerId): speakerId is string => Boolean(speakerId))
+      )
+    );
+    const speakerMatches = await this.getPastSpeakerMatches({
+      viewerId,
+      readClient,
+      now,
+      excludedSpeakerIds: visiblePrioritySpeakerIds,
+    });
     const meetPeople =
       homeData.meetPeople.length > 0 ? homeData.meetPeople : starterEventData.meetPeople;
 

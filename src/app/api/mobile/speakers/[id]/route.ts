@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { mobileSpeakerDetailSchema } from '@kurecal/domain';
 
 import { MobileSpeakerService } from '@/services/mobileSpeakerService';
+import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -53,9 +54,23 @@ export async function GET(
       );
     }
 
+    const networkingContact = await UserNetworkingContactService.getContactForTarget(
+      {
+        viewerUserId: authContext.user.id,
+        targetKind: 'speaker',
+        targetId: speaker.id,
+      },
+      authContext.supabase
+    );
+
     return NextResponse.json({
       success: true,
-      data: mobileSpeakerDetailSchema.parse(speaker),
+      data: mobileSpeakerDetailSchema.parse({
+        ...speaker,
+        networkingState: UserNetworkingContactService.toNetworkingState(
+          networkingContact
+        ),
+      }),
     });
   } catch (error) {
     return NextResponse.json(

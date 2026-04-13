@@ -32,7 +32,9 @@ function buildGoogleCalendarUrl(detail: MobileEventDetail) {
 }
 
 export default function EventDetailRoute() {
-  const { id } = useLocalSearchParams<{ id: string | string[] }>();
+  const { id } = useLocalSearchParams<{
+    id: string | string[];
+  }>();
   const eventId = Array.isArray(id) ? id[0] : id;
   const [data, setData] = useState<MobileEventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -223,33 +225,35 @@ export default function EventDetailRoute() {
   }
 
   return (
-    <MobileEventDetailScreen
-      detail={data}
-      engagement={data.event.engagement}
-      isBookmarkPending={bookmarkPending}
-      isAttendancePending={attendancePending}
-      onBack={() => router.back()}
-      onPrimaryAction={() => {
-        void handlePrimaryAction();
-      }}
-      onAddToCalendar={() => {
-        void handleAddToCalendar();
-      }}
-      onToggleBookmark={() => {
-        void handleToggleBookmark();
-      }}
-      onToggleAttendance={() => {
-        void handleToggleAttendance();
-      }}
-      onOpenEventPage={() => {
-        void openUrl(data.event.sourceUrl);
-      }}
-      onOpenLocation={(location) => {
-        void openUrl(buildMapsSearchUrl(location));
-      }}
-      onShareEvent={() => {
-        void handleShareEvent();
-      }}
-    />
+    <>
+      <MobileEventDetailScreen
+        detail={data}
+        engagement={data.event.engagement}
+        isBookmarkPending={bookmarkPending}
+        isAttendancePending={attendancePending}
+        onBack={() => router.back()}
+        onPrimaryAction={() => {
+          void handlePrimaryAction();
+        }}
+        onAddToCalendar={() => {
+          void handleAddToCalendar();
+        }}
+        onToggleBookmark={() => {
+          void handleToggleBookmark();
+        }}
+        onToggleAttendance={() => {
+          void handleToggleAttendance();
+        }}
+        onOpenEventPage={() => {
+          void openUrl(data.event.sourceUrl);
+        }}
+        onOpenLocation={(location) => {
+          void openUrl(buildMapsSearchUrl(location));
+        }}
+        onShareEvent={() => {
+          void handleShareEvent();
+        }}
+      />
+    </>
   );
 }

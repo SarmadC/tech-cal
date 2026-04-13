@@ -187,6 +187,7 @@ describe('/api/mobile/community', () => {
     const parsed = mobileCommunityNetworkingHomeSchema.parse(payload.data);
     expect(parsed.upcomingMoments).toHaveLength(1);
     expect(parsed.upcomingMoments[0]?.recentTrackerCount).toBe(3);
+    expect(parsed.upcomingMoments[0]?.speakerPreview?.[0]?.name).toBe('Jamie Chen');
     expect(parsed.peopleToMeet[0]?.whyNow).toBeTruthy();
     expect(parsed.followUpNow[0]?.strongestSharedEvent?.title).toBe('Spring Summit');
     expect(parsed.speakerMatches?.[0]?.speaker.name).toBe('Jamie Chen');

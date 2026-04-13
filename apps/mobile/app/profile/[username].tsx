@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { HeaderActionButton, MobilePage } from '../../src/components/chrome/MobilePage';
+import { KureButton } from '../../src/components/chrome/KureButton';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
 import { CommunityAvatar } from '../../src/components/community/CommunityAvatar';
 import { CommunityFollowButton } from '../../src/components/community/CommunityFollowButton';
@@ -19,7 +20,12 @@ import {
   getPublicProfileCareerSummary,
 } from '../../src/components/community/presentation';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
-import { followMobileUser, loadMobilePublicProfile, unfollowMobileUser } from '../../src/lib/mobileApi';
+import {
+  followMobileUser,
+  loadMobilePublicProfile,
+  unfollowMobileUser,
+  updateMobileNetworkingContact,
+} from '../../src/lib/mobileApi';
 
 function getProfileHeroBadges(
   profile: MobilePublicProfile,
@@ -77,6 +83,9 @@ export default function PublicProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followPending, setFollowPending] = useState(false);
+  const [networkingActionPending, setNetworkingActionPending] = useState<
+    'request' | 'confirm' | null
+  >(null);
 
   const loadProfile = useCallback(async () => {
     const trimmed = resolvedUsername?.trim();
@@ -186,6 +195,46 @@ export default function PublicProfileScreen() {
     }
   }
 
+  async function handleNetworkingAction(
+    action: 'mark_request_sent' | 'confirm_connection'
+  ) {
+    if (!profile || profile.isViewerOwner || networkingActionPending) {
+      return;
+    }
+
+    setNetworkingActionPending(action === 'mark_request_sent' ? 'request' : 'confirm');
+
+    try {
+      const result = await updateMobileNetworkingContact({
+        target: {
+          kind: 'profile',
+          id: profile.id,
+        },
+        action,
+      });
+
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              networkingState: result.networkingState,
+            }
+          : current
+      );
+    } catch (nextError) {
+      Alert.alert(
+        action === 'mark_request_sent'
+          ? 'Unable to log request'
+          : 'Unable to confirm connection',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Please try again.'
+      );
+    } finally {
+      setNetworkingActionPending(null);
+    }
+  }
+
   return (
     <MobilePage
       action={<HeaderActionButton label="Back" onPress={() => router.back()} />}
@@ -269,6 +318,86 @@ export default function PublicProfileScreen() {
                 },
               ]}
             />
+
+            {!profile.isViewerOwner ? (
+              <View
+                style={[
+                  styles.networkingCard,
+                  {
+                    backgroundColor: tokens.colors.surfaceStrong,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.md,
+                  },
+                ]}
+              >
+                <View style={styles.networkingCopy}>
+                  <Text
+                    style={{
+                      color: tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 16,
+                      lineHeight: 20,
+                      fontWeight: '800',
+                    }}
+                  >
+                    Networking
+                  </Text>
+                  <Text
+                    style={{
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 13,
+                      lineHeight: 18,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {profile.networkingState?.status === 'connected'
+                      ? 'Confirmed as a real connection.'
+                      : profile.networkingState?.status === 'requested'
+                        ? 'Request logged. Confirm it once the connection is real.'
+                        : 'Use this profile to track outreach and confirmed connections.'}
+                  </Text>
+                </View>
+                <View style={styles.networkingActions}>
+                  {profile.networkingState?.status !== 'connected' ? (
+                    <View style={styles.networkingAction}>
+                      <KureButton
+                        variant={
+                          profile.networkingState?.status === 'requested'
+                            ? 'secondary'
+                            : 'primary'
+                        }
+                        onPress={() => {
+                          void handleNetworkingAction('mark_request_sent');
+                        }}
+                        disabled={Boolean(networkingActionPending)}
+                      >
+                        {networkingActionPending === 'request'
+                          ? 'Saving...'
+                          : 'Mark request sent'}
+                      </KureButton>
+                    </View>
+                  ) : null}
+                  <View style={styles.networkingAction}>
+                    <KureButton
+                      onPress={() => {
+                        void handleNetworkingAction('confirm_connection');
+                      }}
+                      disabled={
+                        Boolean(networkingActionPending) ||
+                        profile.networkingState?.status === 'connected'
+                      }
+                    >
+                      {networkingActionPending === 'confirm'
+                        ? 'Saving...'
+                        : profile.networkingState?.status === 'connected'
+                          ? 'Connection confirmed'
+                          : 'Confirm connection'}
+                    </KureButton>
+                  </View>
+                </View>
+              </View>
+            ) : null}
 
             {profile.mutualConnections.length > 0 ? (
               <CommunitySection
@@ -445,6 +574,21 @@ const styles = StyleSheet.create({
   eventList: {
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  networkingAction: {
+    width: '100%',
+  },
+  networkingActions: {
+    gap: 10,
+  },
+  networkingCard: {
+    borderWidth: 1,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  networkingCopy: {
+    gap: 4,
   },
   metricCell: {
     flex: 1,

@@ -369,11 +369,38 @@ describe('mobile api helpers', () => {
                 slug: 'product-forum',
                 startTime: '2026-04-01T18:00:00.000Z',
               },
+              nextEventToConfirmConnections: {
+                id: 'event-follow-up',
+                title: 'AI Mixer',
+                slug: 'ai-mixer',
+                startTime: '2026-03-20T18:00:00.000Z',
+              },
               averageRating: 4.2,
               recommendationRate: 80,
               totalConnectionsMade: 7,
               uniqueSkillsCount: 5,
               teaserMessage: 'You are building expertise in Product Strategy',
+            },
+            networkPulse: {
+              confirmedConnectionCount: 7,
+              pendingRequestCount: 2,
+              nextContactToConfirm: {
+                kind: 'speaker',
+                id: 'speaker-1',
+                username: null,
+                name: 'Jamie Chen',
+                avatarUrl: 'https://example.com/jamie.jpg',
+                headline: 'Product leader',
+                linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+                sourceEvent: {
+                  id: '11111111-1111-4111-8111-111111111111',
+                  slug: 'product-forum',
+                  title: 'Product Forum',
+                  startTime: '2026-04-01T18:00:00.000Z',
+                  location: 'Remote',
+                  format: 'Hybrid',
+                },
+              },
             },
           },
         }),
@@ -395,6 +422,8 @@ describe('mobile api helpers', () => {
     expect(result.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
     expect(result.careerImpact?.insights[0]?.tone).toBe('success');
     expect(result.careerOutcomes?.averageRating).toBe(4.2);
+    expect(result.networkPulse?.pendingRequestCount).toBe(2);
+    expect(result.networkPulse?.nextContactToConfirm?.id).toBe('speaker-1');
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mobile.kurecal.test/api/mobile/dashboard/summary',
       expect.objectContaining({

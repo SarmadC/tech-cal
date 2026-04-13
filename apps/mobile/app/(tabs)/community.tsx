@@ -11,6 +11,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -231,7 +232,6 @@ export default function CommunityScreen() {
 
   const [home, setHome] = useState<MobileCommunityHome | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -245,9 +245,7 @@ export default function CommunityScreen() {
       const requestId = ++requestSequenceRef.current;
       const existingHome = homeRef.current;
 
-      if (mode === 'refresh') {
-        setRefreshing(true);
-      } else if (!existingHome) {
+      if (mode !== 'refresh' && !existingHome) {
         setLoading(true);
       }
 
@@ -273,13 +271,7 @@ export default function CommunityScreen() {
           setError(message);
         }
       } finally {
-        if (requestId !== requestSequenceRef.current) {
-          return;
-        }
-
-        if (mode === 'refresh') {
-          setRefreshing(false);
-        } else {
+        if (requestId === requestSequenceRef.current && mode !== 'refresh') {
           setLoading(false);
         }
       }
@@ -298,38 +290,39 @@ export default function CommunityScreen() {
     }, [loadCommunity])
   );
 
-  const filteredSpeakers = useMemo(() => {
+  const recommendedSpeakerSurfaces = useMemo(() => {
     if (!home) {
       return [];
     }
 
-    const hasUpcomingSpeakers = home.upcomingMoments.some(
-      (event) => (event.speakerPreview?.length ?? 0) > 0
-    );
-    const baseSurfaces = hasUpcomingSpeakers
-      ? buildSpeakerSurfaces(
-          home.upcomingMoments.filter((event) => matchesEventLens(event, activeLens))
-        )
-      : buildSpeakerMatchSurfaces(home.speakerMatches);
-
-    return baseSurfaces.filter((item) => matchesSpeakerSearch(item, normalizedSearch));
-  }, [activeLens, home, normalizedSearch]);
-
-  const speakerSectionMode = useMemo(() => {
-    if (!home) {
-      return 'empty' as const;
-    }
-
-    if (home.upcomingMoments.some((event) => (event.speakerPreview?.length ?? 0) > 0)) {
-      return 'upcoming' as const;
-    }
-
-    if ((home.speakerMatches?.length ?? 0) > 0) {
-      return 'matched' as const;
-    }
-
-    return 'empty' as const;
+    return buildSpeakerMatchSurfaces(home.speakerMatches);
   }, [home]);
+
+  const upcomingSpeakerSurfaces = useMemo(() => {
+    if (!home) {
+      return [];
+    }
+
+    return buildSpeakerSurfaces(
+      home.upcomingMoments.filter((event) => matchesEventLens(event, activeLens))
+    );
+  }, [activeLens, home]);
+
+  const filteredRecommendedSpeakers = useMemo(
+    () =>
+      recommendedSpeakerSurfaces.filter((item) =>
+        matchesSpeakerSearch(item, normalizedSearch)
+      ),
+    [normalizedSearch, recommendedSpeakerSurfaces]
+  );
+
+  const filteredUpcomingSpeakers = useMemo(
+    () =>
+      upcomingSpeakerSurfaces.filter((item) =>
+        matchesSpeakerSearch(item, normalizedSearch)
+      ),
+    [normalizedSearch, upcomingSpeakerSurfaces]
+  );
 
   const filteredFollowUps = useMemo(() => {
     if (!home) {
@@ -365,6 +358,11 @@ export default function CommunityScreen() {
     );
   }, [activeLens, home, normalizedSearch]);
 
+  const hasRecommendedSpeakerSurfaces = recommendedSpeakerSurfaces.length > 0;
+  const hasUpcomingSpeakerSurfaces = upcomingSpeakerSurfaces.length > 0;
+  const hasAnySpeakerSurfaces =
+    hasRecommendedSpeakerSurfaces || hasUpcomingSpeakerSurfaces;
+
   const visibilityMessage = home ? getVisibilityMessage(home) : null;
   const attendingEvents = filteredEvents.filter(
     (event) => event.viewerContext === 'attending'
@@ -397,6 +395,31 @@ export default function CommunityScreen() {
       setPendingUserId((current) => (current === userId ? null : current));
     }
   }
+
+  const handleOpenSpeakerExternalLink = useCallback(
+    async (_surface: CommunitySpeakerSurface, _label: string, url: string) => {
+      try {
+        await Linking.openURL(url);
+      } catch (nextError) {
+        Alert.alert(
+          'Unable to open link',
+          nextError instanceof Error ? nextError.message : 'Please try again.'
+        );
+      }
+    },
+    []
+  );
+
+  const handleOpenSpeaker = useCallback((item: CommunitySpeakerSurface) => {
+    router.push({
+      pathname: '/speaker/[id]',
+      params: {
+        id: item.speaker.id,
+        ...(item.isPastEvent ? { eventId: item.event.id } : {}),
+        ...(item.isPastEvent ? { eventTitle: item.event.title } : {}),
+      },
+    });
+  }, []);
 
   return (
     <MobilePage
@@ -566,6 +589,66 @@ export default function CommunityScreen() {
               />
             )}
 
+            {hasRecommendedSpeakerSurfaces ? (
+              <>
+                <SectionHeader
+                  icon="microphone"
+                  title="Recommended speakers"
+                  meta={
+                    filteredRecommendedSpeakers.length > 0
+                      ? `${formatCommunityTabCount(filteredRecommendedSpeakers.length)} speakers`
+                      : undefined
+                  }
+                />
+                {filteredRecommendedSpeakers.length > 0 ? (
+                  <View style={styles.stack}>
+                    {filteredRecommendedSpeakers.map((item) => (
+                      <CommunityNetworkingSpeakerCard
+                        key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}:recommended`}
+                        speaker={item.speaker}
+                        onOpenExternalLink={(label, url) => {
+                          void handleOpenSpeakerExternalLink(item, label, url);
+                        }}
+                        onOpenSpeaker={() => handleOpenSpeaker(item)}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <InlineSectionNote title="No recommended speakers in this view" />
+                )}
+              </>
+            ) : null}
+
+            {hasUpcomingSpeakerSurfaces ? (
+              <>
+                <SectionHeader
+                  icon="microphone"
+                  title="Speakers on upcoming events"
+                  meta={
+                    filteredUpcomingSpeakers.length > 0
+                      ? `${formatCommunityTabCount(filteredUpcomingSpeakers.length)} speakers`
+                      : undefined
+                  }
+                />
+                {filteredUpcomingSpeakers.length > 0 ? (
+                  <View style={styles.stack}>
+                    {filteredUpcomingSpeakers.map((item) => (
+                      <CommunityNetworkingSpeakerCard
+                        key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}:upcoming`}
+                        speaker={item.speaker}
+                        onOpenExternalLink={(label, url) => {
+                          void handleOpenSpeakerExternalLink(item, label, url);
+                        }}
+                        onOpenSpeaker={() => handleOpenSpeaker(item)}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <InlineSectionNote title="No upcoming-event speakers in this view" />
+                )}
+              </>
+            ) : null}
+
             <SectionHeader
               icon="users"
               title="People you can meet"
@@ -592,6 +675,14 @@ export default function CommunityScreen() {
                   />
                 ))}
               </View>
+            ) : hasAnySpeakerSurfaces ? (
+              <InlineSectionNote
+                title={
+                  normalizedSearch.length > 0 || activeLens !== 'for_you'
+                    ? 'No people in this view'
+                    : 'No attendee matches yet'
+                }
+              />
             ) : home.summary.trackedUpcomingCount === 0 ? (
               <InlineSectionNote title="No people yet" />
             ) : (
@@ -604,30 +695,7 @@ export default function CommunityScreen() {
               />
             )}
 
-            <SectionHeader
-              icon="microphone"
-              title={
-                speakerSectionMode === 'matched'
-                  ? 'Speakers to know'
-                  : 'Speakers on upcoming events'
-              }
-              meta={
-                filteredSpeakers.length > 0
-                  ? `${formatCommunityTabCount(filteredSpeakers.length)} speakers`
-                  : undefined
-              }
-            />
-            {filteredSpeakers.length > 0 ? (
-              <View style={styles.stack}>
-                {filteredSpeakers.map((item) => (
-                  <CommunityNetworkingSpeakerCard
-                    key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}`}
-                    speaker={item.speaker}
-                    onOpenSpeaker={() => router.push(`/speaker/${item.speaker.id}`)}
-                  />
-                ))}
-              </View>
-            ) : speakerSectionMode === 'upcoming' ? (
+            {!hasAnySpeakerSurfaces ? (
               <InlineSectionNote
                 title={
                   normalizedSearch.length > 0 || activeLens !== 'for_you'
@@ -635,13 +703,7 @@ export default function CommunityScreen() {
                     : 'No speakers yet'
                 }
               />
-            ) : (
-              <InlineSectionNote
-                title={
-                  normalizedSearch.length > 0 ? 'No speakers in this view' : 'No speakers yet'
-                }
-              />
-            )}
+            ) : null}
 
             <SectionHeader
               icon="refresh"

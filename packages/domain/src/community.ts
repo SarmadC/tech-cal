@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { mobileSurfaceHeaderSchema } from './mobile';
+import { mobileSurfaceHeaderSchema } from './surface';
 
 export const voteValueSchema = z.union([
   z.literal(-1),
@@ -203,6 +203,34 @@ export const mobileCommunityNetworkingSpeakerMatchSchema = z.object({
   isPastEvent: z.literal(true),
 });
 
+export const mobileNetworkingContactKindSchema = z.enum([
+  'profile',
+  'speaker',
+]);
+
+export const mobileNetworkingStateStatusSchema = z.enum([
+  'none',
+  'requested',
+  'connected',
+]);
+
+export const mobileNetworkingStateSchema = z.object({
+  status: mobileNetworkingStateStatusSchema,
+  linkedinRequestedAt: z.string().nullable(),
+  confirmedConnectedAt: z.string().nullable(),
+});
+
+export const mobileNetworkingContactReferenceSchema = z.object({
+  kind: mobileNetworkingContactKindSchema,
+  id: z.string(),
+  username: z.string().nullable().optional(),
+  name: z.string(),
+  avatarUrl: z.string().nullable(),
+  headline: z.string().nullable(),
+  linkedinUrl: z.string().nullable().optional(),
+  sourceEvent: mobileCommunityNetworkingSharedEventSchema.nullable().optional(),
+});
+
 export const mobileSpeakerDetailEventSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -224,6 +252,7 @@ export const mobileSpeakerDetailSchema = z.object({
   twitterUrl: z.string().nullable(),
   websiteUrl: z.string().nullable(),
   events: z.array(mobileSpeakerDetailEventSchema),
+  networkingState: mobileNetworkingStateSchema.optional(),
 });
 
 export const mobileCommunityNetworkingEventSchema = z.object({
@@ -368,6 +397,7 @@ export const mobilePublicProfileSchema = z.object({
   careerProfile: mobilePublicProfileCareerSchema.nullable(),
   mutualConnections: z.array(mobilePublicProfileMutualConnectionSchema),
   mutualConnectionsCount: z.number().int().nonnegative(),
+  networkingState: mobileNetworkingStateSchema.optional(),
 });
 
 export interface MobileCommunityComment {
@@ -471,6 +501,16 @@ export type MobileCommunityNetworkingSpeaker = z.infer<
 >;
 export type MobileCommunityNetworkingSpeakerMatch = z.infer<
   typeof mobileCommunityNetworkingSpeakerMatchSchema
+>;
+export type MobileNetworkingContactKind = z.infer<
+  typeof mobileNetworkingContactKindSchema
+>;
+export type MobileNetworkingStateStatus = z.infer<
+  typeof mobileNetworkingStateStatusSchema
+>;
+export type MobileNetworkingState = z.infer<typeof mobileNetworkingStateSchema>;
+export type MobileNetworkingContactReference = z.infer<
+  typeof mobileNetworkingContactReferenceSchema
 >;
 export type MobileSpeakerDetailEvent = z.infer<
   typeof mobileSpeakerDetailEventSchema

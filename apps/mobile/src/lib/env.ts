@@ -9,6 +9,7 @@ type RequiredMobileEnvName =
   | 'EXPO_PUBLIC_SUPABASE_ANON_KEY';
 
 type OptionalMobileEnvName =
+  | 'EXPO_PUBLIC_API_URL'
   | 'EXPO_PUBLIC_AUTH_REDIRECT_URI'
   | 'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID'
   | 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS'
@@ -38,6 +39,10 @@ interface MobileAppJson {
       };
     };
   };
+}
+
+interface LegacyExpoManifest {
+  debuggerHost?: string;
 }
 
 const mobileAppConfig = appConfig as MobileAppJson;
@@ -99,8 +104,7 @@ export function getMobileApiBaseUrl(): string {
     // across WiFi changes without needing to update .env manually.
     const bundlerHost =
       Constants.expoConfig?.hostUri ??
-      // @ts-expect-error — legacy Expo Go manifest field
-      (Constants.manifest as { debuggerHost?: string } | null)?.debuggerHost;
+      (Constants.manifest as LegacyExpoManifest | null)?.debuggerHost;
 
     if (bundlerHost) {
       const host = bundlerHost.split(':')[0];

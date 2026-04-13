@@ -21,6 +21,8 @@ import {
 import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import type { EventFeedback } from '@/services/eventFeedbackService';
+import type { EventNetworkingSummary } from '@/services/eventNetworkingSummaryService';
+import type { HydratedUserNetworkingContact } from '@/services/userNetworkingContactService';
 import type { CareerProfile, Event, TrackedEventRecord } from '@/types';
 import type { CareerGoal } from '@/types/career';
 import { doesEventMatchGoal } from '@/utils/eventGoalAlignment';
@@ -672,48 +674,31 @@ export function buildDiscoveryBreadth(params: {
 }
 
 export function buildNetworkPulse(params: {
-  trackedEvents: TrackedEventRecord[];
-  feedbackList: EventFeedback[];
-  now: Date;
+  contacts: HydratedUserNetworkingContact[];
 }): MobileDashboardNetworkPulse {
-  const attendedEvents = getAttendedEvents(params.trackedEvents, params.now);
-  const eventById = new Map(attendedEvents.map((record) => [record.event.id, record.event] as const));
-  const totalConnectionsMade = params.feedbackList.reduce(
-    (sum, item) => sum + (item.connectionsMade || 0),
-    0
-  );
-  const attendedCount = attendedEvents.length;
-  const connectionsPerEvent =
-    attendedCount > 0
-      ? Math.round((totalConnectionsMade / attendedCount) * 10) / 10
-      : 0;
-
-  const topFeedback = params.feedbackList.reduce<EventFeedback | null>((best, item) => {
-    const score = item.connectionsMade || 0;
-    const bestScore = best?.connectionsMade || 0;
-    return score > bestScore ? item : best;
-  }, null);
-
-  const topEvent = topFeedback ? eventById.get(topFeedback.eventId) : null;
-  const networkingAlignedCount = attendedEvents.filter((record) =>
-    isNetworkingEvent(record.event)
+  const confirmedConnectionCount = params.contacts.filter(
+    (item) => item.networkingState.status === 'connected'
   ).length;
+  const pendingContacts = params.contacts
+    .filter((item) => item.networkingState.status === 'requested')
+    .sort((left, right) => {
+      const leftTime = left.networkingState.linkedinRequestedAt
+        ? new Date(left.networkingState.linkedinRequestedAt).getTime()
+        : new Date(left.row.updatedAt).getTime();
+      const rightTime = right.networkingState.linkedinRequestedAt
+        ? new Date(right.networkingState.linkedinRequestedAt).getTime()
+        : new Date(right.row.updatedAt).getTime();
+      return rightTime - leftTime;
+    });
+  const nextContactToConfirm =
+    pendingContacts.find(
+      (item) => item.contact.kind === 'speaker' || Boolean(item.contact.username)
+    )?.contact ?? null;
 
   return {
-    totalConnectionsMade,
-    connectionsPerEvent,
-    topConnectingEvent:
-      topFeedback && topEvent
-        ? {
-            eventId: topEvent.id,
-            title: topEvent.title,
-            connectionsMade: topFeedback.connectionsMade || 0,
-          }
-        : null,
-    networkingEventRatio:
-      attendedCount > 0
-        ? Math.round((networkingAlignedCount / attendedCount) * 100)
-        : 0,
+    confirmedConnectionCount,
+    pendingRequestCount: pendingContacts.length,
+    nextContactToConfirm,
   };
 }
 
@@ -885,11 +870,15 @@ export function buildDashboardCareerImpact(params: {
 export function buildDashboardCareerOutcomes(params: {
   trackedEvents: TrackedEventRecord[];
   feedbackList: EventFeedback[];
+  networkingSummaries: EventNetworkingSummary[];
   now: Date;
   toSummary: (event: Event, record: TrackedEventRecord) => MobileEventSummary;
 }): MobileDashboardCareerOutcomes {
   const feedbackByEventId = new Map(
     params.feedbackList.map((item) => [item.eventId, item] as const)
+  );
+  const networkingSummaryByEventId = new Map(
+    params.networkingSummaries.map((item) => [item.eventId, item] as const)
   );
   const aggregates = calculateFeedbackAggregates(params.feedbackList);
   const attendedEvents = getAttendedEvents(params.trackedEvents, params.now);
@@ -899,6 +888,26 @@ export function buildDashboardCareerOutcomes(params: {
   const unratedAttended = attendedEvents.filter(
     (record) => !feedbackByEventId.has(record.event.id)
   );
+  const nextConnectionFollowUp = attendedEvents.find((record) => {
+    const networkingSummary = networkingSummaryByEventId.get(record.event.id);
+    const feedback = feedbackByEventId.get(record.event.id);
+    if (!networkingSummary || networkingSummary.linkedinRequestsSent == null) {
+      return false;
+    }
+
+    if (
+      networkingSummary.linkedinRequestsSent <= (feedback?.connectionsMade || 0)
+    ) {
+      return false;
+    }
+
+    const followUpAnchor = networkingSummary.lastOutreachLoggedAt
+      ? new Date(networkingSummary.lastOutreachLoggedAt)
+      : feedback?.feedbackDate
+        ? new Date(feedback.feedbackDate)
+        : getEventOccurrenceDate(record.event);
+    return followUpAnchor.getTime() <= params.now.getTime() - 7 * DAY_IN_MS;
+  });
   const hasNoActivity = attendedEvents.length === 0 && upcomingCount === 0;
   const state = hasNoActivity
     ? 'empty'
@@ -924,6 +933,9 @@ export function buildDashboardCareerOutcomes(params: {
     ),
     nextEventToRate: unratedAttended[0]
       ? params.toSummary(unratedAttended[0].event, unratedAttended[0])
+      : null,
+    nextEventToConfirmConnections: nextConnectionFollowUp
+      ? params.toSummary(nextConnectionFollowUp.event, nextConnectionFollowUp)
       : null,
     averageRating: aggregates.averageRating,
     recommendationRate: aggregates.recommendationRate,

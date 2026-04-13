@@ -26,9 +26,12 @@ import {
 import { CareerProfileService } from '@/services/careerProfileService';
 import { EventService } from '@/services/eventServices';
 import { EventFeedbackService } from '@/services/eventFeedbackService';
+import { EventNetworkingSummaryService } from '@/services/eventNetworkingSummaryService';
 import { ProfileService } from '@/services/profileService';
 import { fetchPersonalizedRecommendationCandidates } from '@/services/recommendations/recommendationPipeline';
+import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
 import { UserEventService } from '@/services/userEventService';
+import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const DASHBOARD_CARD_LIMIT = 3;
@@ -49,8 +52,22 @@ export async function GET(request: Request) {
     }
 
     const now = Date.now();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const readClient =
+      supabaseUrl && serviceRoleKey
+        ? createServiceClient(supabaseUrl, serviceRoleKey)
+        : authContext.supabase;
 
-    const [trackedEvents, careerProfile, profile, feedbackList] = await Promise.all([
+    const [
+      trackedEvents,
+      careerProfile,
+      profile,
+      feedbackList,
+      networkingSummaries,
+      userNetworkingContacts,
+    ] =
+      await Promise.all([
       UserEventService.getTrackedEvents(authContext.user.id, authContext.supabase),
       CareerProfileService.getCareerProfile(
         authContext.user.id,
@@ -63,8 +80,21 @@ export async function GET(request: Request) {
         authContext.user.id,
         authContext.supabase
       ).catch(() => []),
+      EventNetworkingSummaryService.getAllSummariesForUser(
+        authContext.user.id,
+        authContext.supabase
+      ).catch(() => []),
+      UserNetworkingContactService.getAllContactsForViewer(
+        authContext.user.id,
+        authContext.supabase
+      ).catch(() => []),
     ]);
     const nowDate = new Date(now);
+    const hydratedNetworkingContacts =
+      await UserNetworkingContactService.hydrateContacts(
+        userNetworkingContacts,
+        readClient
+      ).catch(() => []);
     const feedbackByEventId = new Map(
       feedbackList.map((item) => [item.eventId, item] as const)
     );
@@ -178,15 +208,14 @@ export async function GET(request: Request) {
     const careerOutcomes = buildDashboardCareerOutcomes({
       trackedEvents,
       feedbackList,
+      networkingSummaries,
       now: nowDate,
       toSummary: (event, record) =>
         toMobileEventSummary(event, engagementFromTrackedEvent(record)),
     });
 
     const networkPulse = buildNetworkPulse({
-      trackedEvents,
-      feedbackList,
-      now: nowDate,
+      contacts: hydratedNetworkingContacts,
     });
 
     const predictionAccuracy = buildPredictionAccuracy({

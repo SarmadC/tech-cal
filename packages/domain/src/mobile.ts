@@ -1,18 +1,20 @@
 import { z } from 'zod';
 
+import {
+  mobileNetworkingContactKindSchema,
+  mobileNetworkingContactReferenceSchema,
+  mobileNetworkingStateSchema,
+} from './community';
 import { profileVisibilitySchema, socialProfileSchema } from './socialProfile';
+import { mobileSurfaceHeaderSchema } from './surface';
+
+export { mobileSurfaceHeaderSchema } from './surface';
 
 export const mobileEventAttendanceStatusSchema = z.enum([
   'attending',
   'attended',
   'cancelled',
 ]);
-
-export const mobileSurfaceHeaderSchema = z.object({
-  eyebrow: z.string(),
-  title: z.string(),
-  subtitle: z.string().nullable().optional(),
-});
 
 export const mobileEventEngagementSchema = z.object({
   isBookmarked: z.boolean(),
@@ -32,6 +34,54 @@ export const mobileEventEngagementUpdateSchema = z
       message: 'At least one engagement field must be provided.',
     }
   );
+
+export const mobileLinkedInOutreachLogSchema = z.object({
+  eventId: z.string(),
+  connectionsMade: z.number().int().nonnegative(),
+  linkedinRequestsSent: z.number().int().nonnegative(),
+});
+
+export const mobileEventNetworkingFeedbackSchema = z.object({
+  eventId: z.string(),
+  connectionsMade: z.number().int().nonnegative().nullable(),
+  linkedinRequestsSent: z.number().int().nonnegative().nullable(),
+});
+
+export const mobileEventNetworkingFeedbackUpdateSchema = z
+  .object({
+    connectionsMade: z.number().int().nonnegative().nullable().optional(),
+    linkedinRequestsSent: z.number().int().nonnegative().nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      Object.prototype.hasOwnProperty.call(value, 'connectionsMade') ||
+      Object.prototype.hasOwnProperty.call(value, 'linkedinRequestsSent'),
+    {
+      message: 'At least one networking field must be provided.',
+    }
+  );
+
+export const mobileNetworkingContactUpdateActionSchema = z.enum([
+  'mark_request_sent',
+  'confirm_connection',
+  'clear_request',
+]);
+
+export const mobileNetworkingContactTargetSchema = z.object({
+  kind: mobileNetworkingContactKindSchema,
+  id: z.string(),
+  sourceEventId: z.string().nullable().optional(),
+});
+
+export const mobileNetworkingContactUpdateSchema = z.object({
+  target: mobileNetworkingContactTargetSchema,
+  action: mobileNetworkingContactUpdateActionSchema,
+});
+
+export const mobileNetworkingContactRecordSchema = z.object({
+  contact: mobileNetworkingContactReferenceSchema,
+  networkingState: mobileNetworkingStateSchema,
+});
 
 export const mobileEventSummarySchema = z.object({
   id: z.string(),
@@ -393,19 +443,12 @@ export const mobileDashboardDiscoveryBreadthSchema = z.object({
   breadthLabel: mobileDashboardDiscoveryBreadthLabelSchema,
 });
 
-export const mobileDashboardNetworkPulseTopEventSchema = z.object({
-  eventId: z.string(),
-  title: z.string(),
-  connectionsMade: z.number().int().nonnegative(),
-});
-
 export const mobileDashboardNetworkPulseSchema = z.object({
-  totalConnectionsMade: z.number().int().nonnegative(),
-  connectionsPerEvent: z.number().nonnegative(),
-  topConnectingEvent: mobileDashboardNetworkPulseTopEventSchema
+  confirmedConnectionCount: z.number().int().nonnegative(),
+  pendingRequestCount: z.number().int().nonnegative(),
+  nextContactToConfirm: mobileNetworkingContactReferenceSchema
     .nullable()
     .optional(),
-  networkingEventRatio: z.number().int().nonnegative(),
 });
 
 export const mobileDashboardPredictionConfidenceSchema = z.enum([
@@ -466,6 +509,7 @@ export const mobileDashboardCareerOutcomesSchema = z.object({
   unratedAttendedCount: z.number().int().nonnegative(),
   ratingsRemaining: z.number().int().nonnegative(),
   nextEventToRate: mobileEventSummarySchema.nullable().optional(),
+  nextEventToConfirmConnections: mobileEventSummarySchema.nullable().optional(),
   averageRating: z.number().nullable().optional(),
   recommendationRate: z.number().nullable().optional(),
   totalConnectionsMade: z.number().int().nonnegative(),
@@ -685,6 +729,27 @@ export type MobileEventEngagement = z.infer<typeof mobileEventEngagementSchema>;
 export type MobileEventEngagementUpdate = z.infer<
   typeof mobileEventEngagementUpdateSchema
 >;
+export type MobileLinkedInOutreachLog = z.infer<
+  typeof mobileLinkedInOutreachLogSchema
+>;
+export type MobileEventNetworkingFeedback = z.infer<
+  typeof mobileEventNetworkingFeedbackSchema
+>;
+export type MobileEventNetworkingFeedbackUpdate = z.infer<
+  typeof mobileEventNetworkingFeedbackUpdateSchema
+>;
+export type MobileNetworkingContactUpdateAction = z.infer<
+  typeof mobileNetworkingContactUpdateActionSchema
+>;
+export type MobileNetworkingContactTarget = z.infer<
+  typeof mobileNetworkingContactTargetSchema
+>;
+export type MobileNetworkingContactUpdate = z.infer<
+  typeof mobileNetworkingContactUpdateSchema
+>;
+export type MobileNetworkingContactRecord = z.infer<
+  typeof mobileNetworkingContactRecordSchema
+>;
 export type MobileEventSummary = z.infer<typeof mobileEventSummarySchema>;
 export type MobileDiscoverRankingMode = z.infer<
   typeof mobileDiscoverRankingModeSchema
@@ -744,9 +809,6 @@ export type MobileDashboardDiscoveryBreadthLabel = z.infer<
 >;
 export type MobileDashboardDiscoveryBreadth = z.infer<
   typeof mobileDashboardDiscoveryBreadthSchema
->;
-export type MobileDashboardNetworkPulseTopEvent = z.infer<
-  typeof mobileDashboardNetworkPulseTopEventSchema
 >;
 export type MobileDashboardNetworkPulse = z.infer<
   typeof mobileDashboardNetworkPulseSchema

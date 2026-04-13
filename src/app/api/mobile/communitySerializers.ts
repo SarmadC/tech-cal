@@ -2,12 +2,14 @@ import {
   mobileCommunityCirclePageSchema,
   mobileCommunityHomeSchema,
   mobileCommunityPostPageSchema,
+  mobileNetworkingStateSchema,
   mobilePublicProfileSchema,
   type MobileCommunityAuthor,
   type MobileCommunityCirclePage,
   type MobileCommunityComment,
   type MobileCommunityCurrentUser,
   type MobileCommunityHome,
+  type MobileNetworkingState,
   type MobileCommunityPost,
   type MobileCommunityPostPage,
   type MobilePublicProfile,
@@ -370,7 +372,8 @@ export function buildMobileCommunityPostPage(
 
 export function toMobilePublicProfile(
   profile: PublicProfileResult,
-  relationship: FollowStatus | null
+  relationship: FollowStatus | null,
+  networkingState?: MobileNetworkingState
 ): MobilePublicProfile {
   return mobilePublicProfileSchema.parse({
     id: profile.id,
@@ -411,5 +414,8 @@ export function toMobilePublicProfile(
       headline: connection.headline,
     })),
     mutualConnectionsCount: profile.mutualConnectionsCount,
+    networkingState: networkingState
+      ? mobileNetworkingStateSchema.parse(networkingState)
+      : undefined,
   });
 }
