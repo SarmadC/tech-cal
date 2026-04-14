@@ -137,4 +137,43 @@ describe('UserNetworkingContactService', () => {
     expect(mockSupabase.query.eq).toHaveBeenCalledWith('id', 'contact-1');
     expect(result).toBeNull();
   });
+
+  it('keeps the row but clears the confirmed timestamp when a connection is undone', async () => {
+    const mockSupabase = createMockSupabase(
+      createContactRow({
+        confirmed_connected_at: null,
+      })
+    );
+    vi.spyOn(UserNetworkingContactService, 'getContactForTarget').mockResolvedValueOnce({
+      id: 'contact-1',
+      viewerUserId: 'user-1',
+      targetKind: 'speaker',
+      targetUserId: null,
+      targetSpeakerId: 'speaker-1',
+      sourceEventId: 'event-1',
+      linkedinRequestedAt: '2026-04-12T12:00:00.000Z',
+      confirmedConnectedAt: '2026-04-13T12:00:00.000Z',
+      createdAt: '2026-04-12T12:00:00.000Z',
+      updatedAt: '2026-04-13T12:00:00.000Z',
+    });
+
+    const result = await UserNetworkingContactService.applyAction(
+      {
+        viewerUserId: 'user-1',
+        targetKind: 'speaker',
+        targetId: 'speaker-1',
+        action: 'clear_connection',
+      },
+      mockSupabase as unknown as SupabaseClient
+    );
+
+    expect(mockSupabase.query.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmed_connected_at: null,
+      })
+    );
+    expect(mockSupabase.query.eq).toHaveBeenCalledWith('id', 'contact-1');
+    expect(result?.confirmedConnectedAt).toBeNull();
+    expect(result?.linkedinRequestedAt).toBe('2026-04-12T12:00:00.000Z');
+  });
 });

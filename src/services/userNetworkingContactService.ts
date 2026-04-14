@@ -158,7 +158,11 @@ export class UserNetworkingContactService {
       viewerUserId: string;
       targetKind: MobileNetworkingContactKind;
       targetId: string;
-      action: 'mark_request_sent' | 'confirm_connection' | 'clear_request';
+      action:
+        | 'mark_request_sent'
+        | 'confirm_connection'
+        | 'clear_request'
+        | 'clear_connection';
       sourceEventId?: string | null;
     },
     supabase: SupabaseClientType
@@ -176,6 +180,33 @@ export class UserNetworkingContactService {
       params.sourceEventId !== undefined
         ? params.sourceEventId
         : existing?.sourceEventId ?? null;
+
+    if (params.action === 'clear_connection') {
+      if (!existing) {
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('user_networking_contacts')
+        .update({
+          confirmed_connected_at: null,
+          source_event_id: nextSourceEventId,
+          updated_at: now,
+        })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error(
+          '[UserNetworkingContactService] Error clearing confirmed connection:',
+          error
+        );
+        throw error;
+      }
+
+      return mapRow(data);
+    }
 
     if (params.action === 'clear_request') {
       if (!existing) {

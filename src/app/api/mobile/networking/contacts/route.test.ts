@@ -168,4 +168,72 @@ describe('PATCH /api/mobile/networking/contacts', () => {
       },
     });
   });
+
+  it('accepts clearing a confirmed connection and returns the downgraded requested state', async () => {
+    mocks.applyAction.mockResolvedValue({
+      id: 'contact-1',
+      viewerUserId: 'user-1',
+      targetKind: 'speaker',
+      targetUserId: null,
+      targetSpeakerId: 'speaker-1',
+      sourceEventId: 'event-1',
+      linkedinRequestedAt: '2026-04-12T12:00:00.000Z',
+      confirmedConnectedAt: null,
+      createdAt: '2026-04-12T12:00:00.000Z',
+      updatedAt: '2026-04-13T12:00:00.000Z',
+    });
+    mocks.hydrateContact.mockResolvedValue({
+      row: { id: 'contact-1' },
+      contact: {
+        kind: 'speaker',
+        id: 'speaker-1',
+        username: null,
+        name: 'Jamie Chen',
+        avatarUrl: null,
+        headline: 'Product leader',
+        linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+        sourceEvent: null,
+      },
+      networkingState: {
+        status: 'requested',
+        linkedinRequestedAt: '2026-04-12T12:00:00.000Z',
+        confirmedConnectedAt: null,
+      },
+    });
+
+    const response = await PATCH(
+      new Request('http://localhost/api/mobile/networking/contacts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: {
+            kind: 'speaker',
+            id: 'speaker-1',
+            sourceEventId: 'event-1',
+          },
+          action: 'clear_connection',
+        }),
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mobileNetworkingContactRecordSchema.parse(payload.data)).toEqual({
+      contact: {
+        kind: 'speaker',
+        id: 'speaker-1',
+        username: null,
+        name: 'Jamie Chen',
+        avatarUrl: null,
+        headline: 'Product leader',
+        linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+        sourceEvent: null,
+      },
+      networkingState: {
+        status: 'requested',
+        linkedinRequestedAt: '2026-04-12T12:00:00.000Z',
+        confirmedConnectedAt: null,
+      },
+    });
+  });
 });

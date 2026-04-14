@@ -3,10 +3,20 @@ import {
   mobileNetworkingContactUpdateSchema,
 } from '@kurecal/domain';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
+
+const runtimeNetworkingContactUpdateSchema = mobileNetworkingContactUpdateSchema.extend({
+  action: z.enum([
+    'mark_request_sent',
+    'confirm_connection',
+    'clear_request',
+    'clear_connection',
+  ]),
+});
 
 export async function PATCH(request: Request) {
   const authContext = await getAuthenticatedRequestContext(request as never);
@@ -18,7 +28,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const payload = mobileNetworkingContactUpdateSchema.parse(
+    const payload = runtimeNetworkingContactUpdateSchema.parse(
       await request.json().catch(() => ({}))
     );
 

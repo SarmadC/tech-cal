@@ -65,6 +65,7 @@ export const mobileNetworkingContactUpdateActionSchema = z.enum([
   'mark_request_sent',
   'confirm_connection',
   'clear_request',
+  'clear_connection',
 ]);
 
 export const mobileNetworkingContactTargetSchema = z.object({

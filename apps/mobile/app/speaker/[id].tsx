@@ -14,14 +14,9 @@ import {
 } from 'react-native';
 
 import { HeaderActionButton, MobilePage } from '../../src/components/chrome/MobilePage';
-import { KureButton } from '../../src/components/chrome/KureButton';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
-import { CommunityAvatar } from '../../src/components/community/CommunityAvatar';
-import { CommunitySection } from '../../src/components/community/CommunitySection';
-import { CommunityUpcomingEventRow } from '../../src/components/community/CommunityUpcomingEventRow';
 import {
   formatCommunityTabCount,
-  formatNetworkingLocation,
   getSafeExternalUrl,
 } from '../../src/components/community/presentation';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
@@ -40,8 +35,14 @@ function getSpeakerEventMeta(
   format: string | null,
   isPastEvent: boolean
 ): string {
-  const locationLine = formatNetworkingLocation(location, format);
-  return isPastEvent ? `Past event · ${locationLine}` : locationLine;
+  const locationLine =
+    format === 'virtual'
+      ? 'Virtual'
+      : format === 'hybrid' && location
+        ? `${location} · Hybrid`
+        : location || 'Location TBA';
+
+  return isPastEvent ? `Past appearance · ${locationLine}` : locationLine;
 }
 
 function getSocialLinks(speaker: MobileSpeakerDetail) {
@@ -62,6 +63,77 @@ function getSocialLinks(speaker: MobileSpeakerDetail) {
     icon: keyof typeof FontAwesome.glyphMap;
     url: string;
   }>;
+}
+
+function buildSpeakerInitials(name: string | null | undefined): string {
+  const parts = (name ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (parts.length === 0) {
+    return 'SP';
+  }
+
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+}
+
+function formatAppearanceDate(value: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value));
+}
+
+function formatAppearanceTime(value: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function getNetworkingSectionCopy(
+  networkingState: NonNullable<MobileSpeakerDetail['networkingState']>
+): string {
+  if (networkingState.status === 'connected') {
+    return 'Connection confirmed on LinkedIn.';
+  }
+
+  if (networkingState.status === 'requested') {
+    return 'Waiting for connection acceptance.';
+  }
+
+  return 'Track LinkedIn request status.';
+}
+
+function getPrimaryNetworkingAction(
+  networkingState: NonNullable<MobileSpeakerDetail['networkingState']>
+): {
+  action: 'mark_request_sent' | 'confirm_connection';
+  label: string;
+  pendingLabel: string;
+  pendingState: 'request' | 'confirm';
+} | null {
+  if (networkingState.status === 'none') {
+    return {
+      action: 'mark_request_sent',
+      label: 'Mark request sent',
+      pendingLabel: 'Saving...',
+      pendingState: 'request',
+    };
+  }
+
+  if (networkingState.status === 'requested') {
+    return {
+      action: 'confirm_connection',
+      label: 'Mark connected',
+      pendingLabel: 'Saving...',
+      pendingState: 'confirm',
+    };
+  }
+
+  return null;
 }
 
 function resolveLinkedInFollowUpEvent(params: {
@@ -107,6 +179,51 @@ function resolveLinkedInFollowUpEvent(params: {
   return null;
 }
 
+function getNetworkingStatusTone(
+  status: NonNullable<MobileSpeakerDetail['networkingState']>['status'],
+  mode: 'light' | 'dark'
+) {
+  if (status === 'connected') {
+    return mode === 'dark'
+      ? {
+          background: 'rgba(34, 197, 94, 0.16)',
+          border: 'rgba(34, 197, 94, 0.34)',
+          text: '#BBF7D0',
+        }
+      : {
+          background: 'rgba(34, 197, 94, 0.08)',
+          border: 'rgba(34, 197, 94, 0.24)',
+          text: '#166534',
+        };
+  }
+
+  if (status === 'requested') {
+    return mode === 'dark'
+      ? {
+          background: 'rgba(251, 191, 36, 0.16)',
+          border: 'rgba(251, 191, 36, 0.32)',
+          text: '#FDE68A',
+        }
+      : {
+          background: 'rgba(245, 158, 11, 0.09)',
+          border: 'rgba(245, 158, 11, 0.22)',
+          text: '#92400E',
+        };
+  }
+
+  return mode === 'dark'
+    ? {
+        background: 'rgba(148, 163, 184, 0.12)',
+        border: 'rgba(148, 163, 184, 0.22)',
+        text: '#CBD5E1',
+      }
+    : {
+        background: 'rgba(148, 163, 184, 0.1)',
+        border: 'rgba(148, 163, 184, 0.18)',
+        text: '#475569',
+      };
+}
+
 export default function SpeakerScreen() {
   const { tokens } = useAppTheme();
   const { id, eventId, eventTitle } = useLocalSearchParams<{
@@ -123,7 +240,7 @@ export default function SpeakerScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [networkingActionPending, setNetworkingActionPending] = useState<
-    'request' | 'confirm' | null
+    'request' | 'confirm' | 'clear' | 'clear_connection' | null
   >(null);
 
   const loadSpeaker = useCallback(async () => {
@@ -181,15 +298,32 @@ export default function SpeakerScreen() {
     linkedinRequestedAt: null,
     confirmedConnectedAt: null,
   };
+  const primaryNetworkingAction = getPrimaryNetworkingAction(networkingState);
+  const networkingStatusTone = getNetworkingStatusTone(
+    networkingState.status,
+    tokens.mode
+  );
 
   const handleNetworkingAction = useCallback(
-    async (action: 'mark_request_sent' | 'confirm_connection') => {
+    async (
+      action:
+        | 'mark_request_sent'
+        | 'confirm_connection'
+        | 'clear_request'
+        | 'clear_connection'
+    ) => {
       if (!speaker || networkingActionPending) {
         return;
       }
 
       setNetworkingActionPending(
-        action === 'mark_request_sent' ? 'request' : 'confirm'
+        action === 'mark_request_sent'
+          ? 'request'
+          : action === 'confirm_connection'
+            ? 'confirm'
+            : action === 'clear_request'
+              ? 'clear'
+              : 'clear_connection'
       );
 
       try {
@@ -214,7 +348,11 @@ export default function SpeakerScreen() {
         Alert.alert(
           action === 'mark_request_sent'
             ? 'Unable to log request'
-            : 'Unable to confirm connection',
+            : action === 'confirm_connection'
+              ? 'Unable to confirm connection'
+              : action === 'clear_request'
+                ? 'Unable to clear request'
+                : 'Unable to clear connection',
           nextError instanceof Error ? nextError.message : 'Please try again.'
         );
       } finally {
@@ -242,9 +380,9 @@ export default function SpeakerScreen() {
 
   return (
     <MobilePage
-      action={<HeaderActionButton label="Back" onPress={() => router.back()} />}
-      subtitle="Speaker profile and event context."
-      title="Speaker"
+      headerHidden
+      showAccentGlow={false}
+      title={speaker?.name ?? 'Speaker'}
     >
       <View style={styles.contentWrap}>
         {loading && !speaker ? (
@@ -278,270 +416,508 @@ export default function SpeakerScreen() {
                 styles.heroCard,
                 {
                   backgroundColor: tokens.colors.surface,
-                  borderColor: tokens.colors.border,
+                  borderColor: tokens.colors.divider,
                   borderRadius: tokens.radius.lg,
+                  shadowColor: tokens.shadow.shadowColor,
+                  shadowOpacity: tokens.mode === 'dark' ? 0.18 : 0.08,
+                  shadowRadius: 24,
+                  shadowOffset: { width: 0, height: 14 },
+                  elevation: 5,
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.heroHeader,
-                  {
-                    borderRadius: tokens.radius.lg,
-                    backgroundColor: tokens.mode === 'dark' ? '#171B25' : '#1F2430',
-                  },
-                ]}
-              >
-                {speaker.photoUrl ? (
-                  <ImageBackground
-                    source={{ uri: speaker.photoUrl }}
+              {speaker.photoUrl ? (
+                <ImageBackground
+                  source={{ uri: speaker.photoUrl }}
+                  style={styles.heroMedia}
+                  imageStyle={{ borderRadius: tokens.radius.lg }}
+                >
+                  <LinearGradient
+                    colors={[
+                      'rgba(10, 15, 24, 0.02)',
+                      'rgba(10, 15, 24, 0.12)',
+                      'rgba(10, 15, 24, 0.46)',
+                      'rgba(10, 15, 24, 0.72)',
+                    ]}
+                    locations={[0, 0.5, 0.78, 1]}
                     style={StyleSheet.absoluteFillObject}
-                    imageStyle={{ borderRadius: tokens.radius.lg }}
-                  >
-                    <LinearGradient
-                      colors={['rgba(15, 23, 42, 0.12)', 'rgba(15, 23, 42, 0.7)']}
-                      end={{ x: 0.8, y: 1 }}
-                      start={{ x: 0.2, y: 0 }}
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                  </ImageBackground>
-                ) : (
+                  />
+                </ImageBackground>
+              ) : (
+                <View style={styles.heroMedia}>
                   <LinearGradient
                     colors={
                       tokens.mode === 'dark'
-                        ? ['#161B26', '#232A3B']
-                        : ['#232837', '#2F3648']
+                        ? ['#0F172A', '#162033', '#1E293B']
+                        : ['#F5F7F8', '#E8EFF2', '#DDE7EC']
                     }
                     end={{ x: 1, y: 1 }}
                     start={{ x: 0, y: 0 }}
                     style={StyleSheet.absoluteFillObject}
                   />
-                )}
+                  <View
+                    style={[
+                      styles.fallbackOrbLarge,
+                      {
+                        backgroundColor:
+                          tokens.mode === 'dark'
+                            ? 'rgba(255,255,255,0.05)'
+                            : 'rgba(255,255,255,0.64)',
+                      },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.fallbackOrbSmall,
+                      {
+                        backgroundColor:
+                          tokens.mode === 'dark'
+                            ? 'rgba(148, 163, 184, 0.1)'
+                            : 'rgba(191, 219, 254, 0.4)',
+                      },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.fallbackMonogram,
+                      {
+                        backgroundColor:
+                          tokens.mode === 'dark'
+                            ? 'rgba(15, 23, 42, 0.4)'
+                            : 'rgba(255, 255, 255, 0.46)',
+                        borderColor:
+                          tokens.mode === 'dark'
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'rgba(255,255,255,0.38)',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          tokens.mode === 'dark'
+                            ? 'rgba(255,255,255,0.92)'
+                            : '#1E293B',
+                        fontFamily: tokens.typography.sans,
+                        fontSize: 38,
+                        lineHeight: 42,
+                        fontWeight: '800',
+                        letterSpacing: -1.2,
+                      }}
+                    >
+                      {buildSpeakerInitials(speaker.name)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.heroTopRow}>
+                <View />
+                <HeaderActionButton label="Back" onPress={() => router.back()} />
               </View>
 
-              <View
-                style={[
-                  styles.avatarWrap,
-                  {
-                    backgroundColor: tokens.colors.surface,
-                    borderRadius: 52,
-                    borderColor: tokens.colors.surface,
-                  },
-                ]}
-              >
-                <CommunityAvatar avatarUrl={speaker.photoUrl} name={speaker.name} size={88} />
-              </View>
-
-              <View style={styles.heroBody}>
+              <View style={styles.heroOverlay}>
                 <Text
-                  style={{
-                    color: tokens.colors.textPrimary,
-                    fontFamily: tokens.typography.sans,
-                    fontSize: 26,
-                    lineHeight: 30,
-                    fontWeight: '800',
-                    letterSpacing: -0.7,
-                  }}
+                  style={[
+                    styles.heroName,
+                    {
+                      color: speaker.photoUrl ? '#FFFFFF' : tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
                 >
                   {speaker.name}
                 </Text>
                 <Text
                   style={{
-                    color: tokens.colors.textSecondary,
+                    color: speaker.photoUrl
+                      ? 'rgba(255,255,255,0.86)'
+                      : tokens.colors.textSecondary,
                     fontFamily: tokens.typography.sans,
-                    fontSize: 15,
-                    lineHeight: 21,
-                    fontWeight: '600',
+                    fontSize: 18,
+                    lineHeight: 24,
+                    fontWeight: '700',
                   }}
                 >
                   {getSpeakerHeadline(speaker.title, speaker.company)}
                 </Text>
                 {speaker.bio ? (
                   <Text
+                    numberOfLines={2}
                     style={{
-                      color: tokens.colors.textSecondary,
+                      color: speaker.photoUrl
+                        ? 'rgba(255,255,255,0.84)'
+                        : tokens.colors.textSecondary,
                       fontFamily: tokens.typography.sans,
-                      fontSize: 14,
-                      lineHeight: 21,
+                      fontSize: 15,
+                      lineHeight: 22,
                       fontWeight: '500',
                     }}
                   >
                     {speaker.bio}
                   </Text>
                 ) : null}
-
                 {socialLinks.length > 0 ? (
-                  <View style={styles.linkRow}>
-                    {socialLinks.map((link) => (
-                      <Pressable
-                        key={link.label}
-                        accessibilityLabel={`Open ${speaker.name} ${link.label}`}
-                        accessibilityRole="button"
-                        onPress={() => {
-                          void handleOpenSocialLink(link.label, link.url);
-                        }}
-                        style={({ pressed }) => [
-                          styles.linkButton,
-                          {
-                            backgroundColor: tokens.colors.surfaceStrong,
-                            borderColor: tokens.colors.border,
-                            borderRadius: tokens.radius.pill,
-                          },
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <FontAwesome
-                          name={link.icon}
-                          size={13}
-                          color={tokens.colors.textPrimary}
-                        />
-                        <Text
-                          style={{
-                            color: tokens.colors.textPrimary,
-                            fontFamily: tokens.typography.sans,
-                            fontSize: 13,
-                            fontWeight: '700',
+                  <View style={styles.heroFooterRow}>
+                    <View style={styles.heroLinkRow}>
+                      {socialLinks.map((link) => (
+                        <Pressable
+                          key={link.label}
+                          accessibilityLabel={`Open ${speaker.name} ${link.label}`}
+                          accessibilityRole="button"
+                          onPress={() => {
+                            void handleOpenSocialLink(link.label, link.url);
                           }}
+                          style={({ pressed }) => [
+                            styles.heroLinkButton,
+                            {
+                              backgroundColor: speaker.photoUrl
+                                ? 'rgba(255,255,255,0.72)'
+                                : tokens.colors.surfaceStrong,
+                              borderColor: speaker.photoUrl
+                                ? 'rgba(255,255,255,0.56)'
+                                : tokens.colors.divider,
+                              borderRadius: tokens.radius.pill,
+                            },
+                            pressed && styles.pressed,
+                          ]}
                         >
-                          {link.label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <FontAwesome
+                            name={link.icon}
+                            size={12}
+                            color="#334155"
+                          />
+                          <Text
+                            style={{
+                              color: '#0F172A',
+                              fontFamily: tokens.typography.sans,
+                              fontSize: 13,
+                              fontWeight: '700',
+                            }}
+                          >
+                            {link.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
                   </View>
                 ) : null}
+              </View>
+            </View>
 
+            <View
+              style={[
+                styles.networkingCard,
+                {
+                  backgroundColor: tokens.colors.surface,
+                  borderColor: tokens.colors.divider,
+                  borderRadius: tokens.radius.lg,
+                },
+              ]}
+            >
+              <View style={styles.networkingHeader}>
+                <Text
+                  style={{
+                    color: tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 21,
+                    lineHeight: 25,
+                    fontWeight: '700',
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Networking
+                </Text>
                 <View
                   style={[
-                    styles.followUpCard,
+                    styles.statusBadge,
                     {
-                      backgroundColor: tokens.colors.surfaceStrong,
-                      borderColor: tokens.colors.border,
-                      borderRadius: tokens.radius.md,
+                      backgroundColor: networkingStatusTone.background,
+                      borderColor: networkingStatusTone.border,
+                      borderRadius: tokens.radius.pill,
                     },
                   ]}
                 >
-                  <View style={styles.followUpCopy}>
+                  <Text
+                    style={{
+                      color: networkingStatusTone.text,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 14,
+                      lineHeight: 18,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {networkingState.status === 'connected'
+                      ? 'Connected'
+                      : networkingState.status === 'requested'
+                        ? 'Request sent'
+                        : 'Not contacted'}
+                  </Text>
+                </View>
+              </View>
+
+              {networkingState.status === 'connected' ? (
+                <View style={styles.networkingResolvedRow}>
+                  <Text
+                    style={{
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 15,
+                      lineHeight: 20,
+                      fontWeight: '500',
+                    }}
+                  >
+                    {getNetworkingSectionCopy(networkingState)}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={Boolean(networkingActionPending)}
+                    onPress={() => {
+                      void handleNetworkingAction('clear_connection');
+                    }}
+                    style={({ pressed }) => [
+                      styles.undoActionInline,
+                      pressed && styles.pressed,
+                      networkingActionPending && styles.disabledAction,
+                    ]}
+                  >
                     <Text
                       style={{
-                        color: tokens.colors.textPrimary,
+                        color: tokens.colors.textSecondary,
                         fontFamily: tokens.typography.sans,
-                        fontSize: 15,
-                        lineHeight: 20,
-                        fontWeight: '800',
+                        fontSize: 14,
+                        lineHeight: 18,
+                        fontWeight: '600',
                       }}
                     >
-                      Networking
+                      {networkingActionPending === 'clear_connection'
+                        ? 'Undoing...'
+                        : 'Undo'}
                     </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              <View
+                style={[
+                  styles.networkingActions,
+                  networkingState.status === 'connected'
+                    ? styles.networkingActionsCompact
+                    : null,
+                ]}
+              >
+                {networkingState.status !== 'connected' ? (
+                  <Text
+                    style={{
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 15,
+                      lineHeight: 20,
+                      fontWeight: '500',
+                    }}
+                  >
+                    {getNetworkingSectionCopy(networkingState)}
+                  </Text>
+                ) : null}
+                {primaryNetworkingAction ? (
+                  <View style={styles.networkingPrimaryAction}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        void handleNetworkingAction(primaryNetworkingAction.action);
+                      }}
+                      disabled={Boolean(networkingActionPending)}
+                      style={({ pressed }) => [
+                        styles.primaryActionButton,
+                        {
+                          backgroundColor: tokens.colors.pillActive,
+                          borderColor: tokens.colors.pillActive,
+                          borderRadius: tokens.radius.pill,
+                        },
+                        pressed && styles.pressed,
+                        networkingActionPending && styles.disabledAction,
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: tokens.colors.pillActiveText,
+                          fontFamily: tokens.typography.sans,
+                          fontSize: 15,
+                          lineHeight: 18,
+                          fontWeight: '700',
+                        }}
+                      >
+                        {networkingActionPending ===
+                        primaryNetworkingAction.pendingState
+                          ? primaryNetworkingAction.pendingLabel
+                          : primaryNetworkingAction.label}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {networkingState.status === 'requested' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={Boolean(networkingActionPending)}
+                    onPress={() => {
+                      void handleNetworkingAction('clear_request');
+                    }}
+                    style={({ pressed }) => [
+                      styles.undoAction,
+                      pressed && styles.pressed,
+                      networkingActionPending && styles.disabledAction,
+                    ]}
+                  >
+                    <FontAwesome
+                      name="undo"
+                      size={12}
+                      color={tokens.colors.textSecondary}
+                    />
                     <Text
                       style={{
                         color: tokens.colors.textSecondary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
                         lineHeight: 18,
-                        fontWeight: '600',
+                        fontWeight: '700',
                       }}
                     >
-                      {networkingState.status === 'connected'
-                        ? 'Confirmed as a real connection.'
-                        : networkingState.status === 'requested'
-                          ? 'LinkedIn request logged. Confirm once it becomes a real connection.'
-                          : 'Track outreach and confirmed connections from this speaker here.'}
+                      {networkingActionPending === 'clear'
+                        ? 'Undoing...'
+                        : 'Undo'}
                     </Text>
-                    {networkingSourceEvent?.eventTitle ? (
-                      <Text
-                        style={{
-                          color: tokens.colors.textTertiary,
-                          fontFamily: tokens.typography.sans,
-                          fontSize: 12,
-                          lineHeight: 16,
-                          fontWeight: '600',
-                        }}
-                      >
-                        Source event: {networkingSourceEvent.eventTitle}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.followUpActions}>
-                    {speaker.linkedinUrl ? (
-                      <View style={styles.followUpAction}>
-                        <KureButton
-                          variant="secondary"
-                          onPress={() => {
-                            void handleOpenSocialLink('LinkedIn', speaker.linkedinUrl!);
-                          }}
-                        >
-                          Open LinkedIn
-                        </KureButton>
-                      </View>
-                    ) : null}
-                    {networkingState.status !== 'connected' ? (
-                      <View style={styles.followUpAction}>
-                        <KureButton
-                          variant={
-                            networkingState.status === 'requested'
-                              ? 'secondary'
-                              : 'primary'
-                          }
-                          onPress={() => {
-                            void handleNetworkingAction('mark_request_sent');
-                          }}
-                          disabled={Boolean(networkingActionPending)}
-                        >
-                          {networkingActionPending === 'request'
-                            ? 'Saving...'
-                            : 'Mark request sent'}
-                        </KureButton>
-                      </View>
-                    ) : null}
-                    <View style={styles.followUpAction}>
-                      <KureButton
-                        onPress={() => {
-                          void handleNetworkingAction('confirm_connection');
-                        }}
-                        disabled={
-                          Boolean(networkingActionPending) ||
-                          networkingState.status === 'connected'
-                        }
-                      >
-                        {networkingActionPending === 'confirm'
-                          ? 'Saving...'
-                          : networkingState.status === 'connected'
-                            ? 'Connection confirmed'
-                            : 'Confirm connection'}
-                      </KureButton>
-                    </View>
-                  </View>
-                </View>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
 
-            <CommunitySection
-              title="Speaking events"
-              meta={`${formatCommunityTabCount(speaker.events.length)} events`}
+            <View
+              style={[
+                styles.eventsSection,
+                {
+                  backgroundColor: tokens.colors.surface,
+                  borderColor: tokens.colors.divider,
+                  borderRadius: tokens.radius.lg,
+                  shadowColor: tokens.shadow.shadowColor,
+                  shadowOpacity: tokens.mode === 'dark' ? 0.08 : 0.03,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 10 },
+                  elevation: 2,
+                },
+              ]}
             >
-              <View style={styles.sectionInner}>
-                {speaker.events.length > 0 ? (
-                  <View
-                    style={[
-                      styles.eventList,
-                      {
-                        backgroundColor: tokens.colors.surfaceStrong,
-                        borderColor: tokens.colors.border,
-                        borderRadius: tokens.radius.md,
-                      },
-                    ]}
+              <View style={styles.eventsHeader}>
+                <Text
+                  style={{
+                    color: tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 16,
+                    lineHeight: 20,
+                    fontWeight: '800',
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  Speaking events
+                </Text>
+                {speaker.events.length > 1 ? (
+                  <Text
+                    style={{
+                      color: tokens.colors.textTertiary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 12,
+                      lineHeight: 16,
+                      fontWeight: '600',
+                    }}
                   >
-                    {speaker.events.map((event, index) => (
-                      <CommunityUpcomingEventRow
-                        key={event.id}
-                        meta={getSpeakerEventMeta(event.location, event.format, event.isPastEvent)}
-                        startTime={event.startTime}
-                        title={event.title}
-                        showDivider={index < speaker.events.length - 1}
-                        onPress={() => router.push(`/event/${event.id}`)}
-                      />
-                    ))}
-                  </View>
+                    {formatCommunityTabCount(speaker.events.length)}
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={styles.eventsBody}>
+                {speaker.events.length > 0 ? (
+                  speaker.events.map((event, index) => (
+                    <Pressable
+                      key={event.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open event ${event.title}`}
+                      onPress={() => router.push(`/event/${event.id}`)}
+                      style={({ pressed }) => [
+                        styles.eventRow,
+                        index < speaker.events.length - 1 && {
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: tokens.colors.divider,
+                        },
+                        pressed && styles.eventRowPressed,
+                      ]}
+                    >
+                      <View style={styles.eventDateBlock}>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: tokens.colors.textTertiary,
+                            fontFamily: tokens.typography.sans,
+                            fontSize: 14,
+                            lineHeight: 18,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {formatAppearanceDate(event.startTime)}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: tokens.colors.textPrimary,
+                            fontFamily: tokens.typography.sans,
+                            fontSize: 14,
+                            lineHeight: 18,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {formatAppearanceTime(event.startTime)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.eventCopy}>
+                        <Text
+                          numberOfLines={2}
+                          style={{
+                            color: tokens.colors.textPrimary,
+                            fontFamily: tokens.typography.sans,
+                            fontSize: 17,
+                            lineHeight: 22,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {event.title}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: tokens.colors.textSecondary,
+                            fontFamily: tokens.typography.sans,
+                            fontSize: 14,
+                            lineHeight: 18,
+                            fontWeight: '400',
+                          }}
+                        >
+                          {getSpeakerEventMeta(
+                            event.location,
+                            event.format,
+                            event.isPastEvent
+                          )}
+                        </Text>
+                      </View>
+
+                      <View style={styles.eventChevron}>
+                        <FontAwesome
+                          name="chevron-right"
+                          size={14}
+                          color={tokens.colors.textTertiary}
+                        />
+                      </View>
+                    </Pressable>
+                  ))
                 ) : (
                   <ScreenState
                     mode="empty"
@@ -551,7 +927,7 @@ export default function SpeakerScreen() {
                   />
                 )}
               </View>
-            </CommunitySection>
+            </View>
           </>
         ) : null}
       </View>
@@ -560,71 +936,203 @@ export default function SpeakerScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatarWrap: {
-    position: 'absolute',
-    top: 138,
-    left: 18,
-    padding: 4,
-    borderWidth: 1,
-  },
   contentWrap: {
     width: '100%',
     maxWidth: 430,
     alignSelf: 'center',
-    gap: 14,
+    gap: 18,
   },
-  eventList: {
-    borderWidth: 1,
-    overflow: 'hidden',
+  eventChevron: {
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
   },
-  followUpAction: {
-    width: '100%',
-  },
-  followUpActions: {
-    gap: 10,
-  },
-  followUpCard: {
-    borderWidth: 1,
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  followUpCopy: {
+  eventCopy: {
+    flex: 1,
     gap: 4,
   },
-  heroBody: {
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingTop: 44,
-    paddingBottom: 18,
+  eventDateBlock: {
+    width: 78,
+    gap: 2,
+  },
+  eventRow: {
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  eventRowPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.995 }],
+  },
+  eventsBody: {
+    gap: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  eventsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
+  eventsSection: {
+    borderWidth: 1,
+  },
+  fallbackMonogram: {
+    position: 'absolute',
+    left: 30,
+    top: 116,
+    width: 124,
+    height: 124,
+    borderRadius: 124,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fallbackOrbLarge: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 320,
+    right: -40,
+    top: 10,
+  },
+  fallbackOrbSmall: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 180,
+    left: -18,
+    bottom: 120,
   },
   heroCard: {
     overflow: 'hidden',
     borderWidth: 1,
   },
-  heroHeader: {
-    height: 196,
-    overflow: 'hidden',
-  },
-  linkButton: {
+  heroFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
   },
-  linkRow: {
+  heroLinkRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroMetaChip: {
+    maxWidth: '72%',
+    minHeight: 34,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+  },
+  heroMedia: {
+    minHeight: 500,
+  },
+  heroName: {
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '800',
+    letterSpacing: -1.4,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
+    gap: 12,
+  },
+  heroTopRow: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  networkingActions: {
+    gap: 12,
+  },
+  networkingActionsCompact: {
+    gap: 0,
+    minHeight: 0,
+  },
+  networkingCard: {
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     gap: 10,
-    paddingTop: 4,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
+  },
+  networkingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  networkingPrimaryAction: {
+    width: '100%',
+    flexGrow: 1,
+  },
+  networkingResolvedRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  primaryActionButton: {
+    minHeight: 44,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  disabledAction: {
+    opacity: 0.45,
   },
   pressed: {
     opacity: 0.86,
   },
-  sectionInner: {
-    padding: 16,
-    gap: 10,
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  undoAction: {
+    alignSelf: 'flex-start',
+    minHeight: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 2,
+  },
+  undoActionInline: {
+    minHeight: 20,
+    paddingHorizontal: 2,
+    justifyContent: 'center',
   },
 });
