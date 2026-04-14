@@ -869,16 +869,14 @@ export default function DashboardScreen() {
             {dashboard.networkPulse ? (
               <DashboardNetworkPulseCard
                 networkPulse={dashboard.networkPulse}
+                attendedEventCount={
+                  dashboard.careerOutcomes?.attendedCount ??
+                  dashboard.insights?.funnel.attended ??
+                  0
+                }
                 speakerMatches={speakerMatches}
-                onOpenSpeaker={(speakerId, eventId, eventTitle) =>
-                  router.push({
-                    pathname: '/speaker/[id]',
-                    params: {
-                      id: speakerId,
-                      ...(eventId ? { eventId } : {}),
-                      ...(eventTitle ? { eventTitle } : {}),
-                    },
-                  })
+                onOpenRecommendedSpeakers={() =>
+                  router.push('/dashboard/recommended-speakers')
                 }
                 onOpenPendingContact={
                   nextNetworkingContact &&

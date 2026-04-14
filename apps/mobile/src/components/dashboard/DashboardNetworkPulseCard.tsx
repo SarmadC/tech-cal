@@ -11,39 +11,30 @@ import { useAppTheme } from '../../providers/ThemeProvider';
 
 export function DashboardNetworkPulseCard({
   networkPulse,
+  attendedEventCount = 0,
   speakerMatches = [],
-  onOpenSpeaker,
+  onOpenRecommendedSpeakers,
   onOpenPendingContact,
 }: {
   networkPulse: MobileDashboardNetworkPulse;
+  attendedEventCount?: number;
   speakerMatches?: MobileCommunityNetworkingSpeakerMatch[];
-  onOpenSpeaker?: (
-    speakerId: string,
-    eventId?: string,
-    eventTitle?: string
-  ) => void;
+  onOpenRecommendedSpeakers?: () => void;
   onOpenPendingContact?: () => void;
 }) {
   const { tokens, resolvedTheme } = useAppTheme();
   const cardFill =
     resolvedTheme === 'light'
-      ? '#D8F1E4'
-      : 'rgba(13, 34, 24, 0.98)';
+      ? '#F5DDD2'
+      : 'rgba(44, 27, 22, 0.98)';
   const totalConnectionsLabel = `connection${
     networkPulse.confirmedConnectionCount === 1 ? '' : 's'
   }`;
   const visibleSpeakerMatches = speakerMatches.slice(0, 3);
-  const stateLabel =
-    networkPulse.pendingRequestCount > 0 &&
-    networkPulse.confirmedConnectionCount === 0
-      ? 'Requests pending'
-      : networkPulse.confirmedConnectionCount === 0
-      ? 'No momentum yet'
-      : networkPulse.pendingRequestCount > 0
-        ? 'Follow up now'
-        : networkPulse.confirmedConnectionCount >= 3
-          ? 'Connections growing'
-          : 'Building momentum';
+  const perEventValue =
+    attendedEventCount > 0
+      ? networkPulse.confirmedConnectionCount / attendedEventCount
+      : 0;
   const footerText = networkPulse.nextContactToConfirm
     ? `Confirm with ${networkPulse.nextContactToConfirm.name}`
     : visibleSpeakerMatches.length > 0
@@ -58,15 +49,28 @@ export function DashboardNetworkPulseCard({
         ? 'Speaker request still pending'
         : 'Profile request still pending'
     : visibleSpeakerMatches.length > 0
-    ? 'Recommended from your event graph'
-    : 'Requests and confirmed connections update this card';
+    ? 'Suggested from your event graph'
+    : 'Suggested from your saved events';
+  const insightActionLabel = networkPulse.nextContactToConfirm
+    ? 'Confirm'
+    : visibleSpeakerMatches.length > 0
+      ? 'Open'
+      : null;
+  const insightAction =
+    networkPulse.nextContactToConfirm && onOpenPendingContact
+      ? onOpenPendingContact
+      : visibleSpeakerMatches.length > 0
+        ? onOpenRecommendedSpeakers
+        : undefined;
   const insightSurfaceColor =
-    resolvedTheme === 'light' ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.05)';
-  const chipBackgroundColor =
-    resolvedTheme === 'light' ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.08)';
-  const chipBorderColor =
-    resolvedTheme === 'light' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(52, 211, 153, 0.16)';
+    resolvedTheme === 'light' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.04)';
   const glyphActiveColor = resolvedTheme === 'light' ? '#059669' : '#34D399';
+  const actionAccentColor =
+    insightActionLabel === 'Open'
+      ? resolvedTheme === 'light'
+        ? '#C2410C'
+        : '#FDBA74'
+      : glyphActiveColor;
 
   return (
     <DashboardCard surfaceColors={[cardFill, cardFill]}>
@@ -79,97 +83,62 @@ export function DashboardNetworkPulseCard({
         >
           Relationship momentum
         </Text>
-
-        <View
-          style={[
-            styles.ratioBadge,
-            {
-              backgroundColor: chipBackgroundColor,
-              borderColor: chipBorderColor,
-            },
-          ]}
-        >
+        <View style={styles.headerMetric}>
           <Text
             style={[
-              styles.ratioText,
-              { color: glyphActiveColor, fontFamily: tokens.typography.sans },
+              styles.headerValue,
+              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
             ]}
           >
-            {stateLabel}
+            {perEventValue.toFixed(1)}
+          </Text>
+          <Text
+            style={[
+              styles.headerMeta,
+              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+            ]}
+          >
+            per event
           </Text>
         </View>
       </View>
 
       <View style={styles.heroSection}>
-        <View style={styles.heroMetricBlock}>
-          <View style={styles.heroMetricRow}>
-            <Text
-              style={[
-                styles.heroValue,
-                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
-              ]}
-            >
-              {networkPulse.confirmedConnectionCount}
-            </Text>
-            <Text
-              style={[
-                styles.heroLabel,
-                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
-              ]}
-            >
-              {totalConnectionsLabel}
-            </Text>
-          </View>
-          <Text
-            style={[
-              styles.heroMeta,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
-            ]}
-          >
-            {networkPulse.pendingRequestCount > 0
-              ? `${networkPulse.pendingRequestCount} request${
-                  networkPulse.pendingRequestCount === 1 ? '' : 's'
-                } pending`
-              : networkPulse.confirmedConnectionCount > 0
-                ? 'Confirmed relationships tracked here'
-                : 'No confirmed connections yet'}
-          </Text>
-        </View>
+        <Text
+          style={[
+            styles.heroValue,
+            { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+          ]}
+        >
+          {networkPulse.confirmedConnectionCount} {totalConnectionsLabel}
+        </Text>
       </View>
 
       <Pressable
-        disabled={!onOpenPendingContact || !networkPulse.nextContactToConfirm}
-        onPress={onOpenPendingContact}
+        disabled={!insightAction}
+        onPress={insightAction}
         style={({ pressed }) => [
           styles.insightStrip,
           {
-            backgroundColor: insightSurfaceColor,
-            borderColor: resolvedTheme === 'light'
-              ? 'rgba(15, 23, 42, 0.05)'
-              : 'rgba(255, 255, 255, 0.04)',
-            opacity:
-              pressed &&
-              onOpenPendingContact &&
-              networkPulse.nextContactToConfirm
-                ? 0.92
-                : 1,
+            borderTopColor:
+              resolvedTheme === 'light'
+                ? 'rgba(15, 23, 42, 0.08)'
+                : 'rgba(255, 255, 255, 0.06)',
+            backgroundColor: pressed && insightAction ? insightSurfaceColor : 'transparent',
+            opacity: pressed && insightAction ? 0.96 : 1,
           },
         ]}
       >
         {!networkPulse.nextContactToConfirm && visibleSpeakerMatches.length > 0 ? (
           <View style={styles.avatarStack}>
             {visibleSpeakerMatches.slice(0, 2).map((match, index) => (
-              <Pressable
+              <View
                 key={`${match.speaker.id}-${index}`}
-                onPress={() =>
-                  onOpenSpeaker?.(match.speaker.id, match.event.id, match.event.title)
-                }
-                style={({ pressed }) => [
+                style={[
                   styles.avatarWrap,
                   {
                     marginLeft: index === 0 ? 0 : -8,
                   },
-                  pressed && styles.avatarPressed,
                 ]}
               >
                 <CommunityAvatar
@@ -177,7 +146,7 @@ export function DashboardNetworkPulseCard({
                   name={match.speaker.name}
                   size={26}
                 />
-              </Pressable>
+              </View>
             ))}
           </View>
         ) : (
@@ -209,14 +178,14 @@ export function DashboardNetworkPulseCard({
             {footerMeta}
           </Text>
         </View>
-        {networkPulse.nextContactToConfirm && onOpenPendingContact ? (
+        {insightActionLabel ? (
           <Text
             style={[
               styles.insightAction,
-              { color: glyphActiveColor, fontFamily: tokens.typography.sans },
+              { color: actionAccentColor, fontFamily: tokens.typography.sans },
             ]}
           >
-            Confirm
+            {insightActionLabel}
           </Text>
         ) : null}
       </Pressable>
@@ -228,62 +197,46 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 12,
-    alignItems: 'center',
   },
   title: {
     flex: 1,
-    fontSize: 21,
-    lineHeight: 24,
-    fontWeight: '800',
-    letterSpacing: -0.7,
-  },
-  ratioBadge: {
-    minHeight: 26,
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  ratioText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     letterSpacing: 0.1,
+  },
+  headerMetric: {
+    alignItems: 'flex-end',
+  },
+  headerValue: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  headerMeta: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   heroSection: {
     alignItems: 'flex-start',
-  },
-  heroMetricBlock: {
-    gap: 2,
-  },
-  heroMetricRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
+    minHeight: 18,
   },
   heroValue: {
-    fontSize: 58,
-    lineHeight: 58,
-    fontWeight: '800',
-    letterSpacing: -1.8,
-  },
-  heroLabel: {
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: '800',
-  },
-  heroMeta: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   insightStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
+    minHeight: 48,
   },
   avatarStack: {
     flexDirection: 'row',
@@ -293,12 +246,9 @@ const styles = StyleSheet.create({
   avatarWrap: {
     position: 'relative',
   },
-  avatarPressed: {
-    opacity: 0.82,
-  },
   insightTextBlock: {
     flex: 1,
-    gap: 1,
+    gap: 2,
   },
   insightAction: {
     fontSize: 12,
@@ -312,8 +262,8 @@ const styles = StyleSheet.create({
   },
   footerText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '700',
   },
   footerMeta: {
