@@ -67,7 +67,6 @@ export default function DashboardRecommendedSpeakersScreen() {
   return (
     <MobilePage
       title="Recommended speakers"
-      subtitle="Suggested from your event graph"
       showAccentGlow={false}
       action={<HeaderActionButton label="Back" onPress={() => router.back()} />}
     >
@@ -103,12 +102,13 @@ export default function DashboardRecommendedSpeakersScreen() {
 
         {home && recommendedSpeakers.length > 0 ? (
           <View style={styles.stack}>
-            {recommendedSpeakers.map((item) => (
-              <View
-                key={`${item.speaker.id}:${item.event.id}:dashboard-recommended`}
-                style={styles.item}
-              >
+            {recommendedSpeakers.map((item, index) => (
+              <View key={`${item.speaker.id}:${item.event.id}:dashboard-recommended`}>
                 <CommunityNetworkingSpeakerCard
+                  eventTitle={item.event.title}
+                  isPastEvent={item.isPastEvent}
+                  matchIndex={index}
+                  matchReason={item.matchReason}
                   speaker={item.speaker}
                   onOpenSpeaker={() =>
                     router.push({
@@ -121,32 +121,6 @@ export default function DashboardRecommendedSpeakersScreen() {
                     })
                   }
                 />
-                <View style={styles.itemMeta}>
-                  <Text
-                    style={[
-                      styles.eventTitle,
-                      {
-                        color: tokens.colors.textPrimary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.event.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.reason,
-                      {
-                        color: tokens.colors.textSecondary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {item.matchReason}
-                  </Text>
-                </View>
               </View>
             ))}
           </View>
@@ -162,21 +136,5 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: 14,
-  },
-  item: {
-    gap: 8,
-  },
-  itemMeta: {
-    gap: 2,
-    paddingHorizontal: 4,
-  },
-  eventTitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-  },
-  reason: {
-    fontSize: 13,
-    lineHeight: 18,
   },
 });

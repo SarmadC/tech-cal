@@ -201,6 +201,25 @@ function buildSpeakerMatchSurfaces(
   }));
 }
 
+function getSpeakerSurfaceReason(item: CommunitySpeakerSurface): string {
+  const explicitReason = item.matchReason?.trim();
+  if (explicitReason) {
+    return explicitReason;
+  }
+
+  if ('primaryReason' in item.event && item.event.primaryReason) {
+    return item.event.primaryReason;
+  }
+
+  if ('whyNow' in item.event && item.event.whyNow) {
+    return item.event.whyNow;
+  }
+
+  return item.isPastEvent
+    ? `Speaker worth knowing from ${item.event.title}.`
+    : `Speaking at one of your tracked events.`;
+}
+
 function getVisibilityMessage(home: MobileCommunityHome): string | null {
   const attendingCount = home.upcomingMoments.filter(
     (event) => event.viewerContext === 'attending'
@@ -605,6 +624,9 @@ export default function CommunityScreen() {
                     {filteredRecommendedSpeakers.map((item) => (
                       <CommunityNetworkingSpeakerCard
                         key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}:recommended`}
+                        eventTitle={item.event.title}
+                        isPastEvent={item.isPastEvent}
+                        matchReason={getSpeakerSurfaceReason(item)}
                         speaker={item.speaker}
                         onOpenExternalLink={(label, url) => {
                           void handleOpenSpeakerExternalLink(item, label, url);
@@ -635,6 +657,9 @@ export default function CommunityScreen() {
                     {filteredUpcomingSpeakers.map((item) => (
                       <CommunityNetworkingSpeakerCard
                         key={`${item.speaker.id ?? item.speaker.name}:${item.event.id}:upcoming`}
+                        eventTitle={item.event.title}
+                        isPastEvent={item.isPastEvent}
+                        matchReason={getSpeakerSurfaceReason(item)}
                         speaker={item.speaker}
                         onOpenExternalLink={(label, url) => {
                           void handleOpenSpeakerExternalLink(item, label, url);

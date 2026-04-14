@@ -164,6 +164,16 @@ const PAST_SPEAKER_FETCH_SCAN_LIMIT = 320;
 const SPEAKER_DETAIL_BATCH_SIZE = 250;
 const SPEAKER_MATCH_LIMIT = 6;
 const SHORT_KEYWORD_ALLOWLIST = new Set(['ai', 'ml', 'ux', 'ui', 'vr', 'ar']);
+const GENERIC_SPEAKER_KEYWORDS = new Set([
+  'conference',
+  'event',
+  'expo',
+  'forum',
+  'inc',
+  'labs',
+  'meetup',
+  'summit',
+]);
 
 function dedupeEvents(
   events: CommunityNetworkingEventInput[]
@@ -248,6 +258,29 @@ function getFirstOverlap(
   return null;
 }
 
+function getPreferredOverlap(
+  source: Iterable<string>,
+  candidateKeywords: Set<string>
+): string | null {
+  let fallback: string | null = null;
+
+  for (const token of source) {
+    if (!candidateKeywords.has(token)) {
+      continue;
+    }
+
+    if (!GENERIC_SPEAKER_KEYWORDS.has(token)) {
+      return token;
+    }
+
+    if (!fallback) {
+      fallback = token;
+    }
+  }
+
+  return fallback;
+}
+
 function formatKeywordLabel(value: string): string {
   if (SHORT_KEYWORD_ALLOWLIST.has(value.toLowerCase())) {
     return value.toUpperCase();
@@ -261,6 +294,50 @@ function formatKeywordLabel(value: string): string {
         : segment
     )
     .join(' ');
+}
+
+function formatSpeakerMatchReason(options: {
+  audience: string;
+  audienceLabel: string;
+  matchedToken?: string | null;
+  prefix: string;
+  speaker: NetworkingSpeakerPreview;
+  event: EventRow;
+  kind: 'role' | 'industry';
+}): string {
+  const normalizedAudience = options.audience.trim().toLowerCase();
+  const topicLabel = options.matchedToken ? formatKeywordLabel(options.matchedToken) : null;
+  const normalizedTopic = topicLabel?.toLowerCase() ?? null;
+  const speakerCompany = options.speaker.company?.trim() ?? '';
+  const eventTitle = options.event.title?.trim() ?? '';
+
+  if (options.kind === 'role') {
+    if (topicLabel && normalizedTopic && !normalizedAudience.includes(normalizedTopic)) {
+      return `Strong overlap with ${options.audienceLabel}, especially around ${topicLabel}.`;
+    }
+
+    if (speakerCompany) {
+      return `${speakerCompany}'s perspective maps well to your ${options.audienceLabel}.`;
+    }
+
+    if (eventTitle) {
+      return `Best fit for your ${options.audienceLabel} from ${eventTitle}.`;
+    }
+  }
+
+  if (topicLabel && normalizedTopic && !normalizedAudience.includes(normalizedTopic)) {
+    return `Useful for your ${options.audienceLabel}, especially around ${topicLabel}.`;
+  }
+
+  if (speakerCompany) {
+    return `Relevant to your ${options.audienceLabel} through ${speakerCompany}'s lens.`;
+  }
+
+  if (eventTitle) {
+    return `Useful context for your ${options.audienceLabel} from ${eventTitle}.`;
+  }
+
+  return `${options.prefix} your ${options.audienceLabel}.`;
 }
 
 function sortStarterEventRows(left: EventRow, right: EventRow): number {
@@ -799,19 +876,37 @@ export class CommunityNetworkingHomeService {
       const rolePhrase = currentRole.toLowerCase();
       const roleTokens = normalizeKeywordTokens(currentRole);
       const roleOverlap = roleTokens.filter((token) => candidateKeywords.has(token));
+      const matchedRoleToken =
+        getPreferredOverlap(roleTokens, candidateKeywords) ?? roleTokens[0] ?? null;
 
       if (candidateText.includes(rolePhrase)) {
         baseScore += 12;
         reasons.push({
           weight: 12,
-          text: `Relevant to your ${currentRole} role.`,
+          text: formatSpeakerMatchReason({
+            audience: currentRole,
+            audienceLabel: currentRole,
+            matchedToken: matchedRoleToken,
+            prefix: 'Strong fit for',
+            speaker,
+            event,
+            kind: 'role',
+          }),
         });
       } else if (roleOverlap.length > 0) {
         const roleScore = 6 + roleOverlap.length * 2;
         baseScore += roleScore;
         reasons.push({
           weight: roleScore,
-          text: `Relevant to your ${currentRole} role.`,
+          text: formatSpeakerMatchReason({
+            audience: currentRole,
+            audienceLabel: currentRole,
+            matchedToken: matchedRoleToken,
+            prefix: 'Strong fit for',
+            speaker,
+            event,
+            kind: 'role',
+          }),
         });
       }
     }
@@ -822,19 +917,39 @@ export class CommunityNetworkingHomeService {
       const industryOverlap = industryTokens.filter((token) =>
         candidateKeywords.has(token)
       );
+      const matchedIndustryToken =
+        getPreferredOverlap(industryTokens, candidateKeywords) ??
+        industryTokens[0] ??
+        null;
 
       if (candidateText.includes(industryPhrase)) {
         baseScore += 8;
         reasons.push({
           weight: 8,
-          text: `Relevant to your ${industry} work.`,
+          text: formatSpeakerMatchReason({
+            audience: industry,
+            audienceLabel: industry,
+            matchedToken: matchedIndustryToken,
+            prefix: 'Useful for',
+            speaker,
+            event,
+            kind: 'industry',
+          }),
         });
       } else if (industryOverlap.length > 0) {
         const industryScore = 4 + industryOverlap.length * 2;
         baseScore += industryScore;
         reasons.push({
           weight: industryScore,
-          text: `Relevant to your ${industry} work.`,
+          text: formatSpeakerMatchReason({
+            audience: industry,
+            audienceLabel: industry,
+            matchedToken: matchedIndustryToken,
+            prefix: 'Useful for',
+            speaker,
+            event,
+            kind: 'industry',
+          }),
         });
       }
     }
@@ -850,19 +965,23 @@ export class CommunityNetworkingHomeService {
         baseScore += 5;
         reasons.push({
           weight: 5,
-          text: `Aligned with your interest in ${interest}.`,
+          text: speaker.company
+            ? `${formatKeywordLabel(interest)} overlap from ${speaker.company}.`
+            : `Clear topic overlap in ${formatKeywordLabel(interest)}.`,
         });
         continue;
       }
 
       if (interestOverlap.length > 0) {
         const matchedToken =
-          getFirstOverlap(interestTokens, candidateKeywords) ?? interest;
+          getPreferredOverlap(interestTokens, candidateKeywords) ?? interest;
         const interestScore = 3 + interestOverlap.length;
         baseScore += interestScore;
         reasons.push({
           weight: interestScore,
-          text: `Aligned with your interest in ${formatKeywordLabel(matchedToken)}.`,
+          text: speaker.company
+            ? `${formatKeywordLabel(matchedToken)} overlap from ${speaker.company}.`
+            : `Clear topic overlap in ${formatKeywordLabel(matchedToken)}.`,
         });
       }
     }
