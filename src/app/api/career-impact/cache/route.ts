@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { CacheInvalidationService } from '@/services/cacheInvalidationService';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
+import { isAdminUser } from '@/lib/adminAuth';
 
 interface CacheStatsResponse {
   success: boolean;
@@ -33,12 +34,20 @@ export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Get authenticated user (admin check could be added here)
+    // Require authenticated admin user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
+      );
+    }
+
+    const isAdmin = await isAdminUser(user.id, supabase);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
       );
     }
 
@@ -90,12 +99,20 @@ export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Get authenticated user
+    // Require authenticated admin user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
+      );
+    }
+
+    const isAdmin = await isAdminUser(user.id, supabase);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
       );
     }
 
