@@ -113,6 +113,46 @@ export class PublicProfileService {
       throw new Error('Failed to fetch public profile.');
     }
 
+    return this.buildPublicProfileResult(
+      (profile as ProfileRow | null) ?? null,
+      viewerId,
+      readClient
+    );
+  }
+
+  static async getPublicProfileById(
+    profileId: string,
+    viewerId: string | null,
+    readClient: SupabaseClientType
+  ): Promise<PublicProfileResult | null> {
+    const normalizedProfileId = profileId.trim();
+    if (!normalizedProfileId) {
+      return null;
+    }
+
+    const { data: profile, error: profileError } = await readClient
+      .from('profiles')
+      .select('id, full_name, avatar_url, username, headline, profile_visibility, show_attendance')
+      .eq('id', normalizedProfileId)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error('Failed to fetch public profile.');
+    }
+
+    return this.buildPublicProfileResult(
+      (profile as ProfileRow | null) ?? null,
+      viewerId,
+      readClient
+    );
+  }
+
+  private static async buildPublicProfileResult(
+    profile: ProfileRow | null,
+    viewerId: string | null,
+    readClient: SupabaseClientType
+  ): Promise<PublicProfileResult | null> {
+
     if (!profile) {
       return null;
     }

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getAuthenticatedRequestContext: vi.fn(),
   hydrateContact: vi.fn(),
   hydrateTarget: vi.fn(),
+  getPublicProfileById: vi.fn(),
 }));
 
 vi.mock('@/utils/supabase/requestAuth', () => ({
@@ -19,6 +20,12 @@ vi.mock('@/utils/supabase/requestAuth', () => ({
 
 vi.mock('@/utils/supabase/service', () => ({
   createServiceClient: (...args: unknown[]) => mocks.createServiceClient(...args),
+}));
+
+vi.mock('@/services/publicProfileService', () => ({
+  PublicProfileService: {
+    getPublicProfileById: (...args: unknown[]) => mocks.getPublicProfileById(...args),
+  },
 }));
 
 vi.mock('@/services/userNetworkingContactService', () => ({
@@ -51,6 +58,21 @@ describe('PATCH /api/mobile/networking/contacts', () => {
       user: { id: 'user-1' },
     });
     mocks.createServiceClient.mockReturnValue({ kind: 'read-supabase' });
+    mocks.getPublicProfileById.mockResolvedValue({
+      id: 'profile-1',
+      fullName: 'Ada Lovelace',
+      avatarUrl: null,
+      username: 'ada',
+      headline: 'ML Engineer',
+      showAttendance: true,
+      isViewerOwner: false,
+      followerCount: 0,
+      followingCount: 0,
+      recentAttendingEvents: [],
+      careerProfile: null,
+      mutualConnections: [],
+      mutualConnectionsCount: 0,
+    });
   });
 
   it('logs a speaker request and returns the hydrated contact record', async () => {
@@ -123,16 +145,6 @@ describe('PATCH /api/mobile/networking/contacts', () => {
 
   it('returns a reset none state when a request is cleared', async () => {
     mocks.applyAction.mockResolvedValue(null);
-    mocks.hydrateTarget.mockResolvedValue({
-      kind: 'profile',
-      id: 'profile-1',
-      username: 'ada',
-      name: 'Ada Lovelace',
-      avatarUrl: null,
-      headline: 'ML Engineer',
-      linkedinUrl: null,
-      sourceEvent: null,
-    });
 
     const response = await PATCH(
       new Request('http://localhost/api/mobile/networking/contacts', {
@@ -167,6 +179,30 @@ describe('PATCH /api/mobile/networking/contacts', () => {
         confirmedConnectedAt: null,
       },
     });
+    expect(mocks.applyAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects inaccessible profile targets before mutating the contact row', async () => {
+    mocks.getPublicProfileById.mockResolvedValueOnce(null);
+
+    const response = await PATCH(
+      new Request('http://localhost/api/mobile/networking/contacts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: {
+            kind: 'profile',
+            id: 'profile-2',
+          },
+          action: 'mark_request_sent',
+        }),
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.error).toBe('Networking target not found');
+    expect(mocks.applyAction).not.toHaveBeenCalled();
   });
 
   it('accepts clearing a confirmed connection and returns the downgraded requested state', async () => {

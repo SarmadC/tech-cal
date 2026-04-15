@@ -1,6 +1,10 @@
 import dns from 'dns/promises';
 import net from 'net';
 
+interface ValidateUrlForServerFetchOptions {
+    allowUnresolvedHostnames?: boolean;
+}
+
 const BLOCKED_HOSTNAMES = new Set([
     'localhost',
     '127.0.0.1',
@@ -41,7 +45,10 @@ function isPrivateIp(ip: string): boolean {
     return true;
 }
 
-export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid: true; url: URL } | { valid: false; reason: string }> {
+export async function validateUrlForServerFetch(
+    rawUrl: string,
+    options: ValidateUrlForServerFetchOptions = {}
+): Promise<{ valid: true; url: URL } | { valid: false; reason: string }> {
     let parsedUrl: URL;
     try {
         parsedUrl = new URL(rawUrl);
@@ -86,6 +93,10 @@ export async function validateUrlForServerFetch(rawUrl: string): Promise<{ valid
             }
         }
     } catch {
+        if (options.allowUnresolvedHostnames) {
+            return { valid: true, url: parsedUrl };
+        }
+
         return { valid: false, reason: 'Hostname resolution failed' };
     }
 

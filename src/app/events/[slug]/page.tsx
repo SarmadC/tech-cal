@@ -280,7 +280,7 @@ import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 export default async function PublicEventPage({ params }: EventPageProps) {
     const { slug } = await params;
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const result = await getEventBySlug(slug);
 
     if (!result) {

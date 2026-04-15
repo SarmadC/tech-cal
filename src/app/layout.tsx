@@ -1,6 +1,6 @@
 // src/app/layout.tsx
-// Root layout is intentionally kept static — no headers() or force-dynamic.
-// Dynamic rendering lives in individual page/route segments that need it.
+// Root layout is intentionally kept static. Nonced scripts belong in route
+// segments that opt into request-bound rendering.
 
 import type { Metadata } from "next";
 import { DM_Sans, Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
@@ -124,7 +124,6 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
             <head>
@@ -139,7 +138,7 @@ export default function RootLayout({
                     Skip to main content
                 </a>
                 <PostHogProvider>
-                    <GoogleAnalytics nonce="" />
+                    <GoogleAnalytics />
                     <Suspense fallback={null}>
                         <PostHogPageView />
                     </Suspense>

@@ -538,7 +538,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
     const { slug } = await params;
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const supabase = await createClient();
 
     const fullSelect = `

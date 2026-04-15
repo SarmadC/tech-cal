@@ -48,7 +48,7 @@ interface CfpEvent {
 }
 
 export default async function CfpCalendarPage() {
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const supabase = await createClient();
     const now = new Date().toISOString();
 

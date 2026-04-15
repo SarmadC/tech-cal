@@ -113,7 +113,7 @@ export function CityDirectoryPageView({
     citySummaries: CitySummary[];
     countryEventCounts: Record<string, number>;
     countrySummaries: CountrySummary[];
-    nonce: string;
+    nonce?: string;
 }) {
     const rankedCities: RankedCitySummary[] = dedupeCitySummariesBySlug(citySummaries).map((city, index) => ({
         ...city,
@@ -203,7 +203,7 @@ export function CityDirectoryPageView({
 }
 
 export default async function CityDirectoryPage() {
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const { citySummaries, countryEventCounts, countrySummaries } = await getCitySummaries();
 
     return (

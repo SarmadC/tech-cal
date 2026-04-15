@@ -210,6 +210,7 @@ INGESTION_VERIFY_SPEAKERS=true      # Optional: Set to 'false' to disable speake
 NEXT_PUBLIC_SENTRY_DSN=...           # Optional: Sentry breadcrumbs
 NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST=true
 NEXT_PUBLIC_ENABLE_DIVERSITY_ENHANCEMENT=true
+CSP_STAGE=compat                     # compat|balanced|strict; use compat for static-safe recovery, strict only when request nonces propagate across rendered routes
 
 # Bug reporting (Contact page -> Linear)
 LINEAR_API_KEY=...                  # Server-only secret (create issues in Linear)

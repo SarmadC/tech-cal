@@ -23,7 +23,7 @@ const pricingFaqs = [
 ];
 
 export default async function PricingPage() {
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
 
     return (
         <>

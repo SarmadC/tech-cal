@@ -7,6 +7,13 @@ type CspOptions = {
     nonce: string;
 };
 
+type CspFlags = {
+    allowUnsafeInline: boolean;
+    allowUnsafeEval: boolean;
+    includeNonce: boolean;
+    includeStrictDynamic: boolean;
+};
+
 function getCspStage(isProduction: boolean): CspStage {
     const fallbackStage = isProduction ? 'strict' : 'balanced';
     const configuredStage = (process.env.CSP_STAGE || fallbackStage).toLowerCase();
@@ -20,28 +27,38 @@ function getCspStage(isProduction: boolean): CspStage {
 
 function getCspFlags(stage: CspStage, isProduction: boolean) {
     if (stage === 'strict') {
-        return { allowUnsafeInline: false, allowUnsafeEval: false };
-    }
-
-    if (stage === 'compat') {
-        return { allowUnsafeInline: true, allowUnsafeEval: true };
+        return {
+            allowUnsafeInline: false,
+            allowUnsafeEval: !isProduction,
+            includeNonce: true,
+            includeStrictDynamic: true,
+        } satisfies CspFlags;
     }
 
     return {
-        allowUnsafeInline: !isProduction,
+        // `compat` and `balanced` intentionally stay static-safe until every
+        // public route is verified to render with a propagated request nonce.
+        allowUnsafeInline: true,
         allowUnsafeEval: !isProduction,
-    };
+        includeNonce: false,
+        includeStrictDynamic: false,
+    } satisfies CspFlags;
 }
 
 export function buildCsp({ frameAncestors, nonce }: CspOptions): string {
     const isProduction = process.env.NODE_ENV === 'production';
     const cspStage = getCspStage(isProduction);
-    const { allowUnsafeInline, allowUnsafeEval } = getCspFlags(cspStage, isProduction);
+    const {
+        allowUnsafeInline,
+        allowUnsafeEval,
+        includeNonce,
+        includeStrictDynamic,
+    } = getCspFlags(cspStage, isProduction);
 
     const scriptSrc = [
         "'self'",
-        `'nonce-${nonce}'`,
-        "'strict-dynamic'",
+        includeNonce ? `'nonce-${nonce}'` : null,
+        includeStrictDynamic ? "'strict-dynamic'" : null,
         allowUnsafeInline ? "'unsafe-inline'" : null,
         allowUnsafeEval ? "'unsafe-eval'" : null,
         'https://cdnjs.cloudflare.com',
