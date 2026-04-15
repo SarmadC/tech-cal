@@ -76,4 +76,14 @@ describe('mobile env helpers', () => {
       slug: 'kurecal-mobile',
     });
   });
+
+  it('switches runtime metadata to production when APP_VARIANT=production', () => {
+    process.env.APP_VARIANT = 'production';
+
+    expect(getMobileRuntimeMetadata()).toEqual({
+      appName: 'KureCal',
+      easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+      slug: 'kurecal-mobile',
+    });
+  });
 });

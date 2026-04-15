@@ -18,6 +18,7 @@ type OptionalMobileEnvName =
   | 'EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID';
 
 type MobileEnvName = RequiredMobileEnvName | OptionalMobileEnvName;
+type MobileAppVariant = 'development' | 'production';
 
 interface RevenueCatRuntimeConfig {
   annualProductId: string | null;
@@ -46,6 +47,50 @@ interface LegacyExpoManifest {
 }
 
 const mobileAppConfig = appConfig as MobileAppJson;
+
+const MOBILE_APP_RUNTIME_METADATA = {
+  development: {
+    appName: 'KureCal Dev',
+    easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+    scheme: 'kurecal-dev',
+    slug: 'kurecal-mobile',
+  },
+  production: {
+    appName: 'KureCal',
+    easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+    scheme: 'kurecal',
+    slug: 'kurecal-mobile',
+  },
+} as const;
+
+function normalizeAppVariant(value: string | undefined): MobileAppVariant | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === 'production' || normalized === 'prod') {
+    return 'production';
+  }
+
+  if (
+    normalized === 'development' ||
+    normalized === 'dev' ||
+    normalized === 'preview'
+  ) {
+    return 'development';
+  }
+
+  return null;
+}
+
+function resolveAppVariant(): MobileAppVariant {
+  return (
+    normalizeAppVariant(process.env.APP_VARIANT) ??
+    normalizeAppVariant(process.env.EAS_BUILD_PROFILE) ??
+    'development'
+  );
+}
 
 function getOptionalEnv(name: MobileEnvName): string | null {
   let value: string | undefined;
@@ -165,10 +210,13 @@ export function getRevenueCatProEntitlementId(): string {
 }
 
 export function getMobileRuntimeMetadata() {
+  const variant = MOBILE_APP_RUNTIME_METADATA[resolveAppVariant()];
+
   return {
-    appName: mobileAppConfig.expo?.name ?? 'KureCal Dev',
-    easProjectId: mobileAppConfig.expo?.extra?.eas?.projectId ?? null,
-    scheme: mobileAppConfig.expo?.scheme ?? 'kurecal-dev',
-    slug: mobileAppConfig.expo?.slug ?? 'kurecal-mobile',
+    appName: variant.appName ?? mobileAppConfig.expo?.name ?? 'KureCal Dev',
+    easProjectId:
+      variant.easProjectId ?? mobileAppConfig.expo?.extra?.eas?.projectId ?? null,
+    scheme: variant.scheme ?? mobileAppConfig.expo?.scheme ?? 'kurecal-dev',
+    slug: variant.slug ?? mobileAppConfig.expo?.slug ?? 'kurecal-mobile',
   };
 }
