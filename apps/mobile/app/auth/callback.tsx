@@ -1,7 +1,8 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BrandLoadingLogo } from '../../src/components/brand/BrandLoadingLogo';
 import { AuthShell, authPalette, authSharedStyles } from '../../src/components/auth/AuthShell';
 import { useAuth } from '../../src/context/AuthProvider';
 
@@ -106,7 +107,7 @@ export default function AuthCallbackScreen() {
       title={isCompletingAuth || loading ? 'Completing sign in' : 'Opening your account'}
     >
       <View style={styles.loadingWrap}>
-        <ActivityIndicator color={authPalette.accent} size="large" />
+        <BrandLoadingLogo color={authPalette.accent} size={76} />
       </View>
     </AuthShell>
   );

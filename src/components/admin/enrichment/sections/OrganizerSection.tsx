@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
@@ -197,7 +198,7 @@ export function OrganizerSection({
                                     className="w-full text-xs"
                                 >
                                     {logoCreating ? (
-                                        <MaterialIcon name="refresh" size={14} className="animate-spin mr-1" />
+                                        <BrandLoadingLogo size={14} inline label={null} className="mr-1" />
                                     ) : null}
                                     Update Logo
                                 </Button>

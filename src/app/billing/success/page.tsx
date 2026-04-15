@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { CheckCircle, Spinner, WarningCircle, ArrowClockwise } from '@phosphor-icons/react';
+import { CheckCircle, WarningCircle, ArrowClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import posthog from 'posthog-js';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 // Maximum time to wait for subscription to become active (30 seconds)
 const MAX_WAIT_TIME_MS = 30000;
@@ -89,7 +90,7 @@ export default function BillingSuccessPage() {
       <main className="responsive-page-shell min-h-[100dvh] bg-background-main px-4 py-10 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background-secondary p-6 shadow-xl sm:p-10">
           <div className="flex flex-col items-center justify-center py-8">
-            <Spinner className="h-10 w-10 animate-spin text-amber-600" />
+            <BrandLoadingLogo className="h-10 w-10 text-amber-600" inline size={40} />
             <p className="mt-4 text-lg font-medium text-foreground-primary">
               Confirming your subscription...
             </p>

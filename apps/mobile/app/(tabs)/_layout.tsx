@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { BrandLoadingScreen } from '../../src/components/brand/BrandLoadingScreen';
 import { useAuth } from '../../src/context/AuthProvider';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
 
@@ -29,16 +29,10 @@ export default function TabsLayout() {
 
   if (loading) {
     return (
-      <View
-        style={[
-          styles.loadingState,
-          {
-            backgroundColor: tokens.colors.shell,
-          },
-        ]}
-      >
-        <ActivityIndicator color={tokens.colors.accent} size="large" />
-      </View>
+      <BrandLoadingScreen
+        backgroundColor={tokens.colors.shell}
+        color={tokens.colors.textPrimary}
+      />
     );
   }
 
@@ -133,11 +127,3 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingState: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-});

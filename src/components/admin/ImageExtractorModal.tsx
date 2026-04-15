@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
@@ -224,11 +225,7 @@ export default function ImageExtractorModal({
                         >
                             {loading ? (
                                 <>
-                                    <MaterialIcon
-                                        name="refresh"
-                                        size={16}
-                                        className="animate-spin"
-                                    />
+                                    <BrandLoadingLogo size={16} inline label={null} />
                                     Extracting...
                                 </>
                             ) : (
@@ -251,11 +248,7 @@ export default function ImageExtractorModal({
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-foreground-tertiary">
-                            <MaterialIcon
-                                name="refresh"
-                                size={32}
-                                className="animate-spin mb-3"
-                            />
+                            <BrandLoadingLogo size={32} label={null} className="mb-3" />
                             <p>Extracting images from page...</p>
                         </div>
                     ) : visibleImages.length === 0 ? (

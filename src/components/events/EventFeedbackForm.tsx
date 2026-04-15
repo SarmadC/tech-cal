@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Star, ThumbsUp, ThumbsDown, Users, Lightbulb, X, Check, Spinner } from '@phosphor-icons/react';
+import { Star, ThumbsUp, ThumbsDown, Users, Lightbulb, X, Check } from '@phosphor-icons/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
@@ -10,6 +10,7 @@ import { EventNetworkingSummaryService } from '@/services/eventNetworkingSummary
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import type { Event } from '@/types';
 import { parseOptionalNonNegativeIntegerInput } from './eventFeedbackFormUtils';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface EventFeedbackFormProps {
     event: Event;
@@ -229,7 +230,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
     if (isFetchingFeedback) {
         return (
             <div className="flex items-center justify-center py-8">
-                <Spinner className="w-6 h-6 text-indigo-500 dark:text-indigo-400 animate-spin" />
+                <BrandLoadingLogo className="h-6 w-6 text-indigo-500 dark:text-indigo-400" inline size={24} />
             </div>
         );
     }
@@ -491,7 +492,7 @@ export function EventFeedbackForm({ event, onClose, onSuccess, compact = false }
                 >
                     {submitMutation.isPending ? (
                         <>
-                            <Spinner className="w-4 h-4 animate-spin" />
+                            <BrandLoadingLogo className="h-4 w-4 text-current" inline label={null} size={16} />
                             <span>Saving...</span>
                         </>
                     ) : (

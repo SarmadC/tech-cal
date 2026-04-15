@@ -16,6 +16,7 @@ import { MobileCareerOnboarding } from '@/components/onboarding/mobile/MobileCar
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { usePostHog } from 'posthog-js/react';
 import { filteredEventKeys } from '@/lib/queryKeys';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 function CareerOnboardingContent() {
     const router = useRouter();
@@ -164,7 +165,7 @@ function CareerOnboardingContent() {
         return (
             <div className="responsive-page-shell min-h-[100dvh] bg-background flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
+                    <BrandLoadingLogo className="mx-auto mb-4 h-8 w-8 text-foreground" inline size={32} />
                     <p className="text-muted-foreground text-sm font-medium">
                         {isCreatingProfile ? 'Setting up your profile...' : 'Loading...'}
                     </p>
@@ -183,7 +184,7 @@ function CareerOnboardingContent() {
                         {isSubmitting && (
                             <div className="absolute inset-0 backdrop-blur-[2px] bg-background/50 flex items-center justify-center z-50 rounded-xl transition-all duration-300">
                                 <div className="text-center">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-foreground mx-auto mb-3"></div>
+                                    <BrandLoadingLogo className="mx-auto mb-3 h-6 w-6 text-foreground" inline size={24} />
                                     <p className="text-sm font-medium text-foreground">Saving profile...</p>
                                 </div>
                             </div>
@@ -221,7 +222,7 @@ export default function CareerOnboardingPage() {
         <Suspense fallback={
             <div className="responsive-page-shell min-h-[100dvh] bg-background flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
+                    <BrandLoadingLogo className="mx-auto mb-4 h-8 w-8 text-foreground" inline size={32} />
                     <p className="text-muted-foreground text-sm font-medium">Loading...</p>
                 </div>
             </div>

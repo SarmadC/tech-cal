@@ -16,7 +16,6 @@ import Link from 'next/link';
 import {
     ArrowClockwise,
     CaretRight,
-    CircleNotch,
     Minus,
     Plus,
     X,
@@ -37,6 +36,7 @@ import { feature as topojsonFeature } from 'topojson-client';
 import type { CitySummary, CountrySummary } from '@/utils/citySummaries';
 import { normalizeCountryName } from '@/utils/citySummaries';
 import { formatDate } from '@/utils/dateUtils';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 const geoUrl = '/maps/countries-110m.json';
 const DEFAULT_CENTER: [number, number] = [10, 20];
@@ -738,7 +738,7 @@ export default function CityDirectoryMap({
                     <p>Shaded countries show regional event density. Click a country to inspect activity.</p>
                     {topologyStatus === 'loading' ? (
                         <p className="mt-2 inline-flex items-center gap-2 text-zinc-400">
-                            <CircleNotch size={12} className="animate-spin" />
+                            <BrandLoadingLogo className="h-3 w-3 text-current" inline label={null} size={12} />
                             Loading atlas geometry
                         </p>
                     ) : null}

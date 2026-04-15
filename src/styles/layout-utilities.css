@@ -123,10 +123,6 @@
   @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
 }
 
-.loading-spinner {
-  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
-}
-
 /* Error states */
 .error-container {
   @apply flex flex-col items-center justify-center space-y-4 p-8;

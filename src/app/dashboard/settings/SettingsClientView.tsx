@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { AppProfile } from '@/types';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import SettingsTabs from '@/app/dashboard/settings/SettingTabs';
 import SettingsNavigation from '@/app/dashboard/settings/SettingsNavigation';
 import SettingsMobileView from '@/app/dashboard/settings/SettingsMobileView';
@@ -59,10 +60,7 @@ export default function SettingsClientView({ profile }: SettingsClientViewProps)
                         <Suspense fallback={
                             <div className="flex items-center justify-center py-12">
                                 <div className="flex items-center space-x-2" style={{ color: 'var(--foreground-secondary)' }}>
-                                    <div
-                                        className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
-                                        style={{ borderColor: 'var(--foreground-secondary)' }}
-                                    />
+                                    <BrandLoadingLogo size={20} inline label={null} />
                                     <span>Loading settings...</span>
                                 </div>
                             </div>
@@ -75,4 +73,3 @@ export default function SettingsClientView({ profile }: SettingsClientViewProps)
         </SidebarProvider>
     );
 }
-

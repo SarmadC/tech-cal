@@ -26,6 +26,9 @@
       "@/*": [
         "./src/*"
       ],
+      "@kurecal/brand": [
+        "./packages/brand/src/index.ts"
+      ],
       "@kurecal/domain": [
         "./packages/domain/src/index.ts"
       ]

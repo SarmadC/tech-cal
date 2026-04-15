@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
@@ -184,11 +185,11 @@ export function UrlsMediaSection({
                                         disabled={uploadingImage}
                                         className="text-xs"
                                     >
-                                        <MaterialIcon
-                                            name={uploadingImage ? 'refresh' : 'image'}
-                                            size={16}
-                                            className={uploadingImage ? 'mr-2 animate-spin' : 'mr-2'}
-                                        />
+                                        {uploadingImage ? (
+                                            <BrandLoadingLogo size={16} inline label={null} className="mr-2" />
+                                        ) : (
+                                            <MaterialIcon name="image" size={16} className="mr-2" />
+                                        )}
                                         {uploadingImage ? 'Uploading...' : 'Update Image'}
                                     </Button>
                                 </div>

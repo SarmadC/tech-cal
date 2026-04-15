@@ -1,4 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { BrandLoadingLogo } from './brand/BrandLoadingLogo';
 
 interface ScreenStateViewProps {
   description: string;
@@ -13,11 +15,16 @@ export function ScreenStateView({
   title,
   onRetry,
 }: ScreenStateViewProps) {
+  if (mode === 'loading') {
+    return (
+      <View style={styles.loadingRoot}>
+        <BrandLoadingLogo color="#f8fafc" size={72} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
-      {mode === 'loading' ? (
-        <ActivityIndicator color="#2dd4bf" size="large" />
-      ) : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {mode === 'error' && onRetry ? (
@@ -41,6 +48,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
+  },
+  loadingRoot: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 260,
+    paddingVertical: 28,
   },
   retryButton: {
     alignItems: 'center',

@@ -1,7 +1,6 @@
 import { router, type Href, Redirect } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -18,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, ClipPath, Defs, Rect } from 'react-native-svg';
 
+import { BrandLoadingLogo } from '../brand/BrandLoadingLogo';
 import { getMobileApiBaseUrl } from '../../lib/env';
 import { useAuth } from '../../context/AuthProvider';
 
@@ -162,8 +162,7 @@ export default function AuthScreenContent() {
     if (loading) {
       return (
         <View style={styles.loadingState}>
-          <ActivityIndicator color={authPalette.accent} size="large" />
-          <Text style={styles.loadingLabel}>Opening your account</Text>
+          <BrandLoadingLogo color={authPalette.accent} size={76} />
         </View>
       );
     }
@@ -527,7 +526,7 @@ function OAuthButton({
     >
       {busy ? (
         <View style={styles.oauthRow}>
-          <ActivityIndicator color="#111111" size="small" style={styles.iconSlot} />
+          <BrandLoadingLogo color="#111111" inline label={null} size={18} style={styles.iconSlot} />
           <Text style={styles.lightButtonLabel}>Connecting…</Text>
         </View>
       ) : (
@@ -582,7 +581,7 @@ function ActionButton({
       testID={testID}
     >
       {loading ? (
-        <ActivityIndicator color={authPalette.textPrimary} />
+        <BrandLoadingLogo color={authPalette.textPrimary} inline label={null} size={18} />
       ) : (
         <Text
           style={
@@ -773,16 +772,10 @@ const styles = StyleSheet.create({
   lightButtonPressed: {
     backgroundColor: authPalette.buttonLightPressed,
   },
-  loadingLabel: {
-    color: authPalette.textSecondary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   loadingState: {
     alignItems: 'center',
     backgroundColor: authPalette.shell,
     flex: 1,
-    gap: 16,
     justifyContent: 'center',
   },
   oauthRow: {

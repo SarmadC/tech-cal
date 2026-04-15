@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { NoteBlank, Check, X, Spinner } from '@phosphor-icons/react';
+import { NoteBlank, Check, X } from '@phosphor-icons/react';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import type { Event } from '@/types';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface EventNotesEditorProps {
     event: Event;
@@ -172,7 +173,7 @@ export function EventNotesEditor({
                     >
                         {isSaving ? (
                             <>
-                                <Spinner className="w-3.5 h-3.5 animate-spin" />
+                                <BrandLoadingLogo className="h-3.5 w-3.5 text-current" inline label={null} size={14} />
                                 Saving...
                             </>
                         ) : (

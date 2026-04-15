@@ -25,6 +25,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { useOnboardingTaxonomy } from '@/hooks/useOnboardingTaxonomy';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface QuickEditModalProps {
   isOpen: boolean;
@@ -726,7 +727,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
           >
             {isSaving ? (
               <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                <BrandLoadingLogo className="mr-2 h-4 w-4 text-white" inline label={null} size={16} />
                 Saving…
               </>
             ) : (

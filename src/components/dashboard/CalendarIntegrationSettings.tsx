@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { getErrorMessage } from '@/utils/errorHandling';
@@ -225,7 +226,7 @@ export default function CalendarIntegrationSettings() {
                         >
                             {connecting ? (
                                 <>
-                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent-primary-foreground)] border-t-transparent" />
+                                    <BrandLoadingLogo size={12} inline label={null} />
                                     <span>Connecting...</span>
                                 </>
                             ) : (
@@ -302,7 +303,7 @@ export default function CalendarIntegrationSettings() {
                             title="Sync Now"
                         >
                             {bulkSyncing ? (
-                                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                <BrandLoadingLogo size={14} inline label={null} />
                             ) : (
                                 <MaterialIcon name="refresh" size={16} />
                             )}

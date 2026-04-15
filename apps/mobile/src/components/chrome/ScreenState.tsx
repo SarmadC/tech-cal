@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { BrandLoadingLogo } from '../brand/BrandLoadingLogo';
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { KureCard } from './KureCard';
 
@@ -38,9 +39,16 @@ export function ScreenState({
           borderColor: tokens.colors.border,
         };
 
+  if (showSpinner) {
+    return (
+      <View style={[styles.loadingSurface, fullHeight && styles.fullHeightSurface]}>
+        <BrandLoadingLogo color={tokens.colors.textPrimary} size={68} />
+      </View>
+    );
+  }
+
   const content = (
     <View style={[styles.content, fullHeight && styles.fullHeight]}>
-      {showSpinner ? <ActivityIndicator color={tokens.colors.accent} /> : null}
       {title ? (
         <Text
           style={[
@@ -112,6 +120,13 @@ const styles = StyleSheet.create({
   },
   fullHeightSurface: {
     minHeight: 160,
+  },
+  loadingSurface: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 240,
+    paddingVertical: 28,
   },
   plainSurface: {
     borderWidth: 0,

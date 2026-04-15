@@ -1,13 +1,14 @@
-import { CircleNotch } from "@phosphor-icons/react"
+import type { ComponentProps } from "react"
 
+import { BrandLoadingLogo } from "@/components/brand/BrandLoadingLogo"
 import { cn } from "@/lib/utils"
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({ className, ...props }: ComponentProps<"span">) {
     return (
-        <CircleNotch
-            role="status"
-            aria-label="Loading"
-            className={cn("size-4 animate-spin", className)}
+        <BrandLoadingLogo
+            className={cn("size-4", className)}
+            inline
+            size={16}
             {...props}
         />
     )

@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { router } from 'expo-router';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -22,6 +21,7 @@ import type {
   MobileDiscoverRankingMode,
 } from '@kurecal/domain';
 
+import { BrandLoadingLogo } from '../../src/components/brand/BrandLoadingLogo';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
 import { DiscoverChipRail, type DiscoverChip } from '../../src/components/discover/DiscoverChipRail';
 import { DiscoverEventCard } from '../../src/components/discover/DiscoverEventCard';
@@ -524,7 +524,7 @@ export default function DiscoverScreen() {
 
         {loadingMore ? (
           <View style={styles.loadMoreWrap}>
-            <ActivityIndicator color={tokens.colors.accent} />
+            <BrandLoadingLogo color={tokens.colors.textPrimary} inline label={null} size={20} />
           </View>
         ) : null}
 

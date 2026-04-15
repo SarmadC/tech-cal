@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal, ArrowCounterClockwise, NavigationArrow, SpinnerGap } from '@phosphor-icons/react';
+import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal, ArrowCounterClockwise, NavigationArrow } from '@phosphor-icons/react';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 import SearchAutocomplete from './SearchAutocomplete';
 import type { SearchSuggestion } from '@/types';
 import type { SearchHistoryItem } from '@/hooks/useSearchHistory';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface DiscoveryHeaderProps {
     searchTerm: string;
@@ -317,7 +318,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-20' : ''}`}>
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-foreground/70 group-focus-within:text-foreground transition-colors z-10 flex items-center">
                         {isSearching ? (
-                            <SpinnerGap size={18} className="animate-spin" />
+                            <BrandLoadingLogo className="h-[18px] w-[18px] text-foreground" inline label={null} size={18} />
                         ) : (
                             <MagnifyingGlass size={18} weight="regular" />
                         )}
@@ -404,7 +405,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         aria-label="Find events near me"
                     >
                         {isLoading ? (
-                            <SpinnerGap size={14} className="animate-spin" />
+                            <BrandLoadingLogo className="h-[14px] w-[14px] text-foreground" inline label={null} size={14} />
                         ) : (
                             <NavigationArrow size={14} />
                         )}

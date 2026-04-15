@@ -6,9 +6,9 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateUserProfileAction, uploadAvatarAction, FormState } from './actions';
 import type { AppProfile } from '@/types';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { TIMEZONE_OPTIONS } from '@/types/career';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -65,7 +65,7 @@ function SaveButton({ isDirty }: { isDirty: boolean }) {
         >
             {pending ? (
                 <>
-                    <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
+                    <BrandLoadingLogo size={16} inline label={null} className="mr-2 shrink-0" />
                     Saving...
                 </>
             ) : (
@@ -292,7 +292,12 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
 
     if (isLoadingSocial) {
-        return <div className="p-8 text-center text-[var(--foreground-tertiary)]">Loading profile settings...</div>;
+        return (
+            <div className="flex items-center justify-center gap-3 p-8 text-center text-[var(--foreground-tertiary)]">
+                <BrandLoadingLogo size={18} inline label={null} />
+                <span>Loading profile settings...</span>
+            </div>
+        );
     }
 
     return (
@@ -326,7 +331,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                                 onClick={() => fileInputRef.current?.click()}
                                 className="h-7 text-[12px] font-medium bg-[var(--background-main)] hover:bg-[var(--background-secondary)] border-[var(--border-default)] text-[var(--foreground-secondary)] hover:text-[var(--foreground-primary)] transition-all duration-200 active:scale-95"
                             >
-                                {isUploading ? <CircleNotchIcon className="animate-spin" /> : "Change avatar"}
+                                {isUploading ? <BrandLoadingLogo size={14} inline label={null} /> : "Change avatar"}
                             </Button>
                         </div>
                     </div>
@@ -367,7 +372,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                             <div className={`mt-1 text-xs flex items-center gap-1 ${usernameAvailabilityState === 'available' ? 'text-green-600' :
                                 usernameAvailabilityState === 'checking' ? 'text-[var(--foreground-secondary)]' : 'text-[var(--error)]'
                                 }`}>
-                                {usernameAvailabilityState === 'checking' && <CircleNotchIcon className="animate-spin h-3 w-3" />}
+                                {usernameAvailabilityState === 'checking' && <BrandLoadingLogo size={12} inline label={null} />}
                             </div>
                         )}
                     </div>

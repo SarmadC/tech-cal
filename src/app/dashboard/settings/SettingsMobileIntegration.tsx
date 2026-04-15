@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { getErrorMessage } from '@/utils/errorHandling';
@@ -244,9 +245,16 @@ export default function SettingsMobileIntegration() {
                                 disabled={bulkSyncing}
                                 className="flex items-center gap-2 px-0 py-1.5 rounded hover:text-[var(--mono-text-primary)] text-xs font-medium text-[var(--mono-text-secondary)] transition-colors group"
                             >
-                                <div className={`${bulkSyncing ? 'animate-spin' : ''}`}>
+                                {bulkSyncing ? (
+                                    <BrandLoadingLogo
+                                        size={14}
+                                        inline
+                                        label={null}
+                                        className="text-[var(--mono-text-tertiary)] group-hover:text-[var(--mono-text-primary)]"
+                                    />
+                                ) : (
                                     <MaterialIcon name="refresh" size={14} className="text-[var(--mono-text-tertiary)] group-hover:text-[var(--mono-text-primary)]" />
-                                </div>
+                                )}
                                 <span>Sync Now</span>
                             </button>
 
