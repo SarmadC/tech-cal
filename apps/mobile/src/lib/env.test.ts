@@ -83,6 +83,7 @@ describe('mobile env helpers', () => {
     expect(getMobileRuntimeMetadata()).toEqual({
       appName: 'KureCal',
       easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+      scheme: 'kurecal',
       slug: 'kurecal-mobile',
     });
   });
