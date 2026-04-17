@@ -4,6 +4,7 @@ import {
   engagementFromTrackedEvent,
   loadEngagementMap,
 } from '@/app/api/mobile/engagement';
+import { selectSharedTopPickEvents } from '@/app/api/mobile/recommendations/topPicks';
 import {
   buildDashboardCareerImpact,
   buildDashboardCareerOutcomes,
@@ -155,9 +156,14 @@ export async function GET(request: Request) {
       })
     );
 
+    const topPickEvents = selectSharedTopPickEvents(recommendedEvents);
+    const topPickCards = topPickEvents
+      .map((event) => recommendedCards.find((card) => card.id === event.id) ?? null)
+      .filter((card): card is NonNullable<typeof card> => Boolean(card));
+
     const topRecommendation = buildTopRecommendation({
-      recommendationCards: recommendedCards,
-      recommendedEvents,
+      recommendationCards: topPickCards,
+      recommendedEvents: topPickEvents,
       now: nowDate,
     });
 
@@ -170,6 +176,7 @@ export async function GET(request: Request) {
 
     const insights = buildDashboardInsights({
       trackedEvents,
+      recommendationCards: topPickCards,
       careerProfile,
       now: nowDate,
     });

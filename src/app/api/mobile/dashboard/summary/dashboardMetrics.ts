@@ -386,6 +386,7 @@ export function buildUpcomingCommitments(params: {
 
 export function buildDashboardInsights(params: {
   trackedEvents: TrackedEventRecord[];
+  recommendationCards: MobileEventCard[];
   careerProfile: CareerProfile | null;
   now: Date;
 }): {
@@ -396,14 +397,32 @@ export function buildDashboardInsights(params: {
     isTrackedUpcoming(record, params.now)
   );
 
-  const scoredPipelineEvents = trackedUpcoming
-    .map((record) => ({
-      event: record.event,
-      score: getEventScore(record.event, params.careerProfile),
+  // Pipeline score intentionally reflects the active recommendation card pool so
+  // it stays identical to the hero match signal. We still keep
+  // trackedUpcomingCount as a separate behavioral count for saved/RSVP'd events.
+  const scoredPipelineEvents = params.recommendationCards
+    .map((card) => ({
+      eventId: card.id,
+      title: card.title,
+      score:
+        typeof card.score === 'number' && Number.isFinite(card.score)
+          ? Math.round(card.score <= 1 ? card.score * 100 : card.score)
+          : 0,
     }))
     .filter((item) => item.score > 0);
 
-  const scores = scoredPipelineEvents.map((item) => item.score);
+  const fallbackPipelineEvents =
+    scoredPipelineEvents.length > 0
+      ? scoredPipelineEvents
+      : params.recommendationCards
+          .map((card) => ({
+            eventId: card.id,
+            title: card.title,
+            score: 0,
+          }))
+          .filter(() => false);
+
+  const scores = fallbackPipelineEvents.map((item) => item.score);
   const highFitCount = scores.filter(
     (score) => score >= RECOMMENDATION_THRESHOLDS.RECOMMENDED
   ).length;
@@ -454,13 +473,13 @@ export function buildDashboardInsights(params: {
           ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
           : 0,
       highFitCount,
-      topEvents: scoredPipelineEvents
+      topEvents: fallbackPipelineEvents
         .slice()
         .sort((left, right) => right.score - left.score)
         .slice(0, 3)
         .map((item) => ({
-          eventId: item.event.id,
-          title: item.event.title,
+          eventId: item.eventId,
+          title: item.title,
           score: item.score,
         })),
     },

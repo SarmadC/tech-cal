@@ -272,6 +272,60 @@ describe('mobile discover route', () => {
   });
 
   it('restores top picks for the first unfiltered best-match load', async () => {
+    const duplicateOrganizer = buildEvent('event-d', {
+      alignmentScore: 85,
+      organizer: 'KureCal',
+      eventTypeId: 'meetup',
+      title: 'Duplicate Organizer Event',
+    });
+    mocks.loadFilteredEventsData.mockResolvedValueOnce({
+      events: [eventA, duplicateOrganizer, eventB, eventC],
+      pagination: {
+        page: 1,
+        pageSize: 24,
+        total: 36,
+        hasMore: true,
+      },
+      filters: {
+        applied: {},
+        available: {
+          categories: [
+            {
+              id: 'meetup',
+              name: 'Meetup',
+              count: 12,
+            },
+          ],
+          difficulties: [],
+          formats: [],
+          locations: [],
+        },
+      },
+      stats: {
+        processingTimeMs: 48,
+        filteredCount: 4,
+        totalCount: 36,
+      },
+      counts: {
+        format: {
+          virtual: 7,
+          'in-person': 19,
+          hybrid: 10,
+        },
+        cost: {
+          free: 20,
+          paid: 16,
+        },
+        categories: {
+          meetup: 12,
+        },
+        tags: {
+          expo: 8,
+          react: 5,
+        },
+      },
+    });
+
     const response = await POST(
       new Request('http://localhost/api/mobile/discover', {
         method: 'POST',
@@ -287,7 +341,13 @@ describe('mobile discover route', () => {
     expect(response.status).toBe(200);
     expect(payload.data.topPicks.title).toBe('Your Top Picks');
     expect(payload.data.topPicks.cards).toHaveLength(3);
-    expect(payload.data.events).toHaveLength(0);
+    expect(payload.data.topPicks.cards.map((card: { id: string }) => card.id)).toEqual([
+      'event-a',
+      'event-b',
+      'event-c',
+    ]);
+    expect(payload.data.events).toHaveLength(1);
+    expect(payload.data.events[0]?.id).toBe('event-d');
   });
 
   it('accepts GET query params for a trending discover load', async () => {

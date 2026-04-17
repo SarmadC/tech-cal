@@ -133,8 +133,21 @@ export default function DashboardScreen() {
   );
 
   const dashboard = data;
-  const pipelineScore = dashboard?.insights?.pipeline.avgScore ?? 0;
-  const highFitCount = dashboard?.insights?.pipeline.highFitCount ?? 0;
+  const topRecommendation = dashboard?.topRecommendation ?? null;
+  const recommendationScore =
+    typeof topRecommendation?.event.score === 'number'
+      ? Math.round(topRecommendation.event.score)
+      : null;
+  const pipelineScore =
+    dashboard?.insights?.pipeline.avgScore && dashboard.insights.pipeline.avgScore > 0
+      ? dashboard.insights.pipeline.avgScore
+      : recommendationScore ?? 0;
+  const highFitCount =
+    dashboard?.insights?.pipeline.highFitCount && dashboard.insights.pipeline.highFitCount > 0
+      ? dashboard.insights.pipeline.highFitCount
+      : pipelineScore >= 60
+        ? 1
+        : 0;
   const nextCommitment = dashboard?.upcomingCommitments?.[0] ?? null;
   const followThroughTotal = dashboard
     ? (dashboard.insights?.funnel.savedOnly ?? 0) +
@@ -244,7 +257,7 @@ export default function DashboardScreen() {
     pipelineScore >= 67 ? 'Strong' : pipelineScore >= 33 ? 'Fair' : 'Low';
   const pipelineStatusColor =
     pipelineScore >= 67
-      ? tokens.colors.success
+      ? '#2563EB'
       : pipelineScore >= 33
         ? tokens.colors.accent
         : tokens.colors.warning;
@@ -256,7 +269,6 @@ export default function DashboardScreen() {
       ]
     : [0, 0, 0];
   const pendingConversion = Math.max(0, funnelValues[1] - funnelValues[2]);
-  const topRecommendation = dashboard?.topRecommendation ?? null;
   const heroEyebrow = topRecommendation
     ? null
     : primaryAttention
@@ -274,10 +286,6 @@ export default function DashboardScreen() {
         topRecommendation.daysUntil
       )
     : null;
-  const recommendationScore =
-    typeof topRecommendation?.event.score === 'number'
-      ? Math.round(topRecommendation.event.score)
-      : null;
   const heroBadgeLabel = topRecommendation
     ? recommendationScore != null
       ? `${recommendationScore}% Match`
@@ -637,7 +645,7 @@ export default function DashboardScreen() {
                             { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
                           ]}
                         >
-                          No score yet
+                          Pipeline score
                         </Text>
                       )}
                       {pipelineScore > 0 ? (
@@ -664,7 +672,7 @@ export default function DashboardScreen() {
                         { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
                       ]}
                     >
-                      Relevant Events Open
+                      {pipelineScore > 0 ? 'Top picks fit' : 'No score yet'}
                     </Text>
                     <View style={styles.utilityViz}>
                       <View
@@ -695,8 +703,8 @@ export default function DashboardScreen() {
                         ]}
                       >
                         {highFitCount > 0
-                          ? `${highFitCount} high-fit event${highFitCount === 1 ? '' : 's'} open`
-                          : 'No high-fit matches yet'}
+                          ? `${highFitCount} high-fit top pick${highFitCount === 1 ? '' : 's'}`
+                          : 'No high-fit top picks yet'}
                       </Text>
                     </View>
                   </View>
@@ -717,7 +725,7 @@ export default function DashboardScreen() {
                         { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
                       ]}
                     >
-                      {unratedAttendedCount > 0 ? String(unratedAttendedCount) : 'None yet'}
+                      {unratedAttendedCount > 0 ? String(unratedAttendedCount) : 'Ratings follow-up'}
                     </Text>
                     <Text
                       style={[
@@ -725,7 +733,7 @@ export default function DashboardScreen() {
                         { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
                       ]}
                     >
-                      Ratings Follow-up
+                      {unratedAttendedCount > 0 ? 'Ratings follow-up' : 'No ratings to follow up'}
                     </Text>
                     <View style={styles.utilityViz}>
                       <View style={styles.ratingDots}>
@@ -864,6 +872,7 @@ export default function DashboardScreen() {
                   params: { id: eventId },
                 })
               }
+              onExploreEvents={() => router.push('/discover')}
             />
 
             {dashboard.networkPulse ? (

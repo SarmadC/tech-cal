@@ -24,15 +24,27 @@ export function DashboardUpcomingCommitmentsCard({
   commitments,
   showOpenSlot,
   onOpenEvent,
+  onExploreEvents,
 }: {
   commitments: MobileDashboardCommitment[];
   showOpenSlot?: boolean;
   onOpenEvent?: (eventId: string) => void;
+  onExploreEvents?: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const cardSurface =
+    commitments.length === 0
+      ? (['#F7DCE8', '#F7DCE8'] as const)
+      : undefined;
+  const emptyStateTextColor = tokens.colors.textSecondary;
+  const emptyActionColor = '#BE185D';
 
   return (
-    <DashboardCard>
+    <DashboardCard
+      style={styles.card}
+      contentStyle={styles.cardContent}
+      surfaceColors={cardSurface}
+    >
       <View style={styles.header}>
         <Text
           style={{
@@ -40,19 +52,10 @@ export function DashboardUpcomingCommitmentsCard({
             fontFamily: tokens.typography.sans,
             fontSize: 18,
             fontWeight: '800',
+            letterSpacing: -0.3,
           }}
         >
-          Upcoming Commitments
-        </Text>
-        <Text
-          style={{
-            color: tokens.colors.textSecondary,
-            fontFamily: tokens.typography.sans,
-            fontSize: 13,
-            lineHeight: 18,
-          }}
-        >
-          RSVP&apos;d events you need to prepare for
+          Upcoming commitments
         </Text>
       </View>
 
@@ -166,8 +169,7 @@ export function DashboardUpcomingCommitmentsCard({
                 style={[
                   styles.openSlot,
                   {
-                    borderColor: tokens.colors.borderStrong,
-                    backgroundColor: tokens.colors.surfaceMuted,
+                    borderTopColor: tokens.colors.divider,
                   },
                 ]}
               >
@@ -190,30 +192,44 @@ export function DashboardUpcomingCommitmentsCard({
             ) : null}
           </>
         ) : (
-          <View
-            style={[
-              styles.emptyState,
-              {
-                borderColor: tokens.colors.borderStrong,
-                backgroundColor: tokens.colors.surfaceMuted,
-              },
-            ]}
-          >
-            <FontAwesome5
-              name="calendar-alt"
-              size={18}
-              color={tokens.colors.textSecondary}
-            />
+          <View style={styles.emptyState}>
             <Text
               style={{
-                color: tokens.colors.textSecondary,
+                color: emptyStateTextColor,
                 fontFamily: tokens.typography.sans,
-                fontSize: 13,
-                fontWeight: '600',
+                fontSize: 15,
+                lineHeight: 20,
+                fontWeight: '700',
               }}
             >
-              No upcoming commitments
+              No events to prepare for yet.
             </Text>
+
+            {onExploreEvents ? (
+              <Pressable
+                onPress={onExploreEvents}
+                style={({ pressed }) => [
+                  styles.emptyAction,
+                  pressed && styles.emptyActionPressed,
+                ]}
+              >
+                <Text
+                  style={{
+                    color: emptyActionColor,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 13,
+                    fontWeight: '700',
+                  }}
+                >
+                  Explore events
+                </Text>
+                <FontAwesome5
+                  name="arrow-right"
+                  size={10}
+                  color={emptyActionColor}
+                />
+              </Pressable>
+            ) : null}
           </View>
         )}
       </View>
@@ -222,11 +238,19 @@ export function DashboardUpcomingCommitmentsCard({
 }
 
 const styles = StyleSheet.create({
+  card: {
+    borderRadius: 18,
+  },
+  cardContent: {
+    gap: 10,
+    padding: 14,
+  },
   header: {
-    gap: 6,
+    gap: 2,
   },
   list: {
     gap: 2,
+    marginTop: 2,
   },
   row: {
     flexDirection: 'row',
@@ -255,24 +279,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   openSlot: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 8,
-    marginTop: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginTop: 8,
+    paddingTop: 10,
   },
   emptyState: {
-    minHeight: 108,
-    borderRadius: 18,
-    borderStyle: 'dashed',
-    borderWidth: 1,
+    gap: 8,
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  emptyAction: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+    gap: 6,
+  },
+  emptyActionPressed: {
+    opacity: 0.72,
   },
 });

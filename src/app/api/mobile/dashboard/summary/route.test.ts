@@ -171,7 +171,38 @@ const recommendedEvent = {
   eventImageUrl: null,
   organization: { id: 'org-2', name: 'KureCal', logo: null },
   tags: [],
+  recommendationMetadata: {
+    matchScore: 87,
+  },
 };
+
+function buildRecommendedEvent(
+  id: string,
+  options: Partial<{
+    score: number;
+    organizer: string;
+    eventTypeId: string;
+    startTime: string;
+    title: string;
+  }> = {}
+) {
+  return {
+    ...recommendedEvent,
+    id,
+    title: options.title ?? `Recommended ${id}`,
+    startTime: options.startTime ?? recommendedEvent.startTime,
+    eventTypeId: options.eventTypeId ?? recommendedEvent.eventTypeId,
+    organizer: options.organizer ?? recommendedEvent.organizer,
+    organization: {
+      id: `org-${id}`,
+      name: options.organizer ?? recommendedEvent.organizer,
+      logo: null,
+    },
+    recommendationMetadata: {
+      matchScore: options.score ?? 87,
+    },
+  };
+}
 
 describe('GET /api/mobile/dashboard/summary', () => {
   beforeEach(() => {
@@ -333,9 +364,13 @@ describe('GET /api/mobile/dashboard/summary', () => {
     expect(parsed.recommendations[0]?.id).toBe('event-2');
     expect(parsed.onboardingState.hasCompleted).toBe(true);
     expect(parsed.topRecommendation?.event.id).toBe('event-2');
+    expect(parsed.topRecommendation?.event.score).toBe(87);
     expect(parsed.upcomingCommitments?.[0]?.trackingId).toBe('tracking-1');
     expect(parsed.showOpenCommitmentSlot).toBe(true);
     expect(parsed.insights?.pipeline.trackedUpcomingCount).toBe(1);
+    expect(parsed.insights?.pipeline.scoredUpcomingCount).toBe(1);
+    expect(parsed.insights?.pipeline.avgScore).toBe(87);
+    expect(parsed.insights?.pipeline.highFitCount).toBe(1);
     expect(parsed.monthlyPulse?.trend.length).toBe(4);
     expect(parsed.performance?.summary.attendedCount).toBe(1);
     expect(parsed.performance?.summary.ratedCount).toBe(1);
@@ -357,6 +392,106 @@ describe('GET /api/mobile/dashboard/summary', () => {
     expect(payload.data.savedCount).toBe(2);
     expect(payload.data.recommendationCount).toBe(1);
     expect(payload.data.heroEvent?.id).toBe('event-1');
+  });
+
+  it('keeps pipeline score aligned with recommendation score when tracked upcoming events are unscored', async () => {
+    mocks.getTrackedEvents.mockResolvedValueOnce([
+      {
+        ...trackedEvent,
+        event: {
+          ...trackedEvent.event,
+          recommendationMetadata: {
+            matchScore: 0,
+          },
+        },
+      },
+    ]);
+    mocks.fetchPersonalizedRecommendationCandidates.mockResolvedValueOnce({
+      events: [
+        {
+          ...recommendedEvent,
+          recommendationMetadata: {
+            matchScore: 87,
+          },
+        },
+      ],
+      matchedTags: [],
+      candidateSources: new Map(),
+    });
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+    const payload = await response.json();
+    const parsed = mobileDashboardSummarySchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.topRecommendation?.event.score).toBe(87);
+    expect(parsed.insights?.pipeline.trackedUpcomingCount).toBe(1);
+    expect(parsed.insights?.pipeline.avgScore).toBe(87);
+    expect(parsed.insights?.pipeline.scoredUpcomingCount).toBe(1);
+  });
+
+  it('uses the same diversified top picks slice for dashboard hero and pipeline', async () => {
+    const recommendationA = buildRecommendedEvent('event-a', {
+      score: 91,
+      organizer: 'Org A',
+      eventTypeId: 'meetup',
+      startTime: '2099-04-12T18:00:00.000Z',
+    });
+    const recommendationB = buildRecommendedEvent('event-b', {
+      score: 88,
+      organizer: 'Org B',
+      eventTypeId: 'conference',
+      startTime: '2099-04-13T18:00:00.000Z',
+    });
+    const recommendationC = buildRecommendedEvent('event-c', {
+      score: 77,
+      organizer: 'Org C',
+      eventTypeId: 'workshop',
+      startTime: '2099-04-14T18:00:00.000Z',
+    });
+    const recommendationD = buildRecommendedEvent('event-d', {
+      score: 85,
+      organizer: 'Org A',
+      eventTypeId: 'meetup',
+      startTime: '2099-04-15T18:00:00.000Z',
+    });
+
+    mocks.fetchPersonalizedRecommendationCandidates.mockResolvedValueOnce({
+      events: [recommendationA, recommendationD, recommendationB, recommendationC],
+      matchedTags: [],
+      candidateSources: new Map(),
+    });
+    mocks.loadEngagementMap.mockResolvedValueOnce(
+      new Map([
+        [recommendationA.id, { isBookmarked: false, status: null }],
+        [recommendationB.id, { isBookmarked: false, status: null }],
+        [recommendationC.id, { isBookmarked: false, status: null }],
+        [recommendationD.id, { isBookmarked: false, status: null }],
+      ])
+    );
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+    const payload = await response.json();
+    const parsed = mobileDashboardSummarySchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.topRecommendation?.event.id).toBe('event-a');
+    expect(parsed.insights?.pipeline.avgScore).toBe(85);
+    expect(parsed.insights?.pipeline.highFitCount).toBe(3);
+    expect(parsed.insights?.pipeline.scoredUpcomingCount).toBe(3);
+    expect(parsed.insights?.pipeline.topEvents.map((event) => event.eventId)).toEqual([
+      'event-a',
+      'event-b',
+      'event-c',
+    ]);
   });
 
   it('returns 401 when the request is unauthenticated', async () => {

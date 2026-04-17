@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildDashboardInsights,
   buildDashboardCareerOutcomes,
   buildDiscoveryBreadth,
   buildEngagementStreak,
@@ -85,6 +86,62 @@ function makeTrackedEvent({
 }
 
 describe('dashboardMetrics builders', () => {
+  it('builds pipeline score from the recommendation pool instead of tracked upcoming events', () => {
+    const trackedEvents = [
+      makeTrackedEvent({
+        id: 'tracked-upcoming',
+        title: 'Tracked Upcoming',
+        status: 'attending',
+        startTime: '2099-04-12T18:00:00.000Z',
+      }),
+    ];
+
+    const recommendationCards = [
+      {
+        id: 'recommended-1',
+        title: 'Recommended 87',
+        slug: 'recommended-87',
+        startTime: '2099-04-12T18:00:00.000Z',
+        score: 0.87,
+      },
+      {
+        id: 'recommended-2',
+        title: 'Recommended 72',
+        slug: 'recommended-72',
+        startTime: '2099-04-13T18:00:00.000Z',
+        score: 72,
+      },
+    ];
+
+    const result = buildDashboardInsights({
+      trackedEvents: trackedEvents as never,
+      recommendationCards: recommendationCards as never,
+      careerProfile: null,
+      now: new Date('2026-04-08T12:00:00.000Z'),
+    });
+
+    expect(result.pipeline.trackedUpcomingCount).toBe(1);
+    expect(result.pipeline.scoredUpcomingCount).toBe(2);
+    expect(result.pipeline.avgScore).toBe(80);
+    expect(result.pipeline.highFitCount).toBe(2);
+    expect(result.pipeline.topEvents.map((event) => event.score)).toEqual([87, 72]);
+  });
+
+  it('returns zero pipeline score when recommendation pool is empty', () => {
+    const result = buildDashboardInsights({
+      trackedEvents: [] as never,
+      recommendationCards: [] as never,
+      careerProfile: null,
+      now: new Date('2026-04-08T12:00:00.000Z'),
+    });
+
+    expect(result.pipeline.trackedUpcomingCount).toBe(0);
+    expect(result.pipeline.scoredUpcomingCount).toBe(0);
+    expect(result.pipeline.avgScore).toBe(0);
+    expect(result.pipeline.highFitCount).toBe(0);
+    expect(result.pipeline.topEvents).toEqual([]);
+  });
+
   it('builds a current and longest engagement streak from ISO weeks', () => {
     const trackedEvents = [
       makeTrackedEvent({
