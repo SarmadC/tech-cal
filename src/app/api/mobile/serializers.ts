@@ -40,6 +40,25 @@ import type { AgendaItem, Event, EventType } from '@/types';
 import type { FilteredEventsData } from '@/types/filteredEvents';
 import { isEventFreeFromPricing, normalizeEventFormat } from '@/utils/filterCountUtils';
 
+function resolveImageUrl(src: string | null | undefined): string | null {
+  const value = src?.trim();
+  if (!value) return null;
+
+  if (value.startsWith('/')) {
+    const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
+    return origin ? `${origin}${value}` : null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'http:') url.protocol = 'https:';
+    if (url.protocol !== 'https:') return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function padDatePart(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -470,8 +489,8 @@ export function toMobileEventCard(
     location: event.location?.trim() || null,
     startTime: event.startTime,
     endTime: event.endTime ?? null,
-    imageUrl: event.eventImageUrl?.trim() || null,
-    organizerLogoUrl: event.organization?.logo?.trim() || null,
+    imageUrl: resolveImageUrl(event.eventImageUrl),
+    organizerLogoUrl: resolveImageUrl(event.organization?.logo),
     organizerName:
       event.organization?.name?.trim() || event.organizer?.trim() || null,
     score:

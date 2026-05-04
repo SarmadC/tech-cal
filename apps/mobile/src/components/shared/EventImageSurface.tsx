@@ -9,10 +9,19 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { SvgUri } from 'react-native-svg';
 
 import type { MobileEventCard } from '@kurecal/domain';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
+
+function isSvgUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.svg');
+  } catch {
+    return url.toLowerCase().includes('.svg');
+  }
+}
 
 interface EventImageSurfaceProps extends PropsWithChildren {
   event: MobileEventCard;
@@ -42,19 +51,34 @@ export function EventImageSurface({
       style={({ pressed }) => [style, pressed && pressedStyle]}
     >
       {imageUri && !isLogoFallback ? (
-        <Image
-          source={{ uri: imageUri }}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
-          onError={() => {
-            if (imageUri === event.imageUrl && event.organizerLogoUrl) {
-              setImageUri(event.organizerLogoUrl);
-              return;
-            }
-
-            setImageUri(null);
-          }}
-        />
+        isSvgUrl(imageUri) ? (
+          <SvgUri
+            uri={imageUri}
+            width="100%"
+            height="100%"
+            style={StyleSheet.absoluteFillObject}
+            onError={() => {
+              if (imageUri === event.imageUrl && event.organizerLogoUrl) {
+                setImageUri(event.organizerLogoUrl);
+                return;
+              }
+              setImageUri(null);
+            }}
+          />
+        ) : (
+          <Image
+            source={{ uri: imageUri }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+            onError={() => {
+              if (imageUri === event.imageUrl && event.organizerLogoUrl) {
+                setImageUri(event.organizerLogoUrl);
+                return;
+              }
+              setImageUri(null);
+            }}
+          />
+        )
       ) : null}
 
       <LinearGradient
@@ -67,12 +91,22 @@ export function EventImageSurface({
       />
 
       {logoFallbackUri ? (
-        <Image
-          source={{ uri: logoFallbackUri }}
-          style={styles.logoFallback}
-          resizeMode="contain"
-          onError={() => setImageUri(null)}
-        />
+        isSvgUrl(logoFallbackUri) ? (
+          <SvgUri
+            uri={logoFallbackUri}
+            width="100%"
+            height="100%"
+            style={styles.logoFallback}
+            onError={() => setImageUri(null)}
+          />
+        ) : (
+          <Image
+            source={{ uri: logoFallbackUri }}
+            style={styles.logoFallback}
+            resizeMode="contain"
+            onError={() => setImageUri(null)}
+          />
+        )
       ) : null}
 
       {!imageUri ? (
