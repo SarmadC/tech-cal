@@ -41,6 +41,7 @@ import {
 } from '../../src/lib/calendarState';
 import { loadMobileCalendarFeed } from '../../src/lib/mobileApi';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
+import { useTabBarVisibility } from '../../src/components/chrome/TabBarVisibilityProvider';
 
 const DEFAULT_FILTERS: CalendarDraftFilters = {
   tags: [],
@@ -99,7 +100,9 @@ function countActiveFilters(filters: CalendarDraftFilters) {
 export default function CalendarScreen() {
   const { profile } = useAuth();
   const { tokens } = useAppTheme();
+  const { isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
+  const tabBarBottomInset = isVisible ? tokens.spacing.tabBarBottom : Math.max(insets.bottom + 20, 28);
   const [visibleMonthStart, setVisibleMonthStart] = useState<LocalCalendarDateKey>(
     () => resolveDefaultVisibleMonth()
   );
@@ -420,7 +423,7 @@ export default function CalendarScreen() {
               styles.stateWrap,
               {
                 marginTop: headerOffset,
-                paddingBottom: tokens.spacing.tabBarBottom,
+                paddingBottom: tabBarBottomInset,
               },
             ]}
           >
@@ -442,7 +445,7 @@ export default function CalendarScreen() {
               styles.stateWrap,
               {
                 marginTop: headerOffset,
-                paddingBottom: tokens.spacing.tabBarBottom,
+                paddingBottom: tabBarBottomInset,
               },
             ]}
           >
@@ -483,7 +486,7 @@ export default function CalendarScreen() {
               void runCalendarRequest(appliedRequest, 'refresh');
             }}
             topInset={headerOffset}
-            bottomInset={tokens.spacing.tabBarBottom}
+            bottomInset={tabBarBottomInset}
           />
         ) : null}
       </SafeAreaView>

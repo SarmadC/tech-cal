@@ -22,6 +22,7 @@ import {
   resolveMonthStartKey,
 } from '../../lib/calendarDateUtils';
 import { useAppTheme } from '../../providers/ThemeProvider';
+import { useTabBarVisibility } from '../chrome/TabBarVisibilityProvider';
 
 interface CalendarAgendaListProps {
   events: MobileCalendarEvent[];
@@ -151,6 +152,7 @@ export function CalendarAgendaList({
   monthStart = null,
 }: CalendarAgendaListProps) {
   const { tokens } = useAppTheme();
+  const { handleScroll } = useTabBarVisibility();
   const listRef = useRef<SectionList<MobileCalendarEvent, AgendaSection> | null>(
     null
   );
@@ -221,7 +223,11 @@ export function CalendarAgendaList({
         paddingBottom: bottomInset,
       }}
       onContentSizeChange={scrollToInitialSection}
+      onScroll={(event) => {
+        handleScroll(event.nativeEvent.contentOffset.y);
+      }}
       onScrollToIndexFailed={handleInitialScrollFailure}
+      scrollEventThrottle={16}
       ListHeaderComponent={
         header ? (
           <View style={styles.headerWrap}>

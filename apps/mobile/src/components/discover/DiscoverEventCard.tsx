@@ -1,4 +1,3 @@
-import { FontAwesome } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -81,20 +80,6 @@ function buildMetadataLine(event: MobileEventCard) {
   return parts.join(' · ');
 }
 
-function buildSupportingLine(event: MobileEventCard) {
-  const insight = event.insight?.trim();
-  if (insight) {
-    return insight.endsWith('.') ? insight : `${insight}.`;
-  }
-
-  const description = event.description?.trim();
-  if (!description) {
-    return null;
-  }
-
-  return description.length > 88 ? `${description.slice(0, 85).trimEnd()}...` : description;
-}
-
 export function DiscoverEventCard({
   event,
   onPress,
@@ -104,7 +89,6 @@ export function DiscoverEventCard({
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
-  const supportingLine = buildSupportingLine(event);
   const isSaved = event.engagement?.isBookmarked || event.badges?.includes('Saved');
 
   return (
@@ -114,172 +98,131 @@ export function DiscoverEventCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
-        {
-          backgroundColor: pressed ? tokens.colors.discoverToolbarStrong : 'transparent',
-          borderColor: pressed ? tokens.colors.discoverToolbarBorderStrong : 'transparent',
-        },
+        pressed && { backgroundColor: 'rgba(255, 255, 255, 0.04)' },
       ]}
     >
-      <View
-        style={[
-          styles.card,
-          {
-            borderBottomColor: showDivider ? tokens.colors.divider : 'transparent',
-          },
-        ]}
-      >
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={[
-              styles.logo,
-              {
-                backgroundColor: tokens.colors.discoverShell,
-              },
-            ]}
-            resizeMode="contain"
-            onError={() => {
-              if (imageUri === event.organizerLogoUrl) {
-                setImageUri(event.imageUrl ?? null);
-                return;
-              }
-
-              setImageUri(null);
-            }}
-          />
-        ) : (
-          <View
-            style={[
-              styles.initialBadge,
-              {
-                backgroundColor: tokens.colors.accentSoft,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: tokens.colors.textPrimary,
-                fontFamily: tokens.typography.sans,
-                fontSize: 13,
-                fontWeight: '800',
-              }}
-            >
-              {event.title.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.copy}>
-          <View style={styles.titleRow}>
-            <View style={styles.titleWrap}>
+      <View style={styles.row}>
+        {/* Logo frame — fixed container normalizes all mark sizes */}
+        <View style={styles.logoWrap}>
+          <View style={styles.logoFrame}>
+            {imageUri ? (
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.logoImage}
+                resizeMode="contain"
+                onError={() => {
+                  if (imageUri === event.organizerLogoUrl) {
+                    setImageUri(event.imageUrl ?? null);
+                    return;
+                  }
+                  setImageUri(null);
+                }}
+              />
+            ) : (
               <Text
-                numberOfLines={2}
                 style={{
-                  color: tokens.colors.textPrimary,
+                  color: tokens.colors.textTertiary,
                   fontFamily: tokens.typography.sans,
                   fontSize: 15,
-                  lineHeight: 19,
-                  fontWeight: '700',
+                  fontWeight: '600',
                 }}
               >
-                {event.title}
+                {event.title.charAt(0).toUpperCase()}
               </Text>
-            </View>
-            <View style={styles.trailingIcons}>
-              {isSaved ? (
-                <FontAwesome
-                  color={tokens.colors.accent}
-                  name="bookmark"
-                  size={10}
-                  style={styles.savedIcon}
-                />
-              ) : null}
-              <FontAwesome
-                color={tokens.colors.textTertiary}
-                name="angle-right"
-                size={11}
-                style={styles.chevronIcon}
-              />
-            </View>
+            )}
           </View>
+          {isSaved ? (
+            <View
+              style={[styles.savedDot, { backgroundColor: tokens.colors.accent }]}
+            />
+          ) : null}
+        </View>
+
+        <View style={styles.copy}>
+          <Text
+            numberOfLines={2}
+            style={{
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+              fontSize: 15,
+              lineHeight: 20,
+              fontWeight: '600',
+            }}
+          >
+            {event.title}
+          </Text>
 
           <Text
             numberOfLines={1}
             style={{
               color: tokens.colors.discoverTextMuted,
               fontFamily: tokens.typography.sans,
-              fontSize: 11,
-              fontWeight: '500',
-              lineHeight: 14,
+              fontSize: 12,
+              fontWeight: '400',
+              lineHeight: 16,
             }}
           >
             {metadataLine}
           </Text>
-
-          {supportingLine ? (
-            <Text
-              numberOfLines={1}
-              style={{
-                color: tokens.colors.discoverTextSoft,
-                fontFamily: tokens.typography.sans,
-                fontSize: 11,
-                lineHeight: 15,
-              }}
-            >
-              {supportingLine}
-            </Text>
-          ) : null}
         </View>
       </View>
+
+      {showDivider ? (
+        <View
+          style={[styles.separator, { backgroundColor: tokens.colors.divider }]}
+        />
+      ) : null}
     </Pressable>
   );
 }
 
+const LOGO_SIZE = 38;
+const ROW_GAP = 12;
+const ROW_PADDING_H = 4;
+
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'flex-start',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 10,
-  },
-  chevronIcon: {
-    paddingTop: 2,
-  },
   copy: {
     flex: 1,
     gap: 3,
   },
-  initialBadge: {
+  logoFrame: {
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 10,
-    height: 32,
+    height: LOGO_SIZE,
     justifyContent: 'center',
-    width: 32,
+    overflow: 'hidden',
+    padding: 4,
+    width: LOGO_SIZE,
   },
-  logo: {
-    borderRadius: 10,
-    height: 32,
-    width: 32,
+  logoImage: {
+    height: '100%',
+    width: '100%',
+  },
+  logoWrap: {
+    flexShrink: 0,
+    marginTop: 1,
   },
   pressable: {
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 12,
   },
-  savedIcon: {
-    marginRight: 4,
-  },
-  titleRow: {
+  row: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 8,
+    gap: ROW_GAP,
+    paddingHorizontal: ROW_PADDING_H,
+    paddingVertical: 11,
   },
-  titleWrap: {
-    flex: 1,
+  savedDot: {
+    borderRadius: 999,
+    bottom: 0,
+    height: 8,
+    position: 'absolute',
+    right: 0,
+    width: 8,
   },
-  trailingIcons: {
-    alignItems: 'center',
-    flexDirection: 'row',
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: ROW_PADDING_H + LOGO_SIZE + ROW_GAP,
   },
 });

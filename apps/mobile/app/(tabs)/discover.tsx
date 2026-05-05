@@ -23,7 +23,6 @@ import type {
 
 import { BrandLoadingLogo } from '../../src/components/brand/BrandLoadingLogo';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
-import { DiscoverChipRail, type DiscoverChip } from '../../src/components/discover/DiscoverChipRail';
 import { DiscoverEventCard } from '../../src/components/discover/DiscoverEventCard';
 import {
   DiscoverFilterSheet,
@@ -67,39 +66,6 @@ const FALLBACK_RANKING_OPTIONS = [
     description: 'Ordered by upcoming start time.',
   },
 ];
-
-function formatDateLabel(value: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  return new Date(`${value}T12:00:00.000Z`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function buildDateRangeLabel(start: string | null, end: string | null) {
-  if (!start && !end) {
-    return '';
-  }
-
-  if (start && end) {
-    return `${formatDateLabel(start)} - ${formatDateLabel(end)}`;
-  }
-
-  if (start) {
-    return `From ${formatDateLabel(start)}`;
-  }
-
-  return `Until ${formatDateLabel(end)}`;
-}
-
-function labelForCost(cost: DiscoverDraftFilters['cost']) {
-  if (cost === 'free') return 'Cost: Free';
-  if (cost === 'paid') return 'Cost: Paid';
-  return '';
-}
 
 function countActiveFilters(searchTerm: string, filters: DiscoverDraftFilters) {
   let count = 0;
@@ -305,90 +271,6 @@ export default function DiscoverScreen() {
     setIsFilterOpen(false);
   }
 
-  function updateAppliedFilters(nextFilters: DiscoverDraftFilters) {
-    startTransition(() => {
-      setFilters(nextFilters);
-      setDraftFilters(nextFilters);
-    });
-  }
-
-  function removeChip(key: string, value?: string) {
-    if (key === 'search') {
-      setSearchText('');
-      setSearchTerm('');
-      return;
-    }
-
-    if (key === 'location') {
-      updateAppliedFilters({ ...filters, location: '' });
-      return;
-    }
-
-    if (key === 'dateRange') {
-      updateAppliedFilters({
-        ...filters,
-        dateRange: {
-          start: null,
-          end: null,
-        },
-      });
-      return;
-    }
-
-    if (key === 'cost') {
-      updateAppliedFilters({ ...filters, cost: 'all' });
-      return;
-    }
-
-    if (key === 'tag' && value) {
-      updateAppliedFilters({
-        ...filters,
-        tags: filters.tags.filter((entry) => entry !== value),
-      });
-    }
-  }
-
-  const tagLabelMap = new Map(
-    (feed?.availableFilters?.tags ?? []).map((tag) => [tag.value, tag.label])
-  );
-
-  const chips: DiscoverChip[] = [];
-  if (searchTerm) {
-    chips.push({
-      key: 'search',
-      label: `Search: ${searchTerm}`,
-      onRemove: () => removeChip('search'),
-    });
-  }
-  if (filters.location.trim()) {
-    chips.push({
-      key: 'location',
-      label: `Location: ${filters.location.trim()}`,
-      onRemove: () => removeChip('location'),
-    });
-  }
-  if (filters.dateRange.start || filters.dateRange.end) {
-    chips.push({
-      key: 'date-range',
-      label: buildDateRangeLabel(filters.dateRange.start, filters.dateRange.end),
-      onRemove: () => removeChip('dateRange'),
-    });
-  }
-  if (filters.cost !== 'all') {
-    chips.push({
-      key: 'cost',
-      label: labelForCost(filters.cost),
-      onRemove: () => removeChip('cost'),
-    });
-  }
-  filters.tags.forEach((tagValue) => {
-    chips.push({
-      key: `tag-${tagValue}`,
-      label: `Tag: ${tagLabelMap.get(tagValue) ?? tagValue}`,
-      onRemove: () => removeChip('tag', tagValue),
-    });
-  });
-
   const rankingOptions = feed?.controls.rankingModes ?? FALLBACK_RANKING_OPTIONS;
   const activeSheetFeed = previewFeed ?? feed;
   const topPicks = feed?.topPicks ?? null;
@@ -398,7 +280,6 @@ export default function DiscoverScreen() {
   const draftActiveFilterCount = countActiveFilters(searchTerm, draftFilters);
   const isInitialLoading = loading && !feed;
   const showEmptyState = !loading && !error && events.length === 0 && !hasTopPicks;
-  const showFeedHeading = hasTopPicks && events.length > 0;
   const hasMore = hasMorePages;
   const counts = activeSheetFeed?.counts ?? feed?.counts ?? {
     format: {
@@ -417,25 +298,28 @@ export default function DiscoverScreen() {
   return (
     <>
       <DiscoverShell
-        header={(compact) => (
+        header={(compact, controlsVisible) => (
           <View style={[styles.headerStack, compact && styles.headerStackCompact]}>
-            <DiscoverSearchBar
-              activeFilterCount={appliedActiveFilterCount}
-              compact={compact}
-              onChangeText={setSearchText}
-              onOpenFilters={openFilters}
-              value={searchText}
-            />
-            {!compact ? <DiscoverChipRail chips={chips} /> : null}
-            <DiscoverRankingRail
-              onChange={(nextValue) => {
-                startTransition(() => {
-                  setRankingMode(nextValue);
-                });
-              }}
-              options={rankingOptions}
-              value={rankingMode}
-            />
+            {controlsVisible ? (
+              <>
+                <DiscoverSearchBar
+                  activeFilterCount={appliedActiveFilterCount}
+                  compact={compact}
+                  onChangeText={setSearchText}
+                  onOpenFilters={openFilters}
+                  value={searchText}
+                />
+                <DiscoverRankingRail
+                  onChange={(nextValue) => {
+                    startTransition(() => {
+                      setRankingMode(nextValue);
+                    });
+                  }}
+                  options={rankingOptions}
+                  value={rankingMode}
+                />
+              </>
+            ) : null}
           </View>
         )}
         refreshControl={
@@ -448,23 +332,6 @@ export default function DiscoverScreen() {
           />
         }
       >
-        {chips.length > 0 ? (
-          <View style={styles.clearFiltersRow}>
-            <Pressable onPress={clearAllFilters}>
-              <Text
-                style={{
-                  color: tokens.colors.discoverTextSoft,
-                  fontFamily: tokens.typography.sans,
-                  fontSize: 13,
-                  fontWeight: '700',
-                }}
-              >
-                Clear all filters
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
         {isInitialLoading ? (
           <ScreenState
             description="Ranking the next set of events for your current filters."
@@ -492,33 +359,15 @@ export default function DiscoverScreen() {
         ) : null}
 
         {events.length > 0 ? (
-          <View style={showFeedHeading ? styles.feedSection : undefined}>
-            {showFeedHeading ? (
-              <View style={styles.feedHeadingRow}>
-                <Text
-                  style={{
-                    color: tokens.colors.discoverTextMuted,
-                    fontFamily: tokens.typography.sans,
-                    fontSize: 11,
-                    fontWeight: '700',
-                    letterSpacing: 0.1,
-                  }}
-                >
-                  Recommended events
-                </Text>
-              </View>
-            ) : null}
-
-            <View style={styles.feedList}>
-              {events.map((event, index) => (
-                <DiscoverEventCard
-                  key={event.id}
-                  event={event}
-                  onPress={() => router.push(`/event/${event.id}`)}
-                  showDivider={index < events.length - 1}
-                />
-              ))}
-            </View>
+          <View style={styles.feedList}>
+            {events.map((event, index) => (
+              <DiscoverEventCard
+                key={event.id}
+                event={event}
+                onPress={() => router.push(`/event/${event.id}`)}
+                showDivider={index < events.length - 1}
+              />
+            ))}
           </View>
         ) : null}
 
@@ -614,17 +463,8 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  clearFiltersRow: {
-    alignItems: 'flex-end',
-  },
-  feedHeadingRow: {
-    paddingHorizontal: 2,
-  },
   feedList: {
     gap: 0,
-  },
-  feedSection: {
-    gap: 3,
   },
   headerStack: {
     gap: 4,

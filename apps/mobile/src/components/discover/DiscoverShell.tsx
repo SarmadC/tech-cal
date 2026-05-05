@@ -1,8 +1,11 @@
-import { useState, type PropsWithChildren, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PropsWithChildren, type ReactElement, type ReactNode } from 'react';
 import {
   LayoutChangeEvent,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
+  UIManager,
   View,
   type RefreshControlProps,
   type StyleProp,
@@ -11,10 +14,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
+import { useTabBarVisibility } from '../chrome/TabBarVisibilityProvider';
 
 interface DiscoverShellProps extends PropsWithChildren {
   contentStyle?: StyleProp<ViewStyle>;
-  header: (compact: boolean) => ReactNode;
+  header: (compact: boolean, controlsVisible: boolean) => ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
 }
 
@@ -25,9 +29,21 @@ export function DiscoverShell({
   refreshControl,
 }: DiscoverShellProps) {
   const { tokens } = useAppTheme();
+  const { handleScroll, isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
   const [compact, setCompact] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
+  const lastOffsetRef = useRef(0);
+
+  useEffect(() => {
+    if (
+      Platform.OS === 'android' &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   function handleHeaderLayout(event: LayoutChangeEvent) {
     const nextHeight = event.nativeEvent.layout.height;
@@ -53,14 +69,13 @@ export function DiscoverShell({
         style={[
           styles.headerWrap,
           {
-            backgroundColor: tokens.colors.discoverHeader,
-            borderBottomColor: tokens.colors.discoverToolbarBorder,
+            backgroundColor: tokens.colors.discoverShell,
             paddingTop: insets.top + (compact ? 6 : 10),
-            paddingBottom: compact ? 8 : 10,
+            paddingBottom: controlsVisible ? (compact ? 8 : 10) : 4,
           },
         ]}
       >
-        <View style={styles.headerInner}>{header(compact)}</View>
+        <View style={styles.headerInner}>{header(compact, controlsVisible)}</View>
       </View>
 
       <ScrollView
@@ -68,15 +83,32 @@ export function DiscoverShell({
           styles.content,
           {
             paddingTop: headerOffset + 8,
-            paddingBottom: tokens.spacing.tabBarBottom,
+            paddingBottom: isVisible ? tokens.spacing.tabBarBottom : Math.max(insets.bottom + 20, 28),
           },
           contentStyle,
         ]}
         onScroll={(event) => {
-          const nextCompact = event.nativeEvent.contentOffset.y > 28;
+          const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
+          const nextCompact = offsetY > 28;
+          const delta = offsetY - lastOffsetRef.current;
+          lastOffsetRef.current = offsetY;
+
           if (nextCompact !== compact) {
             setCompact(nextCompact);
           }
+
+          if (offsetY <= 8 && !controlsVisible) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setControlsVisible(true);
+          } else if (delta > 12 && offsetY > 40 && controlsVisible) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setControlsVisible(false);
+          } else if (delta < -8 && !controlsVisible) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setControlsVisible(true);
+          }
+
+          handleScroll(offsetY);
         }}
         refreshControl={refreshControl}
         scrollEventThrottle={16}
@@ -104,7 +136,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerWrap: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
     left: 0,
     paddingHorizontal: 16,
     position: 'absolute',
