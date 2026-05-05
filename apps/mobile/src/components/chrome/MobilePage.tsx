@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
+import { useTabBarVisibility } from './TabBarVisibilityProvider';
 
 interface MobilePageProps extends PropsWithChildren {
   eyebrow?: string;
@@ -37,10 +38,12 @@ export function MobilePage({
   contentStyle,
 }: MobilePageProps) {
   const { tokens } = useAppTheme();
+  const { handleScroll, isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
   const [compact, setCompact] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
-  const bottomInset = footerInset ?? tokens.spacing.tabBarBottom;
+  const bottomInset =
+    footerInset ?? (isVisible ? tokens.spacing.tabBarBottom : Math.max(insets.bottom + 20, 28));
 
   const fallbackHeaderOffset = useMemo(
     () => (headerHidden ? insets.top + 12 : insets.top + (subtitle ? 148 : 120)),
@@ -140,10 +143,12 @@ export function MobilePage({
           contentStyle,
         ]}
         onScroll={(event) => {
-          const nextCompact = event.nativeEvent.contentOffset.y > 22;
+          const offsetY = event.nativeEvent.contentOffset.y;
+          const nextCompact = offsetY > 22;
           if (nextCompact !== compact) {
             setCompact(nextCompact);
           }
+          handleScroll(offsetY);
         }}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
