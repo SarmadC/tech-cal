@@ -37,6 +37,8 @@ describe('/api/mobile/community/circles/[slug]', () => {
         memberCount: 42,
       },
       isJoined: true,
+      membershipState: 'joined' as const,
+      isModerator: false,
       currentUserProfile: {
         id: 'user-1',
         fullName: 'Ada Lovelace',

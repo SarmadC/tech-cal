@@ -14,13 +14,29 @@ export class CommunityMutationsService {
   ): Promise<{ id: string }> {
     await CommunityModerationService.assertUserCanParticipate(userId, supabase);
 
-    const { data, error } = await supabase
-      .from('circle_posts')
-      .insert({
-        circle_id: payload.circleId,
-        author_id: userId,
-        content: payload.content.trim(),
-      })
+    const insertPayload: Record<string, unknown> = {
+      circle_id: payload.circleId,
+      author_id: userId,
+      content: payload.content.trim(),
+    };
+    if (payload.postType) {
+      insertPayload.post_type = payload.postType;
+    }
+    if (payload.eventId) {
+      insertPayload.event_id = payload.eventId;
+    }
+
+    const { data, error } = await (supabase.from('circle_posts') as unknown as {
+      insert: (row: Record<string, unknown>) => {
+        select: (cols: string) => {
+          single: () => Promise<{
+            data: { id: string };
+            error: { code?: string; message?: string } | null;
+          }>;
+        };
+      };
+    })
+      .insert(insertPayload)
       .select('id')
       .single();
 
@@ -122,5 +138,84 @@ export class CommunityMutationsService {
       }
       throw new Error(error.message ?? 'Failed to submit vote.');
     }
+  }
+
+  static async setPinnedPost(
+    userId: string,
+    circleId: string,
+    postId: string | null,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    if (postId === null) {
+      const { error } = await supabase
+        .from('circle_post_pins')
+        .delete()
+        .eq('circle_id', circleId);
+      if (error) throw new Error(error.message ?? 'Failed to unpin post.');
+      return;
+    }
+
+    const { error } = await supabase.from('circle_post_pins').upsert(
+      {
+        circle_id: circleId,
+        post_id: postId,
+        pinned_by: userId,
+        pinned_at: new Date().toISOString(),
+      },
+      { onConflict: 'circle_id' }
+    );
+    if (error) {
+      if (error.code === '42501') {
+        throw new Error('Only owners and moderators can pin posts.');
+      }
+      throw new Error(error.message ?? 'Failed to pin post.');
+    }
+  }
+
+  static async setMembershipState(
+    userId: string,
+    circleId: string,
+    nextState: 'following' | 'joined' | 'none',
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const client = supabase as unknown as {
+      from: (table: string) => {
+        delete: () => {
+          eq: (
+            col: string,
+            val: string
+          ) => {
+            eq: (
+              col: string,
+              val: string
+            ) => Promise<{ error: { message?: string } | null }>;
+          };
+        };
+        upsert: (
+          row: Record<string, unknown>,
+          opts?: { onConflict?: string }
+        ) => Promise<{ error: { message?: string } | null }>;
+      };
+    };
+
+    if (nextState === 'none') {
+      const { error } = await client
+        .from('circle_members')
+        .delete()
+        .eq('circle_id', circleId)
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message ?? 'Failed to leave circle.');
+      return;
+    }
+
+    const { error } = await client.from('circle_members').upsert(
+      {
+        circle_id: circleId,
+        user_id: userId,
+        membership_state: nextState,
+      },
+      { onConflict: 'circle_id,user_id' }
+    );
+    if (error) throw new Error(error.message ?? 'Failed to update membership.');
   }
 }

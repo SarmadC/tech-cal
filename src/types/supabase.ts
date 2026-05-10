@@ -790,20 +790,100 @@ export type Database = {
           },
         ]
       }
+      circle_event_links: {
+        Row: {
+          circle_id: string
+          created_at: string
+          created_by: string | null
+          event_id: string
+        }
+        Insert: {
+          circle_id: string
+          created_at?: string
+          created_by?: string | null
+          event_id: string
+        }
+        Update: {
+          circle_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_event_links_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_event_links_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       circle_members: {
         Row: {
           circle_id: string
           created_at: string
+          last_visited_at: string | null
+          membership_state: string
+          notification_preference: string
           user_id: string
         }
         Insert: {
           circle_id: string
           created_at?: string
+          last_visited_at?: string | null
+          membership_state?: string
+          notification_preference?: string
           user_id: string
         }
         Update: {
           circle_id?: string
           created_at?: string
+          last_visited_at?: string | null
+          membership_state?: string
+          notification_preference?: string
           user_id?: string
         }
         Relationships: [
@@ -812,6 +892,113 @@ export type Database = {
             columns: ["circle_id"]
             isOneToOne: false
             referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      circle_moderators: {
+        Row: {
+          circle_id: string
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          circle_id: string
+          created_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          circle_id?: string
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_moderators_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_moderators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_moderators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_moderators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      circle_post_pins: {
+        Row: {
+          circle_id: string
+          pinned_at: string
+          pinned_by: string | null
+          post_id: string
+        }
+        Insert: {
+          circle_id: string
+          pinned_at?: string
+          pinned_by?: string | null
+          post_id: string
+        }
+        Update: {
+          circle_id?: string
+          pinned_at?: string
+          pinned_by?: string | null
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_post_pins_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: true
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_post_pins_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_post_pins_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_post_pins_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circle_post_pins_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "circle_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -872,12 +1059,14 @@ export type Database = {
           circle_id: string
           content: string
           created_at: string
+          event_id: string | null
           id: string
           moderated_at: string | null
           moderated_by: string | null
           moderation_notes: string | null
           moderation_reason: string | null
           moderation_status: string
+          post_type: string
           updated_at: string
         }
         Insert: {
@@ -885,12 +1074,14 @@ export type Database = {
           circle_id: string
           content: string
           created_at?: string
+          event_id?: string | null
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_notes?: string | null
           moderation_reason?: string | null
           moderation_status?: string
+          post_type?: string
           updated_at?: string
         }
         Update: {
@@ -898,12 +1089,14 @@ export type Database = {
           circle_id?: string
           content?: string
           created_at?: string
+          event_id?: string | null
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_notes?: string | null
           moderation_reason?: string | null
           moderation_status?: string
+          post_type?: string
           updated_at?: string
         }
         Relationships: [
@@ -936,6 +1129,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "circle_posts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_posts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_posts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "circle_posts_moderated_by_fkey"
             columns: ["moderated_by"]
             isOneToOne: false
@@ -960,33 +1174,85 @@ export type Database = {
       }
       circles: {
         Row: {
+          active_member_count_30d: number
+          cover_image_url: string | null
           created_at: string
           description: string | null
           href: string
+          icon_url: string | null
           id: string
+          join_mode: string
+          location_scope: string | null
           member_count: number
           name: string
+          owner_id: string | null
           slug: string
+          tagline: string | null
+          theme: string | null
+          topic_tags: string[]
+          visibility: string
         }
         Insert: {
+          active_member_count_30d?: number
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           href: string
+          icon_url?: string | null
           id?: string
+          join_mode?: string
+          location_scope?: string | null
           member_count?: number
           name: string
+          owner_id?: string | null
           slug: string
+          tagline?: string | null
+          theme?: string | null
+          topic_tags?: string[]
+          visibility?: string
         }
         Update: {
+          active_member_count_30d?: number
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           href?: string
+          icon_url?: string | null
           id?: string
+          join_mode?: string
+          location_scope?: string | null
           member_count?: number
           name?: string
+          owner_id?: string | null
           slug?: string
+          tagline?: string | null
+          theme?: string | null
+          topic_tags?: string[]
+          visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "circles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "circles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       community_reports: {
         Row: {

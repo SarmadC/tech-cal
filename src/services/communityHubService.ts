@@ -7,6 +7,42 @@ import type {
 import type { SupabaseClientType } from "@/types/database";
 import { BlockService } from "@/services/blockService";
 
+export interface CommunityDiscoveryCard {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  membershipState: 'none' | 'following' | 'joined';
+  tagline: string | null;
+  coverImageUrl: string | null;
+  iconUrl: string | null;
+  theme: string | null;
+  topicTags: string[];
+  locationScope: string | null;
+  activeMemberCount30d: number;
+  upcomingEventCount: number;
+  contextSignals: string[];
+  upcomingEventTitle: string | null;
+}
+
+export interface CommunityRecentActivity {
+  id: string;
+  circleSlug: string;
+  circleName: string;
+  kind: 'post' | 'event' | 'member';
+  summary: string;
+  createdAt: string;
+}
+
+export interface CommunityDiscoveryData {
+  forYou: CommunityDiscoveryCard[];
+  joined: CommunityDiscoveryCard[];
+  explore: CommunityDiscoveryCard[];
+  suggested: CommunityDiscoveryCard[];
+  recentActivity: CommunityRecentActivity[];
+}
+
 // ── Row types for DB results ────────────────────────────────────
 
 interface FeedPostRow {
@@ -48,9 +84,258 @@ const FEED_COMMENT_PREVIEW_LIMIT = 2;
 const TRENDING_THRESHOLD = 8; // ≥8 comments = trending
 const UPCOMING_EVENTS_LIMIT = 5;
 
+interface ExtendedCircleRow extends CircleRow {
+  tagline: string | null;
+  cover_image_url: string | null;
+  icon_url: string | null;
+  theme: string | null;
+  topic_tags: string[] | null;
+  location_scope: string | null;
+  active_member_count_30d: number | null;
+}
+
+const DISCOVERY_PER_SECTION = 12;
+
 // ── Service ──────────────────────────────────────────────────────
 
 export class CommunityHubService {
+  static async getDiscoveryData({
+    viewerId,
+    readClient,
+  }: {
+    viewerId: string | null;
+    readClient: SupabaseClientType;
+  }): Promise<CommunityDiscoveryData> {
+    const client = readClient as unknown as {
+      from: (table: string) => {
+        select: (cols: string) => {
+          order?: (
+            col: string,
+            opts?: { ascending: boolean }
+          ) => {
+            limit: (n: number) => Promise<{ data: unknown[] | null }>;
+          };
+          eq?: (
+            col: string,
+            val: string
+          ) => Promise<{ data: unknown[] | null }>;
+          gte?: (
+            col: string,
+            val: string
+          ) => Promise<{ data: unknown[] | null }>;
+          in?: (
+            col: string,
+            vals: string[]
+          ) => Promise<{ data: unknown[] | null }>;
+        };
+      };
+    };
+
+    const circlesQuery = await readClient
+      .from('circles')
+      .select(
+        'id, slug, name, description, member_count, tagline, cover_image_url, icon_url, theme, topic_tags, location_scope, active_member_count_30d'
+      )
+      .order('member_count', { ascending: false });
+
+    const allCircles = ((circlesQuery.data as unknown as ExtendedCircleRow[]) ??
+      []) as ExtendedCircleRow[];
+
+    const memberships = viewerId
+      ? (
+          (await client
+            .from('circle_members')
+            .select('circle_id, membership_state')
+            .eq?.('user_id', viewerId)) ?? { data: [] }
+        ).data ?? []
+      : [];
+
+    const membershipMap = new Map<string, 'following' | 'joined'>();
+    for (const m of memberships as Array<{
+      circle_id: string;
+      membership_state?: string | null;
+    }>) {
+      const state =
+        m.membership_state === 'following' ? 'following' : 'joined';
+      membershipMap.set(m.circle_id, state);
+    }
+
+    // Upcoming event counts per circle via circle_event_links.
+    const linkRows =
+      (
+        await readClient
+          .from('circle_event_links')
+          .select('circle_id, event_id')
+      ).data ?? [];
+
+    const upcomingEventCountByCircle = new Map<string, number>();
+    const nextEventTitleByCircle = new Map<string, string>();
+    const linkedEventIds = Array.from(
+      new Set(
+        (linkRows as Array<{ event_id: string }>).map((row) => row.event_id)
+      )
+    );
+
+    if (linkedEventIds.length > 0) {
+      const nowIso = new Date().toISOString();
+      const eventsResult = await readClient
+        .from('events')
+        .select('id, title, start_time, status')
+        .in('id', linkedEventIds);
+      const events = (eventsResult.data ?? []) as Array<{
+        id: string;
+        title: string | null;
+        start_time: string;
+        status: string | null;
+      }>;
+      const upcomingEventsById = new Map(
+        events
+          .filter((e) => e.start_time >= nowIso && e.status !== 'cancelled')
+          .map((e) => [e.id, e])
+      );
+
+      for (const link of linkRows as Array<{
+        circle_id: string;
+        event_id: string;
+      }>) {
+        const event = upcomingEventsById.get(link.event_id);
+        if (!event) continue;
+        upcomingEventCountByCircle.set(
+          link.circle_id,
+          (upcomingEventCountByCircle.get(link.circle_id) ?? 0) + 1
+        );
+        const existing = nextEventTitleByCircle.get(link.circle_id);
+        if (!existing) {
+          nextEventTitleByCircle.set(
+            link.circle_id,
+            event.title ?? 'Upcoming event'
+          );
+        }
+      }
+    }
+
+    const toCard = (
+      row: ExtendedCircleRow,
+      contextSignals: string[] = []
+    ): CommunityDiscoveryCard => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      description: row.description ?? '',
+      memberCount: row.member_count,
+      membershipState: membershipMap.get(row.id) ?? 'none',
+      tagline: row.tagline,
+      coverImageUrl: row.cover_image_url,
+      iconUrl: row.icon_url,
+      theme: row.theme,
+      topicTags: row.topic_tags ?? [],
+      locationScope: row.location_scope,
+      activeMemberCount30d: row.active_member_count_30d ?? 0,
+      upcomingEventCount: upcomingEventCountByCircle.get(row.id) ?? 0,
+      contextSignals,
+      upcomingEventTitle: nextEventTitleByCircle.get(row.id) ?? null,
+    });
+
+    const joined: CommunityDiscoveryCard[] = [];
+    const explore: CommunityDiscoveryCard[] = [];
+    const forYou: CommunityDiscoveryCard[] = [];
+
+    // Pull viewer profile interests for forYou heuristic.
+    let viewerTopicTags: string[] = [];
+    let viewerLocation: string | null = null;
+    if (viewerId) {
+      const profileResult = await readClient
+        .from('profiles')
+        .select('preferences, location')
+        .eq('id', viewerId)
+        .maybeSingle();
+      const prof = profileResult.data as
+        | { preferences?: unknown; location?: string | null }
+        | null;
+      if (prof) {
+        viewerLocation = prof.location ?? null;
+        const prefs = (prof.preferences ?? null) as
+          | { interests?: string[]; topics?: string[] }
+          | null;
+        viewerTopicTags = [
+          ...(prefs?.interests ?? []),
+          ...(prefs?.topics ?? []),
+        ].map((t) => String(t).toLowerCase());
+      }
+    }
+
+    for (const row of allCircles) {
+      const state = membershipMap.get(row.id);
+      if (state === 'joined' || state === 'following') {
+        joined.push(toCard(row));
+      } else {
+        const signals: string[] = [];
+        const tags = (row.topic_tags ?? []).map((t) => t.toLowerCase());
+        if (viewerTopicTags.some((t) => tags.includes(t))) {
+          signals.push('Matches your interests');
+        }
+        if (
+          viewerLocation &&
+          row.location_scope &&
+          row.location_scope.toLowerCase() === viewerLocation.toLowerCase()
+        ) {
+          signals.push(`Active in ${row.location_scope}`);
+        }
+        if ((upcomingEventCountByCircle.get(row.id) ?? 0) > 0) {
+          signals.push(`${upcomingEventCountByCircle.get(row.id)} upcoming`);
+        }
+
+        explore.push(toCard(row, signals));
+        if (signals.length > 0 && forYou.length < DISCOVERY_PER_SECTION) {
+          forYou.push(toCard(row, signals));
+        }
+      }
+    }
+
+    const suggested = forYou.slice(0, 6);
+
+    // Recent activity from joined circles' posts.
+    const joinedIds = joined.map((c) => c.id);
+    const recentActivity: CommunityRecentActivity[] = [];
+    if (joinedIds.length > 0) {
+      const postsResult = await readClient
+        .from('circle_posts')
+        .select('id, circle_id, content, created_at, moderation_status')
+        .in('circle_id', joinedIds)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      const posts = (postsResult.data ?? []) as Array<{
+        id: string;
+        circle_id: string;
+        content: string;
+        created_at: string;
+        moderation_status: string;
+      }>;
+      const circleById = new Map(joined.map((c) => [c.id, c]));
+      for (const post of posts) {
+        if (post.moderation_status !== 'active') continue;
+        const circle = circleById.get(post.circle_id);
+        if (!circle) continue;
+        recentActivity.push({
+          id: post.id,
+          circleSlug: circle.slug,
+          circleName: circle.name,
+          kind: 'post',
+          summary: post.content.slice(0, 140),
+          createdAt: post.created_at,
+        });
+      }
+    }
+
+    return {
+      forYou: forYou.slice(0, DISCOVERY_PER_SECTION),
+      joined: joined.slice(0, DISCOVERY_PER_SECTION),
+      explore: explore.slice(0, DISCOVERY_PER_SECTION),
+      suggested,
+      recentActivity,
+    };
+  }
+
   static async getFeedPageData({
     viewerId,
     readClient,
