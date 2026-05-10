@@ -43,6 +43,42 @@ export interface CommunityDiscoveryData {
   recentActivity: CommunityRecentActivity[];
 }
 
+export interface CommunityDiscoveryCard {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  membershipState: 'none' | 'following' | 'joined';
+  tagline: string | null;
+  coverImageUrl: string | null;
+  iconUrl: string | null;
+  theme: string | null;
+  topicTags: string[];
+  locationScope: string | null;
+  activeMemberCount30d: number;
+  upcomingEventCount: number;
+  contextSignals: string[];
+  upcomingEventTitle: string | null;
+}
+
+export interface CommunityRecentActivity {
+  id: string;
+  circleSlug: string;
+  circleName: string;
+  kind: 'post' | 'event' | 'member';
+  summary: string;
+  createdAt: string;
+}
+
+export interface CommunityDiscoveryData {
+  forYou: CommunityDiscoveryCard[];
+  joined: CommunityDiscoveryCard[];
+  explore: CommunityDiscoveryCard[];
+  suggested: CommunityDiscoveryCard[];
+  recentActivity: CommunityRecentActivity[];
+}
+
 // ── Row types for DB results ────────────────────────────────────
 
 interface FeedPostRow {
