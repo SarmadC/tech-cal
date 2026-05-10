@@ -142,7 +142,7 @@ export function CommunityProfileHeroBlock({
                 lineHeight: isProfile ? 15 : 14,
                 fontWeight: '700',
                 letterSpacing: 0.6,
-                textTransform: 'uppercase',
+                
               }}
             >
               {metaText}
@@ -182,7 +182,7 @@ export function CommunityProfileHeroBlock({
                 fontFamily: tokens.typography.sans,
                 fontSize: isProfile ? 30 : 22,
                 lineHeight: isProfile ? 34 : 26,
-                fontWeight: '800',
+                fontWeight: '600',
                 letterSpacing: -0.8,
               }}
             >

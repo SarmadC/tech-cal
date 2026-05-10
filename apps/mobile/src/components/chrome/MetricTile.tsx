@@ -33,14 +33,14 @@ export function MetricTile({
           letterSpacing: 1.6,
         }}
       >
-        {label.toUpperCase()}
+        {label}
       </Text>
       <Text
         style={{
           color: tokens.colors.textPrimary,
           fontFamily: tokens.typography.sans,
           fontSize: 28,
-          fontWeight: '800',
+          fontWeight: '600',
           lineHeight: 32,
         }}
       >

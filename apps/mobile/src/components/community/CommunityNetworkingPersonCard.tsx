@@ -132,13 +132,13 @@ export function CommunityNetworkingPersonCard({
         styles.card,
         {
           backgroundColor: tokens.colors.surface,
-          borderColor: tokens.colors.divider,
+          borderColor: tokens.colors.border,
           borderRadius: tokens.radius.lg,
           shadowColor: tokens.shadow.shadowColor,
-          shadowOpacity: tokens.mode === 'dark' ? 0.08 : 0.04,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: tokens.mode === 'dark' ? 2 : 1,
+          shadowOpacity: tokens.shadow.shadowOpacity,
+          shadowRadius: tokens.shadow.shadowRadius,
+          shadowOffset: tokens.shadow.shadowOffset,
+          elevation: tokens.shadow.elevation,
         },
       ]}
     >
@@ -202,7 +202,7 @@ export function CommunityNetworkingPersonCard({
                 fontFamily: tokens.typography.sans,
                 fontSize: 13,
                 lineHeight: 18,
-                fontWeight: '700',
+                fontWeight: '600',
               }}
             >
               {mode === 'follow-up'

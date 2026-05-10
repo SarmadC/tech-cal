@@ -113,7 +113,7 @@ export function MobilePage({
                     },
                   ]}
                 >
-                  {eyebrow.toUpperCase()}
+                  {eyebrow}
                 </Text>
               ) : null}
               <Text

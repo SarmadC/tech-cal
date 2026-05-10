@@ -47,7 +47,7 @@ export function CommunityUpcomingEventRow({
             lineHeight: 14,
             fontWeight: '700',
             letterSpacing: 0.8,
-            textTransform: 'uppercase',
+            
           }}
         >
           {formatNetworkingEventDate(startTime)}
@@ -58,7 +58,7 @@ export function CommunityUpcomingEventRow({
             fontFamily: tokens.typography.sans,
             fontSize: 14,
             lineHeight: 18,
-            fontWeight: '800',
+            fontWeight: '600',
           }}
         >
           {formatCommunityEventTime(startTime)}
@@ -72,7 +72,7 @@ export function CommunityUpcomingEventRow({
             fontFamily: tokens.typography.sans,
             fontSize: 14,
             lineHeight: 18,
-            fontWeight: '800',
+            fontWeight: '600',
           }}
         >
           {title}

@@ -63,7 +63,7 @@ export function CommunityAvatar({
           color: tokens.colors.textSecondary,
           fontFamily: tokens.typography.sans,
           fontSize: Math.max(11, Math.round(size * 0.3)),
-          fontWeight: '800',
+          fontWeight: '600',
         }}
       >
         {initials}

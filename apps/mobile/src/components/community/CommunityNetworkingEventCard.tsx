@@ -16,105 +16,6 @@ interface CommunityNetworkingEventCardProps {
   onOpenEvent?: () => void;
 }
 
-const EVENT_TONES = {
-  intro: {
-    light: {
-      border: 'rgba(37, 99, 235, 0.18)',
-      headerOverlay: 'rgba(8, 17, 31, 0.18)',
-      headerFallback: '#244488',
-      body: '#21356F',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F8FAFC',
-      bodyMeta: 'rgba(191, 219, 254, 0.84)',
-      bodyCopy: 'rgba(226, 232, 240, 0.86)',
-      overflowText: 'rgba(203, 213, 225, 0.82)',
-    },
-    dark: {
-      border: 'rgba(96, 165, 250, 0.24)',
-      headerOverlay: 'rgba(8, 17, 31, 0.18)',
-      headerFallback: '#244488',
-      body: '#21356F',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F8FAFC',
-      bodyMeta: 'rgba(191, 219, 254, 0.84)',
-      bodyCopy: 'rgba(226, 232, 240, 0.86)',
-      overflowText: 'rgba(203, 213, 225, 0.82)',
-    },
-  },
-  social: {
-    light: {
-      border: 'rgba(16, 185, 129, 0.18)',
-      headerOverlay: 'rgba(5, 22, 18, 0.18)',
-      headerFallback: '#1E5B4C',
-      body: '#184C42',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F0FDF4',
-      bodyMeta: 'rgba(187, 247, 208, 0.84)',
-      bodyCopy: 'rgba(220, 252, 231, 0.84)',
-      overflowText: 'rgba(209, 250, 229, 0.82)',
-    },
-    dark: {
-      border: 'rgba(52, 211, 153, 0.24)',
-      headerOverlay: 'rgba(5, 22, 18, 0.18)',
-      headerFallback: '#1E5B4C',
-      body: '#184C42',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F0FDF4',
-      bodyMeta: 'rgba(187, 247, 208, 0.84)',
-      bodyCopy: 'rgba(220, 252, 231, 0.84)',
-      overflowText: 'rgba(209, 250, 229, 0.82)',
-    },
-  },
-  buzz: {
-    light: {
-      border: 'rgba(245, 158, 11, 0.18)',
-      headerOverlay: 'rgba(28, 16, 5, 0.18)',
-      headerFallback: '#7A4B12',
-      body: '#5E3A12',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#FFF7ED',
-      bodyMeta: 'rgba(253, 230, 138, 0.84)',
-      bodyCopy: 'rgba(254, 243, 199, 0.82)',
-      overflowText: 'rgba(254, 215, 170, 0.82)',
-    },
-    dark: {
-      border: 'rgba(251, 191, 36, 0.22)',
-      headerOverlay: 'rgba(28, 16, 5, 0.18)',
-      headerFallback: '#7A4B12',
-      body: '#5E3A12',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#FFF7ED',
-      bodyMeta: 'rgba(253, 230, 138, 0.84)',
-      bodyCopy: 'rgba(254, 243, 199, 0.82)',
-      overflowText: 'rgba(254, 215, 170, 0.82)',
-    },
-  },
-  saved: {
-    light: {
-      border: 'rgba(71, 85, 105, 0.16)',
-      headerOverlay: 'rgba(8, 17, 31, 0.18)',
-      headerFallback: '#2A365E',
-      body: '#243055',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F8FAFC',
-      bodyMeta: 'rgba(191, 219, 254, 0.84)',
-      bodyCopy: 'rgba(226, 232, 240, 0.86)',
-      overflowText: 'rgba(203, 213, 225, 0.82)',
-    },
-    dark: {
-      border: 'rgba(148, 163, 184, 0.18)',
-      headerOverlay: 'rgba(8, 17, 31, 0.18)',
-      headerFallback: '#2A365E',
-      body: '#243055',
-      bodyTopBorder: 'rgba(255, 255, 255, 0.06)',
-      bodyTitle: '#F8FAFC',
-      bodyMeta: 'rgba(191, 219, 254, 0.84)',
-      bodyCopy: 'rgba(226, 232, 240, 0.86)',
-      overflowText: 'rgba(203, 213, 225, 0.82)',
-    },
-  },
-} as const;
-
 function getProofLine(event: MobileCommunityNetworkingEvent): string {
   if (event.relationshipAttendeeCount > 0) {
     return `${formatCommunityCompactCount(event.relationshipAttendeeCount)} ${event.relationshipAttendeeCount === 1 ? 'person you know' : 'people you know'} here`;
@@ -154,25 +55,6 @@ function getProofOverflowCount(
   return 0;
 }
 
-function getEventTone(
-  event: MobileCommunityNetworkingEvent,
-  mode: 'light' | 'dark'
-) {
-  if (event.relationshipAttendeeCount > 0 || event.networkAttendingCount > 0) {
-    return EVENT_TONES.intro[mode];
-  }
-
-  if (event.visibleAttendeeCount > 0) {
-    return EVENT_TONES.social[mode];
-  }
-
-  if ((event.recentTrackerCount ?? 0) > 0 || event.contextLabel) {
-    return EVENT_TONES.buzz[mode];
-  }
-
-  return EVENT_TONES.saved[mode];
-}
-
 function formatPosterDateLine(event: MobileCommunityNetworkingEvent): string {
   const dateParts = formatCommunityEventDay(event.startTime);
   return `${dateParts.month} ${dateParts.day}`;
@@ -184,11 +66,13 @@ function getSupportingCopy(event: MobileCommunityNetworkingEvent): string | null
   }
 
   if ((event.speakerPreview?.length ?? 0) > 0) {
-    return `${formatCommunityCompactCount(event.speakerPreview?.length ?? 0)} announced speakers give this a clearer entry point`;
+    const count = event.speakerPreview?.length ?? 0;
+    return `${formatCommunityCompactCount(count)} ${count === 1 ? 'speaker' : 'speakers'} announced`;
   }
 
   if ((event.recentTrackerCount ?? 0) > 0) {
-    return `${formatCommunityCompactCount(event.recentTrackerCount ?? 0)} people tracked this event this week`;
+    const count = event.recentTrackerCount ?? 0;
+    return `${formatCommunityCompactCount(count)} ${count === 1 ? 'person' : 'people'} tracked this week`;
   }
 
   return null;
@@ -200,7 +84,6 @@ export function CommunityNetworkingEventCard({
   onOpenEvent,
 }: CommunityNetworkingEventCardProps) {
   const { tokens } = useAppTheme();
-  const tone = getEventTone(event, tokens.mode);
   const [imageUri, setImageUri] = useState<string | null>(event.imageUrl ?? null);
   const supportingCopy = getSupportingCopy(event);
   const posterDate = formatPosterDateLine(event);
@@ -224,13 +107,14 @@ export function CommunityNetworkingEventCard({
       style={({ pressed }) => [
         styles.card,
         {
-          borderColor: tone.border,
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
           borderRadius: tokens.radius.lg,
           shadowColor: tokens.shadow.shadowColor,
-          shadowOpacity: featured ? (tokens.mode === 'dark' ? 0.16 : 0.08) : 0,
-          shadowRadius: featured ? 18 : 0,
-          shadowOffset: featured ? { width: 0, height: 10 } : { width: 0, height: 0 },
-          elevation: featured ? 5 : 0,
+          shadowOpacity: tokens.shadow.shadowOpacity,
+          shadowRadius: tokens.shadow.shadowRadius,
+          shadowOffset: tokens.shadow.shadowOffset,
+          elevation: tokens.shadow.elevation,
         },
         pressed && styles.pressed,
       ]}
@@ -239,8 +123,8 @@ export function CommunityNetworkingEventCard({
         style={[
           styles.header,
           {
-            height: featured ? 206 : 188,
-            backgroundColor: tone.headerFallback,
+            height: featured ? 200 : 168,
+            backgroundColor: tokens.colors.surfaceMuted,
           },
         ]}
       >
@@ -252,25 +136,9 @@ export function CommunityNetworkingEventCard({
             onError={() => setImageUri(null)}
           />
         ) : null}
-        <View
-          style={[
-            StyleSheet.absoluteFillObject,
-            {
-              backgroundColor: tone.headerOverlay,
-            },
-          ]}
-        />
       </View>
 
-      <View
-        style={[
-          styles.body,
-          {
-            backgroundColor: tone.body,
-            borderTopColor: tone.bodyTopBorder,
-          },
-        ]}
-      >
+      <View style={styles.body}>
         <View style={styles.posterMetaRow}>
           <Text
             numberOfLines={1}
@@ -278,8 +146,8 @@ export function CommunityNetworkingEventCard({
               styles.posterMeta,
               styles.posterMetaLocation,
               {
-                color: tone.bodyMeta,
-                fontFamily: tokens.typography.mono,
+                color: tokens.colors.textTertiary,
+                fontFamily: tokens.typography.sans,
               },
             ]}
           >
@@ -290,8 +158,8 @@ export function CommunityNetworkingEventCard({
               styles.posterMeta,
               styles.posterMetaDate,
               {
-                color: tone.bodyMeta,
-                fontFamily: tokens.typography.mono,
+                color: tokens.colors.textTertiary,
+                fontFamily: tokens.typography.sans,
               },
             ]}
           >
@@ -300,30 +168,28 @@ export function CommunityNetworkingEventCard({
         </View>
 
         <Text
-          adjustsFontSizeToFit
-          minimumFontScale={0.82}
-          numberOfLines={1}
+          numberOfLines={2}
           style={[
             styles.posterTitle,
             {
-              color: tone.bodyTitle,
+              color: tokens.colors.textPrimary,
               fontFamily: tokens.typography.sans,
             },
           ]}
         >
-          {event.title.toUpperCase()}
+          {event.title}
         </Text>
 
         {supportingCopy ? (
           <Text
             numberOfLines={2}
-            style={{
-              color: tone.bodyCopy,
-              fontFamily: tokens.typography.sans,
-              fontSize: 15,
-              lineHeight: 22,
-              fontWeight: '600',
-            }}
+            style={[
+              styles.supportingCopy,
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
           >
             {supportingCopy}
           </Text>
@@ -334,21 +200,33 @@ export function CommunityNetworkingEventCard({
             <CommunityAvatarStack
               people={proofPeople}
               max={featured ? 4 : 3}
-              size={featured ? 30 : 26}
+              size={featured ? 28 : 24}
             />
             {proofOverflowCount > 0 ? (
               <Text
-                style={{
-                  color: tone.overflowText,
-                  fontFamily: tokens.typography.sans,
-                  fontSize: 14,
-                  lineHeight: 18,
-                  fontWeight: '700',
-                }}
+                style={[
+                  styles.overflowLabel,
+                  {
+                    color: tokens.colors.textTertiary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
               >
                 +{formatCommunityCompactCount(proofOverflowCount)}
               </Text>
             ) : null}
+            <Text
+              style={[
+                styles.proofLine,
+                {
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {getProofLine(event)}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -357,52 +235,65 @@ export function CommunityNetworkingEventCard({
 }
 
 const styles = StyleSheet.create({
+  body: {
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
   card: {
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    borderWidth: 1,
+  },
+  footerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    minHeight: 28,
+    paddingTop: 6,
   },
   header: {},
-  body: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 18,
-    gap: 8,
-    borderTopWidth: 1,
+  overflowLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   posterMeta: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '700',
-    letterSpacing: 1.1,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    lineHeight: 14,
     textTransform: 'uppercase',
   },
-  posterMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  posterMetaDate: {
+    flexShrink: 0,
   },
   posterMetaLocation: {
     flex: 1,
     minWidth: 0,
   },
-  posterMetaDate: {
-    flexShrink: 0,
+  posterMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
   },
   posterTitle: {
-    fontSize: 22,
+    fontSize: 19,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     lineHeight: 24,
-    fontWeight: '300',
-    letterSpacing: -0.7,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 8,
-    marginTop: 10,
-    minHeight: 30,
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.92,
+  },
+  proofLine: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    minWidth: 0,
+  },
+  supportingCopy: {
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 19,
   },
 });

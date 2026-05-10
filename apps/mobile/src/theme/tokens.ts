@@ -53,6 +53,9 @@ const shared = {
   },
 };
 
+// Apple iOS HIG semantics. Light/dark pairs follow systemBackground /
+// secondarySystemBackground / label / secondaryLabel / tertiaryLabel /
+// separator conventions.
 export const themeTokens = {
   dark: {
     mode: "dark" as const,

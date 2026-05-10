@@ -237,7 +237,7 @@ export function CommunityNetworkingSpeakerCard({
       accessibilityLabel={`Open speaker ${speaker.name}`}
       accessibilityRole="button"
       onPress={onOpenSpeaker}
-      style={[
+      style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: tokens.colors.surface,
@@ -266,8 +266,7 @@ export function CommunityNetworkingSpeakerCard({
           <View style={styles.mainRow}>
             <View
               style={[
-                styles.avatarFrame,
-                isHero ? styles.heroAvatarFrame : styles.compactAvatarFrame,
+                styles.reason,
                 {
                   borderColor: tokens.colors.border,
                   backgroundColor: tokens.colors.surfaceMuted,
@@ -385,16 +384,12 @@ export function CommunityNetworkingSpeakerCard({
             </View>
           </View>
         </View>
-      )}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  avatarFrame: {
-    padding: 4,
-    borderWidth: 1,
-  },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
   },

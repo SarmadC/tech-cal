@@ -45,7 +45,7 @@ export function CommunitySection({
             fontFamily: tokens.typography.sans,
             fontSize: 17,
             lineHeight: 22,
-            fontWeight: '800',
+            fontWeight: '600',
             letterSpacing: -0.3,
           }}
         >
@@ -60,7 +60,7 @@ export function CommunitySection({
               lineHeight: 13,
               fontWeight: '700',
               letterSpacing: 0.9,
-              textTransform: 'uppercase',
+              
             }}
           >
             {meta}

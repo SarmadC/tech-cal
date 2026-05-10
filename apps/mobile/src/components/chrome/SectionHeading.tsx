@@ -24,20 +24,20 @@ export function SectionHeading({
             style={{
               color: tokens.colors.textTertiary,
               fontFamily: tokens.typography.sans,
-              fontSize: 11,
-              fontWeight: '700',
-              letterSpacing: 1.6,
+              fontSize: 13,
+              fontWeight: '500',
             }}
           >
-            {eyebrow.toUpperCase()}
+            {eyebrow}
           </Text>
         ) : null}
         <Text
           style={{
             color: tokens.colors.textPrimary,
             fontFamily: tokens.typography.sans,
-            fontSize: 18,
-            fontWeight: '800',
+            fontSize: 22,
+            fontWeight: '700',
+            letterSpacing: -0.4,
           }}
         >
           {title}
