@@ -1,12 +1,12 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type {
   MobileDashboardFunnelInsight,
   MobileDashboardPipelineInsight,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function DashboardInsightCarousel({
   pipeline,
@@ -18,12 +18,15 @@ export function DashboardInsightCarousel({
   const { tokens } = useAppTheme();
   const funnelTotal = funnel.savedOnly + funnel.rsvped + funnel.attended;
   const funnelColumns = [
-    { label: 'Saved', value: funnel.savedOnly },
-    { label: 'RSVP', value: funnel.rsvped },
-    { label: 'Attended', value: funnel.attended },
+    { label: "Saved", value: funnel.savedOnly },
+    { label: "RSVP", value: funnel.rsvped },
+    { label: "Attended", value: funnel.attended },
   ];
   const funnelMax = Math.max(...funnelColumns.map((column) => column.value), 0);
-  const pipelineBarMax = Math.max(...pipeline.topEvents.map((event) => event.score), 0);
+  const pipelineBarMax = Math.max(
+    ...pipeline.topEvents.map((event) => event.score),
+    0,
+  );
 
   return (
     <ScrollView
@@ -39,7 +42,7 @@ export function DashboardInsightCarousel({
                 color: tokens.colors.textSecondary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 12,
-                fontWeight: '700',
+                fontWeight: "700",
               }}
             >
               Pipeline Health
@@ -49,11 +52,11 @@ export function DashboardInsightCarousel({
                 color: tokens.colors.textPrimary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 34,
-                fontWeight: '800',
+                fontWeight: "800",
                 letterSpacing: -1,
               }}
             >
-              {pipeline.scoredUpcomingCount > 0 ? pipeline.avgScore : '—'}
+              {pipeline.scoredUpcomingCount > 0 ? pipeline.avgScore : "—"}
             </Text>
           </View>
         </View>
@@ -67,20 +70,21 @@ export function DashboardInsightCarousel({
           }}
         >
           {pipeline.trackedUpcomingCount === 0
-            ? 'Save or RSVP to upcoming events to score your pipeline.'
+            ? "Save or RSVP to upcoming events to score your pipeline."
             : `${pipeline.highFitCount} high-fit of ${pipeline.trackedUpcomingCount} upcoming commitments`}
         </Text>
 
         <View style={styles.pipelineList}>
           {pipeline.topEvents.length > 0 ? (
             pipeline.topEvents.map((event) => {
-              const width =
-                (pipelineBarMax > 0
+              const width = (
+                pipelineBarMax > 0
                   ? `${Math.max(
                       18,
-                      Math.round((event.score / pipelineBarMax) * 100)
+                      Math.round((event.score / pipelineBarMax) * 100),
                     )}%`
-                  : '18%') as `${number}%`;
+                  : "18%"
+              ) as `${number}%`;
               return (
                 <View key={event.eventId} style={styles.pipelineItem}>
                   <View style={styles.pipelineCopy}>
@@ -90,7 +94,7 @@ export function DashboardInsightCarousel({
                         color: tokens.colors.textPrimary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
-                        fontWeight: '700',
+                        fontWeight: "700",
                       }}
                     >
                       {event.title}
@@ -117,7 +121,7 @@ export function DashboardInsightCarousel({
                       color: tokens.colors.accent,
                       fontFamily: tokens.typography.mono,
                       fontSize: 12,
-                      fontWeight: '700',
+                      fontWeight: "700",
                     }}
                   >
                     {event.score}
@@ -148,7 +152,7 @@ export function DashboardInsightCarousel({
                 color: tokens.colors.textSecondary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 12,
-                fontWeight: '700',
+                fontWeight: "700",
               }}
             >
               Follow-through Funnel
@@ -158,11 +162,11 @@ export function DashboardInsightCarousel({
                 color: tokens.colors.textPrimary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 34,
-                fontWeight: '800',
+                fontWeight: "800",
                 letterSpacing: -1,
               }}
             >
-              {funnelTotal > 0 ? funnel.attended : '—'}
+              {funnelTotal > 0 ? funnel.attended : "—"}
             </Text>
           </View>
         </View>
@@ -177,13 +181,16 @@ export function DashboardInsightCarousel({
         >
           {funnelTotal > 0
             ? `Last 90 days · ${funnel.attended} attended from saved and RSVP activity`
-            : 'Save, RSVP, and attend events to build a follow-through story.'}
+            : "Save, RSVP, and attend events to build a follow-through story."}
         </Text>
 
         {funnelTotal > 0 ? (
           <View style={styles.funnelChart}>
             {funnelColumns.map((column) => {
-              const height = funnelMax > 0 ? Math.max(12, Math.round((column.value / funnelMax) * 72)) : 12;
+              const height =
+                funnelMax > 0
+                  ? Math.max(12, Math.round((column.value / funnelMax) * 72))
+                  : 12;
               return (
                 <View key={column.label} style={styles.funnelColumn}>
                   <View style={styles.funnelBarWrap}>
@@ -193,9 +200,9 @@ export function DashboardInsightCarousel({
                         {
                           height,
                           backgroundColor:
-                            column.label === 'Attended'
-                              ? '#34d399'
-                              : column.label === 'RSVP'
+                            column.label === "Attended"
+                              ? tokens.colors.success
+                              : column.label === "RSVP"
                                 ? tokens.colors.accent
                                 : tokens.colors.textSecondary,
                         },
@@ -207,7 +214,7 @@ export function DashboardInsightCarousel({
                       color: tokens.colors.textPrimary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 12,
-                      fontWeight: '700',
+                      fontWeight: "700",
                     }}
                   >
                     {column.value}
@@ -217,7 +224,7 @@ export function DashboardInsightCarousel({
                       color: tokens.colors.textSecondary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 11,
-                      fontWeight: '600',
+                      fontWeight: "600",
                     }}
                   >
                     {column.label}
@@ -246,16 +253,16 @@ const styles = StyleSheet.create({
     minHeight: 246,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   pipelineList: {
     gap: 12,
   },
   pipelineItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   pipelineCopy: {
@@ -264,32 +271,32 @@ const styles = StyleSheet.create({
   },
   pipelineTrack: {
     height: 6,
-    borderRadius: 999,
-    overflow: 'hidden',
+    borderRadius: 2,
+    overflow: "hidden",
   },
   pipelineFill: {
-    height: '100%',
-    borderRadius: 999,
+    height: "100%",
+    borderRadius: 2,
   },
   funnelChart: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     gap: 10,
     marginTop: 8,
   },
   funnelColumn: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 6,
   },
   funnelBarWrap: {
     height: 72,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
   funnelBar: {
     width: 26,
-    borderRadius: 999,
+    borderRadius: 2,
   },
 });

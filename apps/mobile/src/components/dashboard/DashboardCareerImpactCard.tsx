@@ -1,32 +1,32 @@
-import { FontAwesome5 } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { FontAwesome5 } from "@expo/vector-icons";
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardCareerImpact } from '@kurecal/domain';
+import type { MobileDashboardCareerImpact } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
-function formatProgressLabel(level: 'exploring' | 'building' | 'regular') {
-  if (level === 'regular') {
-    return 'Regular';
+function formatProgressLabel(level: "exploring" | "building" | "regular") {
+  if (level === "regular") {
+    return "Regular";
   }
 
-  if (level === 'building') {
-    return 'Building';
+  if (level === "building") {
+    return "Building";
   }
 
-  return 'Exploring';
+  return "Exploring";
 }
 
 function toneColor(
-  tone: 'success' | 'info' | 'warning',
-  colors: ReturnType<typeof useAppTheme>['tokens']['colors']
+  tone: "success" | "info" | "warning",
+  colors: ReturnType<typeof useAppTheme>["tokens"]["colors"],
 ) {
-  if (tone === 'success') {
+  if (tone === "success") {
     return colors.success;
   }
 
-  if (tone === 'warning') {
+  if (tone === "warning") {
     return colors.warning;
   }
 
@@ -102,8 +102,8 @@ export function DashboardCareerImpactCard({
               },
             ]}
           >
-            This section starts surfacing your strongest skill and goal themes once
-            your attended history has real signal.
+            This section starts surfacing your strongest skill and goal themes
+            once your attended history has real signal.
           </Text>
         </View>
       </DashboardCard>
@@ -112,20 +112,20 @@ export function DashboardCareerImpactCard({
 
   const metrics = [
     {
-      id: 'skills',
-      label: 'Skill aligned',
+      id: "skills",
+      label: "Skill aligned",
       value: `${careerImpact.skillAlignedPercentage}%`,
       detail: `${careerImpact.skillAlignedCount} events`,
     },
     {
-      id: 'goals',
-      label: 'Goal aligned',
+      id: "goals",
+      label: "Goal aligned",
       value: `${careerImpact.goalAlignedPercentage}%`,
       detail: `${careerImpact.goalAlignedCount} events`,
     },
     {
-      id: 'networking',
-      label: 'Networking',
+      id: "networking",
+      label: "Networking",
       value: `${careerImpact.networkingPercentage}%`,
       detail: `${careerImpact.networkingCount} events`,
     },
@@ -237,9 +237,9 @@ export function DashboardCareerImpactCard({
           <View style={styles.progressList}>
             {careerImpact.skillProgress.map((item) => {
               const progressValue =
-                item.progressLevel === 'regular'
+                item.progressLevel === "regular"
                   ? 1
-                  : item.progressLevel === 'building'
+                  : item.progressLevel === "building"
                     ? 0.64
                     : 0.28;
 
@@ -352,12 +352,7 @@ export function DashboardCareerImpactCard({
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.insightDot,
-                    { backgroundColor: color },
-                  ]}
-                />
+                <View style={[styles.insightDot, { backgroundColor: color }]} />
                 <Text
                   style={[
                     styles.insightMessage,
@@ -380,10 +375,10 @@ export function DashboardCareerImpactCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   headerCopy: {
     flex: 1,
@@ -391,27 +386,27 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.7,
   },
   headerMeta: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   metricGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   metricCard: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
     gap: 4,
     paddingHorizontal: 12,
@@ -420,12 +415,12 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 24,
     lineHeight: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.8,
   },
   metricLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   metricDetail: {
     fontSize: 11,
@@ -437,22 +432,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   progressList: {
     gap: 10,
   },
   progressRow: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   progressHeader: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   progressCopy: {
     flex: 1,
@@ -461,7 +456,7 @@ const styles = StyleSheet.create({
   progressSkill: {
     fontSize: 14,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   progressHint: {
     fontSize: 12,
@@ -469,33 +464,33 @@ const styles = StyleSheet.create({
   },
   levelBadge: {
     minHeight: 28,
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   levelBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   progressTrack: {
     height: 6,
-    borderRadius: 999,
-    overflow: 'hidden',
+    borderRadius: 2,
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
-    borderRadius: 999,
+    height: "100%",
+    borderRadius: 2,
   },
   insightsList: {
     gap: 8,
   },
   insightRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 10,
-    borderRadius: 16,
+    borderRadius: 6,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -503,7 +498,7 @@ const styles = StyleSheet.create({
   insightDot: {
     width: 8,
     height: 8,
-    borderRadius: 999,
+    borderRadius: 2,
     marginTop: 6,
   },
   insightMessage: {
@@ -512,20 +507,20 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   emptyState: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 18,
     paddingVertical: 24,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   emptyBody: {
     fontSize: 13,
     lineHeight: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

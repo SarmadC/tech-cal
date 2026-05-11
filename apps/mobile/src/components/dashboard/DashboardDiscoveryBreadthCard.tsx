@@ -1,19 +1,18 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardDiscoveryBreadth } from '@kurecal/domain';
+import type { MobileDashboardDiscoveryBreadth } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
-function formatLabel(value: MobileDashboardDiscoveryBreadth['breadthLabel']) {
+function formatLabel(value: MobileDashboardDiscoveryBreadth["breadthLabel"]) {
   switch (value) {
-    case 'broad':
-      return 'Broad';
-    case 'balanced':
-      return 'Balanced';
+    case "broad":
+      return "Broad";
+    case "balanced":
+      return "Balanced";
     default:
-      return 'Narrow';
+      return "Narrow";
   }
 }
 
@@ -22,38 +21,34 @@ export function DashboardDiscoveryBreadthCard({
 }: {
   breadth: MobileDashboardDiscoveryBreadth;
 }) {
-  const { tokens, resolvedTheme } = useAppTheme();
+  const { tokens } = useAppTheme();
   const maxFormat = Math.max(
     breadth.formatCounts.virtual,
-    breadth.formatCounts['in-person'],
+    breadth.formatCounts["in-person"],
     breadth.formatCounts.hybrid,
-    1
+    1,
   );
   const formatRows = [
-    { id: 'virtual', label: 'Virtual', value: breadth.formatCounts.virtual },
-    { id: 'in-person', label: 'In person', value: breadth.formatCounts['in-person'] },
-    { id: 'hybrid', label: 'Hybrid', value: breadth.formatCounts.hybrid },
+    { id: "virtual", label: "Virtual", value: breadth.formatCounts.virtual },
+    {
+      id: "in-person",
+      label: "In person",
+      value: breadth.formatCounts["in-person"],
+    },
+    { id: "hybrid", label: "Hybrid", value: breadth.formatCounts.hybrid },
   ];
 
   return (
     <DashboardCard>
-      <LinearGradient
-        colors={
-          resolvedTheme === 'light'
-            ? ['rgba(129, 140, 248, 0.16)', 'rgba(129, 140, 248, 0.03)']
-            : ['rgba(167, 139, 250, 0.16)', 'rgba(49, 46, 129, 0.04)']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
       <View style={styles.header}>
         <View style={styles.copy}>
           <Text
             style={[
               styles.eyebrow,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Discovery Breadth
@@ -61,7 +56,10 @@ export function DashboardDiscoveryBreadthCard({
           <Text
             style={[
               styles.title,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Outside your usual lane
@@ -72,15 +70,18 @@ export function DashboardDiscoveryBreadthCard({
           style={[
             styles.statusChip,
             {
-              backgroundColor: 'rgba(129, 140, 248, 0.14)',
-              borderColor: 'rgba(129, 140, 248, 0.24)',
+              backgroundColor: tokens.colors.accentSoft,
+              borderColor: tokens.colors.border,
             },
           ]}
         >
           <Text
             style={[
               styles.statusText,
-              { color: '#6366f1', fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.accent,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             {formatLabel(breadth.breadthLabel)}
@@ -90,15 +91,23 @@ export function DashboardDiscoveryBreadthCard({
 
       <View style={styles.metricRow}>
         {[
-          { id: 'categories', value: breadth.categoryCount, label: 'categories' },
-          { id: 'organizers', value: breadth.organizerCount, label: 'organizers' },
           {
-            id: 'formats',
+            id: "categories",
+            value: breadth.categoryCount,
+            label: "categories",
+          },
+          {
+            id: "organizers",
+            value: breadth.organizerCount,
+            label: "organizers",
+          },
+          {
+            id: "formats",
             value:
               Number(breadth.formatCounts.virtual > 0) +
-              Number(breadth.formatCounts['in-person'] > 0) +
+              Number(breadth.formatCounts["in-person"] > 0) +
               Number(breadth.formatCounts.hybrid > 0),
-            label: 'formats',
+            label: "formats",
           },
         ].map((item) => (
           <View
@@ -114,7 +123,10 @@ export function DashboardDiscoveryBreadthCard({
             <Text
               style={[
                 styles.metricValue,
-                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
               ]}
             >
               {item.value}
@@ -122,7 +134,10 @@ export function DashboardDiscoveryBreadthCard({
             <Text
               style={[
                 styles.metricLabel,
-                { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+                {
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                },
               ]}
             >
               {item.label}
@@ -137,7 +152,10 @@ export function DashboardDiscoveryBreadthCard({
             <Text
               style={[
                 styles.barLabel,
-                { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+                {
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                },
               ]}
             >
               {item.label}
@@ -145,7 +163,10 @@ export function DashboardDiscoveryBreadthCard({
             <View
               style={[
                 styles.barTrack,
-                { backgroundColor: tokens.colors.surfaceMuted, borderColor: tokens.colors.border },
+                {
+                  backgroundColor: tokens.colors.surfaceMuted,
+                  borderColor: tokens.colors.border,
+                },
               ]}
             >
               <View
@@ -161,7 +182,10 @@ export function DashboardDiscoveryBreadthCard({
             <Text
               style={[
                 styles.barValue,
-                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
               ]}
             >
               {item.value}
@@ -175,10 +199,10 @@ export function DashboardDiscoveryBreadthCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+    alignItems: "flex-start",
   },
   copy: {
     flex: 1,
@@ -186,43 +210,43 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   statusChip: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   metricRow: {
-    flexDirection: 'row',
-    gap: 10,
+    flexDirection: "row",
+    gap: 8,
   },
   metricCell: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 6,
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   metricValue: {
     fontSize: 24,
     lineHeight: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.7,
   },
   metricLabel: {
@@ -233,30 +257,30 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   barLabel: {
     width: 60,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   barTrack: {
     flex: 1,
     height: 10,
-    borderRadius: 999,
+    borderRadius: 2,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   barFill: {
-    height: '100%',
-    borderRadius: 999,
+    height: "100%",
+    borderRadius: 2,
   },
   barValue: {
     width: 18,
     fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'right',
+    fontWeight: "700",
+    textAlign: "right",
   },
 });

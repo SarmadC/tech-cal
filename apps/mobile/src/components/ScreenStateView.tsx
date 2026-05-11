@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { BrandLoadingLogo } from './brand/BrandLoadingLogo';
+import { BrandLoadingLogo } from "./brand/BrandLoadingLogo";
+import { useAppTheme } from "../providers/ThemeProvider";
 
 interface ScreenStateViewProps {
   description: string;
-  mode: 'empty' | 'error' | 'loading';
+  mode: "empty" | "error" | "loading";
   title: string;
   onRetry?: () => void;
 }
@@ -15,27 +16,73 @@ export function ScreenStateView({
   title,
   onRetry,
 }: ScreenStateViewProps) {
-  if (mode === 'loading') {
+  const { tokens } = useAppTheme();
+
+  if (mode === "loading") {
     return (
       <View style={styles.loadingRoot}>
-        <BrandLoadingLogo color="#f8fafc" size={72} />
+        <BrandLoadingLogo color={tokens.colors.textPrimary} size={64} />
       </View>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-      {mode === 'error' && onRetry ? (
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.md,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.title,
+          {
+            color: tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {title}
+      </Text>
+      <Text
+        style={[
+          styles.description,
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {description}
+      </Text>
+      {mode === "error" && onRetry ? (
         <Pressable
           onPress={onRetry}
           style={({ pressed }) => [
             styles.retryButton,
+            {
+              backgroundColor: tokens.colors.pillActive,
+              borderColor: tokens.colors.pillActive,
+              borderRadius: tokens.radius.md,
+            },
             pressed ? styles.retryButtonPressed : null,
           ]}
         >
-          <Text style={styles.retryLabel}>Retry</Text>
+          <Text
+            style={[
+              styles.retryLabel,
+              {
+                color: tokens.colors.pillActiveText,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            Retry
+          </Text>
         </Pressable>
       ) : null}
     </View>
@@ -44,52 +91,45 @@ export function ScreenStateView({
 
 const styles = StyleSheet.create({
   description: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
   },
   loadingRoot: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 260,
-    paddingVertical: 28,
+    justifyContent: "center",
+    minHeight: 200,
+    paddingVertical: 24,
   },
   retryButton: {
-    alignItems: 'center',
-    backgroundColor: '#2dd4bf',
-    borderRadius: 16,
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 48,
-    minWidth: 140,
-    paddingHorizontal: 18,
+    alignItems: "center",
+    borderWidth: 1,
+    justifyContent: "center",
+    marginTop: 4,
+    minHeight: 32,
+    minWidth: 96,
+    paddingHorizontal: 12,
   },
   retryButtonPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.99 }],
   },
   retryLabel: {
-    color: '#042f2e',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "600",
   },
   root: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
+    alignItems: "center",
     borderWidth: 1,
-    gap: 12,
-    justifyContent: 'center',
-    minHeight: 260,
-    padding: 28,
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 200,
+    padding: 16,
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

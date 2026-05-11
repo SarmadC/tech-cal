@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileEventCard } from '@kurecal/domain';
+import type { MobileEventCard } from "@kurecal/domain";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface DiscoverEventCardProps {
   event: MobileEventCard;
@@ -13,8 +13,8 @@ interface DiscoverEventCardProps {
 
 function formatDateLabel(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -25,7 +25,7 @@ function splitLocation(location: string | null | undefined) {
   }
 
   const parts = value
-    .split(',')
+    .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -33,16 +33,16 @@ function splitLocation(location: string | null | undefined) {
 }
 
 function resolveFormatLabel(event: MobileEventCard) {
-  if (event.format === 'virtual') {
-    return 'Virtual';
+  if (event.format === "virtual") {
+    return "Virtual";
   }
 
-  if (event.format === 'in-person') {
-    return 'In person';
+  if (event.format === "in-person") {
+    return "In person";
   }
 
-  if (event.format === 'hybrid') {
-    return 'Hybrid';
+  if (event.format === "hybrid") {
+    return "Hybrid";
   }
 
   return event.formatLabel?.trim() || null;
@@ -55,19 +55,19 @@ function buildMetadataLine(event: MobileEventCard) {
   const priceLabel = event.priceLabel?.trim() || null;
   const parts = [dateLabel];
 
-  if (event.format === 'virtual') {
+  if (event.format === "virtual") {
     if (formatLabel) {
       parts.push(formatLabel);
     }
-  } else if (event.format === 'hybrid') {
+  } else if (event.format === "hybrid") {
     if (formatLabel) {
       parts.push(formatLabel);
     }
 
-    if (locationLabel && locationLabel.toLowerCase() !== 'remote') {
+    if (locationLabel && locationLabel.toLowerCase() !== "remote") {
       parts.push(locationLabel);
     }
-  } else if (locationLabel && locationLabel.toLowerCase() !== 'remote') {
+  } else if (locationLabel && locationLabel.toLowerCase() !== "remote") {
     parts.push(locationLabel);
   } else if (formatLabel) {
     parts.push(formatLabel);
@@ -77,7 +77,7 @@ function buildMetadataLine(event: MobileEventCard) {
     parts.push(priceLabel);
   }
 
-  return parts.join(' · ');
+  return parts.join(" · ");
 }
 
 export function DiscoverEventCard({
@@ -89,7 +89,8 @@ export function DiscoverEventCard({
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
-  const isSaved = event.engagement?.isBookmarked || event.badges?.includes('Saved');
+  const isSaved =
+    event.engagement?.isBookmarked || event.badges?.includes("Saved");
 
   return (
     <Pressable
@@ -98,7 +99,7 @@ export function DiscoverEventCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
-        pressed && { backgroundColor: 'rgba(255, 255, 255, 0.04)' },
+        pressed && { backgroundColor: "rgba(255, 255, 255, 0.04)" },
       ]}
     >
       <View style={styles.row}>
@@ -124,7 +125,7 @@ export function DiscoverEventCard({
                   color: tokens.colors.textTertiary,
                   fontFamily: tokens.typography.sans,
                   fontSize: 15,
-                  fontWeight: '600',
+                  fontWeight: "600",
                 }}
               >
                 {event.title.charAt(0).toUpperCase()}
@@ -133,7 +134,10 @@ export function DiscoverEventCard({
           </View>
           {isSaved ? (
             <View
-              style={[styles.savedDot, { backgroundColor: tokens.colors.accent }]}
+              style={[
+                styles.savedDot,
+                { backgroundColor: tokens.colors.accent },
+              ]}
             />
           ) : null}
         </View>
@@ -146,7 +150,7 @@ export function DiscoverEventCard({
               fontFamily: tokens.typography.sans,
               fontSize: 15,
               lineHeight: 20,
-              fontWeight: '600',
+              fontWeight: "600",
             }}
           >
             {event.title}
@@ -158,7 +162,7 @@ export function DiscoverEventCard({
               color: tokens.colors.discoverTextMuted,
               fontFamily: tokens.typography.sans,
               fontSize: 12,
-              fontWeight: '400',
+              fontWeight: "400",
               lineHeight: 16,
             }}
           >
@@ -186,38 +190,38 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   logoFrame: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderRadius: 4,
     height: LOGO_SIZE,
-    justifyContent: 'center',
-    overflow: 'hidden',
+    justifyContent: "center",
+    overflow: "hidden",
     padding: 4,
     width: LOGO_SIZE,
   },
   logoImage: {
-    height: '100%',
-    width: '100%',
+    height: "100%",
+    width: "100%",
   },
   logoWrap: {
     flexShrink: 0,
     marginTop: 1,
   },
   pressable: {
-    borderRadius: 12,
+    borderRadius: 4,
   },
   row: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
+    alignItems: "flex-start",
+    flexDirection: "row",
     gap: ROW_GAP,
     paddingHorizontal: ROW_PADDING_H,
-    paddingVertical: 11,
+    paddingVertical: 9,
   },
   savedDot: {
     borderRadius: 999,
     bottom: 0,
     height: 8,
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     width: 8,
   },

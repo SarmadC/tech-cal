@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Platform,
@@ -8,52 +8,52 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
+} from "react-native";
 
-import type { CommunityReportInput } from '@kurecal/domain';
+import type { CommunityReportInput } from "@kurecal/domain";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 const REPORT_REASONS: Array<{
-  value: CommunityReportInput['reason'];
+  value: CommunityReportInput["reason"];
   label: string;
   description: string;
 }> = [
   {
-    value: 'harassment',
-    label: 'Harassment',
-    description: 'Targeted abuse, intimidation, or repeated hostility.',
+    value: "harassment",
+    label: "Harassment",
+    description: "Targeted abuse, intimidation, or repeated hostility.",
   },
   {
-    value: 'spam',
-    label: 'Spam',
-    description: 'Promotional noise, scams, or repeated low-value posting.',
+    value: "spam",
+    label: "Spam",
+    description: "Promotional noise, scams, or repeated low-value posting.",
   },
   {
-    value: 'hate',
-    label: 'Hate',
-    description: 'Dehumanizing or hateful language aimed at a protected group.',
+    value: "hate",
+    label: "Hate",
+    description: "Dehumanizing or hateful language aimed at a protected group.",
   },
   {
-    value: 'sexual-content',
-    label: 'Sexual content',
-    description: 'Sexual material that does not belong in this community.',
+    value: "sexual-content",
+    label: "Sexual content",
+    description: "Sexual material that does not belong in this community.",
   },
   {
-    value: 'misinformation',
-    label: 'Misinformation',
-    description: 'Misleading or false claims presented as fact.',
+    value: "misinformation",
+    label: "Misinformation",
+    description: "Misleading or false claims presented as fact.",
   },
   {
-    value: 'other',
-    label: 'Other',
-    description: 'Anything else that needs moderator review.',
+    value: "other",
+    label: "Other",
+    description: "Anything else that needs moderator review.",
   },
 ];
 
 export interface CommunityReportTarget {
   id: string;
-  type: CommunityReportInput['subjectType'];
+  type: CommunityReportInput["subjectType"];
   title: string;
   context?: string;
 }
@@ -72,21 +72,22 @@ export function CommunityReportComposer({
   onSubmit: (payload: CommunityReportInput) => Promise<void>;
 }) {
   const { tokens } = useAppTheme();
-  const [reason, setReason] = useState<CommunityReportInput['reason']>('harassment');
-  const [details, setDetails] = useState('');
+  const [reason, setReason] =
+    useState<CommunityReportInput["reason"]>("harassment");
+  const [details, setDetails] = useState("");
 
   useEffect(() => {
     if (!visible) {
       return;
     }
 
-    setReason('harassment');
-    setDetails('');
+    setReason("harassment");
+    setDetails("");
   }, [target?.id, visible]);
 
   const submitDisabled = useMemo(
     () => submitting || !target,
-    [submitting, target]
+    [submitting, target],
   );
 
   if (!target) {
@@ -94,8 +95,15 @@ export function CommunityReportComposer({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={[styles.backdrop, { backgroundColor: tokens.colors.overlay }]}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <View
+        style={[styles.backdrop, { backgroundColor: tokens.colors.overlay }]}
+      >
         <Pressable style={styles.dismissTarget} onPress={onClose} />
 
         <View
@@ -241,7 +249,7 @@ export function CommunityReportComposer({
                   {
                     backgroundColor: tokens.colors.input,
                     borderColor: tokens.colors.border,
-                    borderRadius: tokens.radius.pill,
+                    borderRadius: tokens.radius.md,
                     opacity: submitting ? 0.6 : 1,
                   },
                 ]}
@@ -273,7 +281,7 @@ export function CommunityReportComposer({
                   styles.primaryButton,
                   {
                     backgroundColor: tokens.colors.textPrimary,
-                    borderRadius: tokens.radius.pill,
+                    borderRadius: tokens.radius.md,
                     opacity: submitDisabled ? 0.6 : 1,
                   },
                 ]}
@@ -287,7 +295,7 @@ export function CommunityReportComposer({
                     },
                   ]}
                 >
-                  {submitting ? 'Sending...' : 'Submit report'}
+                  {submitting ? "Sending..." : "Submit report"}
                 </Text>
               </Pressable>
             </View>
@@ -300,92 +308,92 @@ export function CommunityReportComposer({
 
 const styles = StyleSheet.create({
   actions: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 4,
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 2,
   },
   backdrop: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   context: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   dismissTarget: {
     flex: 1,
   },
   fieldLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   kicker: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.6,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.1,
   },
   noteBlock: {
     gap: 8,
   },
   primaryButton: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 18,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   primaryButtonLabel: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "700",
   },
   reasonCard: {
     borderWidth: 1,
-    gap: 6,
-    padding: 14,
+    gap: 4,
+    padding: 10,
   },
   reasonDescription: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   reasonLabel: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "600",
   },
   reasonList: {
-    gap: 10,
+    gap: 8,
   },
   secondaryButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 18,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   secondaryButtonLabel: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "700",
   },
   sheet: {
     borderWidth: 1,
     paddingBottom: Platform.select({ ios: 28, default: 20 }),
   },
   sheetContent: {
-    gap: 16,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 14,
   },
   textarea: {
     borderWidth: 1,
-    fontSize: 15,
-    minHeight: 120,
-    padding: 14,
-    textAlignVertical: 'top',
+    fontSize: 13,
+    minHeight: 96,
+    padding: 10,
+    textAlignVertical: "top",
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    lineHeight: 28,
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 22,
   },
 });

@@ -4,7 +4,6 @@ export const discoverTheme = {
     accentStrong: '#38bdf8',
     accentSoft: 'rgba(125, 211, 252, 0.14)',
     divider: 'rgba(148, 163, 184, 0.16)',
-    discoverHeader: '#060b13',
     discoverShell: '#05070c',
     discoverTextMuted: '#64748b',
     discoverTextSoft: '#cbd5e1',

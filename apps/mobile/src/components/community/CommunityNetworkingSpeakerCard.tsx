@@ -1,14 +1,13 @@
-import { FontAwesome } from '@expo/vector-icons';
-import type { MobileCommunityNetworkingEvent } from '@kurecal/domain';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome } from "@expo/vector-icons";
+import type { MobileCommunityNetworkingEvent } from "@kurecal/domain";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
-import { CommunityAvatar } from './CommunityAvatar';
-import { getSafeExternalUrl } from './presentation';
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { getSafeExternalUrl } from "./presentation";
 
 type SpeakerPreview = NonNullable<
-  MobileCommunityNetworkingEvent['speakerPreview']
+  MobileCommunityNetworkingEvent["speakerPreview"]
 >[number];
 
 interface CommunityNetworkingSpeakerCardProps {
@@ -16,14 +15,17 @@ interface CommunityNetworkingSpeakerCardProps {
   eventTitle: string;
   matchReason: string;
   matchIndex?: number;
+  compactReason?: string;
   isPastEvent?: boolean;
+  showExternalShortcut?: boolean;
+  variant?: "card" | "compact";
   onOpenSpeaker?: () => void;
   onOpenExternalLink?: (label: string, url: string) => void;
 }
 
 function getSpeakerHeadline(speaker: SpeakerPreview): string {
   const parts = [speaker.title, speaker.company].filter(Boolean);
-  return parts.join(' · ') || 'Event speaker';
+  return parts.join(" · ") || "Event speaker";
 }
 
 function getExternalAction(speaker: SpeakerPreview): {
@@ -34,8 +36,8 @@ function getExternalAction(speaker: SpeakerPreview): {
   const linkedinUrl = getSafeExternalUrl(speaker.linkedinUrl);
   if (linkedinUrl) {
     return {
-      label: 'LinkedIn',
-      icon: 'linkedin-square',
+      label: "LinkedIn",
+      icon: "linkedin-square",
       url: linkedinUrl,
     };
   }
@@ -43,8 +45,8 @@ function getExternalAction(speaker: SpeakerPreview): {
   const twitterUrl = getSafeExternalUrl(speaker.twitterUrl);
   if (twitterUrl) {
     return {
-      label: 'Twitter',
-      icon: 'twitter',
+      label: "Twitter",
+      icon: "twitter",
       url: twitterUrl,
     };
   }
@@ -52,8 +54,8 @@ function getExternalAction(speaker: SpeakerPreview): {
   const websiteUrl = getSafeExternalUrl(speaker.websiteUrl);
   if (websiteUrl) {
     return {
-      label: 'Website',
-      icon: 'external-link',
+      label: "Website",
+      icon: "external-link",
       url: websiteUrl,
     };
   }
@@ -68,14 +70,14 @@ function splitInsightPhrases(value: string | null | undefined): string[] {
 
   return value
     .split(/[,(/)]+/)
-    .map((part) => part.replace(/\b(and|for|of|the)\b/gi, ' ').trim())
-    .map((part) => part.replace(/\s+/g, ' '))
+    .map((part) => part.replace(/\b(and|for|of|the)\b/gi, " ").trim())
+    .map((part) => part.replace(/\s+/g, " "))
     .filter((part) => part.length >= 4)
     .filter(
       (part) =>
         !/^(senior|staff|lead|head|director|associate|principal|vp|chief|professor)$/i.test(
-          part
-        )
+          part,
+        ),
     );
 }
 
@@ -98,12 +100,12 @@ function getDisplayReason(params: {
     /^.+ overlap\.?$/i,
   ];
   const isGenericReason = genericReasonPatterns.some((pattern) =>
-    pattern.test(trimmedReason)
+    pattern.test(trimmedReason),
   );
 
   const titlePhrases = splitInsightPhrases(params.speaker.title);
   const eventPhrases = splitInsightPhrases(params.eventTitle).filter(
-    (phrase) => !/^(summit|conference|forum|expo|meetup)$/i.test(phrase)
+    (phrase) => !/^(summit|conference|forum|expo|meetup)$/i.test(phrase),
   );
   const primaryPhrase = titlePhrases[0] ?? eventPhrases[0] ?? null;
   const secondaryPhrase =
@@ -118,79 +120,117 @@ function getDisplayReason(params: {
   return null;
 }
 
-function getCardTone(matchIndex: number, mode: 'light' | 'dark') {
-  if (matchIndex === 0) {
-    return mode === 'light'
-      ? {
-          accent: '#C2410C',
-          border: 'rgba(194, 65, 12, 0.18)',
-          backgroundTop: 'rgba(255, 237, 213, 0.86)',
-          backgroundBottom: 'rgba(255, 255, 255, 0.98)',
-          shadowOpacity: 0.09,
-        }
-      : {
-          accent: '#FDBA74',
-          border: 'rgba(251, 191, 36, 0.18)',
-          backgroundTop: 'rgba(56, 24, 6, 0.94)',
-          backgroundBottom: 'rgba(16, 19, 24, 0.98)',
-          shadowOpacity: 0.18,
-        };
-  }
-
-  if (matchIndex === 1) {
-    return mode === 'light'
-      ? {
-          accent: '#2563EB',
-          border: 'rgba(37, 99, 235, 0.14)',
-          backgroundTop: 'rgba(239, 246, 255, 0.86)',
-          backgroundBottom: 'rgba(255, 255, 255, 0.98)',
-          shadowOpacity: 0.06,
-        }
-      : {
-          accent: '#93C5FD',
-          border: 'rgba(96, 165, 250, 0.16)',
-          backgroundTop: 'rgba(12, 31, 56, 0.9)',
-          backgroundBottom: 'rgba(16, 19, 24, 0.98)',
-          shadowOpacity: 0.12,
-        };
-  }
-
-  return mode === 'light'
-    ? {
-        accent: '#475569',
-        border: 'rgba(15, 23, 42, 0.08)',
-        backgroundTop: 'rgba(255, 255, 255, 0.94)',
-        backgroundBottom: 'rgba(255, 255, 255, 0.98)',
-        shadowOpacity: 0.03,
-      }
-    : {
-        accent: '#94A3B8',
-        border: 'rgba(255, 255, 255, 0.08)',
-        backgroundTop: 'rgba(20, 24, 31, 0.94)',
-        backgroundBottom: 'rgba(16, 19, 24, 0.98)',
-        shadowOpacity: 0.08,
-      };
-}
-
 export function CommunityNetworkingSpeakerCard({
+  compactReason,
   eventTitle,
   isPastEvent = false,
   matchIndex = 0,
   matchReason,
+  showExternalShortcut = true,
   onOpenSpeaker,
   onOpenExternalLink,
   speaker,
+  variant = "card",
 }: CommunityNetworkingSpeakerCardProps) {
   const { tokens } = useAppTheme();
   const externalAction = getExternalAction(speaker);
-  const tone = getCardTone(matchIndex, tokens.mode);
-  const isHero = matchIndex === 0;
+  const isCompact = variant === "compact";
+  const isHero = !isCompact && matchIndex === 0;
   const displayReason = getDisplayReason({
     eventTitle,
     matchIndex,
     matchReason,
     speaker,
   });
+  const compactMeta = displayReason?.trim() || "Recommended match";
+  const showCompactReason = Boolean(compactReason?.trim());
+
+  if (isCompact) {
+    return (
+      <Pressable
+        accessibilityLabel={`Open speaker ${speaker.name}`}
+        accessibilityRole="button"
+        onPress={onOpenSpeaker}
+        style={({ pressed }) => [
+          styles.compactRow,
+          {
+            opacity: pressed ? 0.76 : 1,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.avatarFrame,
+            styles.compactAvatarFrame,
+            {
+              borderColor: tokens.colors.border,
+              backgroundColor: tokens.colors.surfaceMuted,
+              borderRadius: 999,
+            },
+          ]}
+        >
+          <CommunityAvatar
+            avatarUrl={speaker.photoUrl}
+            name={speaker.name}
+            size={38}
+          />
+        </View>
+        <View style={styles.compactCopy}>
+          <View style={styles.compactHeaderRow}>
+            <View style={styles.compactTitleBlock}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 16,
+                  lineHeight: 19,
+                  fontWeight: "800",
+                  letterSpacing: -0.3,
+                }}
+              >
+                {speaker.name}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 12,
+                  lineHeight: 16,
+                  fontWeight: "600",
+                }}
+              >
+                {getSpeakerHeadline(speaker)}
+              </Text>
+            </View>
+            <FontAwesome
+              color={tokens.colors.textTertiary}
+              name="angle-right"
+              size={16}
+            />
+          </View>
+          {showCompactReason ? (
+            <View style={styles.compactReasonRow}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 12,
+                  lineHeight: 16,
+                  fontWeight: "700",
+                }}
+              >
+                {compactReason ?? compactMeta}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -200,13 +240,14 @@ export function CommunityNetworkingSpeakerCard({
       style={[
         styles.card,
         {
-          borderColor: tone.border,
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
           borderRadius: tokens.radius.md,
           shadowColor: tokens.shadow.shadowColor,
-          shadowOpacity: tone.shadowOpacity,
-          shadowRadius: matchIndex === 0 ? 18 : 12,
-          shadowOffset: { width: 0, height: matchIndex === 0 ? 10 : 6 },
-          elevation: matchIndex === 0 ? 5 : 2,
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          shadowOffset: { width: 0, height: 0 },
+          elevation: 0,
         },
       ]}
     >
@@ -217,14 +258,11 @@ export function CommunityNetworkingSpeakerCard({
             {
               borderRadius: tokens.radius.md,
               opacity: pressed ? 0.94 : 1,
+              paddingHorizontal: 12,
+              paddingVertical: 12,
             },
           ]}
         >
-          <LinearGradient
-            colors={[tone.backgroundTop, tone.backgroundBottom]}
-            style={StyleSheet.absoluteFillObject}
-          />
-
           <View style={styles.mainRow}>
             <View
               style={[
@@ -232,10 +270,7 @@ export function CommunityNetworkingSpeakerCard({
                 isHero ? styles.heroAvatarFrame : styles.compactAvatarFrame,
                 {
                   borderColor: tokens.colors.border,
-                  backgroundColor:
-                    tokens.mode === 'light'
-                      ? 'rgba(255,255,255,0.58)'
-                      : 'rgba(255,255,255,0.04)',
+                  backgroundColor: tokens.colors.surfaceMuted,
                   borderRadius: 999,
                 },
               ]}
@@ -256,7 +291,7 @@ export function CommunityNetworkingSpeakerCard({
                       fontFamily: tokens.typography.sans,
                       fontSize: isHero ? 20 : 17,
                       lineHeight: isHero ? 24 : 20,
-                      fontWeight: '800',
+                      fontWeight: "800",
                       letterSpacing: isHero ? -0.5 : -0.35,
                     }}
                   >
@@ -269,20 +304,23 @@ export function CommunityNetworkingSpeakerCard({
                       fontFamily: tokens.typography.sans,
                       fontSize: isHero ? 13 : 12,
                       lineHeight: isHero ? 18 : 17,
-                      fontWeight: '600',
+                      fontWeight: "600",
                     }}
                   >
                     {getSpeakerHeadline(speaker)}
                   </Text>
                 </View>
-                {externalAction ? (
+                {showExternalShortcut && externalAction ? (
                   <Pressable
                     accessibilityLabel={`Open ${speaker.name} ${externalAction.label}`}
                     accessibilityRole="button"
                     hitSlop={8}
                     onPress={() => {
                       if (onOpenExternalLink) {
-                        onOpenExternalLink(externalAction.label, externalAction.url);
+                        onOpenExternalLink(
+                          externalAction.label,
+                          externalAction.url,
+                        );
                         return;
                       }
 
@@ -293,12 +331,9 @@ export function CommunityNetworkingSpeakerCard({
                       {
                         width: 32,
                         height: 32,
-                        backgroundColor:
-                          tokens.mode === 'light'
-                            ? 'rgba(255,255,255,0.72)'
-                            : 'rgba(15,23,42,0.44)',
+                        backgroundColor: tokens.colors.surfaceMuted,
                         borderColor: tokens.colors.border,
-                        borderRadius: tokens.radius.pill,
+                        borderRadius: tokens.radius.md,
                         opacity: externalPressed ? 0.78 : 1,
                       },
                     ]}
@@ -321,14 +356,18 @@ export function CommunityNetworkingSpeakerCard({
                       fontFamily: tokens.typography.sans,
                       fontSize: isHero ? 14 : 13,
                       lineHeight: isHero ? 18 : 17,
-                      fontWeight: '700',
+                      fontWeight: "700",
                     }}
                   >
                     {displayReason}
                   </Text>
                 ) : null}
                 <View style={styles.eventRow}>
-                  <FontAwesome color={tone.accent} name="calendar-o" size={12} />
+                  <FontAwesome
+                    color={tokens.colors.accent}
+                    name="calendar-o"
+                    size={12}
+                  />
                   <Text
                     numberOfLines={1}
                     style={{
@@ -336,10 +375,10 @@ export function CommunityNetworkingSpeakerCard({
                       fontFamily: tokens.typography.sans,
                       fontSize: isHero ? 12 : 11,
                       lineHeight: isHero ? 16 : 15,
-                      fontWeight: '700',
+                      fontWeight: "700",
                     }}
                   >
-                    {isPastEvent ? 'Spoke at' : 'Speaking at'} {eventTitle}
+                    {isPastEvent ? "Spoke at" : "Speaking at"} {eventTitle}
                   </Text>
                 </View>
               </View>
@@ -359,54 +398,67 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: StyleSheet.hairlineWidth,
   },
-  pressSurface: {
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  compactCopy: {
+    flex: 1,
+    gap: 3,
+    justifyContent: "center",
+  },
+  compactHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  compactReasonRow: {
+    paddingTop: 1,
+  },
+  compactTitleBlock: {
+    flex: 1,
+    gap: 1,
+  },
+  compactRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
+    paddingVertical: 9,
+  },
+  pressSurface: {
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
   },
   copy: {
     flex: 1,
-    gap: 8,
+    gap: 6,
   },
   externalShortcut: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
   },
   mainRow: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
   },
   nameRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
   nameBlock: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   supportingBlock: {
-    gap: 6,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 4,
   },
   eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  openRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   heroAvatarFrame: {
     padding: 2,

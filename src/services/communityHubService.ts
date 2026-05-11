@@ -3,9 +3,9 @@ import type {
   CommunityFeedPageData,
   CommunityLaunchpadCircle,
   CommunityUpcomingEvent,
-} from '@/types/community';
-import type { SupabaseClientType } from '@/types/database';
-import { BlockService } from '@/services/blockService';
+} from "@/types/community";
+import type { SupabaseClientType } from "@/types/database";
+import { BlockService } from "@/services/blockService";
 
 // ── Row types for DB results ────────────────────────────────────
 
@@ -15,7 +15,7 @@ interface FeedPostRow {
   created_at: string;
   author_id: string;
   circle_id: string;
-  moderation_status: 'active' | 'removed';
+  moderation_status: "active" | "removed";
 }
 
 interface FeedCommentRow {
@@ -88,30 +88,29 @@ export class CommunityHubService {
     readClient: SupabaseClientType;
   }): Promise<CommunityFeedPost[]> {
     try {
-      const joinedCircleIds =
-        viewerId
-          ? (
-              await readClient
-                .from('circle_members')
-                .select('circle_id')
-                .eq('user_id', viewerId)
-            ).data || []
-          : [];
+      const joinedCircleIds = viewerId
+        ? (
+            await readClient
+              .from("circle_members")
+              .select("circle_id")
+              .eq("user_id", viewerId)
+          ).data || []
+        : [];
 
       const normalizedJoinedCircleIds = joinedCircleIds.map(
-        (membership: { circle_id: string }) => membership.circle_id
+        (membership: { circle_id: string }) => membership.circle_id,
       );
 
       // Get all circles (for name resolution)
       const { data: allCircles } = await readClient
-        .from('circles')
-        .select('id, slug, name');
+        .from("circles")
+        .select("id, slug, name");
 
       const circleMap = new Map<string, { slug: string; name: string }>(
         ((allCircles as CircleRow[]) || []).map((c) => [
           c.id,
           { slug: c.slug, name: c.name },
-        ])
+        ]),
       );
 
       // Fetch recent posts — from joined circles first, then globally
@@ -119,11 +118,13 @@ export class CommunityHubService {
 
       if (normalizedJoinedCircleIds.length > 0) {
         const { data: joinedPosts } = await readClient
-          .from('circle_posts')
-          .select('id, content, created_at, author_id, circle_id, moderation_status')
-          .in('circle_id', normalizedJoinedCircleIds)
-          .eq('moderation_status', 'active')
-          .order('created_at', { ascending: false })
+          .from("circle_posts")
+          .select(
+            "id, content, created_at, author_id, circle_id, moderation_status",
+          )
+          .in("circle_id", normalizedJoinedCircleIds)
+          .eq("moderation_status", "active")
+          .order("created_at", { ascending: false })
           .limit(FEED_FETCH_LIMIT);
 
         posts = (joinedPosts || []) as FeedPostRow[];
@@ -133,10 +134,12 @@ export class CommunityHubService {
       if (posts.length < FEED_LIMIT) {
         const existingIds = new Set(posts.map((p) => p.id));
         const { data: globalPosts } = await readClient
-          .from('circle_posts')
-          .select('id, content, created_at, author_id, circle_id, moderation_status')
-          .eq('moderation_status', 'active')
-          .order('created_at', { ascending: false })
+          .from("circle_posts")
+          .select(
+            "id, content, created_at, author_id, circle_id, moderation_status",
+          )
+          .eq("moderation_status", "active")
+          .order("created_at", { ascending: false })
           .limit(FEED_FETCH_LIMIT);
 
         for (const gp of (globalPosts || []) as FeedPostRow[]) {
@@ -150,34 +153,33 @@ export class CommunityHubService {
 
       const commentCandidatePostIds = posts.map((post) => post.id);
       const { data: commentRows } = await readClient
-        .from('circle_comments')
-        .select('id, post_id, content, created_at, author_id')
-        .in('post_id', commentCandidatePostIds)
-        .eq('moderation_status', 'active')
-        .order('created_at', { ascending: false })
+        .from("circle_comments")
+        .select("id, post_id, content, created_at, author_id")
+        .in("post_id", commentCandidatePostIds)
+        .eq("moderation_status", "active")
+        .order("created_at", { ascending: false })
         .limit(5_000);
 
-      const blockedUserIds =
-        viewerId
-          ? await BlockService.getBlockedUserIdsForViewer(
-              viewerId,
-              [
-                ...new Set([
-                  ...posts.map((post) => post.author_id),
-                  ...((commentRows as FeedCommentRow[] | null) ?? []).map(
-                    (comment) => comment.author_id
-                  ),
-                ]),
-              ],
-              readClient
-            )
-          : new Set<string>();
+      const blockedUserIds = viewerId
+        ? await BlockService.getBlockedUserIdsForViewer(
+            viewerId,
+            [
+              ...new Set([
+                ...posts.map((post) => post.author_id),
+                ...((commentRows as FeedCommentRow[] | null) ?? []).map(
+                  (comment) => comment.author_id,
+                ),
+              ]),
+            ],
+            readClient,
+          )
+        : new Set<string>();
 
       posts = posts
         .filter(
           (post) =>
-            post.moderation_status === 'active' &&
-            !blockedUserIds.has(post.author_id)
+            post.moderation_status === "active" &&
+            !blockedUserIds.has(post.author_id),
         )
         .slice(0, FEED_LIMIT);
 
@@ -186,9 +188,12 @@ export class CommunityHubService {
       }
 
       const postIds = posts.map((p) => p.id);
-      const filteredComments = ((commentRows as FeedCommentRow[] | null) ?? []).filter(
+      const filteredComments = (
+        (commentRows as FeedCommentRow[] | null) ?? []
+      ).filter(
         (comment) =>
-          postIds.includes(comment.post_id) && !blockedUserIds.has(comment.author_id)
+          postIds.includes(comment.post_id) &&
+          !blockedUserIds.has(comment.author_id),
       );
 
       // Resolve authors
@@ -199,15 +204,15 @@ export class CommunityHubService {
         ]),
       ];
       const { data: profiles } = await readClient
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', authorIds);
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", authorIds);
 
       const profileMap = new Map(
         ((profiles as ProfileRow[]) || []).map((p) => [
           p.id,
           { id: p.id, fullName: p.full_name, avatarUrl: p.avatar_url },
-        ])
+        ]),
       );
 
       // Tally counts manually
@@ -218,7 +223,11 @@ export class CommunityHubService {
           id: string;
           content: string;
           createdAt: string;
-          author: { id: string; fullName: string | null; avatarUrl: string | null };
+          author: {
+            id: string;
+            fullName: string | null;
+            avatarUrl: string | null;
+          };
         }>
       >();
 
@@ -253,15 +262,15 @@ export class CommunityHubService {
           avatarUrl: null,
         },
         circle: circleMap.get(p.circle_id) || {
-          slug: 'unknown',
-          name: 'Unknown Circle',
+          slug: "unknown",
+          name: "Unknown Circle",
         },
         commentCount: countMap.get(p.id) || 0,
         isTrending: (countMap.get(p.id) || 0) >= TRENDING_THRESHOLD,
         recentComments: recentCommentsMap.get(p.id) ?? [],
       }));
     } catch (error) {
-      console.error('Failed to load community feed:', error);
+      console.error("Failed to load community feed:", error);
       return [];
     }
   }
@@ -278,33 +287,34 @@ export class CommunityHubService {
     try {
       // Fetch circles without icon column (not in DB schema)
       const circlesResult = await readClient
-        .from('circles')
-        .select('id, slug, name, description, member_count')
-        .order('member_count', { ascending: false });
+        .from("circles")
+        .select("id, slug, name, description, member_count")
+        .order("member_count", { ascending: false });
 
       const membershipsResult = await readClient
-        .from('circle_members')
-        .select('circle_id')
-        .eq('user_id', viewerId);
+        .from("circle_members")
+        .select("circle_id")
+        .eq("user_id", viewerId);
 
       const circles = (circlesResult.data || []) as CircleRow[];
       const joinedIds = new Set(
         ((membershipsResult.data || []) as { circle_id: string }[]).map(
-          (m) => m.circle_id
-        )
+          (m) => m.circle_id,
+        ),
       );
 
       return circles.map((c) => ({
         id: c.id,
+        slug: c.slug,
         name: c.name,
-        description: c.description || '',
+        description: c.description || "",
         href: `/circle/${c.slug}`,
         memberCount: c.member_count,
         isJoined: joinedIds.has(c.id),
-        icon: 'people', // DB has no icon column; icons are mapped in the UI layer
+        icon: "people", // DB has no icon column; icons are mapped in the UI layer
       }));
     } catch (error) {
-      console.error('Failed to load circles:', error);
+      console.error("Failed to load circles:", error);
       return [];
     }
   }
@@ -323,31 +333,33 @@ export class CommunityHubService {
 
       // Get user's tracked event IDs
       const { data: userEvents } = await readClient
-        .from('user_events')
-        .select('event_id')
-        .eq('user_id', viewerId)
-        .eq('is_bookmarked', true);
+        .from("user_events")
+        .select("event_id")
+        .eq("user_id", viewerId)
+        .eq("is_bookmarked", true);
 
       if (!userEvents || userEvents.length === 0) {
         // Fallback: show next upcoming events globally
         const { data: globalEvents } = await readClient
-          .from('events')
-          .select('id, slug, title, start_time, location')
-          .eq('status', 'confirmed')
-          .gte('start_time', nowIso)
-          .order('start_time', { ascending: true })
+          .from("events")
+          .select("id, slug, title, start_time, location")
+          .eq("status", "confirmed")
+          .gte("start_time", nowIso)
+          .order("start_time", { ascending: true })
           .limit(UPCOMING_EVENTS_LIMIT);
 
-        return ((globalEvents || []) as {
-          id: string;
-          slug: string | null;
-          title: string | null;
-          start_time: string;
-          location: string | null;
-        }[]).map((e) => ({
+        return (
+          (globalEvents || []) as {
+            id: string;
+            slug: string | null;
+            title: string | null;
+            start_time: string;
+            location: string | null;
+          }[]
+        ).map((e) => ({
           id: e.id,
           slug: e.slug || e.id,
-          title: e.title || 'Untitled Event',
+          title: e.title || "Untitled Event",
           startTime: e.start_time,
           location: e.location,
           format: null,
@@ -355,33 +367,35 @@ export class CommunityHubService {
       }
 
       const eventIds = userEvents.map(
-        (ue: { event_id: string }) => ue.event_id
+        (ue: { event_id: string }) => ue.event_id,
       );
 
       const { data: events } = await readClient
-        .from('events')
-        .select('id, slug, title, start_time, location')
-        .in('id', eventIds)
-        .gte('start_time', nowIso)
-        .order('start_time', { ascending: true })
+        .from("events")
+        .select("id, slug, title, start_time, location")
+        .in("id", eventIds)
+        .gte("start_time", nowIso)
+        .order("start_time", { ascending: true })
         .limit(UPCOMING_EVENTS_LIMIT);
 
-      return ((events || []) as {
-        id: string;
-        slug: string | null;
-        title: string | null;
-        start_time: string;
-        location: string | null;
-      }[]).map((e) => ({
+      return (
+        (events || []) as {
+          id: string;
+          slug: string | null;
+          title: string | null;
+          start_time: string;
+          location: string | null;
+        }[]
+      ).map((e) => ({
         id: e.id,
         slug: e.slug || e.id,
-        title: e.title || 'Untitled Event',
+        title: e.title || "Untitled Event",
         startTime: e.start_time,
         location: e.location,
         format: null,
       }));
     } catch (error) {
-      console.error('Failed to load upcoming events:', error);
+      console.error("Failed to load upcoming events:", error);
       return [];
     }
   }

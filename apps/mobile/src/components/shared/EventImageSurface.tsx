@@ -85,7 +85,7 @@ export function EventImageSurface({
         colors={
           isLogoFallback || !imageUri
             ? [tokens.colors.discoverToolbarStrong, tokens.colors.discoverShell]
-            : ['rgba(5, 7, 10, 0.08)', 'rgba(5, 7, 10, 0.82)']
+            : ['rgba(5, 7, 10, 0.22)', 'rgba(5, 7, 10, 0.92)']
         }
         style={StyleSheet.absoluteFillObject}
       />

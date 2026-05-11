@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { mobileSurfaceHeaderSchema } from './surface';
+import { mobileSurfaceHeaderSchema } from "./surface";
 
 export const voteValueSchema = z.union([
   z.literal(-1),
@@ -22,44 +22,44 @@ export const communityCommentDraftSchema = z.object({
 });
 
 export const communityVoteSchema = z.object({
-  entityType: z.enum(['post', 'comment']),
+  entityType: z.enum(["post", "comment"]),
   entityId: z.string().uuid(),
   circleSlug: z.string().min(1),
   voteType: voteValueSchema,
 });
 
 export const communityReportSchema = z.object({
-  subjectType: z.enum(['post', 'comment', 'profile']),
+  subjectType: z.enum(["post", "comment", "profile"]),
   subjectId: z.string().uuid(),
   reason: z.enum([
-    'spam',
-    'harassment',
-    'hate',
-    'sexual-content',
-    'misinformation',
-    'other',
+    "spam",
+    "harassment",
+    "hate",
+    "sexual-content",
+    "misinformation",
+    "other",
   ]),
   details: z.string().trim().max(1_500).optional(),
 });
 
 export const communityReportStatusSchema = z.enum([
-  'open',
-  'reviewing',
-  'resolved',
-  'dismissed',
+  "open",
+  "reviewing",
+  "resolved",
+  "dismissed",
 ]);
 
 export const communityReportResolutionSchema = z.enum([
-  'removed',
-  'warned',
-  'no-action',
-  'other',
+  "removed",
+  "warned",
+  "no-action",
+  "other",
 ]);
 
 export const communityReportRecordSchema = z.object({
   id: z.string().uuid(),
   reporterId: z.string().uuid(),
-  subjectType: z.enum(['post', 'comment', 'profile']),
+  subjectType: z.enum(["post", "comment", "profile"]),
   subjectId: z.string().uuid(),
   reason: communityReportSchema.shape.reason,
   details: z.string().nullable(),
@@ -157,7 +157,7 @@ export const mobileCommunityNetworkingSharedEventSchema = z.object({
   startTime: z.string(),
   location: z.string().nullable(),
   format: z.string().nullable(),
-  viewerContext: z.enum(['attending', 'saved']).optional(),
+  viewerContext: z.enum(["attending", "saved"]).optional(),
 });
 
 export const mobileCommunityNetworkingAttendeePreviewSchema = z.object({
@@ -171,11 +171,11 @@ export const mobileCommunityNetworkingAttendeePreviewSchema = z.object({
 });
 
 export const mobileCommunityNetworkingRecommendedActionSchema = z.enum([
-  'expand_people',
-  'expand_context',
-  'follow',
-  'open_event',
-  'view_profile',
+  "expand_people",
+  "expand_context",
+  "follow",
+  "open_event",
+  "view_profile",
 ]);
 
 export const mobileCommunityNetworkingAmbientActivitySchema = z.object({
@@ -203,15 +203,12 @@ export const mobileCommunityNetworkingSpeakerMatchSchema = z.object({
   isPastEvent: z.literal(true),
 });
 
-export const mobileNetworkingContactKindSchema = z.enum([
-  'profile',
-  'speaker',
-]);
+export const mobileNetworkingContactKindSchema = z.enum(["profile", "speaker"]);
 
 export const mobileNetworkingStateStatusSchema = z.enum([
-  'none',
-  'requested',
-  'connected',
+  "none",
+  "requested",
+  "connected",
 ]);
 
 export const mobileNetworkingStateSchema = z.object({
@@ -263,7 +260,7 @@ export const mobileCommunityNetworkingEventSchema = z.object({
   imageUrl: z.string().nullable().optional(),
   location: z.string().nullable(),
   format: z.string().nullable(),
-  viewerContext: z.enum(['attending', 'saved']),
+  viewerContext: z.enum(["attending", "saved"]),
   contextLabel: z.string().optional(),
   recentTrackerCount: z.number().int().nonnegative().optional(),
   totalAttendeeCount: z.number().int().nonnegative(),
@@ -354,6 +351,15 @@ export const mobileCommunityNetworkingHomeSchema = z.object({
   ambientActivity: mobileCommunityNetworkingAmbientActivitySchema.optional(),
 });
 
+export const mobileCommunityHubHomeSchema =
+  mobileCommunityNetworkingHomeSchema.extend({
+    feed: z.array(mobileCommunityFeedPostSchema).optional(),
+    circles: z.array(mobileCommunityCircleSchema).optional(),
+    communityUpcomingEvents: z
+      .array(mobileCommunityUpcomingEventSchema)
+      .optional(),
+  });
+
 export const mobileFollowStatusSchema = z.object({
   isFollowing: z.boolean(),
   isFollowedBy: z.boolean(),
@@ -414,17 +420,17 @@ export interface MobileCommunityComment {
 
 export const mobileCommunityCommentSchema: z.ZodType<MobileCommunityComment> =
   z.lazy(() =>
-  z.object({
-    id: z.string(),
-    parentId: z.string().nullable(),
-    content: z.string(),
-    createdAt: z.string(),
-    author: mobileCommunityAuthorSchema,
-    isRemoved: z.boolean().optional(),
-    score: z.number().int().optional(),
-    userVote: voteValueSchema.optional(),
-    replies: z.array(mobileCommunityCommentSchema),
-  })
+    z.object({
+      id: z.string(),
+      parentId: z.string().nullable(),
+      content: z.string(),
+      createdAt: z.string(),
+      author: mobileCommunityAuthorSchema,
+      isRemoved: z.boolean().optional(),
+      score: z.number().int().optional(),
+      userVote: voteValueSchema.optional(),
+      replies: z.array(mobileCommunityCommentSchema),
+    }),
   );
 
 export const mobileCommunityPostSchema = z.object({
@@ -438,7 +444,7 @@ export const mobileCommunityPostSchema = z.object({
   userVote: voteValueSchema.optional(),
 });
 
-export const mobileCommunityHomeSchema = mobileCommunityNetworkingHomeSchema;
+export const mobileCommunityHomeSchema = mobileCommunityHubHomeSchema;
 
 export const mobileCommunityCirclePageSchema = z.object({
   header: mobileSurfaceHeaderSchema,
@@ -540,9 +546,10 @@ export type MobilePublicProfileMutualConnection = z.infer<
   typeof mobilePublicProfileMutualConnectionSchema
 >;
 export type MobilePublicProfile = z.infer<typeof mobilePublicProfileSchema>;
-export type MobileCommunityHome = z.infer<
+export type MobileCommunityNetworkingHome = z.infer<
   typeof mobileCommunityNetworkingHomeSchema
 >;
+export type MobileCommunityHome = z.infer<typeof mobileCommunityHubHomeSchema>;
 export type MobileCommunityCirclePage = z.infer<
   typeof mobileCommunityCirclePageSchema
 >;

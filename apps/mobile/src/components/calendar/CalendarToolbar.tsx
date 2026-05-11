@@ -1,7 +1,7 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface CalendarToolbarProps {
   monthLabel: string;
@@ -30,20 +30,24 @@ export function CalendarToolbar({
           backgroundColor: tokens.colors.discoverToolbar,
           borderColor: tokens.colors.discoverToolbarBorderStrong,
           shadowColor: tokens.colors.textPrimary,
-          shadowOpacity: tokens.mode === 'light' ? 0.06 : 0,
+          shadowOpacity: tokens.mode === "light" ? 0.06 : 0,
         },
       ]}
     >
       <Pressable
         accessibilityHint="Long press to jump to a date"
-        accessibilityLabel={isCollapsed ? 'Expand calendar' : 'Collapse calendar'}
+        accessibilityLabel={
+          isCollapsed ? "Expand calendar" : "Collapse calendar"
+        }
         delayLongPress={320}
         onLongPress={onOpenMonthPicker}
         onPress={onToggleCalendar}
         style={({ pressed }) => [
           styles.monthButton,
           {
-            backgroundColor: pressed ? tokens.colors.discoverToolbarStrong : 'transparent',
+            backgroundColor: pressed
+              ? tokens.colors.discoverToolbarStrong
+              : "transparent",
             opacity: pressed ? 0.86 : 1,
           },
         ]}
@@ -53,13 +57,13 @@ export function CalendarToolbar({
             color: tokens.colors.textPrimary,
             fontFamily: tokens.typography.sans,
             fontSize: 17,
-            fontWeight: '800',
+            fontWeight: "800",
           }}
         >
           {monthLabel}
         </Text>
         <FontAwesome
-          name={isCollapsed ? 'angle-down' : 'angle-up'}
+          name={isCollapsed ? "angle-down" : "angle-up"}
           size={15}
           color={tokens.colors.discoverTextSoft}
         />
@@ -83,7 +87,7 @@ export function CalendarToolbar({
             backgroundColor:
               pressed || activeFilterCount > 0
                 ? tokens.colors.discoverToolbarStrong
-                : 'transparent',
+                : "transparent",
             opacity: pressed ? 0.86 : 1,
           },
         ]}
@@ -111,7 +115,7 @@ export function CalendarToolbar({
                 color: tokens.colors.textInverse,
                 fontFamily: tokens.typography.mono,
                 fontSize: 11,
-                fontWeight: '700',
+                fontWeight: "700",
               }}
             >
               {activeFilterCount}
@@ -125,47 +129,47 @@ export function CalendarToolbar({
 
 const styles = StyleSheet.create({
   toolbarShell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 6,
     borderWidth: 1,
-    minHeight: 48,
-    padding: 4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    minHeight: 38,
+    padding: 3,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   monthButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
-    minHeight: 40,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    minHeight: 30,
+    paddingHorizontal: 8,
+    borderRadius: 4,
   },
   divider: {
     width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
     marginVertical: 8,
   },
   filterButton: {
-    minWidth: 40,
-    height: 40,
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    minWidth: 32,
+    height: 32,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   filterBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 4,
   },
 });

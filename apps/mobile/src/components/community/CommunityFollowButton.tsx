@@ -1,16 +1,16 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface CommunityFollowButtonProps {
   isFollowing: boolean;
   followsViewer?: boolean;
   isPending?: boolean;
   disabled?: boolean;
-  copyVariant?: 'follow' | 'connect';
-  size?: 'default' | 'compact';
-  appearance?: 'default' | 'floating';
+  copyVariant?: "follow" | "connect";
+  size?: "default" | "compact";
+  appearance?: "default" | "floating";
   showPlusIcon?: boolean;
   accessibilityLabel?: string;
   onPress?: () => void;
@@ -21,32 +21,32 @@ export function CommunityFollowButton({
   followsViewer = false,
   isPending = false,
   disabled = false,
-  copyVariant = 'follow',
-  size = 'default',
-  appearance = 'default',
+  copyVariant = "follow",
+  size = "default",
+  appearance = "default",
   showPlusIcon = false,
   accessibilityLabel,
   onPress,
 }: CommunityFollowButtonProps) {
   const { tokens } = useAppTheme();
-  const isFloating = appearance === 'floating';
+  const isFloating = appearance === "floating";
 
   const label =
-    copyVariant === 'connect'
+    copyVariant === "connect"
       ? isPending
-        ? 'Working...'
+        ? "Working..."
         : isFollowing
-          ? 'Connected'
+          ? "Connected"
           : followsViewer
-            ? 'Connect back'
-            : 'Connect'
+            ? "Connect back"
+            : "Connect"
       : isPending
-        ? 'Working...'
+        ? "Working..."
         : isFollowing
-          ? 'Following'
+          ? "Following"
           : followsViewer
-            ? 'Follow back'
-            : 'Follow';
+            ? "Follow back"
+            : "Follow";
 
   const borderColor = isFloating
     ? isFollowing
@@ -79,17 +79,19 @@ export function CommunityFollowButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        size === 'compact' && styles.buttonCompact,
+        size === "compact" && styles.buttonCompact,
         isFloating && styles.buttonFloating,
         {
-          borderRadius: tokens.radius.pill,
+          borderRadius: tokens.radius.md,
           borderColor,
           backgroundColor,
           shadowColor: tokens.shadow.shadowColor,
-          shadowOpacity: isFloating && !disabled && !isPending ? 0.08 : 0,
-          shadowRadius: isFloating ? 12 : 0,
-          shadowOffset: isFloating ? { width: 0, height: 6 } : { width: 0, height: 0 },
-          elevation: isFloating ? 2 : 0,
+          shadowOpacity: isFloating && !disabled && !isPending ? 0.03 : 0,
+          shadowRadius: isFloating ? 6 : 0,
+          shadowOffset: isFloating
+            ? { width: 0, height: 3 }
+            : { width: 0, height: 0 },
+          elevation: isFloating ? 1 : 0,
         },
         pressed && styles.pressed,
         (disabled || isPending) && styles.disabled,
@@ -100,13 +102,15 @@ export function CommunityFollowButton({
           style={{
             color: textColor,
             fontFamily: tokens.typography.sans,
-            fontSize: size === 'compact' ? 12 : 13,
-            fontWeight: '800',
+            fontSize: size === "compact" ? 12 : 13,
+            fontWeight: "800",
           }}
         >
           {label}
         </Text>
-        {showIcon ? <FontAwesome name="plus" size={12} color={textColor} /> : null}
+        {showIcon ? (
+          <FontAwesome name="plus" size={12} color={textColor} />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -114,26 +118,26 @@ export function CommunityFollowButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 38,
-    minWidth: 104,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 32,
+    minWidth: 88,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
   },
   buttonCompact: {
-    minHeight: 34,
-    minWidth: 96,
-    paddingHorizontal: 12,
+    minHeight: 28,
+    minWidth: 78,
+    paddingHorizontal: 8,
   },
   buttonFloating: {
-    minWidth: 112,
-    paddingHorizontal: 16,
+    minWidth: 92,
+    paddingHorizontal: 10,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   pressed: {
     opacity: 0.84,

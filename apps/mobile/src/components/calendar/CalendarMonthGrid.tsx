@@ -1,25 +1,19 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { useMemo, useRef } from 'react';
-import {
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FontAwesome } from "@expo/vector-icons";
+import { useMemo, useRef } from "react";
+import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type {
   LocalCalendarDateKey,
   MobileCalendarEvent,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
 import {
   buildCalendarWeeks,
   formatEventDateKey,
   formatMonthLabel,
   parseLocalDateKey,
-} from '../../lib/calendarDateUtils';
-import { useAppTheme } from '../../providers/ThemeProvider';
+} from "../../lib/calendarDateUtils";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface CalendarMonthGridProps {
   monthStart: LocalCalendarDateKey;
@@ -43,7 +37,7 @@ export function CalendarMonthGrid({
   const { tokens } = useAppTheme();
   const monthDate = useMemo(
     () => parseLocalDateKey(monthStart) ?? new Date(),
-    [monthStart]
+    [monthStart],
   );
   const weeks = useMemo(() => buildCalendarWeeks(monthDate), [monthDate]);
   const swipeLockedRef = useRef(false);
@@ -55,7 +49,7 @@ export function CalendarMonthGrid({
       const dayKey = formatEventDateKey(
         event.startTime,
         event.endTime,
-        event.timezone
+        event.timezone,
       );
       const color =
         (event.eventTypeId ? eventTypeColors[event.eventTypeId] : null) ??
@@ -93,7 +87,7 @@ export function CalendarMonthGrid({
           swipeLockedRef.current = false;
         },
       }),
-    [onChangeMonth]
+    [onChangeMonth],
   );
 
   return (
@@ -132,7 +126,7 @@ export function CalendarMonthGrid({
             color: tokens.colors.textPrimary,
             fontFamily: tokens.typography.sans,
             fontSize: 15,
-            fontWeight: '700',
+            fontWeight: "700",
           }}
         >
           {formatMonthLabel(monthDate)}
@@ -159,7 +153,7 @@ export function CalendarMonthGrid({
       </View>
 
       <View style={styles.weekdayRow}>
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
           <Text
             key={day}
             style={[
@@ -199,10 +193,10 @@ export function CalendarMonthGrid({
                     {
                       backgroundColor: isSelected
                         ? tokens.colors.textPrimary
-                        : 'transparent',
+                        : "transparent",
                       borderColor: isSelected
                         ? tokens.colors.textPrimary
-                        : 'transparent',
+                        : "transparent",
                       opacity: pressed ? 0.84 : 1,
                     },
                   ]}
@@ -218,7 +212,7 @@ export function CalendarMonthGrid({
                             : tokens.colors.textTertiary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 13,
-                      fontWeight: isSelected || day.isToday ? '700' : '500',
+                      fontWeight: isSelected || day.isToday ? "700" : "500",
                       opacity: day.inCurrentMonth ? 1 : 0.5,
                     }}
                   >
@@ -253,58 +247,58 @@ export function CalendarMonthGrid({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
+    borderRadius: 6,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 16,
-    gap: 12,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 8,
   },
   monthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   navButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   weekdayRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
   },
   weekday: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   grid: {
-    gap: 6,
+    gap: 4,
   },
   weekRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
   },
   dayButton: {
     flex: 1,
-    minHeight: 46,
-    borderRadius: 14,
+    minHeight: 38,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 4,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   dotRow: {
     minHeight: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 3,
   },
   dot: {

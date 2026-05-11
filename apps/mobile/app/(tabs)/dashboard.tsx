@@ -1,39 +1,32 @@
-import { useCallback, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 
 import type {
   MobileCommunityNetworkingSpeakerMatch,
   MobileNetworkingContactReference,
   MobileDashboardSummary,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
 import {
   HeaderActionButton,
   MobilePage,
-} from '../../src/components/chrome/MobilePage';
-import { InlineNotice } from '../../src/components/chrome/InlineNotice';
-import { KureButton } from '../../src/components/chrome/KureButton';
-import { DashboardNetworkPulseCard } from '../../src/components/dashboard/DashboardNetworkPulseCard';
-import { ScreenState } from '../../src/components/chrome/ScreenState';
-import { DashboardRecommendationsCarousel } from '../../src/components/dashboard/DashboardRecommendationsCarousel';
-import { DashboardUpcomingCommitmentsCard } from '../../src/components/dashboard/DashboardUpcomingCommitmentsCard';
-import { EventImageSurface } from '../../src/components/shared/EventImageSurface';
+} from "../../src/components/chrome/MobilePage";
+import { InlineNotice } from "../../src/components/chrome/InlineNotice";
+import { KureButton } from "../../src/components/chrome/KureButton";
+import { DashboardNetworkPulseCard } from "../../src/components/dashboard/DashboardNetworkPulseCard";
+import { ScreenState } from "../../src/components/chrome/ScreenState";
+import { DashboardRecommendationsCarousel } from "../../src/components/dashboard/DashboardRecommendationsCarousel";
+import { EventImageSurface } from "../../src/components/shared/EventImageSurface";
 import {
   loadMobileCommunityHome,
   loadMobileDashboardSummary,
-} from '../../src/lib/mobileApi';
-import { useAppTheme } from '../../src/providers/ThemeProvider';
+} from "../../src/lib/mobileApi";
+import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 type DashboardAttentionItem = {
   id: string;
-  tone: 'warning' | 'info';
+  tone: "warning" | "info";
   label: string;
   body: string;
   action: string;
@@ -43,7 +36,7 @@ type DashboardAttentionItem = {
 function formatHeroMeta(
   startTime?: string,
   location?: string | null,
-  daysUntil?: number
+  daysUntil?: number,
 ) {
   if (!startTime) {
     return null;
@@ -51,24 +44,24 @@ function formatHeroMeta(
 
   const start = new Date(startTime);
   const dateLabel = start.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 
   const parts = [dateLabel];
   if (location?.trim()) {
     parts.push(location.trim());
   }
-  if (typeof daysUntil === 'number') {
-    parts.push(daysUntil === 0 ? 'Today' : `${daysUntil} days away`);
+  if (typeof daysUntil === "number") {
+    parts.push(daysUntil === 0 ? "Today" : `${daysUntil} days away`);
   }
 
-  return parts.join(' • ');
+  return parts.join(" • ");
 }
 
 export default function DashboardScreen() {
-  const { tokens, resolvedTheme } = useAppTheme();
+  const { tokens } = useAppTheme();
   const hasLoadedRef = useRef(false);
   const [data, setData] = useState<MobileDashboardSummary | null>(null);
   const [speakerMatches, setSpeakerMatches] = useState<
@@ -77,73 +70,80 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadSummary = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
-    if (mode === 'initial') {
-      setLoading(true);
-    }
-
-    try {
-      const [summaryResult, communityResult] = await Promise.allSettled([
-        loadMobileDashboardSummary(),
-        loadMobileCommunityHome(),
-      ]);
-
-      if (summaryResult.status !== 'fulfilled') {
-        throw summaryResult.reason;
+  const loadSummary = useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      if (mode === "initial") {
+        setLoading(true);
       }
 
-      const summary = summaryResult.value;
-      const nextSpeakerMatches =
-        communityResult.status === 'fulfilled'
-          ? (() => {
-              const seen = new Set<string>();
-              return (communityResult.value.speakerMatches ?? []).filter((match) => {
-                const key = match.speaker.id || match.speaker.name;
-                if (seen.has(key)) {
-                  return false;
-                }
+      try {
+        const [summaryResult, communityResult] = await Promise.allSettled([
+          loadMobileDashboardSummary(),
+          loadMobileCommunityHome(),
+        ]);
 
-                seen.add(key);
-                return true;
-              });
-            })()
-          : [];
+        if (summaryResult.status !== "fulfilled") {
+          throw summaryResult.reason;
+        }
 
-      setData(summary);
-      setSpeakerMatches(nextSpeakerMatches);
-      setError(null);
-    } catch (nextError) {
-      setSpeakerMatches([]);
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : 'Unable to load dashboard'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        const summary = summaryResult.value;
+        const nextSpeakerMatches =
+          communityResult.status === "fulfilled"
+            ? (() => {
+                const seen = new Set<string>();
+                return (communityResult.value.speakerMatches ?? []).filter(
+                  (match) => {
+                    const key = match.speaker.id || match.speaker.name;
+                    if (seen.has(key)) {
+                      return false;
+                    }
+
+                    seen.add(key);
+                    return true;
+                  },
+                );
+              })()
+            : [];
+
+        setData(summary);
+        setSpeakerMatches(nextSpeakerMatches);
+        setError(null);
+      } catch (nextError) {
+        setSpeakerMatches([]);
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : "Unable to load dashboard",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      const mode = hasLoadedRef.current ? 'refresh' : 'initial';
+      const mode = hasLoadedRef.current ? "refresh" : "initial";
       hasLoadedRef.current = true;
       void loadSummary(mode);
-    }, [loadSummary])
+    }, [loadSummary]),
   );
 
   const dashboard = data;
   const topRecommendation = dashboard?.topRecommendation ?? null;
   const recommendationScore =
-    typeof topRecommendation?.event.score === 'number'
+    typeof topRecommendation?.event.score === "number"
       ? Math.round(topRecommendation.event.score)
       : null;
   const pipelineScore =
-    dashboard?.insights?.pipeline.avgScore && dashboard.insights.pipeline.avgScore > 0
+    dashboard?.insights?.pipeline.avgScore &&
+    dashboard.insights.pipeline.avgScore > 0
       ? dashboard.insights.pipeline.avgScore
-      : recommendationScore ?? 0;
+      : (recommendationScore ?? 0);
   const highFitCount =
-    dashboard?.insights?.pipeline.highFitCount && dashboard.insights.pipeline.highFitCount > 0
+    dashboard?.insights?.pipeline.highFitCount &&
+    dashboard.insights.pipeline.highFitCount > 0
       ? dashboard.insights.pipeline.highFitCount
       : pipelineScore >= 60
         ? 1
@@ -157,20 +157,24 @@ export default function DashboardScreen() {
   const followThroughRate =
     dashboard && followThroughTotal > 0
       ? Math.round(
-          ((dashboard.insights?.funnel.attended ?? 0) / followThroughTotal) * 100
+          ((dashboard.insights?.funnel.attended ?? 0) / followThroughTotal) *
+            100,
         )
       : 0;
   const unratedAttendedCount =
     dashboard?.careerOutcomes?.unratedAttendedCount ?? 0;
-  const nextNetworkingContact = dashboard?.networkPulse?.nextContactToConfirm ?? null;
+  const nextNetworkingContact =
+    dashboard?.networkPulse?.nextContactToConfirm ?? null;
   const openNetworkingContact = useCallback(
     (contact: MobileNetworkingContactReference) => {
-      if (contact.kind === 'speaker') {
+      if (contact.kind === "speaker") {
         router.push({
-          pathname: '/speaker/[id]',
+          pathname: "/speaker/[id]",
           params: {
             id: contact.id,
-            ...(contact.sourceEvent?.id ? { eventId: contact.sourceEvent.id } : {}),
+            ...(contact.sourceEvent?.id
+              ? { eventId: contact.sourceEvent.id }
+              : {}),
             ...(contact.sourceEvent?.title
               ? { eventTitle: contact.sourceEvent.title }
               : {}),
@@ -181,71 +185,74 @@ export default function DashboardScreen() {
 
       if (contact.username) {
         router.push({
-          pathname: '/profile/[username]',
+          pathname: "/profile/[username]",
           params: { username: contact.username },
         });
       }
     },
-    []
+    [],
   );
 
   const attentionItems: DashboardAttentionItem[] = dashboard
     ? [
         !dashboard.onboardingState.hasCompleted
           ? {
-              id: 'onboarding',
-              tone: 'warning' as const,
-              label: 'Profile incomplete',
-              body: 'Finish onboarding to improve ranking and planning quality.',
-              action: dashboard.onboardingState.ctaLabel ?? 'Resume onboarding',
+              id: "onboarding",
+              tone: "warning" as const,
+              label: "Profile incomplete",
+              body: "Finish onboarding to improve ranking and planning quality.",
+              action: dashboard.onboardingState.ctaLabel ?? "Resume onboarding",
               onPress: () =>
                 router.push({
-                  pathname: '/onboarding',
-                  params: { resume: '1' },
+                  pathname: "/onboarding",
+                  params: { resume: "1" },
                 }),
             }
           : null,
         nextCommitment
           ? {
-              id: 'prep',
-              tone: 'info' as const,
+              id: "prep",
+              tone: "info" as const,
               label: nextCommitment.event.title,
-              body: nextCommitment.daysUntil === 0
-                ? 'Happening today'
-                : `Coming up in ${nextCommitment.daysUntil} day${nextCommitment.daysUntil === 1 ? '' : 's'}`,
-              action: 'Open event',
+              body:
+                nextCommitment.daysUntil === 0
+                  ? "Happening today"
+                  : `Coming up in ${nextCommitment.daysUntil} day${nextCommitment.daysUntil === 1 ? "" : "s"}`,
+              action: "Open event",
               onPress: () =>
                 router.push({
-                  pathname: '/event/[id]',
+                  pathname: "/event/[id]",
                   params: { id: nextCommitment.event.id },
                 }),
             }
           : null,
         dashboard.careerOutcomes?.nextEventToRate
           ? {
-              id: 'feedback',
-              tone: 'warning' as const,
-              label: 'Feedback needed',
+              id: "feedback",
+              tone: "warning" as const,
+              label: "Feedback needed",
               body: dashboard.careerOutcomes.nextEventToRate.title,
-              action: 'Open event',
+              action: "Open event",
               onPress: () =>
                 router.push({
-                  pathname: '/event/[id]',
-                  params: { id: dashboard.careerOutcomes?.nextEventToRate?.id ?? '' },
+                  pathname: "/event/[id]",
+                  params: {
+                    id: dashboard.careerOutcomes?.nextEventToRate?.id ?? "",
+                  },
                 }),
             }
           : null,
         nextNetworkingContact &&
-        (nextNetworkingContact.kind === 'speaker' ||
+        (nextNetworkingContact.kind === "speaker" ||
           Boolean(nextNetworkingContact.username))
           ? {
-              id: 'connections-follow-up',
-              tone: 'info' as const,
-              label: 'Confirm connection',
+              id: "connections-follow-up",
+              tone: "info" as const,
+              label: "Confirm connection",
               body: nextNetworkingContact.sourceEvent?.title
                 ? `${nextNetworkingContact.name} · ${nextNetworkingContact.sourceEvent.title}`
                 : nextNetworkingContact.name,
-              action: 'Open contact',
+              action: "Open contact",
               onPress: () => openNetworkingContact(nextNetworkingContact),
             }
           : null,
@@ -254,10 +261,10 @@ export default function DashboardScreen() {
   const primaryAttention = attentionItems[0] ?? null;
   const secondaryAttentionCount = Math.max(0, attentionItems.length - 1);
   const pipelineStatus =
-    pipelineScore >= 67 ? 'Strong' : pipelineScore >= 33 ? 'Fair' : 'Low';
+    pipelineScore >= 67 ? "Strong" : pipelineScore >= 33 ? "Fair" : "Low";
   const pipelineStatusColor =
     pipelineScore >= 67
-      ? '#2563EB'
+      ? tokens.colors.accent
       : pipelineScore >= 33
         ? tokens.colors.accent
         : tokens.colors.warning;
@@ -272,40 +279,40 @@ export default function DashboardScreen() {
   const heroEyebrow = topRecommendation
     ? null
     : primaryAttention
-      ? 'Needs attention'
-      : 'Next move';
+      ? "Needs attention"
+      : "Next move";
   const heroTitle = topRecommendation
     ? topRecommendation.event.title
     : primaryAttention
       ? primaryAttention.label
-      : 'Nothing urgent. Your next strong-fit event is one tap away.';
+      : "Nothing urgent. Your next strong-fit event is one tap away.";
   const heroMeta = topRecommendation
     ? formatHeroMeta(
         topRecommendation.event.startTime,
         topRecommendation.event.location,
-        topRecommendation.daysUntil
+        topRecommendation.daysUntil,
       )
     : null;
   const heroBadgeLabel = topRecommendation
     ? recommendationScore != null
       ? `${recommendationScore}% Match`
-      : topRecommendation.impactLabel ?? 'Strong fit'
+      : (topRecommendation.impactLabel ?? "Strong fit")
     : null;
   const heroBody = topRecommendation
     ? null
     : primaryAttention
       ? primaryAttention.body
-      : dashboard?.monthlyPulse?.deltaLabel ??
-        'Stay in motion by checking the latest relevant events in Discover.';
+      : (dashboard?.monthlyPulse?.deltaLabel ??
+        "Stay in motion by checking the latest relevant events in Discover.");
   const heroCtaPress = topRecommendation
     ? () =>
         router.push({
-          pathname: '/event/[id]',
+          pathname: "/event/[id]",
           params: { id: topRecommendation.event.id },
         })
     : primaryAttention
       ? primaryAttention.onPress
-      : () => router.push('/discover');
+      : () => router.push("/discover");
 
   return (
     <MobilePage
@@ -314,22 +321,12 @@ export default function DashboardScreen() {
       showAccentGlow={false}
       contentStyle={styles.pageContent}
     >
-      <LinearGradient
-        colors={
-          resolvedTheme === 'light'
-            ? ['rgba(37,99,235,0.06)', 'rgba(255,255,255,0)']
-            : ['rgba(96,165,250,0.10)', 'rgba(5,6,7,0)']
-        }
-        style={styles.pageGlow}
-        start={{ x: 0.12, y: 0 }}
-        end={{ x: 0.85, y: 1 }}
-      />
       <View style={styles.canvas}>
         <View style={styles.topBar}>
           <View />
           <HeaderActionButton
             label="Settings"
-            onPress={() => router.push('../settings')}
+            onPress={() => router.push("../settings")}
           />
         </View>
 
@@ -348,7 +345,10 @@ export default function DashboardScreen() {
             title="Dashboard unavailable"
             description={error}
             action={
-              <KureButton variant="secondary" onPress={() => void loadSummary()}>
+              <KureButton
+                variant="secondary"
+                onPress={() => void loadSummary()}
+              >
                 Try again
               </KureButton>
             }
@@ -365,7 +365,7 @@ export default function DashboardScreen() {
                   style={[
                     styles.heroStatusCard,
                     {
-                      borderColor: 'rgba(245, 158, 11, 0.28)',
+                      borderColor: tokens.colors.border,
                     },
                   ]}
                   pressedStyle={styles.heroStatusPressed}
@@ -374,10 +374,7 @@ export default function DashboardScreen() {
                     style={[
                       styles.heroImageOverlay,
                       {
-                        backgroundColor:
-                          resolvedTheme === 'light'
-                            ? 'rgba(9, 11, 14, 0.42)'
-                            : 'rgba(5, 7, 10, 0.56)',
+                        backgroundColor: tokens.colors.overlay,
                       },
                     ]}
                   />
@@ -390,15 +387,15 @@ export default function DashboardScreen() {
                           styles.heroStatusBadgeOnImage,
                         ]}
                       >
-                      <Text
-                        style={[
-                          styles.heroStatusBadgeText,
-                          {
-                            color: '#F8FAFC',
+                        <Text
+                          style={[
+                            styles.heroStatusBadgeText,
+                            {
+                              color: tokens.colors.textPrimary,
                               fontFamily: tokens.typography.sans,
                             },
-                      ]}
-                    >
+                          ]}
+                        >
                           {heroBadgeLabel}
                         </Text>
                       </View>
@@ -409,7 +406,7 @@ export default function DashboardScreen() {
                       style={[
                         styles.heroStatusTitle,
                         {
-                          color: '#F8FAFC',
+                          color: tokens.colors.textPrimary,
                           fontFamily: tokens.typography.sans,
                         },
                       ]}
@@ -421,7 +418,7 @@ export default function DashboardScreen() {
                         style={[
                           styles.heroStatusMeta,
                           {
-                            color: 'rgba(248, 250, 252, 0.88)',
+                            color: tokens.colors.textSecondary,
                             fontFamily: tokens.typography.sans,
                           },
                         ]}
@@ -434,7 +431,7 @@ export default function DashboardScreen() {
                         style={[
                           styles.heroStatusBody,
                           {
-                            color: 'rgba(248, 250, 252, 0.8)',
+                            color: tokens.colors.textSecondary,
                             fontFamily: tokens.typography.sans,
                           },
                         ]}
@@ -449,7 +446,7 @@ export default function DashboardScreen() {
                       style={[
                         styles.heroFooterArrow,
                         {
-                          color: '#F8FAFC',
+                          color: tokens.colors.textPrimary,
                           fontFamily: tokens.typography.mono,
                         },
                       ]}
@@ -465,10 +462,9 @@ export default function DashboardScreen() {
                     styles.heroStatusCard,
                     {
                       borderColor: primaryAttention
-                        ? 'rgba(251, 191, 36, 0.28)'
+                        ? tokens.colors.borderStrong
                         : tokens.colors.borderStrong,
-                      backgroundColor:
-                        resolvedTheme === 'light' ? '#FFF3D6' : 'rgba(43, 31, 10, 0.98)',
+                      backgroundColor: tokens.colors.surface,
                     },
                     pressed && styles.heroStatusPressed,
                   ]}
@@ -533,8 +529,7 @@ export default function DashboardScreen() {
                     styles.healthCard,
                     {
                       borderColor: tokens.colors.border,
-                      backgroundColor:
-                        resolvedTheme === 'light' ? '#CFECDD' : 'rgba(13, 34, 24, 0.98)',
+                      backgroundColor: tokens.colors.surface,
                     },
                   ]}
                 >
@@ -542,7 +537,10 @@ export default function DashboardScreen() {
                     <Text
                       style={[
                         styles.kpiCardLabel,
-                        { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                        {
+                          color: tokens.colors.textPrimary,
+                          fontFamily: tokens.typography.sans,
+                        },
                       ]}
                     >
                       Follow-through
@@ -550,14 +548,17 @@ export default function DashboardScreen() {
                     <Text
                       style={[
                         styles.healthValue,
-                        { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                        {
+                          color: tokens.colors.textPrimary,
+                          fontFamily: tokens.typography.sans,
+                        },
                       ]}
                     >
-                      {followThroughTotal > 0 ? `${followThroughRate}%` : '0%'}
+                      {followThroughTotal > 0 ? `${followThroughRate}%` : "0%"}
                     </Text>
                   </View>
                   <View style={styles.stepTrack}>
-                    {(['Saved', 'RSVP', 'Attended'] as const).map((lbl, i) => (
+                    {(["Saved", "RSVP", "Attended"] as const).map((lbl, i) => (
                       <View key={lbl} style={styles.stepItem}>
                         <View style={styles.stepCountSpacer} />
                         <View
@@ -577,7 +578,7 @@ export default function DashboardScreen() {
                     ))}
                   </View>
                   <View style={styles.stepLabelRow}>
-                    {(['Saved', 'RSVP', 'Attended'] as const).map((lbl, i) => (
+                    {(["Saved", "RSVP", "Attended"] as const).map((lbl, i) => (
                       <Text
                         key={lbl}
                         style={[
@@ -602,8 +603,8 @@ export default function DashboardScreen() {
                     ]}
                   >
                     {pendingConversion > 0
-                      ? 'RSVP pending attendance'
-                      : 'No pending follow-up'}
+                      ? "RSVP pending attendance"
+                      : "No pending follow-up"}
                   </Text>
                 </View>
 
@@ -613,8 +614,7 @@ export default function DashboardScreen() {
                       styles.utilityCard,
                       {
                         borderColor: tokens.colors.border,
-                        backgroundColor:
-                          resolvedTheme === 'light' ? '#D5E4FB' : 'rgba(18, 31, 58, 0.98)',
+                        backgroundColor: tokens.colors.surface,
                       },
                     ]}
                   >
@@ -624,7 +624,10 @@ export default function DashboardScreen() {
                           <Text
                             style={[
                               styles.utilityValue,
-                              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                              {
+                                color: tokens.colors.textPrimary,
+                                fontFamily: tokens.typography.sans,
+                              },
                             ]}
                           >
                             {pipelineScore}
@@ -632,7 +635,10 @@ export default function DashboardScreen() {
                           <Text
                             style={[
                               styles.scoreDenom,
-                              { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans },
+                              {
+                                color: tokens.colors.textTertiary,
+                                fontFamily: tokens.typography.sans,
+                              },
                             ]}
                           >
                             /100
@@ -642,7 +648,10 @@ export default function DashboardScreen() {
                         <Text
                           style={[
                             styles.utilityValueMuted,
-                            { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                            {
+                              color: tokens.colors.textPrimary,
+                              fontFamily: tokens.typography.sans,
+                            },
                           ]}
                         >
                           Pipeline score
@@ -650,7 +659,10 @@ export default function DashboardScreen() {
                       )}
                       {pipelineScore > 0 ? (
                         <View
-                          style={[styles.statusChip, { borderColor: pipelineStatusColor }]}
+                          style={[
+                            styles.statusChip,
+                            { borderColor: pipelineStatusColor },
+                          ]}
                         >
                           <Text
                             style={[
@@ -669,10 +681,13 @@ export default function DashboardScreen() {
                     <Text
                       style={[
                         styles.kpiCardLabel,
-                        { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+                        {
+                          color: tokens.colors.textSecondary,
+                          fontFamily: tokens.typography.sans,
+                        },
                       ]}
                     >
-                      {pipelineScore > 0 ? 'Top picks fit' : 'No score yet'}
+                      {pipelineScore > 0 ? "Top picks fit" : "No score yet"}
                     </Text>
                     <View style={styles.utilityViz}>
                       <View
@@ -697,14 +712,14 @@ export default function DashboardScreen() {
                           {
                             color: tokens.colors.textSecondary,
                             fontFamily: tokens.typography.sans,
-                            textAlign: 'left',
+                            textAlign: "left",
                             marginTop: 6,
                           },
                         ]}
                       >
                         {highFitCount > 0
-                          ? `${highFitCount} high-fit top pick${highFitCount === 1 ? '' : 's'}`
-                          : 'No high-fit top picks yet'}
+                          ? `${highFitCount} high-fit top pick${highFitCount === 1 ? "" : "s"}`
+                          : "No high-fit top picks yet"}
                       </Text>
                     </View>
                   </View>
@@ -714,26 +729,37 @@ export default function DashboardScreen() {
                       styles.utilityCard,
                       {
                         borderColor: tokens.colors.border,
-                        backgroundColor:
-                          resolvedTheme === 'light' ? '#E7DDF6' : 'rgba(31, 18, 50, 0.98)',
+                        backgroundColor: tokens.colors.surface,
                       },
                     ]}
                   >
                     <Text
                       style={[
-                        unratedAttendedCount > 0 ? styles.utilityValue : styles.utilityValueMuted,
-                        { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+                        unratedAttendedCount > 0
+                          ? styles.utilityValue
+                          : styles.utilityValueMuted,
+                        {
+                          color: tokens.colors.textPrimary,
+                          fontFamily: tokens.typography.sans,
+                        },
                       ]}
                     >
-                      {unratedAttendedCount > 0 ? String(unratedAttendedCount) : 'Ratings follow-up'}
+                      {unratedAttendedCount > 0
+                        ? String(unratedAttendedCount)
+                        : "Ratings follow-up"}
                     </Text>
                     <Text
                       style={[
                         styles.kpiCardLabel,
-                        { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+                        {
+                          color: tokens.colors.textSecondary,
+                          fontFamily: tokens.typography.sans,
+                        },
                       ]}
                     >
-                      {unratedAttendedCount > 0 ? 'Ratings follow-up' : 'No ratings to follow up'}
+                      {unratedAttendedCount > 0
+                        ? "Ratings follow-up"
+                        : "No ratings to follow up"}
                     </Text>
                     <View style={styles.utilityViz}>
                       <View style={styles.ratingDots}>
@@ -745,7 +771,7 @@ export default function DashboardScreen() {
                               {
                                 backgroundColor:
                                   index < unratedAttendedCount
-                                    ? (resolvedTheme === 'light' ? '#6D28D9' : '#A78BFA')
+                                    ? tokens.colors.accent
                                     : tokens.colors.borderStrong,
                               },
                             ]}
@@ -758,14 +784,14 @@ export default function DashboardScreen() {
                           {
                             color: tokens.colors.textSecondary,
                             fontFamily: tokens.typography.sans,
-                            textAlign: 'left',
+                            textAlign: "left",
                             marginTop: 6,
                           },
                         ]}
                       >
                         {unratedAttendedCount > 0
-                          ? 'Rate to improve recommendations'
-                          : 'Attend events to unlock ratings'}
+                          ? "Rate to improve recommendations"
+                          : "Attend events to unlock ratings"}
                       </Text>
                     </View>
                   </View>
@@ -824,7 +850,7 @@ export default function DashboardScreen() {
                           styles.attentionDot,
                           {
                             backgroundColor:
-                              item.tone === 'warning'
+                              item.tone === "warning"
                                 ? tokens.colors.warning
                                 : tokens.colors.accent,
                           },
@@ -863,18 +889,6 @@ export default function DashboardScreen() {
               </View>
             ) : null}
 
-            <DashboardUpcomingCommitmentsCard
-              commitments={dashboard.upcomingCommitments ?? []}
-              showOpenSlot={dashboard.showOpenCommitmentSlot}
-              onOpenEvent={(eventId) =>
-                router.push({
-                  pathname: '/event/[id]',
-                  params: { id: eventId },
-                })
-              }
-              onExploreEvents={() => router.push('/discover')}
-            />
-
             {dashboard.networkPulse ? (
               <DashboardNetworkPulseCard
                 networkPulse={dashboard.networkPulse}
@@ -885,11 +899,11 @@ export default function DashboardScreen() {
                 }
                 speakerMatches={speakerMatches}
                 onOpenRecommendedSpeakers={() =>
-                  router.push('/dashboard/recommended-speakers')
+                  router.push("/dashboard/recommended-speakers")
                 }
                 onOpenPendingContact={
                   nextNetworkingContact &&
-                  (nextNetworkingContact.kind === 'speaker' ||
+                  (nextNetworkingContact.kind === "speaker" ||
                     Boolean(nextNetworkingContact.username))
                     ? () => openNetworkingContact(nextNetworkingContact)
                     : undefined
@@ -902,11 +916,11 @@ export default function DashboardScreen() {
                 recommendations={dashboard.recommendations}
                 onOpenEvent={(eventId) =>
                   router.push({
-                    pathname: '/event/[id]',
+                    pathname: "/event/[id]",
                     params: { id: eventId },
                   })
                 }
-                onExploreMore={() => router.push('/discover')}
+                onExploreMore={() => router.push("/discover")}
               />
             ) : null}
 
@@ -934,85 +948,77 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   pageContent: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 18,
   },
-  pageGlow: {
-    position: 'absolute',
-    top: -18,
-    left: -20,
-    right: -20,
-    height: 260,
-    borderRadius: 260,
-  },
   canvas: {
-    width: '100%',
+    width: "100%",
     maxWidth: 430,
-    gap: 16,
+    gap: 10,
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 16,
   },
   stack: {
-    gap: 16,
+    gap: 10,
   },
   summaryHeader: {
-    gap: 8,
+    gap: 5,
   },
   summaryTopline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   summaryCopy: {
-    gap: 6,
+    gap: 3,
   },
   summaryEyebrow: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    letterSpacing: 0.66,
+    textTransform: "uppercase",
   },
   summaryTitle: {
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '800',
-    letterSpacing: -1,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "700",
+    letterSpacing: -0.24,
     maxWidth: 320,
   },
   summaryBody: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     maxWidth: 340,
   },
   summaryChip: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   summaryChipText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "600",
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   statusBoard: {
     gap: 10,
   },
   heroStatusCard: {
-    borderRadius: 22,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 10,
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    position: 'relative',
+    gap: 8,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    position: "relative",
   },
   heroStatusPressed: {
     opacity: 0.96,
@@ -1022,82 +1028,81 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   heroStatusTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   heroStatusBadge: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   heroStatusBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "600",
     letterSpacing: 0.4,
   },
   heroStatusBadgeOnImage: {
-    backgroundColor: 'rgba(9, 11, 14, 0.52)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: "transparent",
   },
   heroStatusCopy: {
     gap: 4,
   },
   heroStatusEyebrow: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   heroStatusTitle: {
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: '800',
-    letterSpacing: -0.9,
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: "700",
+    letterSpacing: -0.24,
   },
   heroStatusMeta: {
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   heroStatusBody: {
     fontSize: 13,
     lineHeight: 18,
   },
   heroStatusFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
     marginTop: 6,
   },
   heroFooterArrow: {
     fontSize: 18,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   statusSideColumn: {
     gap: 10,
   },
   healthCard: {
-    borderRadius: 20,
+    borderRadius: 6,
     borderWidth: 1,
     gap: 6,
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   healthValue: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.4,
   },
   stepTrack: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: 8,
     marginTop: 2,
   },
@@ -1109,12 +1114,12 @@ const styles = StyleSheet.create({
     height: 22,
   },
   stepSegment: {
-    width: '100%',
+    width: "100%",
     height: 14,
-    borderRadius: 999,
+    borderRadius: 2,
   },
   stepLabelRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 1,
   },
@@ -1122,8 +1127,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   stepHelperText: {
     fontSize: 12,
@@ -1132,35 +1137,35 @@ const styles = StyleSheet.create({
   },
   healthTrack: {
     height: 10,
-    borderRadius: 999,
-    overflow: 'hidden',
+    borderRadius: 2,
+    overflow: "hidden",
   },
   healthFill: {
-    height: '100%',
-    borderRadius: 999,
+    height: "100%",
+    borderRadius: 2,
   },
   statusChip: {
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: 2,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   statusChipText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   kpiTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
   },
   kpiIconBadge: {
     width: 38,
     height: 38,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   kpiIconText: {
     fontSize: 18,
@@ -1170,29 +1175,29 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   utilityRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   utilityCard: {
     flex: 1,
     minHeight: 140,
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
     gap: 6,
-    overflow: 'hidden',
+    overflow: "hidden",
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   utilityLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   utilityValue: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '800',
+    fontWeight: "700",
     letterSpacing: -0.6,
   },
   utilityDetail: {
@@ -1201,57 +1206,57 @@ const styles = StyleSheet.create({
   },
   utilityViz: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   kpiCardLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.1,
   },
   barLabel: {
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   ratingDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingTop: 6,
   },
   ratingDot: {
     flex: 1,
     height: 12,
-    borderRadius: 999,
+    borderRadius: 2,
   },
   attentionCard: {
-    borderRadius: 22,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   attentionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 12,
   },
   attentionTitle: {
     fontSize: 17,
     lineHeight: 22,
-    fontWeight: '800',
+    fontWeight: "700",
   },
   attentionMeta: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   attentionList: {
     gap: 0,
   },
   attentionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -1259,7 +1264,7 @@ const styles = StyleSheet.create({
   attentionDot: {
     width: 8,
     height: 8,
-    borderRadius: 999,
+    borderRadius: 2,
   },
   attentionCopy: {
     flex: 1,
@@ -1268,30 +1273,30 @@ const styles = StyleSheet.create({
   attentionLabel: {
     fontSize: 14,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   attentionBody: {
     fontSize: 12,
     lineHeight: 16,
   },
   kpiHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   scoreWithDenom: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 2,
   },
   scoreDenom: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   utilityValueMuted: {
     fontSize: 16,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.2,
   },
 });

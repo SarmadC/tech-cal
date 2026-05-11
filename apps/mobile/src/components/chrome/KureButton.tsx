@@ -1,16 +1,16 @@
-import type { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { PropsWithChildren } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function KureButton({
   children,
-  variant = 'primary',
+  variant = "primary",
   disabled = false,
   onPress,
   testID,
 }: PropsWithChildren<{
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   disabled?: boolean;
   onPress?: () => void | Promise<unknown>;
   testID?: string;
@@ -27,23 +27,23 @@ export function KureButton({
       style={({ pressed }) => [
         styles.base,
         {
-          borderRadius: tokens.radius.pill,
+          borderRadius: tokens.radius.md,
           borderColor: tokens.colors.border,
           backgroundColor: tokens.colors.surface,
         },
-        variant === 'primary' && {
+        variant === "primary" && {
           backgroundColor: tokens.colors.pillActive,
           borderColor: tokens.colors.pillActive,
         },
-        variant === 'secondary' && {
+        variant === "secondary" && {
           backgroundColor: tokens.colors.surface,
           borderColor: tokens.colors.borderStrong,
         },
-        variant === 'ghost' && {
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
+        variant === "ghost" && {
+          backgroundColor: "transparent",
+          borderColor: "transparent",
         },
-        variant === 'danger' && {
+        variant === "danger" && {
           backgroundColor: tokens.colors.danger,
           borderColor: tokens.colors.danger,
         },
@@ -57,9 +57,9 @@ export function KureButton({
             styles.label,
             {
               color:
-                variant === 'primary'
+                variant === "primary"
                   ? tokens.colors.pillActiveText
-                  : variant === 'danger'
+                  : variant === "danger"
                     ? tokens.colors.textInverse
                     : tokens.colors.textPrimary,
               fontFamily: tokens.typography.sans,
@@ -75,18 +75,18 @@ export function KureButton({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    minHeight: 32,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    justifyContent: "center",
+    paddingHorizontal: 12,
   },
   content: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "600",
   },
   pressed: {
     opacity: 0.86,

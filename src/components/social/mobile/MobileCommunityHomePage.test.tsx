@@ -1,14 +1,14 @@
-import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import MobileCommunityHomePage from '@/components/social/mobile/MobileCommunityHomePage';
-import type { CommunityFeedPageViewModel } from '@/components/social/community-page-shared';
+import type { ReactNode } from "react";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import MobileCommunityHomePage from "@/components/social/mobile/MobileCommunityHomePage";
+import type { CommunityFeedPageViewModel } from "@/components/social/community-page-shared";
 
 const mockRefresh = vi.fn();
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
 
-vi.mock('next/link', () => ({
+vi.mock("next/link", () => ({
   default: ({
     href,
     children,
@@ -23,24 +23,24 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mockRefresh }),
 }));
 
-vi.mock('@/contexts/SnackbarContext', () => ({
+vi.mock("@/contexts/SnackbarContext", () => ({
   useSnackbar: () => ({
     showSuccess: mockShowSuccess,
     showError: mockShowError,
   }),
 }));
 
-vi.mock('@/components/social/mobile/MobileCommunityFeedCell', () => ({
+vi.mock("@/components/social/mobile/MobileCommunityFeedCell", () => ({
   default: ({ post, variant }: { post: { id: string }; variant?: string }) => (
-    <div>{`mobile-feed:${post.id}:${variant || 'list'}`}</div>
+    <div>{`mobile-feed:${post.id}:${variant || "list"}`}</div>
   ),
 }));
 
-vi.mock('@/components/social/mobile/MobileCommunityCircleCell', () => ({
+vi.mock("@/components/social/mobile/MobileCommunityCircleCell", () => ({
   default: ({
     circle,
     variant,
@@ -50,158 +50,182 @@ vi.mock('@/components/social/mobile/MobileCommunityCircleCell', () => ({
   }) => <div>{`circle-cell:${circle.name}:${variant}`}</div>,
 }));
 
-vi.mock('@/components/ui/Icon', () => ({
+vi.mock("@/components/ui/Icon", () => ({
   MaterialIcon: ({ name }: { name: string }) => <span>{`icon:${name}`}</span>,
 }));
 
 function createViewModel(
-  overrides: Partial<CommunityFeedPageViewModel> = {}
+  overrides: Partial<CommunityFeedPageViewModel> = {},
 ): CommunityFeedPageViewModel {
   return {
     isSignedIn: true,
     feed: [
       {
-        id: 'post-1',
-        content: 'Hello world',
-        createdAt: '2026-03-18T12:00:00.000Z',
-        author: { id: 'author-1', fullName: 'Ada', avatarUrl: null },
-        circle: { slug: 'design', name: 'Design Systems' },
+        id: "post-1",
+        content: "Hello world",
+        createdAt: "2026-03-18T12:00:00.000Z",
+        author: { id: "author-1", fullName: "Ada", avatarUrl: null },
+        circle: { slug: "design", name: "Design Systems" },
         commentCount: 5,
         isTrending: true,
       },
       {
-        id: 'post-2',
-        content: 'Another post',
-        createdAt: '2026-03-18T13:00:00.000Z',
-        author: { id: 'author-2', fullName: 'Taylor', avatarUrl: null },
-        circle: { slug: 'mobile', name: 'Mobile Builders' },
+        id: "post-2",
+        content: "Another post",
+        createdAt: "2026-03-18T13:00:00.000Z",
+        author: { id: "author-2", fullName: "Taylor", avatarUrl: null },
+        circle: { slug: "mobile", name: "Mobile Builders" },
         commentCount: 2,
         isTrending: false,
       },
     ],
     circles: [
       {
-        id: 'circle-1',
-        name: 'Mobile Builders',
-        description: 'People building mobile products.',
-        href: '/circle/mobile-builders',
+        id: "circle-1",
+        slug: "mobile-builders",
+        name: "Mobile Builders",
+        description: "People building mobile products.",
+        href: "/circle/mobile-builders",
         isJoined: true,
         memberCount: 42,
       },
       {
-        id: 'circle-2',
-        name: 'AI Circle',
-        description: 'Applied ML teams.',
-        href: '/circle/ai',
+        id: "circle-2",
+        slug: "ai",
+        name: "AI Circle",
+        description: "Applied ML teams.",
+        href: "/circle/ai",
         isJoined: false,
         memberCount: 11,
       },
     ],
     upcomingEvents: [
       {
-        id: 'event-1',
-        slug: 'ios-week',
-        title: 'iOS Week',
-        startTime: '2026-04-01T18:00:00.000Z',
-        location: 'San Francisco',
-        format: 'in_person',
+        id: "event-1",
+        slug: "ios-week",
+        title: "iOS Week",
+        startTime: "2026-04-01T18:00:00.000Z",
+        location: "San Francisco",
+        format: "in_person",
       },
     ],
     ...overrides,
   };
 }
 
-describe('MobileCommunityHomePage', () => {
+describe("MobileCommunityHomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the flattened mobile home with feed, circles, and events inline', () => {
+  it("renders the flattened mobile home with feed, circles, and events inline", () => {
     render(<MobileCommunityHomePage viewModel={createViewModel()} />);
 
-    expect(screen.getByTestId('mobile-community-home-header')).toBeInTheDocument();
-    expect(screen.getByText('mobile-feed:post-1:list')).toBeInTheDocument();
-    expect(screen.getByText('mobile-feed:post-2:list')).toBeInTheDocument();
-    expect(screen.getByText('Circles')).toBeInTheDocument();
-    expect(screen.getByText('circle-cell:Mobile Builders:joined')).toBeInTheDocument();
-    expect(screen.getByText('circle-cell:AI Circle:discover')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming')).toBeInTheDocument();
-    expect(document.querySelector('a[href="/community/circles"]')).not.toBeInTheDocument();
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("mobile-community-home-header"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("mobile-feed:post-1:list")).toBeInTheDocument();
+    expect(screen.getByText("mobile-feed:post-2:list")).toBeInTheDocument();
+    expect(screen.getByText("Circles")).toBeInTheDocument();
+    expect(
+      screen.getByText("circle-cell:Mobile Builders:joined"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("circle-cell:AI Circle:discover"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Upcoming")).toBeInTheDocument();
+    expect(
+      document.querySelector('a[href="/community/circles"]'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
 
-  it('hides discover circles whose canonical name matches a joined circle', () => {
+  it("hides discover circles whose canonical name matches a joined circle", () => {
     render(
       <MobileCommunityHomePage
         viewModel={createViewModel({
           circles: [
             {
-              id: 'circle-1',
-              name: 'AI Circle',
-              description: 'Applied ML teams.',
-              href: '/circle/ai',
+              id: "circle-1",
+              slug: "ai",
+              name: "AI Circle",
+              description: "Applied ML teams.",
+              href: "/circle/ai",
               isJoined: true,
               memberCount: 11,
             },
             {
-              id: 'circle-2',
-              name: 'AI Builders',
-              description: 'Applied ML leads, founders, and platform teams.',
-              href: '/circle/ai-builders',
+              id: "circle-2",
+              slug: "ai-builders",
+              name: "AI Builders",
+              description: "Applied ML leads, founders, and platform teams.",
+              href: "/circle/ai-builders",
               isJoined: false,
               memberCount: 433,
             },
           ],
         })}
-      />
+      />,
     );
 
-    expect(screen.getByText('circle-cell:AI Circle:joined')).toBeInTheDocument();
-    expect(screen.queryByText('circle-cell:AI Builders:discover')).not.toBeInTheDocument();
+    expect(
+      screen.getByText("circle-cell:AI Circle:joined"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("circle-cell:AI Builders:discover"),
+    ).not.toBeInTheDocument();
   });
 
-  it('collapses overlapping product circle variants into one inline row', () => {
+  it("collapses overlapping product circle variants into one inline row", () => {
     render(
       <MobileCommunityHomePage
         viewModel={createViewModel({
           circles: [
             {
-              id: 'circle-1',
-              name: 'Product Systems',
-              description: 'For product-minded engineers and designers.',
-              href: '/circle/product-systems',
+              id: "circle-1",
+              slug: "product-systems",
+              name: "Product Systems",
+              description: "For product-minded engineers and designers.",
+              href: "/circle/product-systems",
               isJoined: false,
               memberCount: 319,
             },
             {
-              id: 'circle-2',
-              name: 'Product Circle',
-              description: 'For PMs, designers, and growth folks.',
-              href: '/circle/product',
+              id: "circle-2",
+              slug: "product",
+              name: "Product Circle",
+              description: "For PMs, designers, and growth folks.",
+              href: "/circle/product",
               isJoined: false,
               memberCount: 10,
             },
           ],
         })}
-      />
+      />,
     );
 
-    expect(screen.getByText('circle-cell:Product Systems:discover')).toBeInTheDocument();
-    expect(screen.queryByText('circle-cell:Product Circle:discover')).not.toBeInTheDocument();
+    expect(
+      screen.getByText("circle-cell:Product Systems:discover"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("circle-cell:Product Circle:discover"),
+    ).not.toBeInTheDocument();
   });
 
-  it('keeps circles hidden on signed-out mobile feed previews', () => {
+  it("keeps circles hidden on signed-out mobile feed previews", () => {
     render(
       <MobileCommunityHomePage
         viewModel={createViewModel({
           isSignedIn: false,
           upcomingEvents: [],
         })}
-      />
+      />,
     );
 
-    expect(screen.getByText('Sign in to join circles and reply.')).toBeInTheDocument();
-    expect(screen.queryByText('Circles')).not.toBeInTheDocument();
-    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Sign in to join circles and reply."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Circles")).not.toBeInTheDocument();
+    expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
   });
 });

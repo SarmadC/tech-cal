@@ -1,22 +1,22 @@
-import { FontAwesome5 } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome5 } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardCareerOutcomes } from '@kurecal/domain';
+import type { MobileDashboardCareerOutcomes } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 function formatPercent(value: number | null | undefined) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return '—';
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
   }
 
   return `${Math.round(value)}%`;
 }
 
 function formatRating(value: number | null | undefined) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return '—';
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
   }
 
   return value.toFixed(1);
@@ -31,7 +31,7 @@ export function DashboardCareerOutcomesCard({
 }) {
   const { tokens } = useAppTheme();
 
-  if (careerOutcomes.state === 'empty') {
+  if (careerOutcomes.state === "empty") {
     return (
       <DashboardCard>
         <View style={styles.emptyState}>
@@ -78,7 +78,7 @@ export function DashboardCareerOutcomesCard({
     );
   }
 
-  if (careerOutcomes.state === 'early') {
+  if (careerOutcomes.state === "early") {
     return (
       <DashboardCard>
         <View style={styles.header}>
@@ -163,7 +163,7 @@ export function DashboardCareerOutcomesCard({
           >
             {careerOutcomes.nextEventToRate
               ? careerOutcomes.nextEventToRate.title
-              : 'You are caught up'}
+              : "You are caught up"}
           </Text>
           <Text
             style={[
@@ -176,9 +176,9 @@ export function DashboardCareerOutcomesCard({
           >
             {careerOutcomes.nextEventToRate
               ? `${careerOutcomes.ratingsRemaining} more rating${
-                  careerOutcomes.ratingsRemaining === 1 ? '' : 's'
+                  careerOutcomes.ratingsRemaining === 1 ? "" : "s"
                 } unlocks the full outcomes view.`
-              : 'Attend another event to keep building your ratings history.'}
+              : "Attend another event to keep building your ratings history."}
           </Text>
 
           {careerOutcomes.nextEventToRate ? (
@@ -269,23 +269,23 @@ export function DashboardCareerOutcomesCard({
 
   const matureMetrics = [
     {
-      id: 'rating',
-      label: 'Avg. rating',
+      id: "rating",
+      label: "Avg. rating",
       value: formatRating(careerOutcomes.averageRating),
     },
     {
-      id: 'recommend',
-      label: 'Recommend rate',
+      id: "recommend",
+      label: "Recommend rate",
       value: formatPercent(careerOutcomes.recommendationRate),
     },
     {
-      id: 'connections',
-      label: 'Connections',
+      id: "connections",
+      label: "Connections",
       value: String(careerOutcomes.totalConnectionsMade),
     },
     {
-      id: 'skills',
-      label: 'Skills gained',
+      id: "skills",
+      label: "Skills gained",
       value: String(careerOutcomes.uniqueSkillsCount),
     },
   ];
@@ -321,12 +321,20 @@ export function DashboardCareerOutcomesCard({
           style={[
             styles.matureBadge,
             {
-              backgroundColor: 'rgba(52, 211, 153, 0.12)',
-              borderColor: 'rgba(52, 211, 153, 0.24)',
+              backgroundColor: tokens.colors.surfaceMuted,
+              borderColor: tokens.colors.border,
             },
           ]}
         >
-          <Text style={[styles.matureBadgeText, { fontFamily: tokens.typography.sans }]}>
+          <Text
+            style={[
+              styles.matureBadgeText,
+              {
+                color: tokens.colors.success,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
             Mature
           </Text>
         </View>
@@ -404,10 +412,10 @@ export function DashboardCareerOutcomesCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   headerCopy: {
     flex: 1,
@@ -415,30 +423,30 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.7,
   },
   progressCounter: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   progressRail: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
   },
   progressSegment: {
     height: 3,
-    borderRadius: 999,
+    borderRadius: 2,
   },
   earlyPanel: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
     gap: 8,
     paddingHorizontal: 14,
@@ -447,30 +455,30 @@ const styles = StyleSheet.create({
   earlyTitle: {
     fontSize: 16,
     lineHeight: 21,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   earlyBody: {
     fontSize: 13,
     lineHeight: 18,
   },
   ctaButton: {
-    alignSelf: 'flex-start',
-    minHeight: 38,
-    borderRadius: 999,
-    justifyContent: 'center',
+    alignSelf: "flex-start",
+    minHeight: 32,
+    borderRadius: 4,
+    justifyContent: "center",
     paddingHorizontal: 16,
     marginTop: 4,
   },
   ctaButtonText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   buttonPressed: {
     opacity: 0.92,
   },
   earlyMetrics: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   earlyMetric: {
@@ -480,7 +488,7 @@ const styles = StyleSheet.create({
   earlyMetricValue: {
     fontSize: 20,
     lineHeight: 24,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.7,
   },
   earlyMetricLabel: {
@@ -492,27 +500,26 @@ const styles = StyleSheet.create({
     height: 32,
   },
   matureBadge: {
-    minHeight: 30,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   matureBadgeText: {
-    color: '#34d399',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   matureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   matureMetric: {
-    width: '48%',
-    borderRadius: 18,
+    width: "48%",
+    borderRadius: 6,
     borderWidth: 1,
     gap: 4,
     paddingHorizontal: 12,
@@ -521,19 +528,19 @@ const styles = StyleSheet.create({
   matureMetricValue: {
     fontSize: 26,
     lineHeight: 30,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.8,
   },
   matureMetricLabel: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   matureNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    borderRadius: 16,
+    borderRadius: 6,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -544,26 +551,26 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
   },
   emptyIcon: {
     width: 56,
     height: 56,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
     fontSize: 18,
     lineHeight: 22,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   emptyBody: {
     fontSize: 13,
     lineHeight: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

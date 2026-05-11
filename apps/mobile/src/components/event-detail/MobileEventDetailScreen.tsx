@@ -28,56 +28,39 @@ import {
 import { KureButton } from '../chrome/KureButton';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
-function DetailInfoRow({
-  label,
+function IconMetaRow({
+  icon,
   children,
-  interactive = false,
   onPress,
 }: {
-  label: string;
+  icon: string;
   children: ReactNode;
-  interactive?: boolean;
   onPress?: () => void;
 }) {
   const { tokens } = useAppTheme();
 
-  if (interactive && onPress) {
+  const inner = (
+    <View style={styles.iconMetaRow}>
+      <FontAwesome name={icon as any} size={13} color={tokens.colors.textTertiary} style={styles.iconMetaIcon} />
+      <View style={{ flex: 1 }}>{children}</View>
+    </View>
+  );
+
+  if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
-          styles.infoRow,
-          {
-            backgroundColor: pressed ? tokens.colors.accentSoft : 'transparent',
-          },
+          styles.iconMetaRowPressable,
+          { backgroundColor: pressed ? tokens.colors.accentSoft : 'transparent' },
         ]}
       >
-        <Text
-          style={[
-            styles.infoLabel,
-            { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans },
-          ]}
-        >
-          {label}
-        </Text>
-        <View style={styles.infoRowBody}>{children}</View>
+        {inner}
       </Pressable>
     );
   }
 
-  return (
-    <View style={styles.infoRow}>
-      <Text
-        style={[
-          styles.infoLabel,
-          { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans },
-        ]}
-      >
-        {label}
-      </Text>
-      <View style={styles.infoRowBody}>{children}</View>
-    </View>
-  );
+  return <View style={styles.iconMetaRowPressable}>{inner}</View>;
 }
 
 export function MobileEventDetailScreen({
@@ -159,6 +142,7 @@ export function MobileEventDetailScreen({
           />
         ) : null}
 
+        {/* ── Header ── */}
         <View
           style={[
             styles.header,
@@ -175,9 +159,7 @@ export function MobileEventDetailScreen({
               onPress={onBack}
               style={({ pressed }) => [
                 styles.iconButton,
-                {
-                  backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent',
-                },
+                { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
               ]}
             >
               <FontAwesome name="angle-left" size={22} color={tokens.colors.textSecondary} />
@@ -204,6 +186,34 @@ export function MobileEventDetailScreen({
               >
                 {event.title}
               </Text>
+
+              {/* Compact meta cluster: badges + date + location */}
+              <View style={styles.metaCluster}>
+                {event.formatLabel ? (
+                  <View
+                    style={[
+                      styles.metaBadge,
+                      { backgroundColor: tokens.colors.accentSoft, borderColor: tokens.colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.metaBadgeText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
+                      {event.formatLabel}
+                    </Text>
+                  </View>
+                ) : null}
+                {event.priceLabel ? (
+                  <View
+                    style={[
+                      styles.metaBadge,
+                      { backgroundColor: tokens.colors.surfaceMuted, borderColor: tokens.colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.metaBadgeText, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+                      {event.priceLabel}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
 
             <View style={styles.headerActions}>
@@ -237,9 +247,7 @@ export function MobileEventDetailScreen({
                 onPress={() => setShowMenu((current) => !current)}
                 style={({ pressed }) => [
                   styles.iconButton,
-                  {
-                    backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent',
-                  },
+                  { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
                 ]}
               >
                 <FontAwesome name="ellipsis-v" size={16} color={tokens.colors.textSecondary} />
@@ -256,10 +264,7 @@ export function MobileEventDetailScreen({
                   ]}
                 >
                   <Pressable
-                    onPress={() => {
-                      setShowMenu(false);
-                      onShareEvent();
-                    }}
+                    onPress={() => { setShowMenu(false); onShareEvent(); }}
                     style={({ pressed }) => [
                       styles.menuItem,
                       { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
@@ -272,10 +277,7 @@ export function MobileEventDetailScreen({
                   </Pressable>
 
                   <Pressable
-                    onPress={() => {
-                      setShowMenu(false);
-                      onAddToCalendar();
-                    }}
+                    onPress={() => { setShowMenu(false); onAddToCalendar(); }}
                     style={({ pressed }) => [
                       styles.menuItem,
                       { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
@@ -289,10 +291,7 @@ export function MobileEventDetailScreen({
 
                   {canOpenEventPage ? (
                     <Pressable
-                      onPress={() => {
-                        setShowMenu(false);
-                        onOpenEventPage();
-                      }}
+                      onPress={() => { setShowMenu(false); onOpenEventPage(); }}
                       style={({ pressed }) => [
                         styles.menuItem,
                         { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
@@ -307,10 +306,7 @@ export function MobileEventDetailScreen({
 
                   <Pressable
                     disabled={isAttendancePending}
-                    onPress={() => {
-                      setShowMenu(false);
-                      onToggleAttendance();
-                    }}
+                    onPress={() => { setShowMenu(false); onToggleAttendance(); }}
                     style={({ pressed }) => [
                       styles.menuItem,
                       {
@@ -330,146 +326,76 @@ export function MobileEventDetailScreen({
           </View>
         </View>
 
+        {/* ── Scrollable content ── */}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Event meta sheet: date, location, organizer */}
           <View
             style={[
-              styles.heroCard,
+              styles.metaSheet,
               {
                 backgroundColor: tokens.colors.surface,
-                borderColor: tokens.colors.borderStrong,
+                borderColor: tokens.colors.border,
               },
             ]}
           >
-            <View style={styles.heroMetaRow}>
-              <View style={styles.heroBadgeRow}>
-                {event.formatLabel ? (
-                  <View
-                    style={[
-                      styles.heroBadge,
-                      {
-                        backgroundColor: tokens.colors.accentSoft,
-                        borderColor: tokens.colors.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.heroBadgeText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
-                      {event.formatLabel}
-                    </Text>
-                  </View>
-                ) : null}
-                {event.priceLabel ? (
-                  <View
-                    style={[
-                      styles.heroBadge,
-                      {
-                        backgroundColor: tokens.colors.surfaceMuted,
-                        borderColor: tokens.colors.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.heroBadgeText, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
-                      {event.priceLabel}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <Pressable
-                disabled={isAttendancePending}
-                onPress={onToggleAttendance}
-                style={({ pressed }) => [
-                  styles.attendancePill,
-                  {
-                    backgroundColor: isAttending
-                      ? tokens.colors.accent
-                      : tokens.colors.surfaceMuted,
-                    borderColor: isAttending ? tokens.colors.accent : tokens.colors.border,
-                    opacity: isAttendancePending ? 0.45 : pressed ? 0.9 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.attendancePillText,
-                    {
-                      color: isAttending ? tokens.colors.textInverse : tokens.colors.textPrimary,
-                      fontFamily: tokens.typography.sans,
-                    },
-                  ]}
-                >
-                  {isAttending ? 'Attending' : 'Attend'}
-                </Text>
-              </Pressable>
-            </View>
-
-            <Text
-              style={[
-                styles.heroTitle,
-                { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
-              ]}
-            >
-              {event.title}
-            </Text>
-
-            <DetailInfoRow label="When">
-              <Text style={[styles.infoPrimary, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+            <IconMetaRow icon="calendar">
+              <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                 {formatEventDateTime(event.startTime, event.endTime, event.timezone)}
               </Text>
-            </DetailInfoRow>
+            </IconMetaRow>
 
             {event.location ? (
-              <DetailInfoRow
-                label="Where"
-                interactive={isLocationInteractive}
-                onPress={
-                  isLocationInteractive
-                    ? () => onOpenLocation(event.location!)
-                    : undefined
-                }
-              >
-                <Text style={[styles.infoPrimary, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                  {event.location}
-                </Text>
-              </DetailInfoRow>
+              <>
+                <View style={[styles.metaDivider, { backgroundColor: tokens.colors.divider }]} />
+                <IconMetaRow
+                  icon="map-marker"
+                  onPress={isLocationInteractive ? () => onOpenLocation(event.location!) : undefined}
+                >
+                  <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                    {event.location}
+                  </Text>
+                </IconMetaRow>
+              </>
             ) : null}
 
             {host?.name ? (
-              <DetailInfoRow label="Hosted by">
-                <View style={styles.hostRow}>
-                  {host.logoUrl ? (
-                    <Image source={{ uri: host.logoUrl }} style={styles.hostLogo} />
-                  ) : (
-                    <View
-                      style={[
-                        styles.hostFallback,
-                        { backgroundColor: tokens.colors.accentSoft },
-                      ]}
-                    >
-                      <Text style={[styles.hostFallbackText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
-                        {getInitials(host.name)}
+              <>
+                <View style={[styles.metaDivider, { backgroundColor: tokens.colors.divider }]} />
+                <View style={styles.iconMetaRowPressable}>
+                  <View style={styles.iconMetaRow}>
+                    {host.logoUrl ? (
+                      <Image source={{ uri: host.logoUrl }} style={styles.hostLogo} />
+                    ) : (
+                      <View
+                        style={[
+                          styles.hostFallback,
+                          { backgroundColor: tokens.colors.accentSoft },
+                        ]}
+                      >
+                        <Text style={[styles.hostFallbackText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
+                          {getInitials(host.name)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.organizerLabel, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
+                        Organizer
+                      </Text>
+                      <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                        {host.name}
                       </Text>
                     </View>
-                  )}
-                  <Text style={[styles.infoPrimary, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                    {host.name}
-                  </Text>
+                  </View>
                 </View>
-              </DetailInfoRow>
+              </>
             ) : null}
-
-            <View style={styles.ctaRow}>
-              <KureButton onPress={onPrimaryAction}>{primaryLabel}</KureButton>
-              {event.sourceUrl ? (
-                <KureButton variant="secondary" onPress={onOpenEventPage}>
-                  Event page
-                </KureButton>
-              ) : null}
-            </View>
           </View>
 
+          {/* Description */}
           {event.description ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -496,6 +422,7 @@ export function MobileEventDetailScreen({
             </View>
           ) : null}
 
+          {/* Tags */}
           {tags.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -542,6 +469,7 @@ export function MobileEventDetailScreen({
             </View>
           ) : null}
 
+          {/* Speakers */}
           {uniqueSpeakers.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -609,6 +537,7 @@ export function MobileEventDetailScreen({
             </View>
           ) : null}
 
+          {/* Agenda */}
           {agendaDayGroups.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -664,9 +593,7 @@ export function MobileEventDetailScreen({
                               key={agendaItem.id}
                               style={[
                                 styles.agendaItem,
-                                {
-                                  borderTopColor: tokens.colors.divider,
-                                },
+                                { borderTopColor: tokens.colors.divider },
                               ]}
                             >
                               <Text style={[styles.agendaTime, { color: tokens.colors.accent, fontFamily: tokens.typography.mono }]}>
@@ -693,6 +620,31 @@ export function MobileEventDetailScreen({
             </View>
           ) : null}
         </ScrollView>
+
+        {/* ── Sticky CTA bar ── */}
+        <View
+          style={[
+            styles.ctaBar,
+            {
+              backgroundColor: tokens.colors.shellElevated,
+              borderTopColor: tokens.colors.border,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
+            },
+          ]}
+        >
+          <View style={styles.ctaRow}>
+            <View style={{ flex: 1 }}>
+              <KureButton onPress={onPrimaryAction}>{primaryLabel}</KureButton>
+            </View>
+            {canOpenEventPage ? (
+              <View style={{ flex: 1 }}>
+                <KureButton variant="secondary" onPress={onOpenEventPage}>
+                  Official site
+                </KureButton>
+              </View>
+            ) : null}
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -707,7 +659,7 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingBottom: 12,
+    paddingBottom: 14,
     paddingHorizontal: 16,
   },
   headerRow: {
@@ -717,17 +669,36 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   headerEyebrow: {
     fontSize: 12,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
   headerTitle: {
     fontSize: 28,
     lineHeight: 30,
     fontWeight: '800',
     letterSpacing: -0.9,
+  },
+  metaCluster: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  metaBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  metaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   headerActions: {
     position: 'relative',
@@ -773,102 +744,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    gap: 18,
+    gap: 20,
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 32,
+    paddingBottom: 16,
   },
-  heroCard: {
-    borderRadius: 26,
-    borderWidth: 1,
-    gap: 14,
-    padding: 18,
+  metaSheet: {
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
-  heroMetaRow: {
+  iconMetaRowPressable: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  iconMetaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    flex: 1,
+  iconMetaIcon: {
+    width: 18,
+    textAlign: 'center',
   },
-  heroBadge: {
-    minHeight: 28,
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  heroBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  attendancePill: {
-    minHeight: 34,
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  attendancePillText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  heroTitle: {
-    fontSize: 30,
-    lineHeight: 32,
-    fontWeight: '800',
-    letterSpacing: -0.9,
-  },
-  infoRow: {
-    gap: 4,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  infoRowBody: {
-    gap: 4,
-  },
-  infoPrimary: {
-    fontSize: 15,
+  metaRowText: {
+    fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
   },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  metaDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 14,
+  },
+  organizerLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 1,
   },
   hostLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
   },
   hostFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   hostFallbackText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
+  },
+  ctaBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
+    paddingHorizontal: 16,
   },
   ctaRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
-    marginTop: 4,
   },
   section: {
     gap: 12,
@@ -902,11 +838,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagBadge: {
-    minHeight: 32,
+    minHeight: 30,
     borderRadius: 999,
     borderWidth: 1,
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
   },
   tagText: {
     fontSize: 12,
@@ -916,8 +852,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   infoCard: {
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
     padding: 14,
   },

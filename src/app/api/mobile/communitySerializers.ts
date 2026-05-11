@@ -13,18 +13,22 @@ import {
   type MobileCommunityPost,
   type MobileCommunityPostPage,
   type MobilePublicProfile,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import type { CircleDiscussionPageData, CirclePostPageData } from '@/services/circleDiscussionService';
-import type { FollowStatus } from '@/services/followService';
-import type { PublicProfileResult } from '@/services/publicProfileService';
+import type {
+  CircleDiscussionPageData,
+  CirclePostPageData,
+} from "@/services/circleDiscussionService";
+import type { FollowStatus } from "@/services/followService";
+import type { PublicProfileResult } from "@/services/publicProfileService";
 import type {
   CommunityNetworkingHomeData,
+  MobileCommunityPulsePreviewData,
   NetworkingFollowUpCard,
   NetworkingOpportunityEvent,
   NetworkingPersonCard,
   NetworkingSharedEvent,
-} from '@/types/community';
+} from "@/types/community";
 import type {
   CircleDiscussionAuthor,
   CircleDiscussionComment,
@@ -32,7 +36,7 @@ import type {
   CircleDiscussionMember,
   CircleDiscussionPost,
   CircleDiscussionUpcomingEvent,
-} from '@/types/circleDiscussions';
+} from "@/types/circleDiscussions";
 
 function toAuthor(author: CircleDiscussionAuthor): MobileCommunityAuthor {
   return {
@@ -43,7 +47,7 @@ function toAuthor(author: CircleDiscussionAuthor): MobileCommunityAuthor {
 }
 
 function toCurrentUser(
-  currentUser: CircleDiscussionCurrentUser | null
+  currentUser: CircleDiscussionCurrentUser | null,
 ): MobileCommunityCurrentUser | null {
   if (!currentUser) {
     return null;
@@ -71,14 +75,16 @@ function toUpcomingEvent(event: CircleDiscussionUpcomingEvent) {
   return {
     id: event.id,
     slug: event.slug,
-    title: event.title ?? 'Untitled Event',
+    title: event.title ?? "Untitled Event",
     startTime: event.startTime ?? new Date(0).toISOString(),
     location: null,
     format: null,
   };
 }
 
-function normalizeVoteValue(value: number | null | undefined): -1 | 0 | 1 | null {
+function normalizeVoteValue(
+  value: number | null | undefined,
+): -1 | 0 | 1 | null {
   if (value === -1 || value === 0 || value === 1) {
     return value;
   }
@@ -152,7 +158,7 @@ function getEventPrimaryReason(event: NetworkingOpportunityEvent): string {
       return `${event.totalAttendeeCount} people already have this event on their radar`;
     }
 
-    return 'This event is already drawing broader community attention';
+    return "This event is already drawing broader community attention";
   }
 
   if (event.relationshipAttendeeCount > 0) {
@@ -171,43 +177,43 @@ function getEventPrimaryReason(event: NetworkingOpportunityEvent): string {
     return `${event.totalAttendeeCount} attendees are already attached to this event`;
   }
 
-  return 'Attendee visibility is still building around this event';
+  return "Attendee visibility is still building around this event";
 }
 
 function getEventWhyNow(event: NetworkingOpportunityEvent): string {
   if (event.contextLabel) {
     if (event.visibleAttendeeCount > 0) {
-      return 'Public attendees are already visible here, so this is a stronger event to start networking around.';
+      return "Public attendees are already visible here, so this is a stronger event to start networking around.";
     }
 
     if (event.location) {
       return `This event is already attracting public interest, especially if ${event.location} is part of your tech-event orbit.`;
     }
 
-    return 'The wider community is already clustering around this event, so it is a useful place to start before your own overlap builds up.';
+    return "The wider community is already clustering around this event, so it is a useful place to start before your own overlap builds up.";
   }
 
   if (event.relationshipAttendeeCount > 0) {
-    return 'This event already has people you know attached to it, so the networking path is clearer before you arrive.';
+    return "This event already has people you know attached to it, so the networking path is clearer before you arrive.";
   }
 
   if (event.networkAttendingCount > 0) {
-    return 'Your network is already starting to gather here, which makes this event more useful than a cold start.';
+    return "Your network is already starting to gather here, which makes this event more useful than a cold start.";
   }
 
   if ((event.recentTrackerCount ?? 0) > 0) {
-    return 'This event is already drawing real interest, even before attendee visibility fully opens up.';
+    return "This event is already drawing real interest, even before attendee visibility fully opens up.";
   }
 
   if (event.totalAttendeeCount > 0) {
-    return 'People are already attaching themselves to this event, so it is worth keeping on your radar before visibility gets stronger.';
+    return "People are already attaching themselves to this event, so it is worth keeping on your radar before visibility gets stronger.";
   }
 
-  return 'This is a real upcoming event worth tracking while attendee signal catches up.';
+  return "This is a real upcoming event worth tracking while attendee signal catches up.";
 }
 
 function getStrongestSharedEvent(
-  sharedEvents: NetworkingSharedEvent[]
+  sharedEvents: NetworkingSharedEvent[],
 ): NetworkingSharedEvent | null {
   return sharedEvents[0] ?? null;
 }
@@ -259,7 +265,8 @@ function getFollowUpWhyNow(person: NetworkingFollowUpCard): string {
 }
 
 export function buildMobileCommunityHome(
-  data: CommunityNetworkingHomeData
+  data: CommunityNetworkingHomeData,
+  pulse?: MobileCommunityPulsePreviewData,
 ): MobileCommunityHome {
   return mobileCommunityHomeSchema.parse({
     summary: data.summary,
@@ -281,19 +288,19 @@ export function buildMobileCommunityHome(
       whyNow: getEventWhyNow(event),
       newVisibleAttendeeCount: event.recentTrackerCount ?? 0,
       recommendedAction:
-        event.attendeePreview.length > 0 ? 'expand_people' : 'open_event',
+        event.attendeePreview.length > 0 ? "expand_people" : "open_event",
     })),
     peopleToMeet: data.meetPeople.map((person) => ({
       ...person,
       strongestSharedEvent: getStrongestSharedEvent(person.sharedEvents),
       whyNow: getPersonWhyNow(person),
-      recommendedAction: person.isInNetwork ? 'expand_context' : 'follow',
+      recommendedAction: person.isInNetwork ? "expand_context" : "follow",
     })),
     followUpNow: data.followUps.map((person) => ({
       ...person,
       strongestSharedEvent: getStrongestSharedEvent(person.sharedEvents),
       whyNow: getFollowUpWhyNow(person),
-      recommendedAction: person.isInNetwork ? 'expand_context' : 'follow',
+      recommendedAction: person.isInNetwork ? "expand_context" : "follow",
     })),
     speakerMatches: data.speakerMatches?.map((match) => ({
       speaker: {
@@ -318,15 +325,26 @@ export function buildMobileCommunityHome(
       newPublicProfilesThisWeek: 0,
       roomsWithFreshTrackingCount: 0,
     },
+    feed: pulse?.feed ?? [],
+    circles:
+      pulse?.circles.map((circle) => ({
+        id: circle.id,
+        slug: circle.slug,
+        name: circle.name,
+        description: circle.description,
+        memberCount: circle.memberCount,
+        isJoined: circle.isJoined,
+      })) ?? [],
+    communityUpcomingEvents: pulse?.communityUpcomingEvents ?? [],
   });
 }
 
 export function buildMobileCommunityCirclePage(
-  data: CircleDiscussionPageData
+  data: CircleDiscussionPageData,
 ): MobileCommunityCirclePage {
   return mobileCommunityCirclePageSchema.parse({
     header: {
-      eyebrow: 'Circle',
+      eyebrow: "Circle",
       title: data.circle.name,
       subtitle: data.circle.description,
     },
@@ -347,11 +365,11 @@ export function buildMobileCommunityCirclePage(
 }
 
 export function buildMobileCommunityPostPage(
-  data: CirclePostPageData
+  data: CirclePostPageData,
 ): MobileCommunityPostPage {
   return mobileCommunityPostPageSchema.parse({
     header: {
-      eyebrow: 'Thread',
+      eyebrow: "Thread",
       title: data.circle.name,
       subtitle: data.circle.description,
     },
@@ -373,7 +391,7 @@ export function buildMobileCommunityPostPage(
 export function toMobilePublicProfile(
   profile: PublicProfileResult,
   relationship: FollowStatus | null,
-  networkingState?: MobileNetworkingState
+  networkingState?: MobileNetworkingState,
 ): MobilePublicProfile {
   return mobilePublicProfileSchema.parse({
     id: profile.id,

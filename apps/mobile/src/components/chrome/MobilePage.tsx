@@ -1,4 +1,9 @@
-import { useMemo, useState, type PropsWithChildren, type ReactNode } from 'react';
+import {
+  useMemo,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
 import {
   type LayoutChangeEvent,
   Pressable,
@@ -8,12 +13,15 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
-import { useTabBarVisibility } from './TabBarVisibilityProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { useTabBarVisibility } from "./TabBarVisibilityProvider";
 
 interface MobilePageProps extends PropsWithChildren {
   eyebrow?: string;
@@ -32,7 +40,7 @@ export function MobilePage({
   subtitle,
   action,
   headerHidden = false,
-  showAccentGlow = true,
+  showAccentGlow = false,
   children,
   footerInset,
   contentStyle,
@@ -43,13 +51,18 @@ export function MobilePage({
   const [compact, setCompact] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
   const bottomInset =
-    footerInset ?? (isVisible ? tokens.spacing.tabBarBottom : Math.max(insets.bottom + 20, 28));
+    footerInset ??
+    (isVisible
+      ? tokens.spacing.tabBarBottom
+      : Math.max(insets.bottom + 16, 24));
 
   const fallbackHeaderOffset = useMemo(
-    () => (headerHidden ? insets.top + 12 : insets.top + (subtitle ? 148 : 120)),
-    [headerHidden, insets.top, subtitle]
+    () => (headerHidden ? insets.top + 8 : insets.top + (subtitle ? 112 : 92)),
+    [headerHidden, insets.top, subtitle],
   );
-  const headerOffset = headerHidden ? fallbackHeaderOffset : headerHeight ?? fallbackHeaderOffset;
+  const headerOffset = headerHidden
+    ? fallbackHeaderOffset
+    : (headerHeight ?? fallbackHeaderOffset);
 
   function handleHeaderLayout(event: LayoutChangeEvent) {
     const nextHeight = event.nativeEvent.layout.height;
@@ -61,9 +74,12 @@ export function MobilePage({
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
-      edges={['left', 'right']}
+      edges={["left", "right"]}
     >
-      <LinearGradient colors={tokens.gradients.page} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={tokens.gradients.page}
+        style={StyleSheet.absoluteFill}
+      />
       {showAccentGlow ? (
         <LinearGradient
           colors={tokens.gradients.accent}
@@ -80,7 +96,7 @@ export function MobilePage({
             {
               backgroundColor: tokens.colors.header,
               borderBottomColor: tokens.colors.headerBorder,
-              paddingTop: insets.top + 12,
+              paddingTop: insets.top + 8,
             },
           ]}
         >
@@ -106,8 +122,8 @@ export function MobilePage({
                   {
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
-                    fontSize: compact ? 24 : tokens.typography.display,
-                    lineHeight: compact ? 28 : 36,
+                    fontSize: compact ? 20 : tokens.typography.display,
+                    lineHeight: compact ? 24 : 29,
                   },
                 ]}
               >
@@ -176,7 +192,7 @@ export function HeaderActionButton({
         {
           backgroundColor: tokens.colors.surface,
           borderColor: tokens.colors.border,
-          borderRadius: tokens.radius.pill,
+          borderRadius: tokens.radius.md,
         },
         pressed && styles.actionPressed,
       ]}
@@ -186,7 +202,7 @@ export function HeaderActionButton({
           color: tokens.colors.textPrimary,
           fontFamily: tokens.typography.sans,
           fontSize: 13,
-          fontWeight: '700',
+          fontWeight: "700",
         }}
       >
         {label}
@@ -200,7 +216,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   accentGlow: {
-    position: 'absolute',
+    position: "absolute",
     top: -80,
     left: -24,
     right: 56,
@@ -208,50 +224,50 @@ const styles = StyleSheet.create({
     borderRadius: 240,
   },
   headerWrap: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
   headerCopy: {
     flex: 1,
-    gap: 6,
-    paddingTop: 4,
+    gap: 3,
+    paddingTop: 2,
   },
   headerAction: {
-    paddingTop: 4,
+    paddingTop: 2,
   },
   eyebrow: {
     fontSize: 11,
-    letterSpacing: 1.8,
-    fontWeight: '700',
+    letterSpacing: 0.66,
+    fontWeight: "600",
   },
   title: {
-    fontWeight: '800',
-    letterSpacing: -0.8,
+    fontWeight: "700",
+    letterSpacing: -0.24,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
     maxWidth: 320,
   },
   content: {
-    gap: 14,
+    gap: 8,
   },
   actionButton: {
-    minHeight: 36,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 32,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
   },
   actionPressed: {

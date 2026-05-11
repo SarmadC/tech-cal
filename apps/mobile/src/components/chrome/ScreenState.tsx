@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { BrandLoadingLogo } from '../brand/BrandLoadingLogo';
-import { useAppTheme } from '../../providers/ThemeProvider';
-import { KureCard } from './KureCard';
+import { BrandLoadingLogo } from "../brand/BrandLoadingLogo";
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { KureCard } from "./KureCard";
 
-type ScreenStateMode = 'loading' | 'empty' | 'error';
-type ScreenStateVariant = 'default' | 'discover' | 'plain';
+type ScreenStateMode = "loading" | "empty" | "error";
+type ScreenStateVariant = "default" | "discover" | "plain";
 
 interface ScreenStateProps {
   action?: ReactNode;
@@ -23,13 +23,13 @@ export function ScreenState({
   fullHeight = false,
   mode,
   title,
-  variant = 'default',
+  variant = "default",
 }: ScreenStateProps) {
   const { tokens } = useAppTheme();
-  const showSpinner = mode === 'loading';
-  const useCard = variant === 'default';
+  const showSpinner = mode === "loading";
+  const useCard = variant === "default";
   const surfaceStyle =
-    variant === 'discover'
+    variant === "discover"
       ? {
           backgroundColor: tokens.colors.discoverToolbar,
           borderColor: tokens.colors.discoverToolbarBorder,
@@ -41,7 +41,9 @@ export function ScreenState({
 
   if (showSpinner) {
     return (
-      <View style={[styles.loadingSurface, fullHeight && styles.fullHeightSurface]}>
+      <View
+        style={[styles.loadingSurface, fullHeight && styles.fullHeightSurface]}
+      >
         <BrandLoadingLogo color={tokens.colors.textPrimary} size={68} />
       </View>
     );
@@ -68,7 +70,7 @@ export function ScreenState({
             styles.description,
             {
               color:
-                variant === 'discover'
+                variant === "discover"
                   ? tokens.colors.discoverTextMuted
                   : tokens.colors.textSecondary,
               fontFamily: tokens.typography.sans,
@@ -92,7 +94,7 @@ export function ScreenState({
         styles.surface,
         surfaceStyle,
         fullHeight && styles.fullHeightSurface,
-        variant === 'plain' && styles.plainSurface,
+        variant === "plain" && styles.plainSurface,
       ]}
     >
       {content}
@@ -105,26 +107,26 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   content: {
-    gap: 8,
-    justifyContent: 'center',
-    minHeight: 88,
+    gap: 6,
+    justifyContent: "center",
+    minHeight: 72,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   fullHeight: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 160,
   },
   fullHeightSurface: {
     minHeight: 160,
   },
   loadingSurface: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 240,
     paddingVertical: 28,
   },
@@ -134,12 +136,12 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   surface: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    padding: 18,
+    padding: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: "700",
   },
 });

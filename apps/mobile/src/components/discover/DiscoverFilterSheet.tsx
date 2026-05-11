@@ -1,5 +1,5 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { useState, type ReactNode } from 'react';
+import { FontAwesome } from "@expo/vector-icons";
+import { useState, type ReactNode } from "react";
 import {
   Modal,
   Pressable,
@@ -8,28 +8,25 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import type {
-  MobileDiscoverCost,
-  MobileDiscoverFeed,
-} from '@kurecal/domain';
+import type { MobileDiscoverCost, MobileDiscoverFeed } from "@kurecal/domain";
 
 import {
   buildDiscoverDateRangeLabel,
   toggleDiscoverSelection,
   type DiscoverDraftFilters as DiscoverDraftFiltersValue,
-} from '../../lib/discoverState';
-import { resolveCurrentLocationLabel } from '../../lib/discoverLocationUtils';
-import { useAppTheme } from '../../providers/ThemeProvider';
-import { DiscoverQuickDatePicker } from './DiscoverQuickDatePicker';
+} from "../../lib/discoverState";
+import { resolveCurrentLocationLabel } from "../../lib/discoverLocationUtils";
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { DiscoverQuickDatePicker } from "./DiscoverQuickDatePicker";
 
 export type DiscoverDraftFilters = DiscoverDraftFiltersValue;
 
 interface DiscoverFilterSheetProps {
   activeFilterCount: number;
-  counts: MobileDiscoverFeed['counts'];
+  counts: MobileDiscoverFeed["counts"];
   isPreviewLoading?: boolean;
   onApply: () => void;
   onChange: (value: DiscoverDraftFilters) => void;
@@ -37,7 +34,7 @@ interface DiscoverFilterSheetProps {
   onReset: () => void;
   profileTimezone?: string | null;
   resultCount: number;
-  tags: MobileDiscoverFeed['availableFilters']['tags'];
+  tags: MobileDiscoverFeed["availableFilters"]["tags"];
   value: DiscoverDraftFilters;
   visible: boolean;
 }
@@ -97,7 +94,9 @@ function FilterChoice({
           style={[
             styles.radio,
             {
-              backgroundColor: checked ? tokens.colors.textPrimary : 'transparent',
+              backgroundColor: checked
+                ? tokens.colors.textPrimary
+                : "transparent",
               borderColor: checked
                 ? tokens.colors.textPrimary
                 : tokens.colors.discoverToolbarBorderStrong,
@@ -108,7 +107,9 @@ function FilterChoice({
             style={[
               styles.radioDot,
               {
-                backgroundColor: checked ? tokens.colors.textInverse : 'transparent',
+                backgroundColor: checked
+                  ? tokens.colors.textInverse
+                  : "transparent",
               },
             ]}
           />
@@ -116,17 +117,19 @@ function FilterChoice({
 
         <Text
           style={{
-            color: checked ? tokens.colors.textPrimary : tokens.colors.discoverTextSoft,
+            color: checked
+              ? tokens.colors.textPrimary
+              : tokens.colors.discoverTextSoft,
             fontFamily: tokens.typography.sans,
             fontSize: 14,
-            fontWeight: checked ? '700' : '500',
+            fontWeight: checked ? "700" : "500",
           }}
         >
           {label}
         </Text>
       </View>
 
-      {typeof count === 'number' ? (
+      {typeof count === "number" ? (
         <Text
           style={{
             color: tokens.colors.discoverTextMuted,
@@ -168,7 +171,7 @@ export function DiscoverFilterSheet({
 
   function update<K extends keyof DiscoverDraftFilters>(
     key: K,
-    nextValue: DiscoverDraftFilters[K]
+    nextValue: DiscoverDraftFilters[K],
   ) {
     onChange({
       ...value,
@@ -180,9 +183,10 @@ export function DiscoverFilterSheet({
     setIsDetectingLocation(true);
 
     try {
-      const detectedLocation = await resolveCurrentLocationLabel(profileTimezone);
+      const detectedLocation =
+        await resolveCurrentLocationLabel(profileTimezone);
       if (detectedLocation) {
-        update('location', detectedLocation);
+        update("location", detectedLocation);
       }
     } finally {
       setIsDetectingLocation(false);
@@ -191,12 +195,17 @@ export function DiscoverFilterSheet({
 
   return (
     <>
-      <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+      <Modal
+        animationType="slide"
+        onRequestClose={onClose}
+        transparent
+        visible={visible}
+      >
         <Pressable
           style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
           onPress={onClose}
         />
-        <SafeAreaView edges={['bottom']} style={styles.sheetSafeArea}>
+        <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
           <View
             style={[
               styles.sheet,
@@ -213,7 +222,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
                     fontSize: 20,
-                    fontWeight: '800',
+                    fontWeight: "800",
                   }}
                 >
                   Discover filters
@@ -223,7 +232,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.discoverTextMuted,
                     fontFamily: tokens.typography.sans,
                     fontSize: 13,
-                    fontWeight: '500',
+                    fontWeight: "500",
                   }}
                 >
                   Refine the feed without losing the current ranking mode.
@@ -236,7 +245,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.discoverTextSoft,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Close
@@ -255,7 +264,7 @@ export function DiscoverFilterSheet({
                       color: tokens.colors.discoverTextMuted,
                       fontFamily: tokens.typography.sans,
                       fontSize: 12,
-                      fontWeight: '500',
+                      fontWeight: "500",
                     }}
                   >
                     {activeFilterCount} active
@@ -266,7 +275,7 @@ export function DiscoverFilterSheet({
                         color: tokens.colors.discoverTextSoft,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
-                        fontWeight: '600',
+                        fontWeight: "600",
                       }}
                     >
                       Reset filters
@@ -281,7 +290,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
                     fontSize: 16,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   When and where
@@ -307,7 +316,7 @@ export function DiscoverFilterSheet({
                             : tokens.colors.discoverTextMuted,
                         fontFamily: tokens.typography.sans,
                         fontSize: 15,
-                        fontWeight: '500',
+                        fontWeight: "500",
                       }}
                     >
                       {dateRangeLabel}
@@ -335,11 +344,13 @@ export function DiscoverFilterSheet({
                       autoCapitalize="words"
                       autoCorrect={false}
                       maxLength={100}
-                      onChangeText={(nextValue) => update('location', nextValue)}
+                      onChangeText={(nextValue) =>
+                        update("location", nextValue)
+                      }
                       placeholder={
                         isDetectingLocation
-                          ? 'Finding nearby events...'
-                          : 'City or region'
+                          ? "Finding nearby events..."
+                          : "City or region"
                       }
                       placeholderTextColor={tokens.colors.discoverTextMuted}
                       style={[
@@ -365,10 +376,12 @@ export function DiscoverFilterSheet({
                         color: tokens.colors.discoverTextSoft,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
-                        fontWeight: '600',
+                        fontWeight: "600",
                       }}
                     >
-                      {isDetectingLocation ? 'Detecting location...' : 'Use current location'}
+                      {isDetectingLocation
+                        ? "Detecting location..."
+                        : "Use current location"}
                     </Text>
                   </Pressable>
                 </FilterSection>
@@ -380,7 +393,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
                     fontSize: 16,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   More filters
@@ -397,23 +410,26 @@ export function DiscoverFilterSheet({
                     ]}
                   >
                     {[
-                      { id: 'all', label: 'Any' },
-                      { id: 'free', label: 'Free', count: costCounts.free },
-                      { id: 'paid', label: 'Paid', count: costCounts.paid },
+                      { id: "all", label: "Any" },
+                      { id: "free", label: "Free", count: costCounts.free },
+                      { id: "paid", label: "Paid", count: costCounts.paid },
                     ].map((option, index, options) => (
                       <View key={option.id}>
                         <FilterChoice
                           checked={value.cost === option.id}
                           count={option.count}
                           label={option.label}
-                          onPress={() => update('cost', option.id as MobileDiscoverCost)}
+                          onPress={() =>
+                            update("cost", option.id as MobileDiscoverCost)
+                          }
                         />
                         {index < options.length - 1 ? (
                           <View
                             style={[
                               styles.divider,
                               {
-                                backgroundColor: tokens.colors.discoverToolbarBorder,
+                                backgroundColor:
+                                  tokens.colors.discoverToolbarBorder,
                               },
                             ]}
                           />
@@ -432,7 +448,10 @@ export function DiscoverFilterSheet({
                         <Pressable
                           key={tag.value}
                           onPress={() =>
-                            update('tags', toggleDiscoverSelection(selectedTags, tag.value))
+                            update(
+                              "tags",
+                              toggleDiscoverSelection(selectedTags, tag.value),
+                            )
                           }
                           style={[
                             styles.filterPill,
@@ -448,10 +467,12 @@ export function DiscoverFilterSheet({
                         >
                           <Text
                             style={{
-                              color: active ? tokens.colors.textPrimary : tokens.colors.discoverTextSoft,
+                              color: active
+                                ? tokens.colors.textPrimary
+                                : tokens.colors.discoverTextSoft,
                               fontFamily: tokens.typography.sans,
                               fontSize: 13,
-                              fontWeight: '600',
+                              fontWeight: "600",
                             }}
                           >
                             {tag.label} {tag.count}
@@ -479,7 +500,7 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.discoverTextSoft,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Reset all
@@ -501,10 +522,10 @@ export function DiscoverFilterSheet({
                     color: tokens.colors.textInverse,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '800',
+                    fontWeight: "800",
                   }}
                 >
-                  {isPreviewLoading ? 'Updating…' : `Show ${resultCount}`}
+                  {isPreviewLoading ? "Updating…" : `Show ${resultCount}`}
                 </Text>
               </Pressable>
             </View>
@@ -513,7 +534,7 @@ export function DiscoverFilterSheet({
       </Modal>
 
       <DiscoverQuickDatePicker
-        onApply={(nextRange) => update('dateRange', nextRange)}
+        onApply={(nextRange) => update("dateRange", nextRange)}
         onClose={() => setIsDatePickerOpen(false)}
         value={value.dateRange}
         visible={isDatePickerOpen}
@@ -524,84 +545,84 @@ export function DiscoverFilterSheet({
 
 const styles = StyleSheet.create({
   activeRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   choiceCopy: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   choiceRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   dateField: {
-    alignItems: 'center',
-    borderRadius: 16,
+    alignItems: "center",
+    borderRadius: 4,
     borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 52,
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 36,
+    paddingHorizontal: 10,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 14,
   },
   filterPill: {
-    borderRadius: 999,
+    borderRadius: 2,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 34,
-    paddingHorizontal: 13,
+    justifyContent: "center",
+    minHeight: 28,
+    paddingHorizontal: 8,
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     paddingTop: 10,
   },
   group: {
-    gap: 14,
+    gap: 10,
   },
   input: {
-    fontSize: 15,
+    fontSize: 14,
     paddingVertical: 0,
   },
   inputWrap: {
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 14,
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 10,
   },
   listCard: {
-    borderRadius: 18,
+    borderRadius: 4,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
   },
   primaryButton: {
-    alignItems: 'center',
-    borderRadius: 16,
+    alignItems: "center",
+    borderRadius: 4,
     borderWidth: 1,
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 48,
+    justifyContent: "center",
+    minHeight: 32,
   },
   radio: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 999,
     borderWidth: 1,
     height: 18,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 18,
   },
   radioDot: {
@@ -614,34 +635,34 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   secondaryButton: {
-    alignItems: 'center',
-    borderRadius: 16,
+    alignItems: "center",
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 48,
-    minWidth: 112,
-    paddingHorizontal: 16,
+    justifyContent: "center",
+    minHeight: 32,
+    minWidth: 88,
+    paddingHorizontal: 12,
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     borderTopWidth: 1,
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
   },
   sheetContent: {
-    gap: 20,
+    gap: 14,
     paddingBottom: 12,
   },
   sheetHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
+    alignItems: "flex-start",
+    flexDirection: "row",
     gap: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingBottom: 12,
   },
   sheetHeaderCopy: {
@@ -650,11 +671,11 @@ const styles = StyleSheet.create({
   },
   sheetSafeArea: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   wrapRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
 });

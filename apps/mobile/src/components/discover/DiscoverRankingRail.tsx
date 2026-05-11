@@ -1,12 +1,15 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileDiscoverFeed, MobileDiscoverRankingMode } from '@kurecal/domain';
+import type {
+  MobileDiscoverFeed,
+  MobileDiscoverRankingMode,
+} from "@kurecal/domain";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface DiscoverRankingRailProps {
   onChange: (value: MobileDiscoverRankingMode) => void;
-  options: MobileDiscoverFeed['controls']['rankingModes'];
+  options: MobileDiscoverFeed["controls"]["rankingModes"];
   value: MobileDiscoverRankingMode;
 }
 
@@ -17,17 +20,17 @@ export function DiscoverRankingRail({
 }: DiscoverRankingRailProps) {
   const { tokens } = useAppTheme();
   const trackBackground =
-    tokens.mode === 'light'
-      ? 'rgba(15, 23, 42, 0.065)'
-      : 'rgba(255, 255, 255, 0.08)';
+    tokens.mode === "light"
+      ? "rgba(15, 23, 42, 0.065)"
+      : "rgba(255, 255, 255, 0.08)";
   const trackBorder =
-    tokens.mode === 'light'
-      ? 'rgba(15, 23, 42, 0.06)'
-      : 'rgba(255, 255, 255, 0.08)';
+    tokens.mode === "light"
+      ? "rgba(15, 23, 42, 0.06)"
+      : "rgba(255, 255, 255, 0.08)";
   const activeBackground =
-    tokens.mode === 'light'
-      ? 'rgba(255, 255, 255, 0.92)'
-      : 'rgba(255, 255, 255, 0.12)';
+    tokens.mode === "light"
+      ? "rgba(255, 255, 255, 0.92)"
+      : tokens.colors.discoverToolbarStrong;
 
   return (
     <View
@@ -55,10 +58,10 @@ export function DiscoverRankingRail({
                 {
                   backgroundColor: activeBackground,
                   borderColor:
-                    tokens.mode === 'light'
-                      ? 'rgba(15, 23, 42, 0.04)'
-                      : 'rgba(255, 255, 255, 0.08)',
-                  shadowOpacity: tokens.mode === 'light' ? 0.08 : 0.2,
+                    tokens.mode === "light"
+                      ? "rgba(15, 23, 42, 0.04)"
+                      : "rgba(255, 255, 255, 0.08)",
+                  shadowOpacity: 0,
                 },
               ],
               {
@@ -68,11 +71,13 @@ export function DiscoverRankingRail({
           >
             <Text
               style={{
-                color: active ? tokens.colors.textPrimary : tokens.colors.textTertiary,
+                color: active
+                  ? tokens.colors.textPrimary
+                  : tokens.colors.textTertiary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 12.5,
                 letterSpacing: -0.1,
-                fontWeight: active ? '600' : '500',
+                fontWeight: active ? "600" : "500",
                 opacity: active ? 1 : 0.84,
               }}
             >
@@ -87,27 +92,27 @@ export function DiscoverRankingRail({
 
 const styles = StyleSheet.create({
   rail: {
-    alignItems: 'center',
-    borderRadius: 18,
+    alignItems: "center",
+    borderRadius: 6,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    minHeight: 48,
-    padding: 4,
+    flexDirection: "row",
+    gap: 3,
+    minHeight: 38,
+    padding: 3,
   },
   segment: {
-    alignItems: 'center',
-    borderRadius: 14,
+    alignItems: "center",
+    borderRadius: 4,
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 40,
-    paddingHorizontal: 10,
+    justifyContent: "center",
+    minHeight: 30,
+    paddingHorizontal: 8,
   },
   segmentActive: {
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
+    elevation: 0,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
+    shadowRadius: 0,
   },
 });

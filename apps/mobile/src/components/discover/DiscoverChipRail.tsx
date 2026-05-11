@@ -1,7 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 
-import type { DiscoverChip as DiscoverChipValue } from '../../lib/discoverState';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import type { DiscoverChip as DiscoverChipValue } from "../../lib/discoverState";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export type DiscoverChip = DiscoverChipValue;
 
@@ -41,7 +41,7 @@ export function DiscoverChipRail({ chips }: DiscoverChipRailProps) {
               color: tokens.colors.discoverTextSoft,
               fontFamily: tokens.typography.sans,
               fontSize: 12,
-              fontWeight: '600',
+              fontWeight: "600",
             }}
           >
             {chip.label} ×
@@ -54,12 +54,12 @@ export function DiscoverChipRail({ chips }: DiscoverChipRailProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    alignItems: 'center',
-    borderRadius: 12,
+    alignItems: "center",
+    borderRadius: 2,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 30,
-    paddingHorizontal: 12,
+    justifyContent: "center",
+    minHeight: 26,
+    paddingHorizontal: 8,
   },
   content: {
     gap: 6,

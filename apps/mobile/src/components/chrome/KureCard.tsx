@@ -1,7 +1,7 @@
-import type { PropsWithChildren } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import type { PropsWithChildren } from "react";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function KureCard({
   children,
@@ -34,7 +34,7 @@ export function KureCard({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    gap: 12,
-    padding: 18,
+    gap: 8,
+    padding: 12,
   },
 });

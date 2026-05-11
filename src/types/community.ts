@@ -5,10 +5,10 @@ export interface CommunityLaunchpadMetrics {
   weeklyActiveThreshold: number;
 }
 
-export type CommunityTelemetryEvent = 'profile_completion_started';
+export type CommunityTelemetryEvent = "profile_completion_started";
 
 export interface CommunityLaunchpadTask {
-  id: 'add_photo' | 'add_headline' | 'pick_interests' | 'set_profile_public';
+  id: "add_photo" | "add_headline" | "pick_interests" | "set_profile_public";
   title: string;
   description: string;
   completed: boolean;
@@ -37,6 +37,7 @@ export interface CommunityLaunchpadMember {
 
 export interface CommunityLaunchpadCircle {
   id: string;
+  slug: string;
   name: string;
   description: string;
   href: string;
@@ -113,6 +114,21 @@ export interface CommunityFeedPageData {
   upcomingEvents: CommunityUpcomingEvent[];
 }
 
+export interface MobileCommunityPulseCircle {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  isJoined: boolean;
+  memberCount: number;
+}
+
+export interface MobileCommunityPulsePreviewData {
+  feed: CommunityFeedPost[];
+  circles: MobileCommunityPulseCircle[];
+  communityUpcomingEvents: CommunityUpcomingEvent[];
+}
+
 // ── Community Networking Hub ───────────────────────────────────
 
 export interface CommunityNetworkingSummary {
@@ -135,7 +151,7 @@ export interface NetworkingSharedEvent {
   startTime: string;
   location: string | null;
   format: string | null;
-  viewerContext?: 'attending' | 'saved';
+  viewerContext?: "attending" | "saved";
 }
 
 export interface NetworkingAttendeePreview {
@@ -174,7 +190,7 @@ export interface NetworkingOpportunityEvent {
   imageUrl?: string | null;
   location: string | null;
   format: string | null;
-  viewerContext: 'attending' | 'saved';
+  viewerContext: "attending" | "saved";
   contextLabel?: string;
   recentTrackerCount?: number;
   totalAttendeeCount: number;

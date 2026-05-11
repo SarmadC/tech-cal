@@ -1,11 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileCommunityFeedPost } from '@kurecal/domain';
+import type { MobileCommunityFeedPost } from "@kurecal/domain";
 
 import {
   formatCommunityRelativeTime,
   summarizeCommunityPost,
-} from '../lib/communityPresentation';
+} from "../lib/communityPresentation";
+import { useAppTheme } from "../providers/ThemeProvider";
 
 interface CommunityFeedCardProps {
   onPress?: () => void;
@@ -20,36 +21,124 @@ function Content({
   post: MobileCommunityFeedPost;
   showCircle: boolean;
 }) {
+  const { tokens } = useAppTheme();
+
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.md,
+        },
+      ]}
+    >
       <View style={styles.metaRow}>
-        <Text style={styles.circleLabel}>
-          {showCircle ? post.circle.name : post.author.fullName || 'Community member'}
+        <Text
+          style={[
+            styles.circleLabel,
+            { color: tokens.colors.accent, fontFamily: tokens.typography.sans },
+          ]}
+        >
+          {showCircle
+            ? post.circle.name
+            : post.author.fullName || "Community member"}
         </Text>
-        <Text style={styles.metaText}>{formatCommunityRelativeTime(post.createdAt)}</Text>
+        <Text
+          style={[
+            styles.metaText,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {formatCommunityRelativeTime(post.createdAt)}
+        </Text>
       </View>
 
-      <Text style={styles.body}>{summarizeCommunityPost(post.content)}</Text>
+      <Text
+        style={[
+          styles.body,
+          {
+            color: tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {summarizeCommunityPost(post.content)}
+      </Text>
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>
-          {post.commentCount} repl{post.commentCount === 1 ? 'y' : 'ies'}
+        <Text
+          style={[
+            styles.footerText,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {post.commentCount} repl{post.commentCount === 1 ? "y" : "ies"}
         </Text>
         {post.isTrending ? (
-          <View style={styles.trendingPill}>
-            <Text style={styles.trendingLabel}>Trending</Text>
+          <View
+            style={[
+              styles.trendingPill,
+              {
+                backgroundColor: tokens.colors.accentSoft,
+                borderColor: tokens.colors.borderStrong,
+                borderRadius: tokens.radius.xs,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.trendingLabel,
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+            >
+              Trending
+            </Text>
           </View>
         ) : null}
       </View>
 
       {post.recentComments?.length ? (
-        <View style={styles.previewStack}>
+        <View
+          style={[
+            styles.previewStack,
+            { borderTopColor: tokens.colors.divider },
+          ]}
+        >
           {post.recentComments.slice(0, 2).map((comment) => (
             <View key={comment.id} style={styles.previewRow}>
-              <Text numberOfLines={1} style={styles.previewAuthor}>
-                {comment.author.fullName || 'Member'}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.previewAuthor,
+                  {
+                    color: tokens.colors.textSecondary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              >
+                {comment.author.fullName || "Member"}
               </Text>
-              <Text numberOfLines={1} style={styles.previewBody}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.previewBody,
+                  {
+                    color: tokens.colors.textTertiary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              >
                 {comment.content}
               </Text>
             </View>
@@ -65,6 +154,8 @@ export function CommunityFeedCard({
   post,
   showCircle = true,
 }: CommunityFeedCardProps) {
+  const { tokens } = useAppTheme();
+
   if (!onPress) {
     return <Content post={post} showCircle={showCircle} />;
   }
@@ -74,6 +165,7 @@ export function CommunityFeedCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
+        { borderRadius: tokens.radius.md },
         pressed ? styles.pressablePressed : null,
       ]}
     >
@@ -84,86 +176,70 @@ export function CommunityFeedCard({
 
 const styles = StyleSheet.create({
   body: {
-    color: '#e2e8f0',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
   },
   card: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 22,
     borderWidth: 1,
-    gap: 12,
-    padding: 18,
+    gap: 8,
+    padding: 12,
   },
   circleLabel: {
-    color: '#2dd4bf',
     flex: 1,
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    letterSpacing: 0.66,
+    textTransform: "uppercase",
   },
   footerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
   },
   footerText: {
-    color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
   },
   metaText: {
-    color: '#64748b',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   previewAuthor: {
-    color: '#cbd5e1',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     minWidth: 88,
   },
   previewBody: {
-    color: '#94a3b8',
     flex: 1,
     fontSize: 12,
   },
   previewRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
   },
   previewStack: {
-    borderTopColor: 'rgba(148, 163, 184, 0.12)',
     borderTopWidth: 1,
-    gap: 8,
-    paddingTop: 12,
+    gap: 6,
+    paddingTop: 8,
   },
-  pressable: {
-    borderRadius: 22,
-  },
+  pressable: {},
   pressablePressed: {
     opacity: 0.92,
     transform: [{ scale: 0.992 }],
   },
   trendingLabel: {
-    color: '#f8fafc',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "600",
   },
   trendingPill: {
-    backgroundColor: 'rgba(245, 158, 11, 0.18)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-    borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
   },
 });

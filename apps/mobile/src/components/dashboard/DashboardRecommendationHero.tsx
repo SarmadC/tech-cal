@@ -1,28 +1,31 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome5 } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardTopRecommendation } from '@kurecal/domain';
+import type { MobileDashboardTopRecommendation } from "@kurecal/domain";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
-function formatEventMeta(startTime: string, location?: string | null, daysUntil?: number) {
+function formatEventMeta(
+  startTime: string,
+  location?: string | null,
+  daysUntil?: number,
+) {
   const start = new Date(startTime);
   const dateLabel = start.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 
   const parts = [dateLabel];
   if (location?.trim()) {
     parts.push(location.trim());
   }
-  if (typeof daysUntil === 'number') {
-    parts.push(daysUntil === 0 ? 'Today' : `${daysUntil} days away`);
+  if (typeof daysUntil === "number") {
+    parts.push(daysUntil === 0 ? "Today" : `${daysUntil} days away`);
   }
 
-  return parts.join(' • ');
+  return parts.join(" • ");
 }
 
 export function DashboardRecommendationHero({
@@ -41,24 +44,13 @@ export function DashboardRecommendationHero({
       style={({ pressed }) => [
         styles.pressable,
         {
-          borderRadius: 24,
-          borderColor: tokens.colors.borderStrong,
+          borderRadius: tokens.radius.md,
+          borderColor: tokens.colors.border,
           backgroundColor: tokens.colors.surface,
         },
         pressed && styles.pressed,
       ]}
     >
-      <LinearGradient
-        colors={[
-          tokens.colors.accentSoft,
-          'transparent',
-          tokens.colors.accentSoft,
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      />
-
       <View style={styles.content}>
         <View style={styles.eyebrowRow}>
           <View
@@ -80,7 +72,7 @@ export function DashboardRecommendationHero({
                 color: tokens.colors.accent,
                 fontFamily: tokens.typography.sans,
                 fontSize: 11,
-                fontWeight: '700',
+                fontWeight: "700",
               }}
             >
               Recommended
@@ -92,19 +84,19 @@ export function DashboardRecommendationHero({
               style={[
                 styles.impactBadge,
                 {
-                  backgroundColor: 'rgba(52, 211, 153, 0.12)',
-                  borderColor: 'rgba(52, 211, 153, 0.24)',
+                  backgroundColor: tokens.colors.surfaceMuted,
+                  borderColor: tokens.colors.border,
                 },
               ]}
             >
               <Text
                 style={{
-                  color: '#34d399',
+                  color: tokens.colors.accent,
                   fontFamily: tokens.typography.sans,
                   fontSize: 10,
-                  fontWeight: '800',
+                  fontWeight: "800",
                   letterSpacing: 0.5,
-                  textTransform: 'uppercase',
+                  textTransform: "uppercase",
                 }}
               >
                 {recommendation.impactLabel}
@@ -117,10 +109,10 @@ export function DashboardRecommendationHero({
           style={{
             color: tokens.colors.textPrimary,
             fontFamily: tokens.typography.sans,
-            fontSize: 28,
-            lineHeight: 32,
-            fontWeight: '800',
-            letterSpacing: -0.9,
+            fontSize: 22,
+            lineHeight: 26,
+            fontWeight: "700",
+            letterSpacing: -0.3,
           }}
         >
           {event.title}
@@ -130,23 +122,29 @@ export function DashboardRecommendationHero({
           style={{
             color: tokens.colors.textSecondary,
             fontFamily: tokens.typography.sans,
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: 12,
+            lineHeight: 16,
           }}
         >
-          {formatEventMeta(event.startTime, event.location, recommendation.daysUntil)}
+          {formatEventMeta(
+            event.startTime,
+            event.location,
+            recommendation.daysUntil,
+          )}
         </Text>
 
         <Text
           style={{
             color: tokens.colors.textSecondary,
             fontFamily: tokens.typography.sans,
-            fontSize: 15,
-            lineHeight: 22,
+            fontSize: 13,
+            lineHeight: 18,
           }}
           numberOfLines={3}
         >
-          {recommendation.reason || event.description || 'A strong next move from your current event pipeline.'}
+          {recommendation.reason ||
+            event.description ||
+            "A strong next move from your current event pipeline."}
         </Text>
 
         <View style={styles.footer}>
@@ -155,7 +153,7 @@ export function DashboardRecommendationHero({
               color: tokens.colors.textPrimary,
               fontFamily: tokens.typography.sans,
               fontSize: 15,
-              fontWeight: '700',
+              fontWeight: "700",
             }}
           >
             View event
@@ -174,46 +172,42 @@ export function DashboardRecommendationHero({
 const styles = StyleSheet.create({
   pressable: {
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   pressed: {
     opacity: 0.92,
     transform: [{ scale: 0.994 }],
   },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
-  },
   content: {
-    gap: 12,
-    padding: 20,
+    gap: 8,
+    padding: 12,
   },
   eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
   },
   eyebrowPill: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
   },
   impactBadge: {
-    minHeight: 26,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 4,
   },
 });

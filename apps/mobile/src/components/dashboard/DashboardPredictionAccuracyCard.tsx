@@ -1,18 +1,20 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardPredictionAccuracy } from '@kurecal/domain';
+import type { MobileDashboardPredictionAccuracy } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
-function formatConfidence(value: MobileDashboardPredictionAccuracy['confidenceLabel']) {
+function formatConfidence(
+  value: MobileDashboardPredictionAccuracy["confidenceLabel"],
+) {
   switch (value) {
-    case 'calibrated':
-      return 'Calibrated';
-    case 'learning':
-      return 'Learning';
+    case "calibrated":
+      return "Calibrated";
+    case "learning":
+      return "Learning";
     default:
-      return 'Not enough data';
+      return "Not enough data";
   }
 }
 
@@ -31,7 +33,10 @@ export function DashboardPredictionAccuracyCard({
           <Text
             style={[
               styles.eyebrow,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Prediction Accuracy
@@ -39,7 +44,10 @@ export function DashboardPredictionAccuracyCard({
           <Text
             style={[
               styles.title,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Recommendation trust signal
@@ -51,17 +59,17 @@ export function DashboardPredictionAccuracyCard({
             styles.confidenceChip,
             {
               backgroundColor:
-                predictionAccuracy.confidenceLabel === 'calibrated'
-                  ? 'rgba(52, 211, 153, 0.12)'
-                  : predictionAccuracy.confidenceLabel === 'learning'
-                    ? 'rgba(96, 165, 250, 0.12)'
-                    : 'rgba(251, 191, 36, 0.14)',
+                predictionAccuracy.confidenceLabel === "calibrated"
+                  ? tokens.colors.surfaceMuted
+                  : predictionAccuracy.confidenceLabel === "learning"
+                    ? tokens.colors.accentSoft
+                    : tokens.colors.surfaceMuted,
               borderColor:
-                predictionAccuracy.confidenceLabel === 'calibrated'
-                  ? 'rgba(52, 211, 153, 0.24)'
-                  : predictionAccuracy.confidenceLabel === 'learning'
-                    ? 'rgba(96, 165, 250, 0.22)'
-                    : 'rgba(251, 191, 36, 0.28)',
+                predictionAccuracy.confidenceLabel === "calibrated"
+                  ? tokens.colors.border
+                  : predictionAccuracy.confidenceLabel === "learning"
+                    ? tokens.colors.border
+                    : tokens.colors.border,
             },
           ]}
         >
@@ -70,11 +78,11 @@ export function DashboardPredictionAccuracyCard({
               styles.confidenceText,
               {
                 color:
-                  predictionAccuracy.confidenceLabel === 'calibrated'
-                    ? '#34d399'
-                    : predictionAccuracy.confidenceLabel === 'learning'
-                      ? '#60a5fa'
-                      : '#f59e0b',
+                  predictionAccuracy.confidenceLabel === "calibrated"
+                    ? tokens.colors.success
+                    : predictionAccuracy.confidenceLabel === "learning"
+                      ? tokens.colors.accent
+                      : tokens.colors.warning,
                 fontFamily: tokens.typography.sans,
               },
             ]}
@@ -88,26 +96,37 @@ export function DashboardPredictionAccuracyCard({
         <Text
           style={[
             styles.accuracyValue,
-            { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
           ]}
         >
-          {predictionAccuracy.accuracy == null ? '—' : `${Math.round(predictionAccuracy.accuracy)}%`}
+          {predictionAccuracy.accuracy == null
+            ? "—"
+            : `${Math.round(predictionAccuracy.accuracy)}%`}
         </Text>
         <Text
           style={[
             styles.sampleMeta,
-            { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+            {
+              color: tokens.colors.textSecondary,
+              fontFamily: tokens.typography.sans,
+            },
           ]}
         >
           {predictionAccuracy.sampleSize} scored rating
-          {predictionAccuracy.sampleSize === 1 ? '' : 's'}
+          {predictionAccuracy.sampleSize === 1 ? "" : "s"}
         </Text>
       </View>
 
       <View
         style={[
           styles.barTrack,
-          { backgroundColor: tokens.colors.surfaceMuted, borderColor: tokens.colors.border },
+          {
+            backgroundColor: tokens.colors.surfaceMuted,
+            borderColor: tokens.colors.border,
+          },
         ]}
       >
         <View
@@ -116,10 +135,10 @@ export function DashboardPredictionAccuracyCard({
             {
               width: `${Math.max(
                 predictionAccuracy.accuracy == null ? 0 : 12,
-                accuracy
+                accuracy,
               )}%`,
               backgroundColor:
-                predictionAccuracy.state === 'ready'
+                predictionAccuracy.state === "ready"
                   ? tokens.colors.success
                   : tokens.colors.accent,
             },
@@ -130,11 +149,14 @@ export function DashboardPredictionAccuracyCard({
       <Text
         style={[
           styles.message,
-          { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
         ]}
       >
         {predictionAccuracy.unlockMessage ??
-          'Your model has enough feedback to start judging how often the ranking gets the call right.'}
+          "Your model has enough feedback to start judging how often the ranking gets the call right."}
       </Text>
     </DashboardCard>
   );
@@ -142,10 +164,10 @@ export function DashboardPredictionAccuracyCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   copy: {
     flex: 1,
@@ -153,53 +175,53 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   confidenceChip: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   confidenceText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   metricRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
     gap: 12,
   },
   accuracyValue: {
     fontSize: 40,
     lineHeight: 42,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -1,
   },
   sampleMeta: {
     fontSize: 12,
     lineHeight: 16,
-    textAlign: 'right',
+    textAlign: "right",
   },
   barTrack: {
     height: 10,
-    borderRadius: 999,
+    borderRadius: 2,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   barFill: {
-    height: '100%',
-    borderRadius: 999,
+    height: "100%",
+    borderRadius: 2,
   },
   message: {
     fontSize: 13,

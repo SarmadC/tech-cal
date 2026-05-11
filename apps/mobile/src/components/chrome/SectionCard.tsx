@@ -1,8 +1,8 @@
-import type { PropsWithChildren, ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import type { PropsWithChildren, ReactNode } from "react";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
-import { KureCard } from './KureCard';
-import { SectionHeading } from './SectionHeading';
+import { KureCard } from "./KureCard";
+import { SectionHeading } from "./SectionHeading";
 
 interface SectionCardProps extends PropsWithChildren {
   eyebrow?: string;
@@ -32,13 +32,15 @@ export function SectionCard({
           action={action}
         />
       ) : null}
-      {children ? <View style={[styles.content, contentStyle]}>{children}</View> : null}
+      {children ? (
+        <View style={[styles.content, contentStyle]}>{children}</View>
+      ) : null}
     </KureCard>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    gap: 12,
+    gap: 8,
   },
 });

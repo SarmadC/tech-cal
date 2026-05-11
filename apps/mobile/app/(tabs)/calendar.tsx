@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutAnimation,
   LayoutChangeEvent,
@@ -7,26 +7,29 @@ import {
   Text,
   UIManager,
   View,
-} from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { router } from "expo-router";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import type {
   LocalCalendarDateKey,
   MobileCalendarFeed,
   MobileCalendarFeedRequest,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import { CalendarAgendaList } from '../../src/components/calendar/CalendarAgendaList';
+import { CalendarAgendaList } from "../../src/components/calendar/CalendarAgendaList";
 import {
   CalendarFilterSheet,
   type CalendarDraftFilters,
-} from '../../src/components/calendar/CalendarFilterSheet';
-import { CalendarMonthGrid } from '../../src/components/calendar/CalendarMonthGrid';
-import { CalendarQuickDatePicker } from '../../src/components/calendar/CalendarQuickDatePicker';
-import { CalendarToolbar } from '../../src/components/calendar/CalendarToolbar';
-import { ScreenState } from '../../src/components/chrome/ScreenState';
-import { useAuth } from '../../src/context/AuthProvider';
+} from "../../src/components/calendar/CalendarFilterSheet";
+import { CalendarMonthGrid } from "../../src/components/calendar/CalendarMonthGrid";
+import { CalendarQuickDatePicker } from "../../src/components/calendar/CalendarQuickDatePicker";
+import { CalendarToolbar } from "../../src/components/calendar/CalendarToolbar";
+import { ScreenState } from "../../src/components/chrome/ScreenState";
+import { useAuth } from "../../src/context/AuthProvider";
 import {
   formatLocalDateKey,
   formatMonthButtonLabel,
@@ -34,23 +37,23 @@ import {
   resolveMonthStartKey,
   resolvePreferredSelectedDate,
   shiftMonthKey,
-} from '../../src/lib/calendarDateUtils';
+} from "../../src/lib/calendarDateUtils";
 import {
   resolveCalendarRenderState,
   resolveCalendarSheetState,
-} from '../../src/lib/calendarState';
-import { loadMobileCalendarFeed } from '../../src/lib/mobileApi';
-import { useAppTheme } from '../../src/providers/ThemeProvider';
-import { useTabBarVisibility } from '../../src/components/chrome/TabBarVisibilityProvider';
+} from "../../src/lib/calendarState";
+import { loadMobileCalendarFeed } from "../../src/lib/mobileApi";
+import { useAppTheme } from "../../src/providers/ThemeProvider";
+import { useTabBarVisibility } from "../../src/components/chrome/TabBarVisibilityProvider";
 
 const DEFAULT_FILTERS: CalendarDraftFilters = {
   tags: [],
-  location: '',
+  location: "",
   dateRange: {
     start: null,
     end: null,
   },
-  cost: 'all',
+  cost: "all",
 };
 
 function resolveDefaultSelectedDate() {
@@ -63,7 +66,7 @@ function resolveDefaultVisibleMonth() {
 
 function buildRequest(
   monthStart: LocalCalendarDateKey,
-  filters: CalendarDraftFilters
+  filters: CalendarDraftFilters,
 ): MobileCalendarFeedRequest {
   return {
     monthStart,
@@ -92,7 +95,7 @@ function countActiveFilters(filters: CalendarDraftFilters) {
   if (filters.tags.length > 0) count += 1;
   if (filters.location.trim()) count += 1;
   if (filters.dateRange.start || filters.dateRange.end) count += 1;
-  if (filters.cost !== 'all') count += 1;
+  if (filters.cost !== "all") count += 1;
 
   return count;
 }
@@ -102,23 +105,25 @@ export default function CalendarScreen() {
   const { tokens } = useAppTheme();
   const { isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
-  const tabBarBottomInset = isVisible ? tokens.spacing.tabBarBottom : Math.max(insets.bottom + 20, 28);
-  const [visibleMonthStart, setVisibleMonthStart] = useState<LocalCalendarDateKey>(
-    () => resolveDefaultVisibleMonth()
-  );
+  const tabBarBottomInset = isVisible
+    ? tokens.spacing.tabBarBottom
+    : Math.max(insets.bottom + 20, 28);
+  const [visibleMonthStart, setVisibleMonthStart] =
+    useState<LocalCalendarDateKey>(() => resolveDefaultVisibleMonth());
   const [selectedDate, setSelectedDate] = useState<LocalCalendarDateKey | null>(
-    () => resolveDefaultSelectedDate()
+    () => resolveDefaultSelectedDate(),
   );
   const [isCalendarCollapsed, setIsCalendarCollapsed] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
   const [filters, setFilters] = useState<CalendarDraftFilters>(DEFAULT_FILTERS);
-  const [draftFilters, setDraftFilters] = useState<CalendarDraftFilters>(
-    DEFAULT_FILTERS
-  );
+  const [draftFilters, setDraftFilters] =
+    useState<CalendarDraftFilters>(DEFAULT_FILTERS);
   const [feed, setFeed] = useState<MobileCalendarFeed | null>(null);
-  const [previewFeed, setPreviewFeed] = useState<MobileCalendarFeed | null>(null);
+  const [previewFeed, setPreviewFeed] = useState<MobileCalendarFeed | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,7 +133,7 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (
-      Platform.OS === 'android' &&
+      Platform.OS === "android" &&
       UIManager.setLayoutAnimationEnabledExperimental
     ) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -137,21 +142,21 @@ export default function CalendarScreen() {
 
   const appliedRequest = useMemo(
     () => buildRequest(visibleMonthStart, filters),
-    [filters, visibleMonthStart]
+    [filters, visibleMonthStart],
   );
   const previewRequest = useMemo(
     () => buildRequest(visibleMonthStart, draftFilters),
-    [draftFilters, visibleMonthStart]
+    [draftFilters, visibleMonthStart],
   );
 
   async function runCalendarRequest(
     request: MobileCalendarFeedRequest,
-    mode: 'initial' | 'refresh' = 'initial'
+    mode: "initial" | "refresh" = "initial",
   ) {
     const requestSequence = requestSequenceRef.current + 1;
     requestSequenceRef.current = requestSequence;
 
-    if (mode === 'refresh') {
+    if (mode === "refresh") {
       setRefreshing(true);
     } else {
       setLoading(true);
@@ -165,7 +170,9 @@ export default function CalendarScreen() {
       }
 
       setFeed(nextFeed);
-      setSelectedDate((current) => resolvePreferredSelectedDate(nextFeed, current));
+      setSelectedDate((current) =>
+        resolvePreferredSelectedDate(nextFeed, current),
+      );
       setError(null);
     } catch (nextError) {
       if (requestSequence !== requestSequenceRef.current) {
@@ -175,7 +182,7 @@ export default function CalendarScreen() {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to load calendar'
+          : "Unable to load calendar",
       );
     } finally {
       if (requestSequence !== requestSequenceRef.current) {
@@ -219,7 +226,7 @@ export default function CalendarScreen() {
         setPreviewError(
           nextError instanceof Error
             ? nextError.message
-            : 'Unable to preview calendar'
+            : "Unable to preview calendar",
         );
       })
       .finally(() => {
@@ -240,17 +247,18 @@ export default function CalendarScreen() {
         previewFeed,
         previewError,
       }),
-    [feed, previewError, previewFeed]
+    [feed, previewError, previewFeed],
   );
-  const { inlineError, showAgenda, showFatalError, showInitialLoading } = useMemo(
-    () =>
-      resolveCalendarRenderState({
-        error,
-        feed,
-        loading,
-      }),
-    [error, feed, loading]
-  );
+  const { inlineError, showAgenda, showFatalError, showInitialLoading } =
+    useMemo(
+      () =>
+        resolveCalendarRenderState({
+          error,
+          feed,
+          loading,
+        }),
+      [error, feed, loading],
+    );
   const activeFilterCount = countActiveFilters(filters);
   const draftActiveFilterCount = countActiveFilters(draftFilters);
   const eventTypeColors = useMemo(
@@ -259,9 +267,9 @@ export default function CalendarScreen() {
         (feed?.availableFilters.eventTypes ?? []).map((eventType) => [
           eventType.id,
           eventType.color,
-        ])
+        ]),
       ),
-    [feed?.availableFilters.eventTypes]
+    [feed?.availableFilters.eventTypes],
   );
   const headerOffset = (headerHeight ?? insets.top + 80) + 6;
   const agendaHeader =
@@ -381,8 +389,11 @@ export default function CalendarScreen() {
   return (
     <>
       <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: tokens.colors.discoverShell }]}
-        edges={['left', 'right']}
+        style={[
+          styles.safeArea,
+          { backgroundColor: tokens.colors.discoverShell },
+        ]}
+        edges={["left", "right"]}
       >
         <View
           style={[
@@ -406,7 +417,7 @@ export default function CalendarScreen() {
           <View style={styles.headerInner}>
             <CalendarToolbar
               monthLabel={formatMonthButtonLabel(
-                feed?.month.monthStart ?? visibleMonthStart
+                feed?.month.monthStart ?? visibleMonthStart,
               )}
               isCollapsed={isCalendarCollapsed}
               activeFilterCount={activeFilterCount}
@@ -475,7 +486,7 @@ export default function CalendarScreen() {
                   description={
                     feed.emptyState.body ??
                     feed.emptyState.description ??
-                    'Try another month.'
+                    "Try another month."
                   }
                   variant="discover"
                 />
@@ -483,7 +494,7 @@ export default function CalendarScreen() {
             }
             refreshing={refreshing}
             onRefresh={() => {
-              void runCalendarRequest(appliedRequest, 'refresh');
+              void runCalendarRequest(appliedRequest, "refresh");
             }}
             topInset={headerOffset}
             bottomInset={tabBarBottomInset}
@@ -520,7 +531,9 @@ export default function CalendarScreen() {
         mode="single"
         visible={isMonthPickerOpen}
         value={selectedDate}
-        onApply={(dateKey) => jumpToDate(dateKey ?? resolveDefaultSelectedDate())}
+        onApply={(dateKey) =>
+          jumpToDate(dateKey ?? resolveDefaultSelectedDate())
+        }
         onClose={() => setIsMonthPickerOpen(false)}
         title="Jump to date"
         applyLabel="Go to date"
@@ -535,46 +548,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrap: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerInner: {
-    width: '100%',
+    width: "100%",
     maxWidth: 430,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   stateWrap: {
     flex: 1,
     paddingHorizontal: 16,
   },
   stateInner: {
-    width: '100%',
+    width: "100%",
     maxWidth: 430,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   agendaHeaderStack: {
-    gap: 14,
+    gap: 8,
   },
   inlineErrorBanner: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   inlineErrorCopy: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 10,
   },
   inlineErrorDot: {
     width: 8,
     height: 8,
-    borderRadius: 999,
+    borderRadius: 4,
     marginTop: 6,
   },
   inlineErrorTextWrap: {
@@ -583,11 +596,11 @@ const styles = StyleSheet.create({
   },
   inlineErrorTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   inlineErrorDescription: {
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

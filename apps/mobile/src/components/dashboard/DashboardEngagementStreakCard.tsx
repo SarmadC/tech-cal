@@ -1,32 +1,28 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardEngagementStreak } from '@kurecal/domain';
+import type { MobileDashboardEngagementStreak } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function DashboardEngagementStreakCard({
   streak,
 }: {
   streak: MobileDashboardEngagementStreak;
 }) {
-  const { tokens, resolvedTheme } = useAppTheme();
+  const { tokens } = useAppTheme();
 
   return (
-    <DashboardCard
-      style={{
-        backgroundColor:
-          resolvedTheme === 'light'
-            ? 'rgba(250, 242, 227, 0.96)'
-            : 'rgba(43, 35, 19, 0.98)',
-      }}
-    >
+    <DashboardCard>
       <View style={styles.header}>
         <View style={styles.copy}>
           <Text
             style={[
               styles.eyebrow,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Engagement Streak
@@ -34,7 +30,10 @@ export function DashboardEngagementStreakCard({
           <Text
             style={[
               styles.title,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Weekly consistency
@@ -45,15 +44,18 @@ export function DashboardEngagementStreakCard({
           style={[
             styles.longestBadge,
             {
-              backgroundColor: 'rgba(245, 158, 11, 0.14)',
-              borderColor: 'rgba(245, 158, 11, 0.24)',
+              backgroundColor: tokens.colors.accentSoft,
+              borderColor: tokens.colors.border,
             },
           ]}
         >
           <Text
             style={[
               styles.longestText,
-              { color: '#d97706', fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.warning,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             Best {streak.longestWeekStreak}
@@ -66,7 +68,10 @@ export function DashboardEngagementStreakCard({
           <Text
             style={[
               styles.primaryValue,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             {streak.currentWeekStreak}
@@ -74,7 +79,10 @@ export function DashboardEngagementStreakCard({
           <Text
             style={[
               styles.primaryLabel,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             consecutive weeks
@@ -92,7 +100,7 @@ export function DashboardEngagementStreakCard({
                     ? tokens.colors.success
                     : tokens.colors.surfaceMuted,
                   borderColor: week.active
-                    ? 'rgba(52, 211, 153, 0.32)'
+                    ? tokens.colors.border
                     : tokens.colors.borderStrong,
                 },
               ]}
@@ -104,7 +112,10 @@ export function DashboardEngagementStreakCard({
       <Text
         style={[
           styles.message,
-          { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
         ]}
       >
         {streak.nudgeMessage}
@@ -115,9 +126,9 @@ export function DashboardEngagementStreakCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: 12,
   },
   copy: {
@@ -126,30 +137,30 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   longestBadge: {
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   longestText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   body: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   primaryMetric: {
@@ -159,7 +170,7 @@ const styles = StyleSheet.create({
   primaryValue: {
     fontSize: 42,
     lineHeight: 44,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -1.2,
   },
   primaryLabel: {
@@ -168,14 +179,14 @@ const styles = StyleSheet.create({
   },
   dotRow: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 8,
   },
   dot: {
     flex: 1,
     height: 14,
-    borderRadius: 999,
+    borderRadius: 2,
     borderWidth: 1,
   },
   message: {

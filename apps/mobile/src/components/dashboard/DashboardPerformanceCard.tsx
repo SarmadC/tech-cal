@@ -1,16 +1,16 @@
-import { FontAwesome5 } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome5 } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardPerformance } from '@kurecal/domain';
+import type { MobileDashboardPerformance } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 function formatAttendedDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -66,19 +66,19 @@ export function DashboardPerformanceCard({
       <View style={styles.summaryRow}>
         {[
           {
-            id: 'attended',
+            id: "attended",
             value: performance.summary.attendedCount,
-            label: 'attended',
+            label: "attended",
           },
           {
-            id: 'rated',
+            id: "rated",
             value: performance.summary.ratedCount,
-            label: 'rated',
+            label: "rated",
           },
           {
-            id: 'connections',
+            id: "connections",
             value: performance.summary.connectionsMade,
-            label: 'connections',
+            label: "connections",
           },
         ].map((item) => (
           <View
@@ -120,7 +120,10 @@ export function DashboardPerformanceCard({
       {performance.recentWins.length > 0 ? (
         <View style={styles.timeline}>
           {performance.recentWins.map((win, index) => {
-            const matchedSummary = [...win.matchedSkills.slice(0, 2), ...win.matchedGoals.slice(0, 1)];
+            const matchedSummary = [
+              ...win.matchedSkills.slice(0, 2),
+              ...win.matchedGoals.slice(0, 1),
+            ];
 
             return (
               <Pressable
@@ -177,9 +180,9 @@ export function DashboardPerformanceCard({
                         ]}
                       >
                         {formatAttendedDate(win.attendedDate)}
-                        {typeof win.bookmarkedLeadDays === 'number'
+                        {typeof win.bookmarkedLeadDays === "number"
                           ? ` • Saved ${win.bookmarkedLeadDays}d ahead`
-                          : ''}
+                          : ""}
                       </Text>
                     </View>
 
@@ -212,24 +215,30 @@ export function DashboardPerformanceCard({
                         styles.statusBadge,
                         {
                           backgroundColor: win.feedbackSubmitted
-                            ? 'rgba(52, 211, 153, 0.12)'
-                            : 'rgba(251, 191, 36, 0.14)',
+                            ? tokens.colors.surfaceMuted
+                            : tokens.colors.accentSoft,
                           borderColor: win.feedbackSubmitted
-                            ? 'rgba(52, 211, 153, 0.24)'
-                            : 'rgba(251, 191, 36, 0.28)',
+                            ? tokens.colors.border
+                            : tokens.colors.border,
                         },
                       ]}
                     >
                       <FontAwesome5
-                        name={win.feedbackSubmitted ? 'check-circle' : 'star'}
+                        name={win.feedbackSubmitted ? "check-circle" : "star"}
                         size={11}
-                        color={win.feedbackSubmitted ? '#34d399' : '#fbbf24'}
+                        color={
+                          win.feedbackSubmitted
+                            ? tokens.colors.success
+                            : tokens.colors.warning
+                        }
                       />
                       <Text
                         style={[
                           styles.statusText,
                           {
-                            color: win.feedbackSubmitted ? '#34d399' : '#fbbf24',
+                            color: win.feedbackSubmitted
+                              ? tokens.colors.success
+                              : tokens.colors.warning,
                             fontFamily: tokens.typography.sans,
                           },
                         ]}
@@ -237,8 +246,8 @@ export function DashboardPerformanceCard({
                         {win.feedbackSubmitted && win.actualValueRating
                           ? `${win.actualValueRating}/5 rated`
                           : win.feedbackSubmitted
-                            ? 'Feedback logged'
-                            : 'Not rated yet'}
+                            ? "Feedback logged"
+                            : "Not rated yet"}
                       </Text>
                     </View>
 
@@ -297,7 +306,7 @@ export function DashboardPerformanceCard({
                 ]}
               >
                 +{performance.hiddenCount} more win
-                {performance.hiddenCount === 1 ? '' : 's'} in your full history
+                {performance.hiddenCount === 1 ? "" : "s"} in your full history
               </Text>
             </View>
           ) : null}
@@ -347,9 +356,9 @@ export function DashboardPerformanceCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: 12,
   },
   headerCopy: {
@@ -357,28 +366,28 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   title: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   meta: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   summaryRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   summaryCard: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 6,
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -386,7 +395,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.6,
   },
   summaryLabel: {
@@ -397,7 +406,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     paddingVertical: 14,
   },
@@ -405,13 +414,13 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   rail: {
-    alignItems: 'center',
+    alignItems: "center",
     width: 14,
   },
   node: {
     width: 9,
     height: 9,
-    borderRadius: 999,
+    borderRadius: 2,
     marginTop: 6,
   },
   line: {
@@ -424,9 +433,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   rowTop: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   titleBlock: {
     flex: 1,
@@ -435,7 +444,7 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   rowSubtitle: {
     fontSize: 12,
@@ -444,52 +453,52 @@ const styles = StyleSheet.create({
   scoreBadge: {
     minWidth: 48,
     height: 34,
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   scoreText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   statusBadge: {
     minHeight: 28,
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   skillPill: {
     minHeight: 28,
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   skillPillText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   historyCallout: {
     marginTop: 8,
     minHeight: 40,
-    borderRadius: 16,
+    borderRadius: 6,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
   },
@@ -497,23 +506,23 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   emptyState: {
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 18,
     paddingVertical: 24,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   emptyBody: {
     fontSize: 13,
     lineHeight: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -1,13 +1,13 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type {
   MobileCommunityNetworkingSpeakerMatch,
   MobileDashboardNetworkPulse,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { CommunityAvatar } from '../community/CommunityAvatar';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { CommunityAvatar } from "../community/CommunityAvatar";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function DashboardNetworkPulseCard({
   networkPulse,
@@ -22,13 +22,9 @@ export function DashboardNetworkPulseCard({
   onOpenRecommendedSpeakers?: () => void;
   onOpenPendingContact?: () => void;
 }) {
-  const { tokens, resolvedTheme } = useAppTheme();
-  const cardFill =
-    resolvedTheme === 'light'
-      ? '#F5DDD2'
-      : 'rgba(44, 27, 22, 0.98)';
+  const { tokens } = useAppTheme();
   const totalConnectionsLabel = `connection${
-    networkPulse.confirmedConnectionCount === 1 ? '' : 's'
+    networkPulse.confirmedConnectionCount === 1 ? "" : "s"
   }`;
   const visibleSpeakerMatches = speakerMatches.slice(0, 3);
   const perEventValue =
@@ -38,23 +34,23 @@ export function DashboardNetworkPulseCard({
   const footerText = networkPulse.nextContactToConfirm
     ? `Confirm with ${networkPulse.nextContactToConfirm.name}`
     : visibleSpeakerMatches.length > 0
-    ? `${visibleSpeakerMatches.length} speaker intro${
-        visibleSpeakerMatches.length === 1 ? '' : 's'
-      } ready`
-    : 'Open a speaker or profile to start tracking connections';
+      ? `${visibleSpeakerMatches.length} speaker intro${
+          visibleSpeakerMatches.length === 1 ? "" : "s"
+        } ready`
+      : "Open a speaker or profile to start tracking connections";
   const footerMeta = networkPulse.nextContactToConfirm
     ? networkPulse.nextContactToConfirm.sourceEvent?.title
       ? `Requested after ${networkPulse.nextContactToConfirm.sourceEvent.title}`
-      : networkPulse.nextContactToConfirm.kind === 'speaker'
-        ? 'Speaker request still pending'
-        : 'Profile request still pending'
+      : networkPulse.nextContactToConfirm.kind === "speaker"
+        ? "Speaker request still pending"
+        : "Profile request still pending"
     : visibleSpeakerMatches.length > 0
-    ? 'Suggested from your event graph'
-    : 'Suggested from your saved events';
+      ? "Suggested from your event graph"
+      : "Suggested from your saved events";
   const insightActionLabel = networkPulse.nextContactToConfirm
-    ? 'Confirm'
+    ? "Confirm"
     : visibleSpeakerMatches.length > 0
-      ? 'Open'
+      ? "Open"
       : null;
   const insightAction =
     networkPulse.nextContactToConfirm && onOpenPendingContact
@@ -62,23 +58,21 @@ export function DashboardNetworkPulseCard({
       : visibleSpeakerMatches.length > 0
         ? onOpenRecommendedSpeakers
         : undefined;
-  const insightSurfaceColor =
-    resolvedTheme === 'light' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.04)';
-  const glyphActiveColor = resolvedTheme === 'light' ? '#059669' : '#34D399';
+  const insightSurfaceColor = tokens.colors.surfaceMuted;
+  const glyphActiveColor = tokens.colors.success;
   const actionAccentColor =
-    insightActionLabel === 'Open'
-      ? resolvedTheme === 'light'
-        ? '#C2410C'
-        : '#FDBA74'
-      : glyphActiveColor;
+    insightActionLabel === "Open" ? tokens.colors.accent : glyphActiveColor;
 
   return (
-    <DashboardCard surfaceColors={[cardFill, cardFill]}>
+    <DashboardCard>
       <View style={styles.header}>
         <Text
           style={[
             styles.title,
-            { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
           ]}
         >
           Relationship momentum
@@ -87,7 +81,10 @@ export function DashboardNetworkPulseCard({
           <Text
             style={[
               styles.headerValue,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             {perEventValue.toFixed(1)}
@@ -95,7 +92,10 @@ export function DashboardNetworkPulseCard({
           <Text
             style={[
               styles.headerMeta,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
           >
             per event
@@ -107,7 +107,10 @@ export function DashboardNetworkPulseCard({
         <Text
           style={[
             styles.heroValue,
-            { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
           ]}
         >
           {networkPulse.confirmedConnectionCount} {totalConnectionsLabel}
@@ -120,16 +123,15 @@ export function DashboardNetworkPulseCard({
         style={({ pressed }) => [
           styles.insightStrip,
           {
-            borderTopColor:
-              resolvedTheme === 'light'
-                ? 'rgba(15, 23, 42, 0.08)'
-                : 'rgba(255, 255, 255, 0.06)',
-            backgroundColor: pressed && insightAction ? insightSurfaceColor : 'transparent',
+            borderTopColor: tokens.colors.divider,
+            backgroundColor:
+              pressed && insightAction ? insightSurfaceColor : "transparent",
             opacity: pressed && insightAction ? 0.96 : 1,
           },
         ]}
       >
-        {!networkPulse.nextContactToConfirm && visibleSpeakerMatches.length > 0 ? (
+        {!networkPulse.nextContactToConfirm &&
+        visibleSpeakerMatches.length > 0 ? (
           <View style={styles.avatarStack}>
             {visibleSpeakerMatches.slice(0, 2).map((match, index) => (
               <View
@@ -151,10 +153,7 @@ export function DashboardNetworkPulseCard({
           </View>
         ) : (
           <View
-            style={[
-              styles.footerDot,
-              { backgroundColor: glyphActiveColor },
-            ]}
+            style={[styles.footerDot, { backgroundColor: glyphActiveColor }]}
           />
         )}
 
@@ -162,7 +161,10 @@ export function DashboardNetworkPulseCard({
           <Text
             style={[
               styles.footerText,
-              { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
             numberOfLines={1}
           >
@@ -171,7 +173,10 @@ export function DashboardNetworkPulseCard({
           <Text
             style={[
               styles.footerMeta,
-              { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans },
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
             ]}
             numberOfLines={1}
           >
@@ -195,24 +200,24 @@ export function DashboardNetworkPulseCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: 12,
   },
   title: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.1,
   },
   headerMetric: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   headerValue: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.4,
   },
   headerMeta: {
@@ -220,18 +225,18 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   heroSection: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     minHeight: 18,
   },
   heroValue: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.4,
   },
   insightStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -239,12 +244,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   avatarStack: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     minWidth: 44,
   },
   avatarWrap: {
-    position: 'relative',
+    position: "relative",
   },
   insightTextBlock: {
     flex: 1,
@@ -253,7 +258,7 @@ const styles = StyleSheet.create({
   insightAction: {
     fontSize: 12,
     lineHeight: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   footerDot: {
     width: 8,
@@ -264,7 +269,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   footerMeta: {
     fontSize: 11,

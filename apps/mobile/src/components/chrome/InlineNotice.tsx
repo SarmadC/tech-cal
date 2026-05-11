@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
 
-type InlineNoticeTone = 'info' | 'success' | 'warning' | 'danger';
+type InlineNoticeTone = "info" | "success" | "warning" | "danger";
 
 interface InlineNoticeProps {
   title: string;
@@ -15,16 +15,16 @@ interface InlineNoticeProps {
 export function InlineNotice({
   title,
   description,
-  tone = 'info',
+  tone = "info",
   action,
 }: InlineNoticeProps) {
   const { tokens } = useAppTheme();
   const toneColor =
-    tone === 'success'
+    tone === "success"
       ? tokens.colors.success
-      : tone === 'warning'
+      : tone === "warning"
         ? tokens.colors.warning
-        : tone === 'danger'
+        : tone === "danger"
           ? tokens.colors.danger
           : tokens.colors.info;
 
@@ -33,7 +33,7 @@ export function InlineNotice({
       style={[
         styles.notice,
         {
-          backgroundColor: tokens.colors.accentSoft,
+          backgroundColor: tokens.colors.surfaceStrong,
           borderColor: tokens.colors.border,
           borderRadius: tokens.radius.md,
         },
@@ -74,25 +74,25 @@ export function InlineNotice({
 const styles = StyleSheet.create({
   notice: {
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    padding: 14,
+    flexDirection: "row",
+    gap: 8,
+    padding: 10,
   },
   rail: {
-    width: 4,
-    borderRadius: 999,
+    width: 2,
+    borderRadius: 1,
   },
   copy: {
     flex: 1,
     gap: 4,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: "600",
   },
   description: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   action: {
     paddingTop: 4,

@@ -1,21 +1,21 @@
-import { FontAwesome5 } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FontAwesome5 } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardCommitment } from '@kurecal/domain';
+import type { MobileDashboardCommitment } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 function formatDateParts(startTime: string) {
   const start = new Date(startTime);
   return {
     date: start.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
+      month: "short",
+      day: "numeric",
     }),
     time: start.toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
+      hour: "numeric",
+      minute: "2-digit",
     }),
   };
 }
@@ -32,26 +32,18 @@ export function DashboardUpcomingCommitmentsCard({
   onExploreEvents?: () => void;
 }) {
   const { tokens } = useAppTheme();
-  const cardSurface =
-    commitments.length === 0
-      ? (['#F7DCE8', '#F7DCE8'] as const)
-      : undefined;
   const emptyStateTextColor = tokens.colors.textSecondary;
-  const emptyActionColor = '#BE185D';
+  const emptyActionColor = tokens.colors.accent;
 
   return (
-    <DashboardCard
-      style={styles.card}
-      contentStyle={styles.cardContent}
-      surfaceColors={cardSurface}
-    >
+    <DashboardCard style={styles.card} contentStyle={styles.cardContent}>
       <View style={styles.header}>
         <Text
           style={{
             color: tokens.colors.textPrimary,
             fontFamily: tokens.typography.sans,
             fontSize: 18,
-            fontWeight: '800',
+            fontWeight: "800",
             letterSpacing: -0.3,
           }}
         >
@@ -86,7 +78,7 @@ export function DashboardUpcomingCommitmentsCard({
                         color: tokens.colors.textPrimary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 14,
-                        fontWeight: '700',
+                        fontWeight: "700",
                       }}
                     >
                       {date}
@@ -96,7 +88,7 @@ export function DashboardUpcomingCommitmentsCard({
                         color: tokens.colors.textSecondary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 11,
-                        fontWeight: '500',
+                        fontWeight: "500",
                       }}
                     >
                       {time}
@@ -110,7 +102,7 @@ export function DashboardUpcomingCommitmentsCard({
                         color: tokens.colors.textPrimary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 14,
-                        fontWeight: '700',
+                        fontWeight: "700",
                       }}
                     >
                       {item.event.title}
@@ -124,7 +116,7 @@ export function DashboardUpcomingCommitmentsCard({
                         lineHeight: 16,
                       }}
                     >
-                      {item.event.location || 'Details available in event view'}
+                      {item.event.location || "Details available in event view"}
                     </Text>
                   </View>
 
@@ -133,12 +125,12 @@ export function DashboardUpcomingCommitmentsCard({
                       styles.badge,
                       {
                         borderColor: isUrgent
-                          ? 'rgba(251, 191, 36, 0.35)'
+                          ? tokens.colors.border
                           : isFar
                             ? tokens.colors.border
-                            : 'rgba(96, 165, 250, 0.28)',
+                            : tokens.colors.border,
                         backgroundColor: isUrgent
-                          ? 'rgba(251, 191, 36, 0.12)'
+                          ? tokens.colors.surfaceMuted
                           : isFar
                             ? tokens.colors.surfaceMuted
                             : tokens.colors.accentSoft,
@@ -148,16 +140,16 @@ export function DashboardUpcomingCommitmentsCard({
                     <Text
                       style={{
                         color: isUrgent
-                          ? '#fbbf24'
+                          ? tokens.colors.warning
                           : isFar
                             ? tokens.colors.textSecondary
                             : tokens.colors.accent,
                         fontFamily: tokens.typography.sans,
                         fontSize: 11,
-                        fontWeight: '800',
+                        fontWeight: "800",
                       }}
                     >
-                      {item.daysUntil === 0 ? 'Today' : `${item.daysUntil}d`}
+                      {item.daysUntil === 0 ? "Today" : `${item.daysUntil}d`}
                     </Text>
                   </View>
                 </Pressable>
@@ -183,7 +175,7 @@ export function DashboardUpcomingCommitmentsCard({
                     color: tokens.colors.textSecondary,
                     fontFamily: tokens.typography.sans,
                     fontSize: 12,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Open Slot
@@ -199,7 +191,7 @@ export function DashboardUpcomingCommitmentsCard({
                 fontFamily: tokens.typography.sans,
                 fontSize: 15,
                 lineHeight: 20,
-                fontWeight: '700',
+                fontWeight: "700",
               }}
             >
               No events to prepare for yet.
@@ -218,7 +210,7 @@ export function DashboardUpcomingCommitmentsCard({
                     color: emptyActionColor,
                     fontFamily: tokens.typography.sans,
                     fontSize: 13,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Explore events
@@ -239,7 +231,7 @@ export function DashboardUpcomingCommitmentsCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
+    borderRadius: 6,
   },
   cardContent: {
     gap: 10,
@@ -253,8 +245,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
     paddingVertical: 12,
   },
@@ -271,18 +263,18 @@ const styles = StyleSheet.create({
   },
   badge: {
     minWidth: 48,
-    minHeight: 28,
-    borderRadius: 999,
+    minHeight: 24,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 8,
   },
   openSlot: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 8,
     marginTop: 8,
     paddingTop: 10,
@@ -293,9 +285,9 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   emptyAction: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   emptyActionPressed: {

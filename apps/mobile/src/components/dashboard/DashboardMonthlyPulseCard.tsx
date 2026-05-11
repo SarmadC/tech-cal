@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileDashboardMonthlyPulse } from '@kurecal/domain';
+import type { MobileDashboardMonthlyPulse } from "@kurecal/domain";
 
-import { DashboardCard } from './DashboardCard';
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { DashboardCard } from "./DashboardCard";
+import { useAppTheme } from "../../providers/ThemeProvider";
 
 export function DashboardMonthlyPulseCard({
   pulse,
@@ -21,7 +21,7 @@ export function DashboardMonthlyPulseCard({
             color: tokens.colors.textSecondary,
             fontFamily: tokens.typography.sans,
             fontSize: 12,
-            fontWeight: '700',
+            fontWeight: "700",
           }}
         >
           Monthly Pulse
@@ -40,7 +40,7 @@ export function DashboardMonthlyPulseCard({
               color: tokens.colors.textSecondary,
               fontFamily: tokens.typography.sans,
               fontSize: 10,
-              fontWeight: '700',
+              fontWeight: "700",
             }}
           >
             {pulse.deltaLabel}
@@ -53,7 +53,7 @@ export function DashboardMonthlyPulseCard({
           color: tokens.colors.textPrimary,
           fontFamily: tokens.typography.sans,
           fontSize: 36,
-          fontWeight: '800',
+          fontWeight: "800",
           letterSpacing: -1,
         }}
       >
@@ -64,7 +64,7 @@ export function DashboardMonthlyPulseCard({
           color: tokens.colors.textSecondary,
           fontFamily: tokens.typography.sans,
           fontSize: 13,
-          fontWeight: '500',
+          fontWeight: "500",
         }}
       >
         events attended in the last 30 days
@@ -86,7 +86,7 @@ export function DashboardMonthlyPulseCard({
                 color: tokens.colors.textSecondary,
                 fontFamily: tokens.typography.sans,
                 fontSize: 12,
-                fontWeight: '600',
+                fontWeight: "600",
               }}
             >
               No attendance activity in the last 30 days
@@ -95,7 +95,10 @@ export function DashboardMonthlyPulseCard({
         ) : (
           <View style={styles.trendGrid}>
             {pulse.trend.map((item) => {
-              const height = Math.max(10, Math.round((item.value / trendMax) * 44));
+              const height = Math.max(
+                10,
+                Math.round((item.value / trendMax) * 44),
+              );
               return (
                 <View key={item.label} style={styles.trendColumn}>
                   <View style={styles.trendBarWrap}>
@@ -114,7 +117,7 @@ export function DashboardMonthlyPulseCard({
                       color: tokens.colors.textPrimary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 11,
-                      fontWeight: '700',
+                      fontWeight: "700",
                     }}
                   >
                     {item.value}
@@ -124,7 +127,7 @@ export function DashboardMonthlyPulseCard({
                       color: tokens.colors.textSecondary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 10,
-                      fontWeight: '600',
+                      fontWeight: "600",
                     }}
                   >
                     {item.label}
@@ -141,42 +144,42 @@ export function DashboardMonthlyPulseCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   deltaPill: {
     minHeight: 26,
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   trendArea: {
     marginTop: 4,
   },
   emptyState: {
-    borderRadius: 16,
+    borderRadius: 6,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     paddingHorizontal: 14,
     paddingVertical: 16,
   },
   trendGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 10,
   },
   trendColumn: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 4,
   },
   trendBarWrap: {
     height: 52,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
   trendBar: {
     width: 12,

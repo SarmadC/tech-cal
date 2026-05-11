@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import type { MobileCommunityComment } from '@kurecal/domain';
+import type { MobileCommunityComment } from "@kurecal/domain";
 
-import { formatCommunityRelativeTime } from '../lib/communityPresentation';
+import { formatCommunityRelativeTime } from "../lib/communityPresentation";
+import { useAppTheme } from "../providers/ThemeProvider";
 
 interface CommunityCommentThreadProps {
   comment: MobileCommunityComment;
@@ -13,24 +14,74 @@ export function CommunityCommentThread({
   comment,
   depth = 0,
 }: CommunityCommentThreadProps) {
+  const { tokens } = useAppTheme();
+
   return (
-    <View style={[styles.root, depth > 0 ? styles.replyRoot : null]}>
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor:
+            depth > 0 ? tokens.colors.surfaceMuted : tokens.colors.surface,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.md,
+        },
+      ]}
+    >
       <View style={styles.headerRow}>
-        <Text style={styles.authorLabel}>
-          {comment.author.fullName || 'Community member'}
+        <Text
+          style={[
+            styles.authorLabel,
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {comment.author.fullName || "Community member"}
         </Text>
-        <Text style={styles.metaLabel}>
+        <Text
+          style={[
+            styles.metaLabel,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
           {formatCommunityRelativeTime(comment.createdAt)}
         </Text>
-        {typeof comment.score === 'number' ? (
-          <Text style={styles.metaLabel}>Score {comment.score}</Text>
+        {typeof comment.score === "number" ? (
+          <Text
+            style={[
+              styles.metaLabel,
+              {
+                color: tokens.colors.textTertiary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            Score {comment.score}
+          </Text>
         ) : null}
       </View>
 
-      <Text style={styles.body}>{comment.content}</Text>
+      <Text
+        style={[
+          styles.body,
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {comment.content}
+      </Text>
 
       {comment.replies.length ? (
-        <View style={styles.replies}>
+        <View
+          style={[styles.replies, { borderLeftColor: tokens.colors.border }]}
+        >
           {comment.replies.map((reply) => (
             <CommunityCommentThread
               key={reply.id}
@@ -46,43 +97,33 @@ export function CommunityCommentThread({
 
 const styles = StyleSheet.create({
   authorLabel: {
-    color: '#f8fafc',
     flexShrink: 1,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "600",
   },
   body: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   headerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   metaLabel: {
-    color: '#64748b',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: "600",
   },
   replies: {
-    borderLeftColor: 'rgba(148, 163, 184, 0.14)',
     borderLeftWidth: 1,
-    gap: 12,
-    marginLeft: 8,
-    marginTop: 12,
-    paddingLeft: 12,
-  },
-  replyRoot: {
-    backgroundColor: 'rgba(15, 23, 42, 0.36)',
+    gap: 8,
+    marginLeft: 6,
+    marginTop: 6,
+    paddingLeft: 8,
   },
   root: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 18,
     borderWidth: 1,
-    gap: 10,
-    padding: 14,
+    gap: 8,
+    padding: 10,
   },
 });

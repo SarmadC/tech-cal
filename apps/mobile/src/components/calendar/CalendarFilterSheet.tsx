@@ -1,5 +1,5 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { FontAwesome } from "@expo/vector-icons";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Modal,
   Pressable,
@@ -8,18 +8,18 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import type {
   MobileCalendarFeed,
   MobileDiscoverCost,
   MobileDiscoverDateRange,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import { resolveCurrentLocationLabel } from '../../lib/discoverLocationUtils';
-import { useAppTheme } from '../../providers/ThemeProvider';
-import { CalendarQuickDatePicker } from './CalendarQuickDatePicker';
+import { resolveCurrentLocationLabel } from "../../lib/discoverLocationUtils";
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { CalendarQuickDatePicker } from "./CalendarQuickDatePicker";
 
 export interface CalendarDraftFilters {
   tags: string[];
@@ -31,8 +31,8 @@ export interface CalendarDraftFilters {
 interface CalendarFilterSheetProps {
   visible: boolean;
   value: CalendarDraftFilters;
-  tags: MobileCalendarFeed['availableFilters']['tags'];
-  counts: MobileCalendarFeed['counts'];
+  tags: MobileCalendarFeed["availableFilters"]["tags"];
+  counts: MobileCalendarFeed["counts"];
   resultCount: number | null;
   activeFilterCount: number;
   profileTimezone?: string | null;
@@ -55,22 +55,22 @@ function toggleSelection(values: string[], value: string) {
 
 function formatDateLabel(value: string | null) {
   if (!value) {
-    return '';
+    return "";
   }
 
-  const [year, month, day] = value.split('-').map(Number);
+  const [year, month, day] = value.split("-").map(Number);
   const date = new Date(year, month - 1, day);
 
   return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 function formatDateRangeLabel(value: MobileDiscoverDateRange) {
   if (!value.start && !value.end) {
-    return 'Any date';
+    return "Any date";
   }
 
   if (value.start && value.end) {
@@ -139,7 +139,9 @@ function FilterChoice({
           style={[
             styles.radio,
             {
-              backgroundColor: checked ? tokens.colors.textPrimary : 'transparent',
+              backgroundColor: checked
+                ? tokens.colors.textPrimary
+                : "transparent",
               borderColor: checked
                 ? tokens.colors.textPrimary
                 : tokens.colors.discoverToolbarBorderStrong,
@@ -150,7 +152,9 @@ function FilterChoice({
             style={[
               styles.radioDot,
               {
-                backgroundColor: checked ? tokens.colors.textInverse : 'transparent',
+                backgroundColor: checked
+                  ? tokens.colors.textInverse
+                  : "transparent",
               },
             ]}
           />
@@ -158,17 +162,19 @@ function FilterChoice({
 
         <Text
           style={{
-            color: checked ? tokens.colors.textPrimary : tokens.colors.discoverTextSoft,
+            color: checked
+              ? tokens.colors.textPrimary
+              : tokens.colors.discoverTextSoft,
             fontFamily: tokens.typography.sans,
             fontSize: 14,
-            fontWeight: checked ? '700' : '500',
+            fontWeight: checked ? "700" : "500",
           }}
         >
           {label}
         </Text>
       </View>
 
-      {typeof count === 'number' ? (
+      {typeof count === "number" ? (
         <Text
           style={{
             color: tokens.colors.discoverTextMuted,
@@ -218,7 +224,7 @@ export function CalendarFilterSheet({
 
   function update<K extends keyof CalendarDraftFilters>(
     key: K,
-    nextValue: CalendarDraftFilters[K]
+    nextValue: CalendarDraftFilters[K],
   ) {
     onChange({
       ...value,
@@ -230,9 +236,10 @@ export function CalendarFilterSheet({
     setIsDetectingLocation(true);
 
     try {
-      const detectedLocation = await resolveCurrentLocationLabel(profileTimezone);
+      const detectedLocation =
+        await resolveCurrentLocationLabel(profileTimezone);
       if (detectedLocation) {
-        update('location', detectedLocation);
+        update("location", detectedLocation);
       }
     } finally {
       setIsDetectingLocation(false);
@@ -241,12 +248,17 @@ export function CalendarFilterSheet({
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={onClose}
+      >
         <Pressable
           style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
           onPress={onClose}
         />
-        <SafeAreaView edges={['bottom']} style={styles.sheetSafeArea}>
+        <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
           <View
             style={[
               styles.sheet,
@@ -263,7 +275,7 @@ export function CalendarFilterSheet({
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
                     fontSize: 20,
-                    fontWeight: '800',
+                    fontWeight: "800",
                   }}
                 >
                   Calendar filters
@@ -276,7 +288,7 @@ export function CalendarFilterSheet({
                     color: tokens.colors.discoverTextSoft,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Close
@@ -295,7 +307,7 @@ export function CalendarFilterSheet({
                       color: tokens.colors.discoverTextMuted,
                       fontFamily: tokens.typography.sans,
                       fontSize: 12,
-                      fontWeight: '500',
+                      fontWeight: "500",
                     }}
                   >
                     {activeFilterCount} active
@@ -306,7 +318,7 @@ export function CalendarFilterSheet({
                         color: tokens.colors.discoverTextSoft,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
-                        fontWeight: '600',
+                        fontWeight: "600",
                       }}
                     >
                       Reset filters
@@ -348,7 +360,7 @@ export function CalendarFilterSheet({
                             : tokens.colors.discoverTextMuted,
                         fontFamily: tokens.typography.sans,
                         fontSize: 15,
-                        fontWeight: '500',
+                        fontWeight: "500",
                       }}
                     >
                       {dateRangeLabel}
@@ -377,7 +389,9 @@ export function CalendarFilterSheet({
                       autoCorrect={false}
                       maxLength={100}
                       placeholder={
-                        isDetectingLocation ? 'Finding nearby events...' : 'City or region'
+                        isDetectingLocation
+                          ? "Finding nearby events..."
+                          : "City or region"
                       }
                       placeholderTextColor={tokens.colors.discoverTextMuted}
                       style={[
@@ -388,7 +402,9 @@ export function CalendarFilterSheet({
                         },
                       ]}
                       value={value.location}
-                      onChangeText={(nextValue) => update('location', nextValue)}
+                      onChangeText={(nextValue) =>
+                        update("location", nextValue)
+                      }
                     />
                   </View>
 
@@ -406,12 +422,12 @@ export function CalendarFilterSheet({
                           : tokens.colors.discoverTextSoft,
                         fontFamily: tokens.typography.sans,
                         fontSize: 13,
-                        fontWeight: '600',
+                        fontWeight: "600",
                       }}
                     >
                       {isDetectingLocation
-                        ? 'Detecting location...'
-                        : 'Use current location'}
+                        ? "Detecting location..."
+                        : "Use current location"}
                     </Text>
                   </Pressable>
                 </FilterSection>
@@ -441,9 +457,9 @@ export function CalendarFilterSheet({
                     ]}
                   >
                     {[
-                      { id: 'all', label: 'Any' },
-                      { id: 'free', label: 'Free', count: costCounts.free },
-                      { id: 'paid', label: 'Paid', count: costCounts.paid },
+                      { id: "all", label: "Any" },
+                      { id: "free", label: "Free", count: costCounts.free },
+                      { id: "paid", label: "Paid", count: costCounts.paid },
                     ].map((option, index, options) => (
                       <View key={option.id}>
                         <FilterChoice
@@ -451,7 +467,7 @@ export function CalendarFilterSheet({
                           count={option.count}
                           checked={value.cost === option.id}
                           onPress={() =>
-                            update('cost', option.id as MobileDiscoverCost)
+                            update("cost", option.id as MobileDiscoverCost)
                           }
                         />
                         {index < options.length - 1 ? (
@@ -459,7 +475,8 @@ export function CalendarFilterSheet({
                             style={[
                               styles.divider,
                               {
-                                backgroundColor: tokens.colors.discoverToolbarBorder,
+                                backgroundColor:
+                                  tokens.colors.discoverToolbarBorder,
                               },
                             ]}
                           />
@@ -478,7 +495,10 @@ export function CalendarFilterSheet({
                         <Pressable
                           key={tag.value}
                           onPress={() =>
-                            update('tags', toggleSelection(selectedTags, tag.value))
+                            update(
+                              "tags",
+                              toggleSelection(selectedTags, tag.value),
+                            )
                           }
                           style={[
                             styles.filterPill,
@@ -499,7 +519,7 @@ export function CalendarFilterSheet({
                                 : tokens.colors.discoverTextSoft,
                               fontFamily: tokens.typography.sans,
                               fontSize: 13,
-                              fontWeight: '600',
+                              fontWeight: "600",
                             }}
                           >
                             {tag.label} {tag.count}
@@ -527,8 +547,8 @@ export function CalendarFilterSheet({
                     color: tokens.colors.warning,
                     fontFamily: tokens.typography.sans,
                     fontSize: 12,
-                    fontWeight: '800',
-                    textTransform: 'uppercase',
+                    fontWeight: "800",
+                    textTransform: "uppercase",
                   }}
                 >
                   Preview unavailable
@@ -538,7 +558,7 @@ export function CalendarFilterSheet({
                     color: tokens.colors.discoverTextSoft,
                     fontFamily: tokens.typography.sans,
                     fontSize: 13,
-                    fontWeight: '500',
+                    fontWeight: "500",
                   }}
                 >
                   {previewError}
@@ -552,7 +572,7 @@ export function CalendarFilterSheet({
                 style={[
                   styles.footerButton,
                   {
-                    backgroundColor: 'transparent',
+                    backgroundColor: "transparent",
                     borderColor: tokens.colors.discoverToolbarBorderStrong,
                   },
                 ]}
@@ -562,7 +582,7 @@ export function CalendarFilterSheet({
                     color: tokens.colors.discoverTextSoft,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '700',
+                    fontWeight: "700",
                   }}
                 >
                   Reset all
@@ -592,13 +612,13 @@ export function CalendarFilterSheet({
                       : tokens.colors.textInverse,
                     fontFamily: tokens.typography.sans,
                     fontSize: 14,
-                    fontWeight: '800',
+                    fontWeight: "800",
                   }}
                 >
                   {previewError
-                    ? 'Preview unavailable'
+                    ? "Preview unavailable"
                     : isPreviewLoading
-                      ? 'Updating…'
+                      ? "Updating…"
                       : `Show ${resultCount ?? 0}`}
                 </Text>
               </Pressable>
@@ -611,7 +631,7 @@ export function CalendarFilterSheet({
           visible={isDatePickerOpen}
           presentation="inline"
           value={value.dateRange}
-          onApply={(nextRange) => update('dateRange', nextRange)}
+          onApply={(nextRange) => update("dateRange", nextRange)}
           onClose={() => setIsDatePickerOpen(false)}
           title="Select date range"
           applyLabel="Apply range"
@@ -628,95 +648,95 @@ const styles = StyleSheet.create({
   },
   sheetSafeArea: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   sheet: {
-    maxHeight: '88%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    maxHeight: "88%",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     borderTopWidth: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 14,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+    gap: 10,
   },
   sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
   },
   sheetHeaderCopy: {
     flex: 1,
     gap: 4,
   },
   sheetContent: {
-    gap: 18,
+    gap: 14,
     paddingBottom: 8,
   },
   activeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   group: {
-    gap: 14,
+    gap: 10,
   },
   groupTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   section: {
     gap: 10,
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.15,
   },
   wrapRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   listCard: {
-    borderRadius: 18,
+    borderRadius: 4,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   filterPill: {
-    minHeight: 36,
-    borderRadius: 16,
+    minHeight: 28,
+    borderRadius: 2,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 42,
   },
   choiceRow: {
-    minHeight: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   choiceCopy: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   radio: {
     width: 16,
     height: 16,
     borderRadius: 999,
     borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioDot: {
     width: 6,
@@ -724,34 +744,34 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   inputWrap: {
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 36,
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
+    justifyContent: "center",
+    paddingHorizontal: 10,
   },
   input: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 20,
     paddingVertical: 0,
   },
   dateField: {
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 36,
+    borderRadius: 4,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   previewErrorBanner: {
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     gap: 6,
     paddingHorizontal: 14,
@@ -759,11 +779,11 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     flex: 1,
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 32,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
   },
 });
