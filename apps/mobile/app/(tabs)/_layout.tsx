@@ -1,7 +1,8 @@
 import { Redirect, Tabs } from "expo-router";
-import { BottomTabBar } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { SymbolView } from "expo-symbols";
-import { Animated, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BrandLoadingScreen } from "../../src/components/brand/BrandLoadingScreen";
 import {
@@ -20,81 +21,137 @@ const TAB_ICONS = {
   profile: "person.crop.circle",
 } as const;
 
+const TAB_ACTIVE_ICONS = {
+  discover: "safari.fill",
+  calendar: "calendar",
+  community: "person.2.fill",
+  dashboard: "chart.bar.xaxis",
+  profile: "person.crop.circle.fill",
+} as const;
+
 type TabName = keyof typeof TAB_ICONS;
 
-function TabIcon({
-  color,
-  focused,
-  tab,
-  tokens,
-}: {
-  color: string;
-  focused: boolean;
-  tab: TabName;
-  tokens: AppThemeTokens;
-}) {
-  return (
-    <View
-      style={{
-        minWidth: 28,
-        height: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: tokens.radius.md,
-        borderBottomColor: focused ? tokens.colors.accent : "transparent",
-        borderBottomWidth: 1,
-      }}
-    >
-      <SymbolView
-        name={TAB_ICONS[tab]}
-        size={focused ? 18 : 17}
-        tintColor={focused ? tokens.colors.textSecondary : color}
-        type="monochrome"
-        weight={focused ? "medium" : "regular"}
-      />
-    </View>
-  );
-}
-
-function TabLabel({
-  color,
-  focused,
-  title,
-  tokens,
-}: {
-  color: string;
-  focused: boolean;
-  title: string;
-  tokens: AppThemeTokens;
-}) {
-  return (
-    <Text
-      style={{
-        marginTop: 0,
-        fontFamily: tokens.typography.sans,
-        fontSize: 8.5,
-        lineHeight: 10,
-        letterSpacing: 0.2,
-        fontWeight: focused ? "500" : "500",
-        color: focused ? tokens.colors.textSecondary : color,
-        opacity: focused ? 0.88 : 0.9,
-      }}
-    >
-      {title}
-    </Text>
-  );
-}
-
-function buildTabOptions(tab: TabName, title: string, tokens: AppThemeTokens) {
+function buildTabOptions(title: string) {
   return {
     title,
-    tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-      <TabIcon color={color} focused={focused} tab={tab} tokens={tokens} />
-    ),
-    tabBarLabel: ({ color, focused }: { color: string; focused: boolean }) => (
-      <TabLabel color={color} focused={focused} title={title} tokens={tokens} />
-    ),
   };
+}
+
+function isVisibleTab(tabName: string): tabName is TabName {
+  return tabName in TAB_ICONS;
+}
+
+function AppTabBar({
+  animatedValue,
+  state,
+  descriptors,
+  navigation,
+  tokens,
+}: BottomTabBarProps & {
+  animatedValue: Animated.Value;
+  tokens: AppThemeTokens;
+}) {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
+  const translateY = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [72 + bottomInset, 0],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="box-none"
+      style={[
+        styles.tabBarFrame,
+        {
+          opacity: animatedValue,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.tabBarRail,
+          {
+            backgroundColor:
+              tokens.mode === "dark"
+                ? "rgba(13, 14, 15, 0.94)"
+                : "rgba(255, 255, 255, 0.94)",
+            paddingBottom: bottomInset,
+          },
+        ]}
+      >
+        {state.routes.map((route, index) => {
+          if (!isVisibleTab(route.name)) {
+            return null;
+          }
+
+          const descriptor = descriptors[route.key];
+          const options = descriptor.options;
+          const focused = state.index === index;
+          const title =
+            options.tabBarLabel !== undefined &&
+            typeof options.tabBarLabel === "string"
+              ? options.tabBarLabel
+              : options.title ?? route.name;
+          const iconColor = focused
+            ? tokens.colors.textPrimary
+            : tokens.colors.textTertiary;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? title}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : undefined}
+              onLongPress={onLongPress}
+              onPress={onPress}
+              style={({ pressed }) => [
+                styles.tabButton,
+                {
+                  backgroundColor: pressed
+                    ? "rgba(255, 255, 255, 0.06)"
+                    : "transparent",
+                  opacity: focused ? 1 : 0.48,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                },
+              ]}
+            >
+              {focused ? <View style={styles.activeIconGlow} /> : null}
+              <SymbolView
+                name={
+                  focused ? TAB_ACTIVE_ICONS[route.name] : TAB_ICONS[route.name]
+                }
+                size={focused ? 26 : 25}
+                tintColor={iconColor}
+                type="monochrome"
+                weight={focused ? "medium" : "regular"}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
 }
 
 function TabsNavigator() {
@@ -120,11 +177,6 @@ function TabsNavigator() {
     return <Redirect href="../onboarding" />;
   }
 
-  const translateY = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [88, 0],
-  });
-
   return (
     <Tabs
       initialRouteName="discover"
@@ -135,70 +187,34 @@ function TabsNavigator() {
         },
       }}
       tabBar={(props) => (
-        <Animated.View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            transform: [{ translateY }],
-            opacity: animatedValue,
-          }}
-        >
-          <BottomTabBar {...props} />
-        </Animated.View>
+        <AppTabBar {...props} animatedValue={animatedValue} tokens={tokens} />
       )}
       screenOptions={{
         headerShown: false,
         sceneStyle: {
           backgroundColor: tokens.colors.shell,
         },
-        tabBarActiveTintColor: tokens.colors.textPrimary,
-        tabBarInactiveTintColor: tokens.colors.textTertiary,
-        tabBarStyle: {
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: tokens.colors.tabBar,
-          borderTopColor: tokens.colors.tabBarBorder,
-          height: 70,
-          paddingBottom: 8,
-          paddingTop: 4,
-        },
-        tabBarIconStyle: {
-          marginBottom: -6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: tokens.typography.sans,
-          fontSize: 8.5,
-          fontWeight: "500",
-        },
-        tabBarItemStyle: {
-          paddingTop: 1,
-        },
       }}
     >
       <Tabs.Screen
         name="discover"
-        options={buildTabOptions("discover", "Discover", tokens)}
+        options={buildTabOptions("Discover")}
       />
       <Tabs.Screen
         name="calendar"
-        options={buildTabOptions("calendar", "Calendar", tokens)}
+        options={buildTabOptions("Calendar")}
       />
       <Tabs.Screen
         name="community"
-        options={buildTabOptions("community", "Community", tokens)}
+        options={buildTabOptions("Community")}
       />
       <Tabs.Screen
         name="dashboard"
-        options={buildTabOptions("dashboard", "Dashboard", tokens)}
+        options={buildTabOptions("Dashboard")}
       />
       <Tabs.Screen
         name="profile"
-        options={buildTabOptions("profile", "Profile", tokens)}
+        options={buildTabOptions("Profile")}
       />
       <Tabs.Screen
         name="submit-event"
@@ -224,6 +240,41 @@ function TabsNavigator() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarFrame: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  tabBarRail: {
+    minHeight: 62,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255, 255, 255, 0.11)",
+    paddingHorizontal: 18,
+    paddingTop: 9,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  tabButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 999,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIconGlow: {
+    position: "absolute",
+    width: 36,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.055)",
+  },
+});
 
 export default function TabsLayout() {
   return (
