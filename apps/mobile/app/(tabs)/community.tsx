@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import {
   Pressable,
@@ -20,6 +19,19 @@ import {
   formatCommunityRelativeTime,
 } from '../../src/lib/communityPresentation';
 import { loadMobileCommunityHome } from '../../src/lib/mobileApi';
+
+const colors = {
+  accent: '#BDC2FF',
+  background: '#0D0E0F',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderStrong: 'rgba(189, 194, 255, 0.36)',
+  danger: '#FFB4AB',
+  surface: '#121314',
+  surfaceHigh: '#1B1C1D',
+  text: '#E3E2E3',
+  textMuted: '#C6C5D5',
+  textSubtle: '#908F9E',
+};
 
 export default function CommunityScreen() {
   const [data, setData] = useState<MobileCommunityHome | null>(null);
@@ -61,36 +73,32 @@ export default function CommunityScreen() {
 
   if (loading && !data) {
     return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="loading"
-              title="Loading community"
-              description="Pulling the latest circle conversations and upcoming moments."
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenStateView
+            mode="loading"
+            title="Loading community"
+            description="Pulling the latest circle conversations and upcoming moments."
+          />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error && !data) {
     return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.stateWrap}>
-            <ScreenStateView
-              mode="error"
-              title="Community unavailable"
-              description={error}
-              onRetry={() => {
-                void loadCommunity();
-              }}
-            />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenStateView
+            mode="error"
+            title="Community unavailable"
+            description={error}
+            onRetry={() => {
+              void loadCommunity();
+            }}
+          />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -101,275 +109,291 @@ export default function CommunityScreen() {
   };
 
   return (
-    <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                void loadCommunity('refresh');
-              }}
-              tintColor="#2dd4bf"
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              void loadCommunity('refresh');
+            }}
+            tintColor={colors.accent}
+          />
+        }
+      >
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>{header.eyebrow}</Text>
+          <Text style={styles.title}>{header.title}</Text>
+          {header.subtitle ? (
+            <Text style={styles.subtitle}>{header.subtitle}</Text>
+          ) : null}
+        </View>
+
+        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEyebrow}>Circles</Text>
+            <Text style={styles.sectionTitle}>Your rooms</Text>
+          </View>
+
+          {data?.circles.length ? (
+            <View style={styles.stack}>
+              {data.circles.map((circle) => (
+                <Pressable
+                  key={circle.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: '../community/[slug]',
+                      params: { slug: circle.slug },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.circleCard,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                >
+                  <View style={styles.circleHeader}>
+                    <Text style={styles.circleName}>{circle.name}</Text>
+                    {circle.isJoined ? (
+                      <View style={styles.joinedPill}>
+                        <Text style={styles.joinedLabel}>Joined</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.circleDescription}>{circle.description}</Text>
+                  <Text style={styles.circleMeta}>
+                    {formatCompactCount(circle.memberCount)} members
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <ScreenStateView
+              mode="empty"
+              title="No circles yet"
+              description="Join a circle to keep its conversations and event moments close."
             />
-          }
-        >
-          <View style={styles.hero}>
-            <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-            <Text style={styles.title}>{header.title}</Text>
-            {header.subtitle ? (
-              <Text style={styles.subtitle}>{header.subtitle}</Text>
-            ) : null}
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEyebrow}>Feed</Text>
+            <Text style={styles.sectionTitle}>Recent conversations</Text>
           </View>
 
-          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Circles</Text>
-              <Text style={styles.sectionTitle}>Your rooms</Text>
+          {data?.feed.length ? (
+            <View style={styles.stack}>
+              {data.feed.map((post) => (
+                <CommunityFeedCard
+                  key={post.id}
+                  post={post}
+                  onPress={() =>
+                    router.push({
+                      pathname: '../community/[slug]/post/[postId]',
+                      params: { slug: post.circle.slug, postId: post.id },
+                    })
+                  }
+                />
+              ))}
             </View>
+          ) : (
+            <ScreenStateView
+              mode="empty"
+              title="No posts yet"
+              description="The newest circle threads will show up here once the community starts moving."
+            />
+          )}
+        </View>
 
-            {data?.circles.length ? (
-              <View style={styles.stack}>
-                {data.circles.map((circle) => (
-                  <Pressable
-                    key={circle.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../community/[slug]',
-                        params: { slug: circle.slug },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.circleCard,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
-                    <View style={styles.circleHeader}>
-                      <Text style={styles.circleName}>{circle.name}</Text>
-                      {circle.isJoined ? (
-                        <View style={styles.joinedPill}>
-                          <Text style={styles.joinedLabel}>Joined</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.circleDescription}>{circle.description}</Text>
-                    <Text style={styles.circleMeta}>
-                      {formatCompactCount(circle.memberCount)} members
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No circles yet"
-                description="Join a circle to keep its conversations and event moments close."
-              />
-            )}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEyebrow}>Upcoming</Text>
+            <Text style={styles.sectionTitle}>Moments around your community</Text>
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Feed</Text>
-              <Text style={styles.sectionTitle}>Recent conversations</Text>
+          {data?.upcomingEvents.length ? (
+            <View style={styles.stack}>
+              {data.upcomingEvents.map((event) => (
+                <Pressable
+                  key={event.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: '../event/[id]',
+                      params: { id: event.id },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.eventCard,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                >
+                  <Text style={styles.eventTitle}>{event.title}</Text>
+                  <Text style={styles.eventMeta}>
+                    {formatCommunityRelativeTime(event.startTime)} ·{' '}
+                    {event.location || event.format || 'Online'}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-
-            {data?.feed.length ? (
-              <View style={styles.stack}>
-                {data.feed.map((post) => (
-                  <CommunityFeedCard
-                    key={post.id}
-                    post={post}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../community/[slug]/post/[postId]',
-                        params: { slug: post.circle.slug, postId: post.id },
-                      })
-                    }
-                  />
-                ))}
-              </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No posts yet"
-                description="The newest circle threads will show up here once the community starts moving."
-              />
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Upcoming</Text>
-              <Text style={styles.sectionTitle}>Moments around your community</Text>
-            </View>
-
-            {data?.upcomingEvents.length ? (
-              <View style={styles.stack}>
-                {data.upcomingEvents.map((event) => (
-                  <Pressable
-                    key={event.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '../event/[id]',
-                        params: { id: event.id },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.eventCard,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventMeta}>
-                      {formatCommunityRelativeTime(event.startTime)} •{' '}
-                      {event.location || event.format || 'Online'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No upcoming community moments"
-                description="Save a few events or join circles and upcoming moments will show here."
-              />
-            )}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+          ) : (
+            <ScreenStateView
+              mode="empty"
+              title="No upcoming community moments"
+              description="Save a few events or join circles and upcoming moments will show here."
+            />
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   cardPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
+    opacity: 0.84,
   },
   circleCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 10,
-    padding: 18,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   circleDescription: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   circleHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   circleMeta: {
-    color: '#64748b',
+    color: colors.textSubtle,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
+    lineHeight: 16,
   },
   circleName: {
-    color: '#f8fafc',
+    color: colors.text,
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   content: {
-    gap: 18,
-    padding: 22,
+    gap: 16,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   eventCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 8,
-    padding: 18,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   eventMeta: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600',
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
   },
   eventTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   eyebrow: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.66,
+    lineHeight: 16,
     textTransform: 'uppercase',
   },
-  gradient: {
-    flex: 1,
-  },
   hero: {
-    gap: 10,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: 6,
+    paddingBottom: 12,
   },
   inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-    lineHeight: 20,
+    backgroundColor: colors.surfaceHigh,
+    borderColor: 'rgba(255, 180, 171, 0.22)',
+    borderRadius: 4,
+    borderWidth: 1,
+    color: colors.danger,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   joinedLabel: {
-    color: '#ccfbf1',
+    color: colors.accent,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
+    lineHeight: 14,
   },
   joinedPill: {
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: 'rgba(45, 212, 191, 0.3)',
-    borderRadius: 999,
+    backgroundColor: 'rgba(189, 194, 255, 0.08)',
+    borderColor: colors.borderStrong,
+    borderRadius: 2,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   safeArea: {
+    backgroundColor: colors.background,
     flex: 1,
   },
   section: {
-    gap: 14,
+    gap: 8,
   },
   sectionEyebrow: {
-    color: '#2dd4bf',
+    color: colors.textSubtle,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    fontWeight: '600',
+    letterSpacing: 0.66,
+    lineHeight: 16,
     textTransform: 'uppercase',
   },
   sectionHeader: {
-    gap: 6,
+    gap: 2,
   },
   sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 20,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 24,
   },
   stack: {
-    gap: 14,
+    gap: 8,
   },
   stateWrap: {
     flex: 1,
     justifyContent: 'center',
-    padding: 22,
+    padding: 20,
   },
   subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.8,
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '600',
+    lineHeight: 29,
   },
 });

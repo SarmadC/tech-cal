@@ -1,7 +1,7 @@
 PODS:
-  - EXConstants (55.0.9):
+  - EXConstants (55.0.11):
     - ExpoModulesCore
-  - Expo (55.0.9):
+  - Expo (55.0.11):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -26,32 +26,32 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoAsset (55.0.10):
+  - ExpoAsset (55.0.12):
     - ExpoModulesCore
-  - ExpoDomWebView (55.0.3):
+  - ExpoDomWebView (55.0.5):
     - ExpoModulesCore
-  - ExpoFileSystem (55.0.12):
+  - ExpoFileSystem (55.0.14):
     - ExpoModulesCore
-  - ExpoFont (55.0.4):
+  - ExpoFont (55.0.6):
     - ExpoModulesCore
-  - ExpoGlassEffect (55.0.8):
+  - ExpoGlassEffect (55.0.10):
     - ExpoModulesCore
-  - ExpoImage (55.0.6):
+  - ExpoImage (55.0.8):
     - ExpoModulesCore
     - libavif/libdav1d
     - SDWebImage (~> 5.21.0)
     - SDWebImageAVIFCoder (~> 0.11.0)
     - SDWebImageSVGCoder (~> 1.7.0)
     - SDWebImageWebPCoder (~> 0.14.6)
-  - ExpoKeepAwake (55.0.4):
+  - ExpoKeepAwake (55.0.6):
     - ExpoModulesCore
-  - ExpoLinearGradient (55.0.9):
+  - ExpoLinearGradient (55.0.11):
     - ExpoModulesCore
-  - ExpoLinking (55.0.9):
+  - ExpoLinking (55.0.11):
     - ExpoModulesCore
-  - ExpoLogBox (55.0.8):
+  - ExpoLogBox (55.0.10):
     - React-Core
-  - ExpoModulesCore (55.0.18):
+  - ExpoModulesCore (55.0.20):
     - ExpoModulesJSI
     - hermes-engine
     - RCTRequired
@@ -75,17 +75,19 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoModulesJSI (55.0.18):
+  - ExpoModulesJSI (55.0.20):
     - hermes-engine
     - React-Core
     - React-runtimescheduler
     - ReactCommon
-  - ExpoRouter (55.0.8):
+  - ExpoRouter (55.0.10):
     - ExpoModulesCore
     - RNScreens
-  - ExpoSecureStore (55.0.9):
+  - ExpoSecureStore (55.0.11):
     - ExpoModulesCore
-  - ExpoSymbols (55.0.5):
+  - ExpoSymbols (55.0.7):
+    - ExpoModulesCore
+  - ExpoWebBrowser (55.0.15):
     - ExpoModulesCore
   - FBLazyVector (0.83.4)
   - hermes-engine (0.14.1):
@@ -108,6 +110,11 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
+  - PurchasesHybridCommon (17.54.0):
+    - RevenueCat (= 5.67.0)
+  - PurchasesHybridCommonUI (17.54.0):
+    - PurchasesHybridCommon (= 17.54.0)
+    - RevenueCatUI (= 5.67.0)
   - RCTDeprecation (0.83.4)
   - RCTRequired (0.83.4)
   - RCTSwiftUI (0.83.4)
@@ -1956,6 +1963,15 @@ PODS:
     - React-utils (= 0.83.4)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.83.4)
+  - RevenueCat (5.67.0)
+  - RevenueCatUI (5.67.0):
+    - RevenueCat (= 5.67.0)
+  - RNPaywalls (9.15.1):
+    - PurchasesHybridCommonUI (= 17.54.0)
+    - React-Core
+  - RNPurchases (9.15.1):
+    - PurchasesHybridCommon (= 17.54.0)
+    - React-Core
   - RNScreens (4.23.0):
     - hermes-engine
     - RCTRequired
@@ -2019,13 +2035,13 @@ PODS:
 DEPENDENCIES:
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
-  - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
+  - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
-  - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios`)
+  - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoGlassEffect (from `../node_modules/expo-glass-effect/ios`)
   - ExpoImage (from `../node_modules/expo-image/ios`)
-  - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
+  - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - "ExpoLogBox (from `../node_modules/@expo/log-box`)"
@@ -2034,6 +2050,7 @@ DEPENDENCIES:
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
+  - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2109,6 +2126,8 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
+  - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2117,6 +2136,10 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
+    - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
+    - RevenueCat
+    - RevenueCatUI
     - SDWebImage
     - SDWebImageAVIFCoder
     - SDWebImageSVGCoder
@@ -2128,11 +2151,11 @@ EXTERNAL SOURCES:
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
-    :path: "../node_modules/expo/node_modules/expo-asset/ios"
+    :path: "../node_modules/expo-asset/ios"
   ExpoDomWebView:
     :path: "../node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
-    :path: "../node_modules/expo/node_modules/expo-file-system/ios"
+    :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
   ExpoGlassEffect:
@@ -2140,7 +2163,7 @@ EXTERNAL SOURCES:
   ExpoImage:
     :path: "../node_modules/expo-image/ios"
   ExpoKeepAwake:
-    :path: "../node_modules/expo/node_modules/expo-keep-awake/ios"
+    :path: "../node_modules/expo-keep-awake/ios"
   ExpoLinearGradient:
     :path: "../node_modules/expo-linear-gradient/ios"
   ExpoLinking:
@@ -2157,6 +2180,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-secure-store/ios"
   ExpoSymbols:
     :path: "../node_modules/expo-symbols/ios"
+  ExpoWebBrowser:
+    :path: "../node_modules/expo-web-browser/ios"
   FBLazyVector:
     :path: "../node_modules/react-native/Libraries/FBLazyVector"
   hermes-engine:
@@ -2306,34 +2331,41 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNPaywalls:
+    :path: "../node_modules/react-native-purchases-ui"
+  RNPurchases:
+    :path: "../node_modules/react-native-purchases"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  EXConstants: 898c24a310046c0e68335619d0f379099a52e199
-  Expo: 55d24f07827a295a2860cbba79709fc0536adc96
-  ExpoAsset: 4efd0227e808dfa84d286aa3663ded641ef73479
-  ExpoDomWebView: f101fb3db4b6eec4163fca51f7507189b7e48661
-  ExpoFileSystem: 4ed8ccc90671813c861f212fba3668fe133b7e68
-  ExpoFont: 1aa465cf9f8ac6b670405becba8b15473581b2dd
-  ExpoGlassEffect: 42361543f2c0c383df0cb779e3cd2496b47a585e
-  ExpoImage: 53ab717157f29bb5139f9f75b259f93f784b6847
-  ExpoKeepAwake: 7f3b28c361c37389b18841bb52a58003b39fcb33
-  ExpoLinearGradient: 2e52067758a25f9b51e3fc3f4077851c0756c81c
-  ExpoLinking: 1f0d112b2777e73eef2bb580b13283fc8c85ff08
-  ExpoLogBox: 393a66b37ef3005c2890eb8b4468329db20bee51
-  ExpoModulesCore: f950d653c14728227b232312ac2420f45930a959
-  ExpoModulesJSI: 92db390c19eb21af69005d94f430793c7ca7aec7
-  ExpoRouter: 3e3ecbfd6baf14fc1a5c17fe840645b2db7559c5
-  ExpoSecureStore: 83d31183fecaae7a084e88e29d14d5a02d90882a
-  ExpoSymbols: 3d67a96643245a5d933ce7fbf535f95eb541f617
+  EXConstants: 9813b8a316e5b7bb562731c7a45e236f54195185
+  Expo: f298f7cafc2bfeb81997ddeae502ce98a672ae7f
+  ExpoAsset: 63f22b029eb9aa68d5048f77ff9430f42c770d2c
+  ExpoDomWebView: 2b2fbd9a07de8790569257cbf9dfdaa31cf95c70
+  ExpoFileSystem: 05e8c679738bd90263f9ed32bfa221f7b52ebbe5
+  ExpoFont: cdd7a1d574a376fa003c713eff49e0a4df8672c7
+  ExpoGlassEffect: 72bcb9dc634262c59897ff7c53c16e2ff03990d0
+  ExpoImage: ef931bba1fd3e907c2262216d17eb21095c9ac2b
+  ExpoKeepAwake: a1baf9810a2dee1905aa9bdd336852598f7220e9
+  ExpoLinearGradient: 7b177a39f4e9ffd00156452afe115265f47c22fc
+  ExpoLinking: b42fd76bdda8662ddf797b17cb4cc793adabfe98
+  ExpoLogBox: a3de999775d423ac9cb85d24bd47628e5392761f
+  ExpoModulesCore: c9299eda14c15d1f230b84c33d45ede363e9c554
+  ExpoModulesJSI: a998e176d28567273b540fa568505ff1c9aaacac
+  ExpoRouter: 9d717e9d5b0e1ccff05b1b2fd7c031b6fbecc433
+  ExpoSecureStore: 2410bec85e98b0718e21b8b012d4c3721ba8c0ed
+  ExpoSymbols: 8b63e859ba013df1f2fc666f535fddb3d5270569
+  ExpoWebBrowser: 231c91ddd1e445d81d4a4cac364360354200c32f
   FBLazyVector: 061f518bbd81677ed8a8317e2ae60b8779495808
-  hermes-engine: ee10a531f5b0c90c4c0d86489233b9426297b3af
+  hermes-engine: bdcf6dc8f458948ac9c77c15c321c9222eb61ba2
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
+  PurchasesHybridCommon: 6a8f4e30952167d2afaccf17ebcf8f8107060e4c
+  PurchasesHybridCommonUI: 8bbf53fe39a7e65cfbd0a2aba4dec6e30cd2c5d5
   RCTDeprecation: 5045f20b2cc1239bf422764004338c720684a22f
   RCTRequired: b6b9724225dd780ac2989d2e575d5513c50fe04b
   RCTSwiftUI: 395b65655229fa2006415207adcfcb6e35dc78ed
@@ -2342,7 +2374,7 @@ SPEC CHECKSUMS:
   React: 3e14066ac707b3e369d09e2e923d8bee7f8c33ff
   React-callinvoker: bd7959a24564feaf5e4c8c11789e64884da13482
   React-Core: f060f4e14e9301685ce63ea65fbe903bf3397e45
-  React-Core-prebuilt: 0e88c9e9e66595f756dabe61a84eb605d82b9743
+  React-Core-prebuilt: 0a407aabd3e4b738e755bf912991ab2fd03c574f
   React-CoreModules: 89a1a544297be88ca4cdff317423f9e0d0c192a4
   React-cxxreact: 81b1bfa305b1b759cc0fe18327644816216e5993
   React-debug: 234fddb309822e13b9b442ef1bdca8d2b8c3cbf2
@@ -2405,7 +2437,11 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 2b19d66e5ddfe8dc7afb6338a4626156cbf2bab1
   ReactCodegen: 43f0948182edee9407c7b977fb059455dfeb9361
   ReactCommon: c6e81cc1ae185fa84863f3ea1d58caac4be741d7
-  ReactNativeDependencies: cd9b560b81c5b9d492f0c99878db4090cf55d849
+  ReactNativeDependencies: 4abdc3eb99bec2e9ed8c9c23bf21b640e2950e0c
+  RevenueCat: f0d05079b59c33c645293bbc1fa78469ea7fcae7
+  RevenueCatUI: a285e58fd30bb3810d1442b5020bd45a1772c358
+  RNPaywalls: e21d0c7d2a2b39ecfbc64544c147766cc68cb2f9
+  RNPurchases: bd9310d7ae9f27f77bc636c562af4bf911d0dccd
   RNScreens: 02e62f995ceb94ea465864b3bf4d4767b87f0362
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57

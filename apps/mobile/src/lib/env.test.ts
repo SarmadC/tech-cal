@@ -5,7 +5,9 @@ import {
   getRevenueCatProductIds,
   getRevenueCatProEntitlementId,
   getRevenueCatRuntimeConfig,
+  getMobileEmailConfirmationRedirectUrl,
   getMobileApiBaseUrl,
+  getMobilePasswordResetRedirectUrl,
   getMobileRuntimeMetadata,
   getRequiredMobileEnv,
   getSupabaseRuntimeConfig,
@@ -22,6 +24,22 @@ describe('mobile env helpers', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api.kurecal.test/';
 
     expect(getMobileApiBaseUrl()).toBe('https://api.kurecal.test');
+  });
+
+  it('builds the mobile password reset redirect URL', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://app.kurecal.test/';
+
+    expect(getMobilePasswordResetRedirectUrl()).toBe(
+      'https://app.kurecal.test/auth/callback?type=recovery'
+    );
+  });
+
+  it('builds the mobile email confirmation redirect URL', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://app.kurecal.test/';
+
+    expect(getMobileEmailConfirmationRedirectUrl()).toBe(
+      'https://app.kurecal.test/auth/callback?next=%2Fdiscover'
+    );
   });
 
   it('throws when a required env var is missing', () => {

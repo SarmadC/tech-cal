@@ -1,5 +1,14 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+const colors = {
+  accent: '#BDC2FF',
+  accentStrong: '#5E6AD2',
+  border: 'rgba(255, 255, 255, 0.08)',
+  surface: '#121314',
+  text: '#E3E2E3',
+  textMuted: '#C6C5D5',
+};
+
 interface ScreenStateViewProps {
   description: string;
   mode: 'empty' | 'error' | 'loading';
@@ -16,7 +25,7 @@ export function ScreenStateView({
   return (
     <View style={styles.root}>
       {mode === 'loading' ? (
-        <ActivityIndicator color="#2dd4bf" size="large" />
+        <ActivityIndicator color={colors.accent} size="small" />
       ) : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -37,45 +46,47 @@ export function ScreenStateView({
 
 const styles = StyleSheet.create({
   description: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
   },
   retryButton: {
     alignItems: 'center',
-    backgroundColor: '#2dd4bf',
-    borderRadius: 16,
+    backgroundColor: colors.accentStrong,
+    borderColor: colors.accentStrong,
+    borderRadius: 6,
+    borderWidth: 1,
     justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 48,
-    minWidth: 140,
-    paddingHorizontal: 18,
+    marginTop: 4,
+    minHeight: 32,
+    minWidth: 96,
+    paddingHorizontal: 12,
   },
   retryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.84,
   },
   retryLabel: {
-    color: '#042f2e',
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#FDFAFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   root: {
     alignItems: 'center',
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 12,
+    gap: 8,
     justifyContent: 'center',
-    minHeight: 260,
-    padding: 28,
+    minHeight: 180,
+    padding: 16,
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 22,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 24,
     textAlign: 'center',
   },
 });
