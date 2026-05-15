@@ -14,11 +14,18 @@ type CspFlags = {
     includeStrictDynamic: boolean;
 };
 
+function isStrictNonceModeEnabled() {
+    return process.env.CSP_STRICT_NONCE_MODE === 'true';
+}
+
 function getCspStage(isProduction: boolean): CspStage {
-    const fallbackStage = isProduction ? 'strict' : 'balanced';
+    const fallbackStage = isProduction ? 'compat' : 'balanced';
     const configuredStage = (process.env.CSP_STAGE || fallbackStage).toLowerCase();
 
     if (configuredStage === 'compat' || configuredStage === 'balanced' || configuredStage === 'strict') {
+        if (isProduction && configuredStage === 'strict' && !isStrictNonceModeEnabled()) {
+            return 'compat';
+        }
         return configuredStage;
     }
 
