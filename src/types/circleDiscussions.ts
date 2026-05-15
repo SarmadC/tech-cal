@@ -25,6 +25,7 @@ export interface CircleDiscussionPost {
   isRemoved?: boolean;
   score?: number;
   userVote?: number;
+  isPinned?: boolean;
 }
 
 export interface CircleDiscussionCurrentUser {

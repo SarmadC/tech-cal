@@ -1,17 +1,24 @@
 import {
   mobileCommunityCirclePageSchema,
+  mobileCommunityEventsSchema,
   mobileCommunityHomeSchema,
+  mobileCommunityPeopleSchema,
   mobileCommunityPostPageSchema,
   mobileNetworkingStateSchema,
   mobilePublicProfileSchema,
   type MobileCommunityAuthor,
+  type MobileCommunityCircle,
   type MobileCommunityCirclePage,
+  type MobileCommunityCircleMember,
   type MobileCommunityComment,
   type MobileCommunityCurrentUser,
+  type MobileCommunityEvents,
   type MobileCommunityHome,
-  type MobileNetworkingState,
+  type MobileCommunityPeople,
   type MobileCommunityPost,
   type MobileCommunityPostPage,
+  type MobileCommunityUpcomingEvent,
+  type MobileNetworkingState,
   type MobilePublicProfile,
 } from "@kurecal/domain";
 
@@ -19,6 +26,8 @@ import type {
   CircleDiscussionPageData,
   CirclePostPageData,
 } from "@/services/circleDiscussionService";
+import type { CommunityEventsData } from "@/services/communityEventsService";
+import type { CommunityPeopleData } from "@/services/communityPeopleService";
 import type { FollowStatus } from "@/services/followService";
 import type { PublicProfileResult } from "@/services/publicProfileService";
 import type {
@@ -61,7 +70,7 @@ function toCurrentUser(
   };
 }
 
-function toMember(member: CircleDiscussionMember) {
+function toMember(member: CircleDiscussionMember): MobileCommunityCircleMember {
   return {
     id: member.id,
     fullName: member.fullName,
@@ -71,13 +80,15 @@ function toMember(member: CircleDiscussionMember) {
   };
 }
 
-function toUpcomingEvent(event: CircleDiscussionUpcomingEvent) {
+function toUpcomingEvent(
+  event: CircleDiscussionUpcomingEvent,
+): MobileCommunityUpcomingEvent {
   return {
     id: event.id,
     slug: event.slug,
     title: event.title ?? "Untitled Event",
     startTime: event.startTime ?? new Date(0).toISOString(),
-    location: null,
+    location: event.organizerName,
     format: null,
   };
 }
@@ -116,6 +127,7 @@ function toPost(post: CircleDiscussionPost): MobileCommunityPost {
     isRemoved: post.isRemoved ?? false,
     score: post.score ?? undefined,
     userVote: normalizeVoteValue(post.userVote) ?? undefined,
+    isPinned: post.isPinned ?? false,
   };
 }
 
@@ -126,14 +138,36 @@ function toCircleSummary(input: {
   description: string;
   memberCount: number;
   isJoined?: boolean;
-}) {
+  membershipState?: "none" | "following" | "joined";
+  tagline?: string | null;
+  coverImageUrl?: string | null;
+  iconUrl?: string | null;
+  theme?: string | null;
+  topicTags?: string[];
+  locationScope?: string | null;
+  activeMemberCount30d?: number;
+  upcomingEventCount?: number;
+}): MobileCommunityCircle {
+  const isJoined =
+    input.isJoined ??
+    (input.membershipState ? input.membershipState === "joined" : undefined);
+
   return {
     id: input.id,
     slug: input.slug,
     name: input.name,
     description: input.description,
     memberCount: input.memberCount,
-    isJoined: input.isJoined,
+    isJoined,
+    membershipState: input.membershipState,
+    tagline: input.tagline ?? null,
+    coverImageUrl: input.coverImageUrl ?? null,
+    iconUrl: input.iconUrl ?? null,
+    theme: input.theme ?? null,
+    topicTags: input.topicTags ?? [],
+    locationScope: input.locationScope ?? null,
+    activeMemberCount30d: input.activeMemberCount30d ?? 0,
+    upcomingEventCount: input.upcomingEventCount ?? 0,
   };
 }
 
@@ -355,12 +389,49 @@ export function buildMobileCommunityCirclePage(
       description: data.circle.description,
       memberCount: data.circle.memberCount,
       isJoined: data.isJoined,
+      membershipState: data.membershipState,
     }),
     isJoined: data.isJoined,
+    isModerator: data.isModerator,
     currentUser: toCurrentUser(data.currentUserProfile),
     members: data.members.map((member) => toMember(member)),
     upcomingEvents: data.upcomingEvents.map((event) => toUpcomingEvent(event)),
     posts: data.posts.map((post) => toPost(post)),
+  });
+}
+
+export function buildMobileCommunityPeople(
+  data: CommunityPeopleData,
+): MobileCommunityPeople {
+  return mobileCommunityPeopleSchema.parse({
+    header: {
+      eyebrow: data.circle.name,
+      title: "People",
+      subtitle: "Members worth meeting in this community",
+    },
+    circle: toCircleSummary(data.circle),
+    peopleForYou: data.peopleForYou,
+    activeMembers: data.activeMembers,
+    goingToNextEvent: data.goingToNextEvent,
+    mutuals: data.mutuals,
+    newMembers: data.newMembers,
+  });
+}
+
+export function buildMobileCommunityEvents(
+  data: CommunityEventsData,
+): MobileCommunityEvents {
+  return mobileCommunityEventsSchema.parse({
+    header: {
+      eyebrow: data.circle.name,
+      title: "Events",
+      subtitle: "Activations from this community",
+    },
+    circle: toCircleSummary(data.circle),
+    nextUp: data.nextUp,
+    thisMonth: data.thisMonth,
+    past: data.past,
+    popularWithMembers: data.popularWithMembers,
   });
 }
 
@@ -380,6 +451,7 @@ export function buildMobileCommunityPostPage(
       description: data.circle.description,
       memberCount: data.circle.memberCount,
       isJoined: data.isJoined,
+      membershipState: data.membershipState,
     }),
     isJoined: data.isJoined,
     currentUser: toCurrentUser(data.currentUserProfile),

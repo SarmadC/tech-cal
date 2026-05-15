@@ -82,6 +82,8 @@ export interface CircleSummary {
 export interface CircleDiscussionPageData {
   circle: CircleSummary;
   isJoined: boolean;
+  membershipState: 'none' | 'following' | 'joined';
+  isModerator: boolean;
   currentUserProfile: CircleDiscussionCurrentUser | null;
   members: CircleDiscussionMember[];
   upcomingEvents: CircleDiscussionUpcomingEvent[];
@@ -91,6 +93,8 @@ export interface CircleDiscussionPageData {
 export interface CirclePostPageData {
   circle: CircleSummary;
   isJoined: boolean;
+  membershipState: 'none' | 'following' | 'joined';
+  isModerator: boolean;
   currentUserProfile: CircleDiscussionCurrentUser | null;
   members: CircleDiscussionMember[];
   upcomingEvents: CircleDiscussionUpcomingEvent[];
@@ -275,20 +279,111 @@ export class CircleDiscussionService {
       return null;
     }
 
-    const [viewerContext, posts, upcomingEvents] = await Promise.all([
-      this.getViewerContext({ circleId: circle.id, viewerId, readClient }),
-      this.getPosts({ circleId: circle.id, viewerId, readClient }),
-      this.getUpcomingEvents({ circle, readClient }),
-    ]);
+    const [viewerContext, rawPosts, upcomingEvents, pinResult, isModerator] =
+      await Promise.all([
+        this.getViewerContext({ circleId: circle.id, viewerId, readClient }),
+        this.getPosts({ circleId: circle.id, viewerId, readClient }),
+        this.getUpcomingEvents({ circle, readClient }),
+        readClient
+          .from('circle_post_pins')
+          .select('post_id')
+          .eq('circle_id', circle.id)
+          .maybeSingle(),
+        viewerId
+          ? this.isViewerModerator({ circleId: circle.id, viewerId, readClient })
+          : Promise.resolve(false),
+      ]);
+
+    const pinnedPostId = pinResult.data?.post_id ?? null;
+    const posts = pinnedPostId
+      ? [
+          ...rawPosts
+            .filter((p) => p.id === pinnedPostId)
+            .map((p) => ({ ...p, isPinned: true })),
+          ...rawPosts.filter((p) => p.id !== pinnedPostId),
+        ]
+      : rawPosts;
+
+    if (viewerId && viewerContext.membershipState !== 'none') {
+      void this.touchLastVisited({
+        circleId: circle.id,
+        viewerId,
+        readClient,
+      });
+    }
 
     return {
       circle,
       isJoined: viewerContext.isJoined,
+      membershipState: viewerContext.membershipState,
+      isModerator,
       currentUserProfile: viewerContext.currentUserProfile,
       members: viewerContext.members,
       upcomingEvents,
       posts,
     };
+  }
+
+  private static async isViewerModerator({
+    circleId,
+    viewerId,
+    readClient,
+  }: {
+    circleId: string;
+    viewerId: string;
+    readClient: SupabaseClientType;
+  }): Promise<boolean> {
+    const [ownerResult, modResult] = await Promise.all([
+      readClient
+        .from('circles')
+        .select('owner_id')
+        .eq('id', circleId)
+        .maybeSingle(),
+      readClient
+        .from('circle_moderators')
+        .select('user_id')
+        .eq('circle_id', circleId)
+        .eq('user_id', viewerId)
+        .maybeSingle(),
+    ]);
+    if (ownerResult.data?.owner_id === viewerId) return true;
+    return Boolean(modResult.data);
+  }
+
+  private static async touchLastVisited({
+    circleId,
+    viewerId,
+    readClient,
+  }: {
+    circleId: string;
+    viewerId: string;
+    readClient: SupabaseClientType;
+  }): Promise<void> {
+    try {
+      await (
+        readClient as unknown as {
+          from: (table: string) => {
+            update: (row: Record<string, unknown>) => {
+              eq: (
+                col: string,
+                val: string
+              ) => {
+                eq: (
+                  col: string,
+                  val: string
+                ) => Promise<{ error: { message?: string } | null }>;
+              };
+            };
+          };
+        }
+      )
+        .from('circle_members')
+        .update({ last_visited_at: new Date().toISOString() })
+        .eq('circle_id', circleId)
+        .eq('user_id', viewerId);
+    } catch {
+      // last_visited_at is a freshness signal, not load-bearing — swallow.
+    }
   }
 
   static async getCirclePostPageData({
@@ -308,10 +403,13 @@ export class CircleDiscussionService {
 
     const { circle } = postLocator;
 
-    const [viewerContext, posts, upcomingEvents] = await Promise.all([
+    const [viewerContext, posts, upcomingEvents, isModerator] = await Promise.all([
       this.getViewerContext({ circleId: circle.id, viewerId, readClient }),
       this.getPosts({ circleId: circle.id, viewerId, readClient, postId }),
       this.getUpcomingEvents({ circle, readClient }),
+      viewerId
+        ? this.isViewerModerator({ circleId: circle.id, viewerId, readClient })
+        : Promise.resolve(false),
     ]);
 
     const post = posts[0];
@@ -323,6 +421,8 @@ export class CircleDiscussionService {
     return {
       circle,
       isJoined: viewerContext.isJoined,
+      membershipState: viewerContext.membershipState,
+      isModerator,
       currentUserProfile: viewerContext.currentUserProfile,
       members: viewerContext.members,
       upcomingEvents,
@@ -439,6 +539,7 @@ export class CircleDiscussionService {
     readClient: SupabaseClientType;
   }): Promise<{
     isJoined: boolean;
+    membershipState: 'none' | 'following' | 'joined';
     currentUserProfile: CircleDiscussionCurrentUser | null;
     members: CircleDiscussionMember[];
   }> {
@@ -452,7 +553,7 @@ export class CircleDiscussionService {
     const membershipPromise = viewerId
       ? readClient
           .from('circle_members')
-          .select('circle_id')
+          .select('circle_id, membership_state')
           .eq('circle_id', circleId)
           .eq('user_id', viewerId)
           .maybeSingle()
@@ -487,8 +588,18 @@ export class CircleDiscussionService {
         ? await this.getMemberProfiles({ memberIds, readClient })
         : [];
 
+    const membershipRow = membershipResult.data as
+      | { membership_state?: string | null }
+      | null;
+    const membershipState: 'none' | 'following' | 'joined' = !membershipRow
+      ? 'none'
+      : membershipRow.membership_state === 'following'
+        ? 'following'
+        : 'joined';
+
     return {
-      isJoined: Boolean(membershipResult.data),
+      isJoined: membershipState === 'joined',
+      membershipState,
       currentUserProfile,
       members,
     };
