@@ -14,7 +14,14 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: './vitest.setup.ts',
         testTimeout: 10000,
-        exclude: ['**/node_modules/**', '**/tests/**/*.spec.ts'],
+        exclude: [
+            '**/node_modules/**',
+            '**/tests/**/*.spec.ts',
+            '**/.claude/worktrees/**',
+            '**/.codex/worktrees/**',
+            '**/.cursor/worktrees/**',
+            '**/.agents/scratch/**',
+        ],
         alias: {
             '@': path.resolve(__dirname, './src'),
             'expo-constants': path.resolve(__dirname, './test-support/expo-constants.ts'),

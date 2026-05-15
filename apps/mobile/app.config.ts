@@ -1,4 +1,4 @@
-import baseConfig from './app.json';
+import baseConfig from './app.base.json';
 
 type MobileAppVariant = 'development' | 'production';
 

@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-import appConfig from '../../app.json';
+import appConfig from '../../app.base.json';
 
 export type MobilePlatform = 'android' | 'ios' | 'macos' | 'web' | 'windows';
 
