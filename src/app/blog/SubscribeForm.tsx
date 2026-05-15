@@ -5,8 +5,9 @@ import { useEffect, useRef, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { subscribeToAction, type SubscribeFormState } from './actions';
-import { CircleNotchIcon, TwitterLogo, LinkedinLogo } from '@phosphor-icons/react';
+import { TwitterLogo, LinkedinLogo } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 function SubmitButton() {
     const { pending } = useFormStatus();
@@ -16,7 +17,7 @@ function SubmitButton() {
             disabled={pending}
             className="bg-[#EDEDEF] hover:bg-white text-black font-medium px-4 py-2 rounded-lg transition-all shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-xs tracking-wide min-w-[90px]"
         >
-            {pending && <CircleNotchIcon className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            {pending ? <BrandLoadingLogo className="mr-2 h-3.5 w-3.5 text-current" inline label={null} size={14} /> : null}
             {pending ? '...' : 'Subscribe'}
         </button>
     );

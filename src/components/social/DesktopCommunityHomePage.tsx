@@ -2,11 +2,12 @@
 
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { CircleNotch, LockKey } from '@phosphor-icons/react';
+import { LockKey } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import FeedPostItem from '@/components/social/FeedPostItem';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import {
   formatCommunityTabCount,
   type CommunityFeedPageViewModel,
@@ -96,7 +97,7 @@ function CommunityDiscoverRow({
         disabled={isPending}
         className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] px-3 text-xs font-semibold text-[var(--foreground-primary)] transition-colors hover:bg-[var(--background-secondary)]/18 disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {isPending ? <CircleNotch size={14} className="animate-spin" /> : 'Join'}
+        {isPending ? <BrandLoadingLogo className="h-3.5 w-3.5 text-current" inline label={null} size={14} /> : 'Join'}
       </button>
     </article>
   );

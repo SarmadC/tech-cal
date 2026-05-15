@@ -1,7 +1,8 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { CheckIcon, UserCheckIcon, WarningOctagonIcon, CircleNotchIcon } from '@phosphor-icons/react';
+import { CheckIcon, UserCheckIcon, WarningOctagonIcon } from '@phosphor-icons/react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
@@ -117,7 +118,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event, variant = 'full' }) => {
 
     const getToggleIcon = () => {
         if (isInitialLoad) {
-            return <CircleNotchIcon className="w-4 h-4 animate-spin" />;
+            return <BrandLoadingLogo size={16} inline label={null} />;
         }
 
         if (hasLoadError) {
@@ -209,7 +210,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event, variant = 'full' }) => {
     if (isInitialLoad) {
         return (
             <div className="flex items-center justify-center p-4">
-                <CircleNotchIcon className={`w-5 h-5 animate-spin ${theme.textMuted}`} />
+                <BrandLoadingLogo size={20} inline label={null} className={theme.textMuted} />
                 <span className={`ml-2 text-sm ${theme.textMuted}`}>Loading...</span>
             </div>
         );

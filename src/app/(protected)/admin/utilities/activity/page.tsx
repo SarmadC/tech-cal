@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { MaterialIcon } from '@/components/ui/Icon';
 
 type ExtractionJobLogRow = {
@@ -190,7 +191,7 @@ export default function AdminApiActivityPage() {
                     disabled={loading}
                     className="text-foreground-400 hover:text-white"
                 >
-                    <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
+                    {loading ? <BrandLoadingLogo size={16} inline label={null} /> : <MaterialIcon name="refresh" size={16} />}
                 </Button>
             </div>
 
@@ -206,7 +207,7 @@ export default function AdminApiActivityPage() {
                 <CardContent className="space-y-4">
                     {loading && activity.length === 0 ? (
                         <div className="flex items-center justify-center py-12">
-                            <MaterialIcon name="refresh" size={24} className="animate-spin text-foreground-400" />
+                            <BrandLoadingLogo size={24} inline label={null} className="text-foreground-400" />
                             <span className="ml-2 text-foreground-400">Loading activity...</span>
                         </div>
                     ) : filteredActivity.length === 0 ? (

@@ -4,7 +4,7 @@ import Script from 'next/script';
 import React from 'react';
 
 interface GoogleAnalyticsProps {
-    nonce: string;
+    nonce?: string;
 }
 
 export default function GoogleAnalytics({ nonce }: GoogleAnalyticsProps) {

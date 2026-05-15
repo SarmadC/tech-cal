@@ -5,7 +5,6 @@ import { useFormStatus } from 'react-dom';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { submitContactFormAction, type ContactFormState } from './actions';
 import {
-    CircleNotchIcon,
     PaperPlaneRight,
     ArrowUpRight,
     WarningCircle,
@@ -18,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -42,7 +42,7 @@ function SubmitButton({ disabled }: { disabled?: boolean }) {
             )}
         >
             {pending ? (
-                <CircleNotchIcon className="w-4 h-4 animate-spin" />
+                <BrandLoadingLogo className="h-4 w-4 text-current" inline label={null} size={16} />
             ) : (
                 <>
                     Send message

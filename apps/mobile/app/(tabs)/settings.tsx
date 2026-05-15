@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import {
   Alert,
   Pressable,
@@ -11,21 +11,23 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import type {
   MobileProfileUpdate,
   NormalizedSubscription,
   ProfileVisibility,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
-import { ScreenStateView } from '../../src/components/ScreenStateView';
-import { useAuth } from '../../src/context/AuthProvider';
+import { ScreenStateView } from "../../src/components/ScreenStateView";
+import { useAuth } from "../../src/context/AuthProvider";
 import {
   loadMobileSubscriptionStatus,
   updateMobileProfile,
-} from '../../src/lib/mobileApi';
+} from "../../src/lib/mobileApi";
+import { useAppTheme } from "../../src/providers/ThemeProvider";
+import type { ThemePreference } from "../../src/theme/tokens";
 
 const VISIBILITY_OPTIONS: Array<{
   description: string;
@@ -33,36 +35,58 @@ const VISIBILITY_OPTIONS: Array<{
   value: ProfileVisibility;
 }> = [
   {
-    value: 'private',
-    label: 'Private',
-    description: 'Only you can see your profile details.',
+    value: "private",
+    label: "Private",
+    description: "Only you can see your profile details.",
   },
   {
-    value: 'connections',
-    label: 'Connections',
-    description: 'Approved connections can view your profile.',
+    value: "connections",
+    label: "Connections",
+    description: "Approved connections can view your profile.",
   },
   {
-    value: 'public',
-    label: 'Public',
-    description: 'Anyone can view your public profile card.',
+    value: "public",
+    label: "Public",
+    description: "Anyone can view your public profile card.",
+  },
+];
+
+const THEME_OPTIONS: Array<{
+  description: string;
+  label: string;
+  value: ThemePreference;
+}> = [
+  {
+    value: "system",
+    label: "System",
+    description: "Match your device appearance.",
+  },
+  {
+    value: "dark",
+    label: "Dark",
+    description: "Use the darker, Linear-style app surface.",
+  },
+  {
+    value: "light",
+    label: "Light",
+    description: "Use the brighter app surface.",
   },
 ];
 
 function hasPaidAccess(subscription: NormalizedSubscription | null): boolean {
-  if (!subscription || subscription.tier === 'free') {
+  if (!subscription || subscription.tier === "free") {
     return false;
   }
 
   if (
-    subscription.status === 'active' ||
-    subscription.status === 'trialing' ||
-    subscription.status === 'past_due'
+    subscription.status === "active" ||
+    subscription.status === "trialing" ||
+    subscription.status === "past_due"
   ) {
     return true;
   }
 
-  if (subscription.status === 'canceled' && subscription.currentPeriodEnd) {
+  if (subscription.status === "canceled" && subscription.currentPeriodEnd) {
     return new Date(subscription.currentPeriodEnd).getTime() > Date.now();
   }
 
@@ -70,22 +94,24 @@ function hasPaidAccess(subscription: NormalizedSubscription | null): boolean {
 }
 
 function formatSubscriptionSummary(
-  subscription: NormalizedSubscription | null
+  subscription: NormalizedSubscription | null,
 ): string {
   if (!subscription) {
-    return 'Checking your subscription access.';
+    return "Checking your subscription access.";
   }
 
-  const tier = subscription.tier === 'free' ? 'Free' : 'KureCal Pro';
+  const tier = subscription.tier === "free" ? "Free" : "KureCal Pro";
   const status =
-    subscription.status === 'trialing'
-      ? 'Trialing'
-      : subscription.status.replace(/_/g, ' ');
+    subscription.status === "trialing"
+      ? "Trialing"
+      : subscription.status.replace(/_/g, " ");
 
   return `${tier} · ${status}`;
 }
 
 export default function SettingsScreen() {
+  const { preference, resolvedTheme, setThemePreference, tokens } =
+    useAppTheme();
   const {
     hasCompletedOnboarding,
     loading,
@@ -99,16 +125,17 @@ export default function SettingsScreen() {
     timezone: null,
     username: null,
     headline: null,
-    profileVisibility: 'private',
+    profileVisibility: "private",
     showAttendance: false,
   });
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<NormalizedSubscription | null>(
-    null
+  const [subscription, setSubscription] =
+    useState<NormalizedSubscription | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(
+    null,
   );
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
@@ -137,7 +164,7 @@ export default function SettingsScreen() {
       setSubscriptionError(
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to refresh your subscription'
+          : "Unable to refresh your subscription",
       );
     } finally {
       setSubscriptionLoading(false);
@@ -163,7 +190,7 @@ export default function SettingsScreen() {
       profile.careerProfile.industry,
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(" · ");
   }, [profile?.careerProfile]);
 
   async function handleRefresh() {
@@ -176,7 +203,7 @@ export default function SettingsScreen() {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to refresh your profile'
+          : "Unable to refresh your profile",
       );
     } finally {
       setRefreshing(false);
@@ -190,14 +217,14 @@ export default function SettingsScreen() {
     try {
       await updateMobileProfile(draft);
       await refreshProfile();
-      Alert.alert('Profile saved', 'Your mobile profile settings are updated.');
+      Alert.alert("Profile saved", "Your mobile profile settings are updated.");
     } catch (nextError) {
       const message =
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to save your profile';
+          : "Unable to save your profile";
       setError(message);
-      Alert.alert('Save failed', message);
+      Alert.alert("Save failed", message);
     } finally {
       setSaving(false);
     }
@@ -205,7 +232,7 @@ export default function SettingsScreen() {
 
   if (loading && !profile) {
     return (
-      <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
+      <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
@@ -221,13 +248,15 @@ export default function SettingsScreen() {
 
   if (!profile) {
     return (
-      <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
+      <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
               title="Profile unavailable"
-              description={error ?? 'We could not load your mobile profile state.'}
+              description={
+                error ?? "We could not load your mobile profile state."
+              }
               onRetry={() => {
                 void handleRefresh();
               }}
@@ -239,7 +268,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
+    <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -249,38 +278,42 @@ export default function SettingsScreen() {
               onRefresh={() => {
                 void handleRefresh();
               }}
-              tintColor="#7dd3fc"
+              tintColor={tokens.colors.accent}
             />
           }
         >
           <View style={styles.hero}>
             <Text style={styles.eyebrow}>Profile</Text>
             <Text style={styles.title}>
-              {profile.profile.fullName ?? profile.socialProfile.username ?? 'Your mobile profile'}
+              {profile.profile.fullName ??
+                profile.socialProfile.username ??
+                "Your mobile profile"}
             </Text>
             <Text style={styles.subtitle}>
               {profile.socialProfile.headline ??
-                'Update your identity, privacy, and career setup for the mobile app.'}
+                "Update your identity, privacy, and career setup for the mobile app."}
             </Text>
-            <Text style={styles.meta}>{session?.user.email ?? 'Unknown email'}</Text>
+            <Text style={styles.meta}>
+              {session?.user.email ?? "Unknown email"}
+            </Text>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Subscription</Text>
             <Text style={styles.subscriptionLabel}>
               {subscriptionLoading && !subscription
-                ? 'Checking access…'
+                ? "Checking access…"
                 : formatSubscriptionSummary(subscription)}
             </Text>
             <Text style={styles.cardBody}>
               {subscriptionError
                 ? subscriptionError
                 : hasPaidAccess(subscription)
-                  ? 'Your mobile upgrade flow is active. Manage renewals, restore access, or review your plan from the native paywall.'
-                  : 'Upgrade to unlock full recommendations, calendar sync, and unlimited saved events inside the Expo app.'}
+                  ? "Your mobile upgrade flow is active. Manage renewals, restore access, or review your plan from the native paywall."
+                  : "Upgrade to unlock full recommendations, calendar sync, and unlimited saved events inside the Expo app."}
             </Text>
             <Pressable
-              onPress={() => router.push('../paywall')}
+              onPress={() => router.push("../paywall")}
               style={({ pressed }) => [
                 hasPaidAccess(subscription)
                   ? styles.secondaryButton
@@ -300,10 +333,40 @@ export default function SettingsScreen() {
                 }
               >
                 {hasPaidAccess(subscription)
-                  ? 'Manage subscription'
-                  : 'Unlock KureCal Pro'}
+                  ? "Manage subscription"
+                  : "Unlock KureCal Pro"}
               </Text>
             </Pressable>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Appearance</Text>
+            <Text style={styles.cardBody}>
+              Current theme: {resolvedTheme === "dark" ? "Dark" : "Light"}
+            </Text>
+            <View style={styles.themeChoiceRow}>
+              {THEME_OPTIONS.map((option) => {
+                const selected = preference === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setThemePreference(option.value)}
+                    style={({ pressed }) => [
+                      styles.themeChoice,
+                      selected ? styles.themeChoiceSelected : null,
+                      pressed ? styles.choiceCardPressed : null,
+                    ]}
+                  >
+                    <Text style={styles.themeChoiceLabel}>{option.label}</Text>
+                    <Text style={styles.themeChoiceDescription}>
+                      {option.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.card}>
@@ -315,7 +378,7 @@ export default function SettingsScreen() {
               placeholder="Full name"
               placeholderTextColor="#64748b"
               style={styles.input}
-              value={draft.fullName ?? ''}
+              value={draft.fullName ?? ""}
             />
             <TextInput
               autoCapitalize="none"
@@ -325,7 +388,7 @@ export default function SettingsScreen() {
               placeholder="Username"
               placeholderTextColor="#64748b"
               style={styles.input}
-              value={draft.username ?? ''}
+              value={draft.username ?? ""}
             />
             <TextInput
               onChangeText={(value) =>
@@ -335,7 +398,7 @@ export default function SettingsScreen() {
               placeholderTextColor="#64748b"
               style={[styles.input, styles.multilineInput]}
               multiline
-              value={draft.headline ?? ''}
+              value={draft.headline ?? ""}
             />
             <TextInput
               autoCapitalize="none"
@@ -345,7 +408,7 @@ export default function SettingsScreen() {
               placeholder="Timezone"
               placeholderTextColor="#64748b"
               style={styles.input}
-              value={draft.timezone ?? ''}
+              value={draft.timezone ?? ""}
             />
           </View>
 
@@ -370,7 +433,9 @@ export default function SettingsScreen() {
                     ]}
                   >
                     <Text style={styles.choiceTitle}>{option.label}</Text>
-                    <Text style={styles.choiceDescription}>{option.description}</Text>
+                    <Text style={styles.choiceDescription}>
+                      {option.description}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -387,10 +452,10 @@ export default function SettingsScreen() {
                 onValueChange={(value) =>
                   setDraft((current) => ({ ...current, showAttendance: value }))
                 }
-                thumbColor={draft.showAttendance ? '#e0f2fe' : '#e2e8f0'}
+                thumbColor={draft.showAttendance ? "#e0f2fe" : "#e2e8f0"}
                 trackColor={{
-                  false: 'rgba(148, 163, 184, 0.32)',
-                  true: 'rgba(45, 212, 191, 0.58)',
+                  false: "rgba(148, 163, 184, 0.32)",
+                  true: "rgba(45, 212, 191, 0.58)",
                 }}
                 value={draft.showAttendance ?? false}
               />
@@ -401,23 +466,25 @@ export default function SettingsScreen() {
             <Text style={styles.cardTitle}>Career setup</Text>
             <Text style={styles.cardBody}>
               {hasCompletedOnboarding
-                ? careerSummary ?? 'Career profile completed.'
-                : 'Finish onboarding to unlock personalized recommendations.'}
+                ? (careerSummary ?? "Career profile completed.")
+                : "Finish onboarding to unlock personalized recommendations."}
             </Text>
             {profile.careerProfile?.primarySkills?.length ? (
               <View style={styles.chipRow}>
-                {profile.careerProfile.primarySkills.slice(0, 5).map((skill) => (
-                  <View key={skill} style={styles.chip}>
-                    <Text style={styles.chipLabel}>{skill}</Text>
-                  </View>
-                ))}
+                {profile.careerProfile.primarySkills
+                  .slice(0, 5)
+                  .map((skill) => (
+                    <View key={skill} style={styles.chip}>
+                      <Text style={styles.chipLabel}>{skill}</Text>
+                    </View>
+                  ))}
               </View>
             ) : null}
             <Pressable
               onPress={() =>
                 router.push({
-                  pathname: '../onboarding',
-                  params: { resume: '1' },
+                  pathname: "../onboarding",
+                  params: { resume: "1" },
                 })
               }
               style={({ pressed }) => [
@@ -426,7 +493,9 @@ export default function SettingsScreen() {
               ]}
             >
               <Text style={styles.secondaryButtonLabel}>
-                {hasCompletedOnboarding ? 'Edit career profile' : 'Complete onboarding'}
+                {hasCompletedOnboarding
+                  ? "Edit career profile"
+                  : "Complete onboarding"}
               </Text>
             </Pressable>
           </View>
@@ -444,7 +513,7 @@ export default function SettingsScreen() {
               ]}
             >
               <Text style={styles.primaryButtonLabel}>
-                {saving ? 'Saving…' : 'Save profile'}
+                {saving ? "Saving…" : "Save profile"}
               </Text>
             </Pressable>
 
@@ -468,126 +537,126 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   actionRow: {
-    gap: 12,
+    gap: 8,
   },
   card: {
-    backgroundColor: 'rgba(8, 15, 24, 0.88)',
-    borderColor: 'rgba(125, 211, 252, 0.14)',
-    borderRadius: 24,
+    backgroundColor: "#121314",
+    borderColor: "rgba(255, 255, 255, 0.07)",
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 14,
-    padding: 22,
+    gap: 10,
+    padding: 12,
   },
   cardBody: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    lineHeight: 22,
+    color: "#c6c5d5",
+    fontSize: 13,
+    lineHeight: 18,
   },
   cardTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '700',
+    color: "#e3e2e3",
+    fontSize: 14,
+    fontWeight: "700",
   },
   chip: {
-    backgroundColor: 'rgba(45, 212, 191, 0.12)',
-    borderColor: 'rgba(45, 212, 191, 0.18)',
-    borderRadius: 999,
+    backgroundColor: "#1f2021",
+    borderColor: "rgba(255, 255, 255, 0.07)",
+    borderRadius: 2,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   chipLabel: {
-    color: '#e2e8f0',
+    color: "#e3e2e3",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   choiceCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 18,
+    backgroundColor: "#1b1c1d",
+    borderColor: "rgba(255, 255, 255, 0.07)",
+    borderRadius: 4,
     borderWidth: 1,
-    gap: 6,
-    padding: 16,
+    gap: 4,
+    padding: 10,
   },
   choiceCardPressed: {
     opacity: 0.92,
   },
   choiceCardSelected: {
-    borderColor: 'rgba(45, 212, 191, 0.36)',
-    backgroundColor: 'rgba(19, 78, 74, 0.44)',
+    borderColor: "#5e6ad2",
+    backgroundColor: "rgba(94, 106, 210, 0.14)",
   },
   choiceDescription: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
+    color: "#908f9e",
+    fontSize: 12,
+    lineHeight: 16,
   },
   choiceStack: {
-    gap: 10,
+    gap: 8,
   },
   choiceTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '700',
+    color: "#e3e2e3",
+    fontSize: 13,
+    fontWeight: "600",
   },
   content: {
-    gap: 18,
-    padding: 24,
+    gap: 12,
+    padding: 20,
   },
   eyebrow: {
-    color: '#7dd3fc',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
+    color: "#908f9e",
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.66,
+    textTransform: "uppercase",
   },
   gradient: {
     flex: 1,
   },
   hero: {
-    gap: 12,
+    gap: 6,
   },
   inlineError: {
-    color: '#fca5a5',
+    color: "#fca5a5",
     fontSize: 14,
     lineHeight: 20,
   },
   input: {
-    backgroundColor: 'rgba(15, 23, 42, 0.74)',
-    borderColor: 'rgba(148, 163, 184, 0.16)',
-    borderRadius: 16,
+    backgroundColor: "#1b1c1d",
+    borderColor: "rgba(255, 255, 255, 0.07)",
+    borderRadius: 4,
     borderWidth: 1,
-    color: '#f8fafc',
-    fontSize: 15,
-    minHeight: 52,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    color: "#e3e2e3",
+    fontSize: 14,
+    minHeight: 38,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   meta: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '600',
+    color: "#908f9e",
+    fontSize: 12,
+    fontWeight: "500",
   },
   multilineInput: {
     minHeight: 92,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   primaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#7dd3fc',
-    borderRadius: 18,
-    justifyContent: 'center',
-    minHeight: 54,
-    paddingHorizontal: 20,
+    alignItems: "center",
+    backgroundColor: "#5e6ad2",
+    borderRadius: 4,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   primaryButtonLabel: {
-    color: '#082f49',
-    fontSize: 14,
-    fontWeight: '700',
+    color: "#fdfaff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   primaryButtonPressed: {
     opacity: 0.92,
@@ -597,61 +666,89 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   secondaryButton: {
-    alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.24)',
-    borderRadius: 18,
+    alignItems: "center",
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   secondaryButtonLabel: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '600',
+    color: "#c6c5d5",
+    fontSize: 13,
+    fontWeight: "600",
   },
   secondaryButtonPressed: {
     opacity: 0.82,
   },
   stateWrap: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
   },
   subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
+    color: "#c6c5d5",
+    fontSize: 13,
+    lineHeight: 18,
   },
   subscriptionLabel: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '700',
+    color: "#e3e2e3",
+    fontSize: 13,
+    fontWeight: "600",
   },
   switchCopy: {
     flex: 1,
     gap: 4,
   },
   switchDescription: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
+    color: "#908f9e",
+    fontSize: 12,
+    lineHeight: 16,
   },
   switchRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 16,
   },
   switchTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '700',
+    color: "#e3e2e3",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  themeChoice: {
+    backgroundColor: "#1b1c1d",
+    borderColor: "rgba(255, 255, 255, 0.07)",
+    borderRadius: 4,
+    borderWidth: 1,
+    flex: 1,
+    gap: 5,
+    minHeight: 76,
+    padding: 10,
+  },
+  themeChoiceDescription: {
+    color: "#908f9e",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  themeChoiceLabel: {
+    color: "#e3e2e3",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  themeChoiceRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  themeChoiceSelected: {
+    backgroundColor: "rgba(94, 106, 210, 0.14)",
+    borderColor: "#5e6ad2",
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 30,
-    fontWeight: '700',
-    letterSpacing: -0.9,
-    lineHeight: 36,
+    color: "#e3e2e3",
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.24,
+    lineHeight: 29,
   },
 });

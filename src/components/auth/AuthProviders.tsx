@@ -1,8 +1,8 @@
 // src/components/auth/AuthProviders.tsx
 'use client';
 
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { OAuthProvider } from '@/types';
 
 interface AuthProvidersProps {
@@ -76,7 +76,7 @@ export default function AuthProviders({
                     >
                         {isThisProviderPending ? (
                             <>
-                                <CircleNotchIcon className="w-5 h-5 animate-spin" />
+                                <BrandLoadingLogo className="h-5 w-5 text-current" inline label={null} size={20} />
                                 <span>Redirecting to {name}...</span>
                             </>
                         ) : isPending ? (

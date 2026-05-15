@@ -88,7 +88,7 @@ export default async function EventsPage(
 ) {
     const searchParams = await props.searchParams;
     const circleSlug = searchParams?.circle as string | undefined;
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
 
     const supabase = await createClient();
 

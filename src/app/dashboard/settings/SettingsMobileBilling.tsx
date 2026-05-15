@@ -6,7 +6,8 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openCustomerPortal } from '@/lib/paddle';
-import { CircleNotch, ShieldCheck, Receipt, CreditCard } from '@phosphor-icons/react';
+import { ShieldCheck, Receipt, CreditCard } from '@phosphor-icons/react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 export default function SettingsMobileBilling() {
     const {
@@ -75,7 +76,7 @@ export default function SettingsMobileBilling() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <CircleNotch weight="bold" className="h-5 w-5 animate-spin text-[var(--mono-text-tertiary)]" />
+                <BrandLoadingLogo className="h-5 w-5 text-[var(--mono-text-tertiary)]" inline size={20} />
             </div>
         );
     }

@@ -5,6 +5,7 @@ import { X } from '@phosphor-icons/react';
 import { CareerProfile } from '@/types/career';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useQuickEditForm } from './hooks/useQuickEditForm';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 // Editor imports
 import RoleEditor from './editors/RoleEditor';
@@ -285,7 +286,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
                                 }
                             `}
                         >
-                            {isSaving && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                            {isSaving ? <BrandLoadingLogo className="h-3 w-3 text-current" inline label={null} size={12} /> : null}
                             Save
                         </button>
                     </div>

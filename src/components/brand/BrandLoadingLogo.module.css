@@ -1,0 +1,54 @@
+.root {
+  color: currentColor;
+  line-height: 0;
+}
+
+.float {
+  animation: brand-logo-float var(--brand-loading-logo-float-duration, 3000ms)
+    ease-in-out infinite;
+  will-change: transform;
+}
+
+.svg {
+  display: block;
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.armAnimated {
+  animation: brand-arm-pulse var(--brand-loading-logo-pulse-duration, 3600ms)
+    ease-in-out infinite;
+  animation-delay: var(--brand-loading-logo-arm-delay, 0ms);
+}
+
+@keyframes brand-arm-pulse {
+  0%,
+  100% {
+    opacity: var(--brand-loading-logo-arm-opacity-min, 0.18);
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes brand-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(
+      calc(var(--brand-loading-logo-float-distance, 6px) * -1)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .armAnimated,
+  .float {
+    animation: none;
+  }
+}

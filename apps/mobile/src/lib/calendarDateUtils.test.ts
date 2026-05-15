@@ -28,6 +28,31 @@ function buildFeed(overrides: Partial<MobileCalendarFeed> = {}): MobileCalendarF
       savedCount: 1,
       attendingCount: 1,
     },
+    results: {
+      returnedCount: 1,
+      totalCount: 1,
+    },
+    filters: {
+      tags: [],
+      location: null,
+      dateRange: {
+        start: null,
+        end: null,
+      },
+      cost: 'all',
+      activeCount: 0,
+    },
+    availableFilters: {
+      tags: [],
+      eventTypes: [],
+    },
+    counts: {
+      cost: {
+        free: 1,
+        paid: 0,
+      },
+      tags: {},
+    },
     days: Array.from({ length: 42 }, (_, index) => ({
       dateKey:
         index < 31
@@ -55,6 +80,7 @@ function buildFeed(overrides: Partial<MobileCalendarFeed> = {}): MobileCalendarF
     emptyState: {
       title: 'No events this month',
       description: 'Move to another month.',
+      body: 'Move to another month.',
     },
     ...overrides,
   };

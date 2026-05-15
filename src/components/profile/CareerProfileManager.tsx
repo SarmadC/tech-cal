@@ -17,6 +17,7 @@ import { AnalyticsService } from '@/services/analyticsService';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import { filteredEventKeys } from '@/lib/queryKeys';
 import { NETWORKING_GOAL_OPTIONS, EVENT_TYPE_OPTIONS } from './quick-edit/config';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 // --- Shared Components (Refined Linear Style) ---
 
@@ -302,7 +303,7 @@ export default function CareerProfileManager({
     };
 
 
-    if (isLoading) return <div className="flex items-center justify-center min-h-[200px]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-500"></div></div>;
+    if (isLoading) return <div className="flex items-center justify-center min-h-[200px]"><BrandLoadingLogo className="h-6 w-6 text-zinc-500" inline size={24} /></div>;
     if (error) return <div className="flex items-center justify-center min-h-[200px] text-red-500">Error loading profile</div>;
 
     // ... (Keep onboarding/incomplete state logic currently same, focusing on the main view below)

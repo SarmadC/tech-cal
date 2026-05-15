@@ -93,9 +93,12 @@ export default function SignupScreen() {
     setPendingProvider(provider);
     setError(null);
 
-    const result = await signInWithOAuth(provider);
-    if (result.error) {
-      setError(result.error);
+    try {
+      await signInWithOAuth(provider);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Unable to start sign up.'
+      );
     }
 
     setPendingProvider(null);
@@ -119,14 +122,15 @@ export default function SignupScreen() {
     setSubmitting(true);
     setError(null);
 
-    const result = await signUp({
-      email,
-      name,
-      password,
-    });
-
-    if (result.error) {
-      setError(result.error);
+    try {
+      await signUp({
+        confirmPassword,
+        email,
+        name,
+        password,
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign up.');
       setSubmitting(false);
       return;
     }

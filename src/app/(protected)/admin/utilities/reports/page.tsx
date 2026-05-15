@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useAdminReports, ReportType } from '@/hooks/useAdminReports';
 import type { IngestionSummaryReport, ModerationSLAReport, EnrichmentCoverageReport } from '@/app/api/admin/reports/route';
@@ -95,7 +96,7 @@ export default function AdminReportsPage() {
                     disabled={loading}
                     className="text-foreground-tertiary hover:text-white"
                 >
-                    <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
+                    {loading ? <BrandLoadingLogo size={16} inline label={null} /> : <MaterialIcon name="refresh" size={16} />}
                 </Button>
             </div>
 
@@ -111,7 +112,7 @@ export default function AdminReportsPage() {
             {/* Loading State */}
             {loading && !data && (
                 <div className="flex items-center justify-center py-12">
-                    <MaterialIcon name="refresh" size={24} className="animate-spin text-foreground-tertiary" />
+                    <BrandLoadingLogo size={24} inline label={null} className="text-foreground-tertiary" />
                     <span className="ml-2 text-foreground-tertiary">Loading report...</span>
                 </div>
             )}

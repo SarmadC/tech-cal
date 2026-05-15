@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -498,7 +499,7 @@ export default function ModerationPreviewPanel({
                             {lookupLoading ? (
                                 <div className="flex items-center justify-center py-12">
                                     <div className="flex items-center gap-3 text-foreground-muted">
-                                        <MaterialIcon name="refresh" size={18} className="animate-spin" />
+                                        <BrandLoadingLogo size={18} inline label={null} />
                                         <span className="text-sm">Loading editor...</span>
                                     </div>
                                 </div>

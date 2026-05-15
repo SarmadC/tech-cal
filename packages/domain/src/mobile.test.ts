@@ -6,6 +6,8 @@ import {
   mobileDashboardSummarySchema,
   mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
+  mobileEventNetworkingFeedbackSchema,
+  mobileEventNetworkingFeedbackUpdateSchema,
   mobileEventEngagementUpdateSchema,
   mobileProfileStateSchema,
   mobileSavedEventsFeedSchema,
@@ -16,19 +18,92 @@ describe('mobile domain contracts', () => {
     expect(
       mobileDiscoverFeedSchema.parse({
         header: {
-          eyebrow: 'Discover',
-          title: 'Find your next event',
-          subtitle: 'Fresh events for this week',
+          eyebrow: 'KureCal mobile',
+          title: 'Discover',
+          subtitle: 'The mobile web discovery hierarchy, translated into the native app shell.',
         },
-        totalCount: 12,
-        nextPage: 2,
+        controls: {
+          rankingModes: [
+            {
+              id: 'best-match',
+              label: 'Best match',
+              description: 'Prioritize strongest career alignment.',
+            },
+          ],
+          activeRankingMode: 'best-match',
+        },
+        activeState: {
+          resultLabel: '12 ranked picks',
+          supportingText: 'Career-impact ranking tuned to the same mobile web discovery hierarchy.',
+        },
+        results: {
+          returnedCount: 1,
+          totalCount: 12,
+          hasMore: true,
+        },
+        filters: {
+          searchTerm: '',
+          categories: [],
+          tags: ['expo'],
+          location: null,
+          dateRange: {
+            start: null,
+            end: null,
+          },
+          format: 'all',
+          cost: 'all',
+          activeCount: 1,
+        },
+        availableFilters: {
+          categories: [],
+          tags: [
+            {
+              value: 'expo',
+              label: 'Expo',
+              count: 8,
+            },
+          ],
+        },
+        counts: {
+          format: {
+            virtual: 2,
+            'in-person': 8,
+            hybrid: 2,
+          },
+          cost: {
+            free: 6,
+            paid: 6,
+          },
+          categories: {},
+          tags: {
+            expo: 8,
+          },
+        },
+        topPicks: {
+          title: 'Your Top Picks',
+          cards: [
+            {
+              id: 'hero-1',
+              title: 'Top pick',
+              slug: 'top-pick',
+              startTime: '2026-04-09T18:00:00.000Z',
+              organizerLogoUrl: 'https://example.com/logo.png',
+              insight: 'Fits your goals',
+            },
+          ],
+        },
         events: [
           {
             id: 'event-1',
             title: 'Expo Jam',
+            slug: 'expo-jam',
             startTime: '2026-04-10T18:00:00.000Z',
             endTime: '2026-04-10T19:00:00.000Z',
             organizerName: 'KureCal',
+            organizerLogoUrl: 'https://example.com/logo.png',
+            badges: ['Saved'],
+            insight: 'Fits your goals',
+            format: 'hybrid',
             engagement: {
               isBookmarked: true,
               status: 'attending',
@@ -41,38 +116,242 @@ describe('mobile domain contracts', () => {
 
   it('parses dashboard summaries with hero and section cards', () => {
     const parsed = mobileDashboardSummarySchema.parse({
-      header: {
+      hero: {
         eyebrow: 'Dashboard',
-        title: 'Your event runway',
+        title: 'Your momentum, in one pass.',
+        subtitle: 'A mobile-first overview of recommendations and plans.',
+        highlight: 'AI Builders Night',
       },
-      upcomingCount: 3,
-      savedCount: 5,
-      recommendationCount: 18,
-      heroEvent: {
-        id: 'event-hero',
-        title: 'AI Builders Night',
-        startTime: '2026-04-12T18:00:00.000Z',
-        organizerName: 'KureCal',
-      },
-      upcomingEvents: [
+      metrics: [
+        {
+          id: 'tracked',
+          label: 'Tracked',
+          value: '3',
+          detail: 'Events connected to your planning flow.',
+        },
+      ],
+      recommendationsLabel: 'Recommended next',
+      recommendations: [
+        {
+          id: 'event-hero',
+          title: 'AI Builders Night',
+          slug: 'ai-builders-night',
+          startTime: '2026-04-12T18:00:00.000Z',
+          organizerName: 'KureCal',
+        },
+      ],
+      upcomingLabel: 'Planned next',
+      upcoming: [
         {
           id: 'event-1',
           title: 'Upcoming event',
+          slug: 'upcoming-event',
           startTime: '2026-04-15T18:00:00.000Z',
         },
       ],
-      recommendedEvents: [
+      onboardingState: {
+        hasCompleted: false,
+        title: 'Career profile incomplete',
+        body: 'Finish onboarding to improve recommendations and planning quality.',
+        ctaLabel: 'Finish onboarding',
+      },
+      topRecommendation: {
+        event: {
+          id: 'event-hero',
+          title: 'AI Builders Night',
+          slug: 'ai-builders-night',
+          startTime: '2026-04-12T18:00:00.000Z',
+          organizerName: 'KureCal',
+          score: 88,
+        },
+        daysUntil: 7,
+        impactLabel: 'High Impact',
+        reason: 'Strong alignment with your current goals',
+      },
+      upcomingCommitments: [
         {
-          id: 'event-2',
-          title: 'Recommended event',
-          startTime: '2026-04-16T18:00:00.000Z',
+          trackingId: 'tracking-1',
+          daysUntil: 3,
+          event: {
+            id: 'event-1',
+            title: 'Upcoming event',
+            slug: 'upcoming-event',
+            startTime: '2026-04-15T18:00:00.000Z',
+          },
         },
       ],
+      showOpenCommitmentSlot: true,
+      insights: {
+        pipeline: {
+          trackedUpcomingCount: 4,
+          scoredUpcomingCount: 3,
+          avgScore: 76,
+          highFitCount: 2,
+          topEvents: [
+            {
+              eventId: 'event-hero',
+              title: 'AI Builders Night',
+              score: 88,
+            },
+          ],
+        },
+        funnel: {
+          savedOnly: 2,
+          rsvped: 3,
+          attended: 1,
+        },
+      },
+      monthlyPulse: {
+        currentCount: 2,
+        deltaLabel: '+1 vs prev 30d',
+        trend: [
+          { label: 'W1', value: 0 },
+          { label: 'W2', value: 1 },
+          { label: 'W3', value: 0 },
+          { label: 'W4', value: 1 },
+        ],
+      },
+      performance: {
+        summary: {
+          attendedCount: 3,
+          ratedCount: 2,
+          connectionsMade: 7,
+        },
+        recentWins: [
+          {
+            event: {
+              id: 'event-attended',
+              title: 'Product Forum',
+              slug: 'product-forum',
+              startTime: '2026-04-02T18:00:00.000Z',
+            },
+            score: 78,
+            trackedAt: '2026-03-18T00:00:00.000Z',
+            attendedDate: '2026-04-02T18:00:00.000Z',
+            matchedSkills: ['Product Strategy'],
+            matchedGoals: ['networking'],
+            bookmarkedLeadDays: 12,
+            feedbackSubmitted: true,
+            actualValueRating: 4,
+          },
+        ],
+        hiddenCount: 0,
+      },
+      engagementStreak: {
+        currentWeekStreak: 2,
+        longestWeekStreak: 5,
+        recentWeeks: [
+          { weekKey: '2026-02-16', active: false },
+          { weekKey: '2026-02-23', active: true },
+          { weekKey: '2026-03-02', active: true },
+          { weekKey: '2026-03-09', active: false },
+          { weekKey: '2026-03-16', active: true },
+          { weekKey: '2026-03-23', active: true },
+          { weekKey: '2026-03-30', active: false },
+          { weekKey: '2026-04-06', active: true },
+        ],
+        nudgeMessage: 'One event next week extends your streak to 3.',
+      },
+      discoveryBreadth: {
+        categoryCount: 3,
+        organizerCount: 2,
+        formatCounts: {
+          virtual: 1,
+          'in-person': 1,
+          hybrid: 1,
+        },
+        breadthLabel: 'balanced',
+      },
+      networkPulse: {
+        confirmedConnectionCount: 7,
+        pendingRequestCount: 2,
+        nextContactToConfirm: {
+          kind: 'speaker',
+          id: 'speaker-1',
+          username: null,
+          name: 'Jamie Chen',
+          avatarUrl: 'https://example.com/jamie.jpg',
+          headline: 'Product leader',
+          linkedinUrl: 'https://linkedin.com/in/jamie-chen',
+          sourceEvent: {
+            id: '11111111-1111-4111-8111-111111111111',
+            slug: 'product-forum',
+            title: 'Product Forum',
+            startTime: '2026-04-02T18:00:00.000Z',
+            location: 'Remote',
+            format: 'Hybrid',
+          },
+        },
+      },
+      predictionAccuracy: {
+        accuracy: 82,
+        sampleSize: 4,
+        confidenceLabel: 'learning',
+        state: 'ready',
+        unlockMessage: null,
+      },
+      careerImpact: {
+        totalEvents: 3,
+        skillAlignedCount: 2,
+        skillAlignedPercentage: 67,
+        goalAlignedCount: 2,
+        goalAlignedPercentage: 67,
+        networkingCount: 1,
+        networkingPercentage: 33,
+        skillProgress: [
+          {
+            skill: 'Product Strategy',
+            eventsAttended: 2,
+            progressLevel: 'building',
+            nextMilestone: '3 more events to become a regular',
+          },
+        ],
+        insights: [
+          {
+            tone: 'success',
+            message:
+              'Product Strategy is showing up consistently across 2 attended events.',
+          },
+        ],
+      },
+      careerOutcomes: {
+        state: 'mature',
+        attendedCount: 3,
+        upcomingCount: 1,
+        feedbackCount: 5,
+        unratedAttendedCount: 1,
+        ratingsRemaining: 0,
+        nextEventToRate: {
+          id: 'event-attended',
+          title: 'Product Forum',
+          slug: 'product-forum',
+          startTime: '2026-04-02T18:00:00.000Z',
+        },
+        nextEventToConfirmConnections: {
+          id: 'event-follow-up',
+          title: 'AI Mixer',
+          slug: 'ai-mixer',
+          startTime: '2026-03-20T18:00:00.000Z',
+        },
+        averageRating: 4.2,
+        recommendationRate: 80,
+        totalConnectionsMade: 7,
+        uniqueSkillsCount: 5,
+        teaserMessage: 'You are building expertise in Product Strategy',
+      },
     });
 
-    expect(parsed.heroEvent?.title).toBe('AI Builders Night');
-    expect(parsed.upcomingEvents?.length).toBe(1);
-    expect(parsed.recommendedEvents?.length).toBe(1);
+    expect(parsed.hero.highlight).toBe('AI Builders Night');
+    expect(parsed.upcoming.length).toBe(1);
+    expect(parsed.recommendations.length).toBe(1);
+    expect(parsed.topRecommendation?.impactLabel).toBe('High Impact');
+    expect(parsed.insights?.pipeline.avgScore).toBe(76);
+    expect(parsed.monthlyPulse?.trend.length).toBe(4);
+    expect(parsed.performance?.recentWins[0]?.feedbackSubmitted).toBe(true);
+    expect(parsed.careerImpact?.skillProgress[0]?.progressLevel).toBe('building');
+    expect(parsed.careerOutcomes?.state).toBe('mature');
+    expect(parsed.networkPulse?.pendingRequestCount).toBe(2);
+    expect(parsed.networkPulse?.nextContactToConfirm?.name).toBe('Jamie Chen');
   });
 
   it('parses calendar month feeds with grid days and agenda events', () => {
@@ -93,6 +372,45 @@ describe('mobile domain contracts', () => {
         savedCount: 1,
         attendingCount: 1,
       },
+      results: {
+        returnedCount: 2,
+        totalCount: 2,
+      },
+      filters: {
+        tags: ['expo'],
+        location: 'Calgary',
+        dateRange: {
+          start: '2026-05-10',
+          end: '2026-05-20',
+        },
+        cost: 'free',
+        activeCount: 4,
+      },
+      availableFilters: {
+        tags: [
+          {
+            value: 'expo',
+            label: 'Expo',
+            count: 2,
+          },
+        ],
+        eventTypes: [
+          {
+            id: 'meetup',
+            name: 'Meetup',
+            color: '#2dd4bf',
+          },
+        ],
+      },
+      counts: {
+        cost: {
+          free: 2,
+          paid: 0,
+        },
+        tags: {
+          expo: 2,
+        },
+      },
       days: Array.from({ length: 42 }, (_, index) => ({
         dateKey: `2026-05-${String((index % 31) + 1).padStart(2, '0')}`,
         dayNumber: (index % 31) + 1,
@@ -110,9 +428,11 @@ describe('mobile domain contracts', () => {
           endTime: '2026-05-12T20:00:00.000Z',
           dateKey: '2026-05-12',
           timezone: 'America/Edmonton',
+          eventTypeId: 'meetup',
           eventTypeName: 'Meetup',
           eventTypeColor: '#2dd4bf',
           isAllDay: false,
+          isFree: true,
           engagement: {
             isBookmarked: true,
             status: 'attending',
@@ -122,12 +442,14 @@ describe('mobile domain contracts', () => {
       emptyState: {
         title: 'No events this month',
         description: 'Move to another month to keep exploring.',
+        body: 'Move to another month to keep exploring.',
       },
     });
 
     expect(parsed.days).toHaveLength(42);
     expect(parsed.events[0]?.dateKey).toBe('2026-05-12');
     expect(parsed.metrics.attendingCount).toBe(1);
+    expect(parsed.filters.location).toBe('Calgary');
   });
 
   it('parses rich event detail payloads for mobile detail screens', () => {
@@ -272,5 +594,22 @@ describe('mobile domain contracts', () => {
 
     expect(bootstrap.taxonomy.roleGroups[0]?.roles[0]).toBe('Software Engineer');
     expect(mutation.isBookmarked).toBe(true);
+  });
+
+  it('parses mobile networking feedback payloads', () => {
+    const parsed = mobileEventNetworkingFeedbackSchema.parse({
+      eventId: 'event-1',
+      connectionsMade: 2,
+      linkedinRequestsSent: 4,
+    });
+
+    expect(parsed.connectionsMade).toBe(2);
+    expect(parsed.linkedinRequestsSent).toBe(4);
+  });
+
+  it('requires at least one field when updating mobile networking feedback', () => {
+    expect(() => mobileEventNetworkingFeedbackUpdateSchema.parse({})).toThrow(
+      'At least one networking field must be provided.'
+    );
   });
 });

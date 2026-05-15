@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { X, PaperPlaneRight } from '@phosphor-icons/react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { HackathonService } from '@/services/hackathonService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import type { HackathonTeam, TeamMessage } from '@/types/hackathon';
@@ -120,7 +121,7 @@ export function TeamChatRoom({ team, userId, onClose }: TeamChatRoomProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <BrandLoadingLogo size={20} color="rgba(255, 255, 255, 0.72)" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center">

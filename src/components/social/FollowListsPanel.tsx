@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts';
 import FollowButton from '@/components/social/FollowButton';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import {
   FOLLOW_STATUS_CHANGED_EVENT,
   applyFollowDelta,
@@ -288,7 +288,7 @@ export default function FollowListsPanel({
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--foreground-secondary)]">
-          <CircleNotchIcon className="h-4 w-4 animate-spin" />
+          <BrandLoadingLogo className="h-4 w-4 text-current" inline label={null} size={16} />
           Loading network...
         </div>
       ) : !viewerId ? (
@@ -300,7 +300,7 @@ export default function FollowListsPanel({
         </p>
       ) : activeListState.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--foreground-secondary)]">
-          <CircleNotchIcon className="h-4 w-4 animate-spin" />
+          <BrandLoadingLogo className="h-4 w-4 text-current" inline label={null} size={16} />
           Loading {activeTab}...
         </div>
       ) : activeListState.error ? (
@@ -379,7 +379,7 @@ export default function FollowListsPanel({
               >
                 {activeListState.isLoadingMore ? (
                   <>
-                    <CircleNotchIcon className="h-3.5 w-3.5 animate-spin" />
+                    <BrandLoadingLogo className="h-3.5 w-3.5 text-current" inline label={null} size={14} />
                     Loading...
                   </>
                 ) : (

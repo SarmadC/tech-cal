@@ -2,7 +2,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandLoadingLogo } from '../../src/components/brand/BrandLoadingLogo';
+import { BrandLoadingScreen } from '../../src/components/brand/BrandLoadingScreen';
 import {
   EVENT_SUBMISSION_TYPE_OPTIONS,
   buildSubmitEventPayload,
@@ -62,11 +63,7 @@ export default function SubmitEventScreen() {
   const disabled = submitting || loading;
 
   if (loading) {
-    return (
-      <View style={styles.loadingState}>
-        <ActivityIndicator color="#7dd3fc" size="large" />
-      </View>
-    );
+    return <BrandLoadingScreen backgroundColor="#05070c" color="#7dd3fc" />;
   }
 
   if (!session?.access_token) {
@@ -356,7 +353,7 @@ export default function SubmitEventScreen() {
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color="#03111d" />
+                <BrandLoadingLogo color="#03111d" inline label={null} size={18} />
               ) : (
                 <Text style={styles.primaryButtonLabel}>Submit event for review</Text>
               )}

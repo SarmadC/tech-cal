@@ -5,6 +5,7 @@ import type { CommunityReportRecord } from '@/lib/communitySchemas';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { MaterialIcon } from '@/components/ui/Icon';
 
 type ReportFilter = 'all' | 'open' | 'reviewing' | 'resolved' | 'dismissed';
@@ -126,7 +127,7 @@ export default function CommunityReportsClient() {
           onClick={() => void fetchReports()}
           disabled={loading}
         >
-          <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
+          {loading ? <BrandLoadingLogo size={16} inline label={null} /> : <MaterialIcon name="refresh" size={16} />}
           Refresh
         </Button>
       </div>
@@ -153,7 +154,7 @@ export default function CommunityReportsClient() {
       {loading ? (
         <Card>
           <CardContent className="flex items-center gap-3 pt-6 text-sm text-foreground-tertiary">
-            <MaterialIcon name="refresh" size={16} className="animate-spin" />
+            <BrandLoadingLogo size={16} inline label={null} />
             Loading reports...
           </CardContent>
         </Card>

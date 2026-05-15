@@ -28,6 +28,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
 import MobileDashboardView from '@/app/dashboard/MobileDashboardView';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface DashboardClientViewProps {
     initialEventTypes: EventType[];
@@ -79,8 +80,8 @@ export default function DashboardClientView({
                     <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
                             <div className="flex items-center justify-center min-h-[400px]">
-                                <div className="text-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                                <div className="text-center text-muted-foreground">
+                                    <BrandLoadingLogo className="mx-auto mb-4 h-8 w-8 text-foreground" inline size={32} />
                                     <p className="text-muted-foreground">Loading dashboard...</p>
                                 </div>
                             </div>

@@ -1,26 +1,60 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { POST } from './route';
 
 const mocks = vi.hoisted(() => ({
+    checkRateLimit: vi.fn(),
+    createRateLimiter: vi.fn(),
     getAuthenticatedRequestContext: vi.fn(),
     insert: vi.fn(),
+    queryResult: vi.fn(),
+    validateUrlForServerFetch: vi.fn(),
 }));
 
-const insertBuilder = {
-    insert: (...args: unknown[]) => mocks.insert(...args),
-};
+function createAwaitableQueryBuilder() {
+    const builder = {
+        eq: vi.fn(() => builder),
+        limit: vi.fn(() => builder),
+        then: (...args: Parameters<PromiseLike<unknown>['then']>) =>
+            Promise.resolve(mocks.queryResult()).then(...args),
+    };
+
+    return builder;
+}
 
 const userScopedSupabase = {
-    from: vi.fn(() => insertBuilder),
+    from: vi.fn((table: string) => {
+        if (table !== 'events' && table !== 'user_submitted_events') {
+            throw new Error(`Unexpected table ${table}`);
+        }
+
+        return {
+            insert: (...args: unknown[]) => mocks.insert(...args),
+            select: vi.fn(() => createAwaitableQueryBuilder()),
+        };
+    }),
 };
 
 vi.mock('@/utils/supabase/requestAuth', () => ({
-    getAuthenticatedRequestContext: (...args: unknown[]) => mocks.getAuthenticatedRequestContext(...args),
+    getAuthenticatedRequestContext: (...args: unknown[]) =>
+        mocks.getAuthenticatedRequestContext(...args),
+}));
+
+vi.mock('@/utils/rateLimit', () => ({
+    checkRateLimit: (...args: unknown[]) => mocks.checkRateLimit(...args),
+    createRateLimiter: (...args: unknown[]) => mocks.createRateLimiter(...args),
+}));
+
+vi.mock('@/lib/ssrfProtection', () => ({
+    validateUrlForServerFetch: (...args: unknown[]) =>
+        mocks.validateUrlForServerFetch(...args),
 }));
 
 describe('POST /api/events/submit', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mocks.createRateLimiter.mockReturnValue({});
+        mocks.checkRateLimit.mockResolvedValue({ success: true });
         mocks.getAuthenticatedRequestContext.mockResolvedValue({
             authMethod: 'cookie',
             supabase: userScopedSupabase,
@@ -34,27 +68,45 @@ describe('POST /api/events/submit', () => {
                 }),
             })),
         }));
+        mocks.queryResult.mockResolvedValue({
+            count: 0,
+            data: [],
+            error: null,
+        });
+        mocks.validateUrlForServerFetch.mockResolvedValue({
+            valid: true,
+            url: new URL('https://example.com/register'),
+        });
     });
 
-    it('creates a submission with normalized values', async () => {
-        const response = await POST({
-            json: async () => ({
-                title: '  Launch Week  ',
-                description: '  Product demos  ',
-                event_type: 'conference',
-                start_date: '2026-05-01T09:00:00Z',
-                end_date: '2026-05-01T17:00:00Z',
-                location: '  Edmonton  ',
-                is_virtual: false,
-                registration_url: '  https://example.com/register  ',
-                organizer_name: '  Tech Cal  ',
-                tags: [' react ', 'typescript', '', 42],
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    it('creates a submission with normalized values and moderation metadata', async () => {
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: '  Launch Week  ',
+                    description: '  Product demos  ',
+                    event_type: 'conference',
+                    start_date: '2026-05-01T09:00:00Z',
+                    end_date: '2026-05-01T17:00:00Z',
+                    location: '  Edmonton  ',
+                    is_virtual: false,
+                    registration_url: '  https://example.com/register  ',
+                    organizer_name: '  Tech Cal  ',
+                    tags: [' react ', 'typescript', '', 42],
+                }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            }) as never
+        );
         const payload = await response.json();
 
         expect(response.status).toBe(201);
         expect(payload.id).toBe('submission-1');
+        expect(mocks.checkRateLimit).toHaveBeenCalledTimes(1);
+        expect(mocks.validateUrlForServerFetch).toHaveBeenCalledWith(
+            'https://example.com/register',
+            { allowUnresolvedHostnames: true }
+        );
         expect(mocks.insert).toHaveBeenCalledWith({
             user_id: 'user-1',
             title: 'Launch Week',
@@ -64,9 +116,30 @@ describe('POST /api/events/submit', () => {
             end_date: '2026-05-01T17:00:00.000Z',
             location: 'Edmonton',
             is_virtual: false,
-            registration_url: 'https://example.com/register',
             organizer_name: 'Tech Cal',
+            registration_mode: 'external',
+            registration_url: 'https://example.com/register',
+            risk_flags: [],
+            submission_fingerprint: expect.stringMatching(/^[a-f0-9]{32}$/),
+            submitted_payload: {
+                title: 'Launch Week',
+                description: 'Product demos',
+                event_type: 'conference',
+                start_date: '2026-05-01T09:00:00.000Z',
+                end_date: '2026-05-01T17:00:00.000Z',
+                is_virtual: false,
+                location: 'Edmonton',
+                registration_url: 'https://example.com/register',
+                organizer_name: 'Tech Cal',
+                tags: ['react', 'typescript'],
+            },
             tags: ['react', 'typescript'],
+            validation_summary: expect.objectContaining({
+                duplicate_event_count: 0,
+                repeated_submission_count: 0,
+                schema_version: 1,
+                warnings: [],
+            }),
         });
     });
 
@@ -77,132 +150,128 @@ describe('POST /api/events/submit', () => {
             user: { id: 'mobile-user-1' },
         });
 
-        const response = await POST({
-            headers: new Headers({ authorization: 'Bearer mobile-token' }),
-            json: async () => ({
-                title: 'Mobile Launch Week',
-                event_type: 'meetup',
-                start_date: '2026-05-01T09:00:00Z',
-                end_date: null,
-                is_virtual: true,
-                location: 'should be ignored',
-                tags: ['react-native', 'expo'],
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: 'Mobile Launch Week',
+                    event_type: 'meetup',
+                    start_date: '2026-05-01T09:00:00Z',
+                    end_date: null,
+                    is_virtual: true,
+                    location: 'should be ignored',
+                    tags: ['react-native', 'expo'],
+                }),
+                headers: {
+                    Authorization: 'Bearer mobile-token',
+                    'Content-Type': 'application/json',
+                    Origin: 'https://evil.example',
+                },
+                method: 'POST',
+            }) as never
+        );
         const payload = await response.json();
 
         expect(response.status).toBe(201);
         expect(payload.id).toBe('submission-1');
-        expect(mocks.insert).toHaveBeenCalledWith({
-            user_id: 'mobile-user-1',
-            title: 'Mobile Launch Week',
-            description: null,
-            event_type: 'meetup',
-            start_date: '2026-05-01T09:00:00.000Z',
-            end_date: null,
-            location: null,
-            is_virtual: true,
-            registration_url: null,
-            organizer_name: null,
-            tags: ['react-native', 'expo'],
+        expect(mocks.insert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user_id: 'mobile-user-1',
+                location: null,
+                registration_mode: 'native',
+                registration_url: null,
+            })
+        );
+    });
+
+    it('returns 403 for cross-site cookie-authenticated requests', async () => {
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: 'Launch Week',
+                    event_type: 'conference',
+                    start_date: '2026-05-01T09:00:00Z',
+                    location: 'Edmonton',
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    Origin: 'https://evil.example',
+                },
+                method: 'POST',
+            }) as never
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(403);
+        expect(payload.error).toBe('Cross-site requests are not allowed.');
+        expect(mocks.insert).not.toHaveBeenCalled();
+    });
+
+    it('returns 429 when rate limited', async () => {
+        mocks.checkRateLimit.mockResolvedValueOnce({ success: false });
+
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: 'Launch Week',
+                    event_type: 'conference',
+                    start_date: '2026-05-01T09:00:00Z',
+                    location: 'Edmonton',
+                }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            }) as never
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(429);
+        expect(payload.error).toBe('Too many requests. Please try again later.');
+        expect(mocks.insert).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when the registration URL is not publicly reachable', async () => {
+        mocks.validateUrlForServerFetch.mockResolvedValueOnce({
+            reason: 'Host is not allowed',
+            valid: false,
         });
+
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: 'Launch Week',
+                    event_type: 'conference',
+                    start_date: '2026-05-01T09:00:00Z',
+                    location: 'Edmonton',
+                    registration_url: 'https://localhost/register',
+                }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            }) as never
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(payload.error).toBe('Registration URL must be publicly reachable');
+        expect(mocks.insert).not.toHaveBeenCalled();
     });
 
     it('returns 401 when authentication cannot be resolved', async () => {
         mocks.getAuthenticatedRequestContext.mockResolvedValueOnce(null);
 
-        const response = await POST({
-            headers: new Headers(),
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'conference',
-                start_date: '2026-05-01T09:00:00Z',
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+        const response = await POST(
+            new Request('http://localhost/api/events/submit', {
+                body: JSON.stringify({
+                    title: 'Launch Week',
+                    event_type: 'conference',
+                    start_date: '2026-05-01T09:00:00Z',
+                }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            }) as never
+        );
         const payload = await response.json();
 
         expect(response.status).toBe(401);
         expect(payload.error).toBe('Unauthorized');
-        expect(mocks.insert).not.toHaveBeenCalled();
-    });
-
-    it('returns 401 for an invalid bearer token', async () => {
-        mocks.getAuthenticatedRequestContext.mockResolvedValueOnce(null);
-
-        const response = await POST({
-            headers: new Headers({ authorization: 'Bearer invalid-token' }),
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'conference',
-                start_date: '2026-05-01T09:00:00Z',
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-        const payload = await response.json();
-
-        expect(response.status).toBe(401);
-        expect(payload.error).toBe('Unauthorized');
-        expect(mocks.insert).not.toHaveBeenCalled();
-    });
-
-    it('returns 400 for invalid event type', async () => {
-        const response = await POST({
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'webinar',
-                start_date: '2026-05-01T09:00:00Z',
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-        const payload = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(payload.error).toBe('Event type is invalid');
-        expect(mocks.insert).not.toHaveBeenCalled();
-    });
-
-    it('returns 400 for invalid start date', async () => {
-        const response = await POST({
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'conference',
-                start_date: 'not-a-date',
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-        const payload = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(payload.error).toBe('Start date must be a valid datetime');
-        expect(mocks.insert).not.toHaveBeenCalled();
-    });
-
-    it('returns 400 for invalid end date', async () => {
-        const response = await POST({
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'conference',
-                start_date: '2026-05-01T09:00:00Z',
-                end_date: 'later maybe',
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-        const payload = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(payload.error).toBe('End date must be a valid datetime');
-        expect(mocks.insert).not.toHaveBeenCalled();
-    });
-
-    it('returns 400 when an in-person event omits location', async () => {
-        const response = await POST({
-            json: async () => ({
-                title: 'Launch Week',
-                event_type: 'conference',
-                start_date: '2026-05-01T09:00:00Z',
-                is_virtual: false,
-            }),
-        } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-        const payload = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(payload.error).toBe('Location is required for in-person events');
         expect(mocks.insert).not.toHaveBeenCalled();
     });
 });

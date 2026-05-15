@@ -61,7 +61,7 @@ const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
 };
 
 export default async function TechEventsCalendar2026Page() {
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const supabase = await createClient();
 
     const year2026Start = '2026-01-01T00:00:00.000Z';

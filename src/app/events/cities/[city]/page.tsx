@@ -153,7 +153,7 @@ export async function generateStaticParams(): Promise<{ city: string }[]> {
 
 export default async function CityPage({ params }: CityPageProps) {
     const { city } = await params;
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const data = await getCityData(city);
 
     if (!data) notFound();

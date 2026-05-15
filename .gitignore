@@ -17,9 +17,14 @@
 # misc
 .DS_Store
 *.pem
+.agents/scratch/
+.claude/worktrees/
+apps/mobile/.claude/
+Sessions_All.csv
 .expo/
 .tmp-apple-auth/
 .tmp-google-brand/
+tmp/
 
 # debug
 npm-debug.log*

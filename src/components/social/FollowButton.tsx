@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { dispatchFollowStatusChanged } from '@/components/social/followEvents';
 import { sendTelemetryEvent } from '@/utils/telemetryClient';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface FollowStatusResponse {
   success?: boolean;
@@ -168,7 +168,7 @@ export default function FollowButton({
       className={compact ? 'h-7 px-2 text-[11px]' : 'h-8 px-3 text-xs'}
       aria-pressed={isFollowing}
     >
-      {isSubmitting && <CircleNotchIcon className="h-3.5 w-3.5 animate-spin" />}
+      {isSubmitting ? <BrandLoadingLogo className="h-3.5 w-3.5 text-current" inline label={null} size={14} /> : null}
       {label}
     </Button>
   );

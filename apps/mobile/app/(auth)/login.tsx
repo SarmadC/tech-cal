@@ -78,13 +78,13 @@ export default function LoginScreen() {
     setSubmitting(true);
     setError(null);
 
-    const result = await signIn({
-      email: email.trim(),
-      password,
-    });
-
-    if (result.error) {
-      setError(result.error);
+    try {
+      await signIn({
+        email: email.trim(),
+        password,
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign in.');
       setSubmitting(false);
       return;
     }
@@ -101,9 +101,12 @@ export default function LoginScreen() {
     setPendingProvider(provider);
     setError(null);
 
-    const result = await signInWithOAuth(provider);
-    if (result.error) {
-      setError(result.error);
+    try {
+      await signInWithOAuth(provider);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Unable to start sign in.'
+      );
       setPendingProvider(null);
       return;
     }

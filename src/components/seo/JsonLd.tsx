@@ -133,7 +133,7 @@ interface ArticleJsonLdProps {
     authorName: string;
     slug: string;
     imageUrl?: string;
-    nonce: string;
+    nonce?: string;
 }
 
 export function ArticleJsonLd({
@@ -201,7 +201,7 @@ interface EventJsonLdProps {
         priceMax?: number | null;
         currency?: string | null;
     };
-    nonce: string;
+    nonce?: string;
 }
 
 export function EventJsonLd({
@@ -295,7 +295,7 @@ interface BreadcrumbItem {
 
 interface BreadcrumbJsonLdProps {
     items: BreadcrumbItem[];
-    nonce: string;
+    nonce?: string;
 }
 
 export function BreadcrumbJsonLd({ items, nonce }: BreadcrumbJsonLdProps) {

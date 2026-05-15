@@ -1,4 +1,5 @@
 import {
+  blockedUserSummarySchema,
   communityCommentDraftSchema,
   communityPostDraftSchema,
   communityReportSchema,
@@ -15,18 +16,27 @@ import {
   mobileDiscoverFeedRequestSchema,
   mobileDiscoverFeedSchema,
   mobileEventDetailSchema,
+  mobileEventNetworkingFeedbackSchema,
+  mobileEventNetworkingFeedbackUpdateSchema,
   mobileEventEngagementSchema,
   mobileEventEngagementUpdateSchema,
+  mobileFollowStatusSchema,
+  mobileLinkedInOutreachLogSchema,
+  mobileNetworkingContactRecordSchema,
+  mobileNetworkingContactUpdateSchema,
   mobileOnboardingStatusSchema,
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
+  mobilePublicProfileSchema,
   mobileSavedEventsFeedSchema,
+  mobileSpeakerDetailSchema,
   revenueCatReconcileSchema,
   subscriptionOfferingSchema,
   type CommunityCommentDraft,
   type CommunityPostDraft,
   type CommunityReportInput,
   type CommunityVoteInput,
+  type BlockedUserSummary,
   type MobileCalendarFeed,
   type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
@@ -38,12 +48,20 @@ import {
   type MobileDiscoverFeed,
   type MobileDiscoverFeedRequest,
   type MobileEventDetail,
+  type MobileEventNetworkingFeedback,
+  type MobileEventNetworkingFeedbackUpdate,
   type MobileEventEngagement,
   type MobileEventEngagementUpdate,
+  type MobileFollowStatus,
+  type MobileLinkedInOutreachLog,
+  type MobileNetworkingContactRecord,
+  type MobileNetworkingContactUpdate,
   type MobileOnboardingStatus,
   type MobileProfileState,
   type MobileProfileUpdate,
+  type MobilePublicProfile,
   type MobileSavedEventsFeed,
+  type MobileSpeakerDetail,
   type NormalizedSubscription,
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
@@ -51,6 +69,7 @@ import {
 import type { ZodType } from 'zod';
 
 import { getMobileApiBaseUrl } from './env';
+import { sessionStorage } from './sessionStorage';
 import { supabase } from './supabase';
 
 interface MobileApiEnvelope<T> {
@@ -58,6 +77,9 @@ interface MobileApiEnvelope<T> {
   data?: T;
   error?: string;
 }
+
+const PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY =
+  'mobile_pending_networking_follow_up_event_id';
 
 function getDeviceTimezone(): string | null {
   try {
@@ -123,6 +145,56 @@ async function fetchMobileEnvelope(
     : payload;
 }
 
+async function setPendingNetworkingFollowUpEventId(
+  eventId: string | null
+): Promise<void> {
+  const trimmed = eventId?.trim() ?? '';
+  if (!trimmed) {
+    await sessionStorage.removeItem(PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY);
+    return;
+  }
+
+  await sessionStorage.setItem(PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY, trimmed);
+}
+
+async function syncPendingNetworkingFollowUpEventId(
+  eventId: string | null
+): Promise<void> {
+  try {
+    await setPendingNetworkingFollowUpEventId(eventId);
+  } catch (error) {
+    console.warn(
+      '[mobileApi] Unable to persist pending networking follow-up event id',
+      error
+    );
+  }
+}
+
+export async function loadPendingNetworkingFollowUpEventId(): Promise<string | null> {
+  try {
+    const value = await sessionStorage.getItem(PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY);
+    const trimmed = value?.trim() ?? '';
+    return trimmed || null;
+  } catch (error) {
+    console.warn(
+      '[mobileApi] Unable to load pending networking follow-up event id',
+      error
+    );
+    return null;
+  }
+}
+
+export async function clearPendingNetworkingFollowUpEventId(): Promise<void> {
+  try {
+    await sessionStorage.removeItem(PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY);
+  } catch (error) {
+    console.warn(
+      '[mobileApi] Unable to clear pending networking follow-up event id',
+      error
+    );
+  }
+}
+
 export async function loadMobileDashboardSummary(): Promise<MobileDashboardSummary> {
   return fetchMobileContract(
     '/api/mobile/dashboard/summary',
@@ -165,17 +237,13 @@ export async function loadMobileCalendarFeed(
   input: MobileCalendarFeedRequest = {}
 ): Promise<MobileCalendarFeed> {
   const payload = mobileCalendarFeedRequestSchema.parse(input);
-  const searchParams = new URLSearchParams();
-
-  if (payload.monthStart) {
-    searchParams.set('monthStart', payload.monthStart);
-  }
-
-  const search = searchParams.toString();
-
   return fetchMobileContract(
-    `/api/mobile/calendar${search ? `?${search}` : ''}`,
-    mobileCalendarFeedSchema
+    '/api/mobile/calendar',
+    mobileCalendarFeedSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
   );
 }
 
@@ -206,6 +274,71 @@ export async function loadMobileCommunityPost(
   return fetchMobileContract(
     `/api/mobile/community/posts/${encodeURIComponent(postId.trim())}`,
     mobileCommunityPostPageSchema
+  );
+}
+
+export async function loadMobilePublicProfile(
+  username: string
+): Promise<MobilePublicProfile> {
+  const trimmed = username.trim();
+  if (!trimmed) {
+    throw new Error('Username is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/profiles/${encodeURIComponent(trimmed)}`,
+    mobilePublicProfileSchema
+  );
+}
+
+export async function loadMobileFollowStatus(
+  userId: string
+): Promise<MobileFollowStatus> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/follows/status/${encodeURIComponent(trimmed)}`,
+    mobileFollowStatusSchema
+  );
+}
+
+export async function followMobileUser(userId: string): Promise<void> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  await fetchMobileEnvelope('/api/follows', {
+    method: 'POST',
+    body: JSON.stringify({ userId: trimmed }),
+  });
+}
+
+export async function unfollowMobileUser(userId: string): Promise<void> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    throw new Error('User id is required');
+  }
+
+  await fetchMobileEnvelope(`/api/follows/${encodeURIComponent(trimmed)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function loadMobileSpeakerDetail(
+  speakerId: string
+): Promise<MobileSpeakerDetail> {
+  const trimmed = speakerId.trim();
+  if (!trimmed) {
+    throw new Error('Speaker id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/speakers/${encodeURIComponent(trimmed)}`,
+    mobileSpeakerDetailSchema
   );
 }
 
@@ -266,6 +399,84 @@ export async function updateMobileEventEngagement(
   );
 }
 
+export async function updateMobileNetworkingContact(
+  input: MobileNetworkingContactUpdate
+): Promise<MobileNetworkingContactRecord> {
+  const payload = mobileNetworkingContactUpdateSchema.parse(input);
+
+  return fetchMobileContract(
+    '/api/mobile/networking/contacts',
+    mobileNetworkingContactRecordSchema,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function logMobileLinkedInRequest(
+  eventId: string
+): Promise<MobileLinkedInOutreachLog> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+
+  const result = await fetchMobileContract(
+    `/api/mobile/events/${encodeURIComponent(eventId.trim())}/networking-outreach`,
+    mobileLinkedInOutreachLogSchema,
+    {
+      method: 'POST',
+    }
+  );
+
+  await syncPendingNetworkingFollowUpEventId(
+    result.linkedinRequestsSent > result.connectionsMade ? result.eventId : null
+  );
+
+  return result;
+}
+
+export async function loadMobileEventNetworkingFeedback(
+  eventId: string
+): Promise<MobileEventNetworkingFeedback> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/events/${encodeURIComponent(eventId.trim())}/feedback`,
+    mobileEventNetworkingFeedbackSchema
+  );
+}
+
+export async function updateMobileEventNetworkingFeedback(
+  eventId: string,
+  input: MobileEventNetworkingFeedbackUpdate
+): Promise<MobileEventNetworkingFeedback> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+
+  const payload = mobileEventNetworkingFeedbackUpdateSchema.parse(input);
+
+  const result = await fetchMobileContract(
+    `/api/mobile/events/${encodeURIComponent(eventId.trim())}/feedback`,
+    mobileEventNetworkingFeedbackSchema,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
+
+  await syncPendingNetworkingFollowUpEventId(
+    (result.linkedinRequestsSent ?? 0) > (result.connectionsMade ?? 0)
+      ? result.eventId
+      : null
+  );
+
+  return result;
+}
+
 export async function joinMobileCommunityCircle(circleId: string): Promise<void> {
   if (!circleId.trim()) {
     throw new Error('Circle id is required');
@@ -290,6 +501,23 @@ export async function leaveMobileCommunityCircle(circleId: string): Promise<void
       method: 'DELETE',
     }
   );
+}
+
+export async function loadMobileBlockedUsers(): Promise<BlockedUserSummary[]> {
+  return fetchMobileContract('/api/blocks', blockedUserSummarySchema.array());
+}
+
+export async function blockMobileUser(blockedUserId: string): Promise<void> {
+  if (!blockedUserId.trim()) {
+    throw new Error('Blocked user id is required');
+  }
+
+  await fetchMobileEnvelope('/api/blocks', {
+    method: 'POST',
+    body: JSON.stringify({
+      blockedUserId: blockedUserId.trim(),
+    }),
+  });
 }
 
 export async function createMobileCommunityPost(

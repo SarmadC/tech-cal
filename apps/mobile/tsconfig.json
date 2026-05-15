@@ -1,7 +1,11 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "paths": {
+      "@kurecal/brand": [
+        "../../packages/brand/src/index.ts"
+      ],
       "@kurecal/domain": [
         "../../packages/domain/src/index.ts"
       ]
@@ -13,10 +17,15 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
+    "../../packages/brand/src/**/*.ts",
     "../../packages/domain/src/**/*.ts"
   ],
   "exclude": [
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "../../packages/brand/src/**/*.test.ts",
+    "../../packages/brand/src/**/*.test.tsx",
+    "../../packages/domain/src/**/*.test.ts",
+    "../../packages/domain/src/**/*.test.tsx"
   ]
 }

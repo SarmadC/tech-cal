@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mobileCalendarFeedSchema } from '@kurecal/domain';
 
@@ -6,8 +6,9 @@ import { GET, POST } from './route';
 
 const mocks = vi.hoisted(() => ({
   getAuthenticatedRequestContext: vi.fn(),
-  getCalendarEvents: vi.fn(),
+  loadFilteredEventsData: vi.fn(),
   loadEngagementMap: vi.fn(),
+  getEventTypes: vi.fn(),
 }));
 
 vi.mock('@/utils/supabase/requestAuth', () => ({
@@ -15,79 +16,159 @@ vi.mock('@/utils/supabase/requestAuth', () => ({
     mocks.getAuthenticatedRequestContext(...args),
 }));
 
-vi.mock('@/services/eventServices', () => ({
-  EventService: {
-    getCalendarEvents: (...args: unknown[]) => mocks.getCalendarEvents(...args),
-  },
-}));
+vi.mock('@/services/filteredEventsService', async () => {
+  const actual = await vi.importActual<typeof import('@/services/filteredEventsService')>(
+    '@/services/filteredEventsService'
+  );
+
+  return {
+    ...actual,
+    loadFilteredEventsData: (...args: unknown[]) =>
+      mocks.loadFilteredEventsData(...args),
+  };
+});
 
 vi.mock('@/app/api/mobile/engagement', () => ({
   loadEngagementMap: (...args: unknown[]) => mocks.loadEngagementMap(...args),
 }));
 
+vi.mock('@/services/eventTypeService', () => ({
+  EventTypeService: {
+    getEventTypes: (...args: unknown[]) => mocks.getEventTypes(...args),
+  },
+}));
+
 const calendarEvent = {
-  id: 'event-1',
-  createdAt: '2026-05-01T00:00:00.000Z',
-  updatedAt: '2026-05-01T00:00:00.000Z',
-  title: 'KureCal Monthly Kickoff',
-  description: 'A planning session for the month.',
+  id: '11111111-1111-4111-8111-111111111111',
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-02T00:00:00.000Z',
+  title: 'Calendar Event',
+  description: 'An event in the visible month.',
   organizer: 'KureCal',
-  location: 'Calgary',
+  location: 'Remote',
   status: 'confirmed',
-  startTime: '2026-05-12T18:00:00.000Z',
-  endTime: '2026-05-12T20:00:00.000Z',
+  startTime: '2026-04-10T18:00:00.000Z',
+  endTime: '2026-04-10T19:00:00.000Z',
   timezone: 'America/Edmonton',
-  sourceUrl: 'https://example.com/events/monthly-kickoff',
+  sourceUrl: 'https://example.com/events/calendar-event',
   livestreamUrl: null,
   registrationUrl: 'https://example.com/register',
-  eventTypeId: 'meetup',
-  eventFormat: 'Hybrid',
+  eventTypeId: 'conference',
+  eventFormat: 'Online',
   priceMin: 0,
   priceRange: 'Free',
   eventImageUrl: null,
-  category: {
-    id: 'meetup',
-    name: 'Meetup',
-    color: '#2dd4bf',
-  },
   organization: {
     id: 'org-1',
     name: 'KureCal',
-    logo: null,
+    logo: 'https://example.com/logo.png',
   },
-  tags: [{ id: 'tag-1', name: 'expo', color: '#0ea5e9', category: 'stack' }],
+  category: {
+    id: 'conference',
+    name: 'Conference',
+    color: '#2563EB',
+  },
+  tags: [{ id: 'tag-1', name: 'ai', color: '#0ea5e9', category: 'stack' }],
+  recommendationMetadata: null,
 };
 
-describe('/api/mobile/calendar', () => {
+describe('mobile calendar route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-05T12:00:00.000Z'));
+
+    const supabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                preferences: null,
+                timezone: 'America/Edmonton',
+                location: 'Edmonton, Canada',
+              },
+            }),
+          })),
+        })),
+      })),
+    };
+
     mocks.getAuthenticatedRequestContext.mockResolvedValue({
       authMethod: 'bearer',
-      supabase: {},
-      user: { id: 'user-1' },
+      supabase,
+      user: { id: '22222222-2222-4222-8222-222222222222' },
     });
-    mocks.getCalendarEvents.mockResolvedValue([calendarEvent]);
-    mocks.loadEngagementMap.mockResolvedValue(
-      new Map([
-        [
-          calendarEvent.id,
-          {
-            isBookmarked: true,
-            status: 'attending',
+    mocks.getEventTypes.mockResolvedValue([
+      {
+        id: 'conference',
+        name: 'Conference',
+        color: '#2563EB',
+        description: 'Large format events',
+      },
+    ]);
+    mocks.loadFilteredEventsData.mockResolvedValue({
+      events: [calendarEvent],
+      pagination: {
+        page: 1,
+        pageSize: 100,
+        total: 1,
+        hasMore: false,
+      },
+      filters: {
+        applied: {
+          tags: [],
+          locations: [],
+          cost: 'all',
+          dateRange: {
+            start: '2026-04-01T00:00:00.000',
+            end: '2026-04-30T23:59:59.999',
           },
-        ],
-      ])
+        },
+        available: {
+          categories: [],
+          difficulties: [],
+          formats: [],
+          locations: [],
+        },
+      },
+      stats: {
+        processingTimeMs: 18,
+        filteredCount: 1,
+        totalCount: 1,
+      },
+      isColdStart: false,
+      counts: {
+        format: {
+          virtual: 1,
+          'in-person': 0,
+          hybrid: 0,
+        },
+        cost: {
+          free: 1,
+          paid: 0,
+        },
+        categories: {},
+        tags: {
+          ai: 1,
+        },
+      },
+    });
+    mocks.loadEngagementMap.mockResolvedValue(
+      new Map([[calendarEvent.id, { isBookmarked: true, status: 'attending' }]])
     );
   });
 
-  it('returns a typed month feed for GET requests', async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns the default current-month feed on GET', async () => {
     const response = await GET(
-      new Request(
-        'http://localhost/api/mobile/calendar?monthStart=2026-05-01',
-        {
-          headers: { Authorization: 'Bearer mobile-token' },
-        }
-      )
+      new Request('http://localhost/api/mobile/calendar', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
     );
     const payload = await response.json();
 
@@ -95,21 +176,14 @@ describe('/api/mobile/calendar', () => {
     expect(payload.success).toBe(true);
 
     const parsed = mobileCalendarFeedSchema.parse(payload.data);
-    expect(parsed.month.monthStart).toBe('2026-05-01');
-    expect(parsed.days).toHaveLength(42);
+    expect(parsed.month.monthStart).toBe('2026-04-01');
     expect(parsed.events[0]?.engagement?.status).toBe('attending');
-    expect(parsed.metrics.savedCount).toBe(1);
-    expect(mocks.getCalendarEvents).toHaveBeenCalledWith(
-      {},
-      expect.objectContaining({
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
-        limit: 600,
-      })
-    );
+    expect(parsed.events[0]?.timeLabel).toBe('12:00 PM - 1:00 PM');
+    expect(parsed.filters.activeCount).toBe(0);
+    expect(parsed.availableFilters.eventTypes[0]?.name).toBe('Conference');
   });
 
-  it('accepts POST payloads and returns the same contract', async () => {
+  it('accepts POST month navigation and filters', async () => {
     const response = await POST(
       new Request('http://localhost/api/mobile/calendar', {
         method: 'POST',
@@ -119,6 +193,13 @@ describe('/api/mobile/calendar', () => {
         },
         body: JSON.stringify({
           monthStart: '2026-05-01',
+          tags: ['ai'],
+          location: 'Calgary',
+          dateRange: {
+            start: '2026-05-10',
+            end: '2026-05-20',
+          },
+          cost: 'free',
         }),
       })
     );
@@ -126,28 +207,109 @@ describe('/api/mobile/calendar', () => {
 
     expect(response.status).toBe(200);
     expect(payload.success).toBe(true);
-    expect(mobileCalendarFeedSchema.parse(payload.data).events[0]?.title).toBe(
-      'KureCal Monthly Kickoff'
-    );
+
+    const parsed = mobileCalendarFeedSchema.parse(payload.data);
+    expect(parsed.filters.location).toBe('Calgary');
+    expect(parsed.month.monthStart).toBe('2026-05-01');
+
+    const loadArgs = mocks.loadFilteredEventsData.mock.calls[0]?.[0];
+    expect(loadArgs.request.rawLocations).toEqual(['Calgary']);
+    expect(loadArgs.request.tags).toEqual(['ai']);
+    expect(loadArgs.request.cost).toBe('free');
+    expect(loadArgs.request.sortBy).toBe('date');
+    expect(loadArgs.request.sortDirection).toBe('asc');
   });
 
-  it('returns 401 when authentication is missing', async () => {
+  it('returns 401 when the request is unauthenticated', async () => {
     mocks.getAuthenticatedRequestContext.mockResolvedValueOnce(null);
 
-    const response = await GET(
-      new Request('http://localhost/api/mobile/calendar')
-    );
+    const response = await GET(new Request('http://localhost/api/mobile/calendar'));
     const payload = await response.json();
 
     expect(response.status).toBe(401);
     expect(payload.error).toBe('Authentication required');
   });
 
+  it('serializes date-only midnight anchors as all-day calendar rows', async () => {
+    mocks.loadFilteredEventsData.mockResolvedValueOnce({
+      events: [
+        {
+          ...calendarEvent,
+          id: '33333333-3333-4333-8333-333333333333',
+          title: 'Date Only Conference',
+          startTime: '2026-06-02T00:00:00.000Z',
+          endTime: '2026-06-05T00:00:00.000Z',
+          timezone: null,
+        },
+      ],
+      pagination: {
+        page: 1,
+        pageSize: 100,
+        total: 1,
+        hasMore: false,
+      },
+      filters: {
+        applied: {
+          tags: [],
+          locations: [],
+          cost: 'all',
+          dateRange: {
+            start: '2026-06-01T00:00:00.000',
+            end: '2026-06-30T23:59:59.999',
+          },
+        },
+        available: {
+          categories: [],
+          difficulties: [],
+          formats: [],
+          locations: [],
+        },
+      },
+      stats: {
+        processingTimeMs: 18,
+        filteredCount: 1,
+        totalCount: 1,
+      },
+      isColdStart: false,
+      counts: {
+        format: {
+          virtual: 1,
+          'in-person': 0,
+          hybrid: 0,
+        },
+        cost: {
+          free: 1,
+          paid: 0,
+        },
+        categories: {},
+        tags: {},
+      },
+    });
+
+    const response = await POST(
+      new Request('http://localhost/api/mobile/calendar', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer mobile-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          monthStart: '2026-06-01',
+        }),
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+    expect(mobileCalendarFeedSchema.parse(payload.data).events[0]?.isAllDay).toBe(
+      true
+    );
+  });
+
   it('returns 400 for an invalid monthStart', async () => {
     const response = await GET(
-      new Request(
-        'http://localhost/api/mobile/calendar?monthStart=2026-5-1'
-      )
+      new Request('http://localhost/api/mobile/calendar?monthStart=2026-5-1')
     );
     const payload = await response.json();
 

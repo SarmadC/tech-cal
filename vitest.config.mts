@@ -14,9 +14,20 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: './vitest.setup.ts',
         testTimeout: 10000,
-        exclude: ['**/node_modules/**', '**/tests/**/*.spec.ts'],
+        exclude: [
+            '**/node_modules/**',
+            '**/tests/**/*.spec.ts',
+            '**/.claude/worktrees/**',
+            '**/.codex/worktrees/**',
+            '**/.cursor/worktrees/**',
+            '**/.agents/scratch/**',
+        ],
         alias: {
             '@': path.resolve(__dirname, './src'),
+            'expo-constants': path.resolve(__dirname, './test-support/expo-constants.ts'),
+            'expo-secure-store': path.resolve(__dirname, './test-support/expo-secure-store.ts'),
+            'react-native': path.resolve(__dirname, './test-support/react-native.ts'),
+            '@kurecal/brand': path.resolve(__dirname, './packages/brand/src/index.ts'),
             '@kurecal/domain': path.resolve(__dirname, './packages/domain/src/index.ts'),
         },
 

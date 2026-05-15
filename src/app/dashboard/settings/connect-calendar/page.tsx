@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getErrorMessage } from '@/utils/errorHandling';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 export default function ConnectCalendarPage() {
     const router = useRouter();
@@ -66,7 +67,7 @@ export default function ConnectCalendarPage() {
             >
                 {status === 'connecting' && (
                     <div className="space-y-4">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                        <BrandLoadingLogo className="mx-auto text-foreground-primary" size={48} />
                         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
                             {message}
                         </h2>
@@ -120,4 +121,3 @@ export default function ConnectCalendarPage() {
         </div>
     );
 }
-

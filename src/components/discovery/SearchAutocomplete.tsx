@@ -5,6 +5,8 @@ import { MagnifyingGlass, Calendar, Users, Folder, Tag as TagIcon, Clock } from 
 import type { SearchSuggestion } from '@/types';
 import type { SearchHistoryItem } from '@/hooks/useSearchHistory';
 
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
+
 interface SearchAutocompleteProps {
   suggestions: SearchSuggestion[];
   history?: SearchHistoryItem[];
@@ -130,7 +132,7 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
       {isLoading ? (
         <div className="p-4 text-center text-sm text-muted-foreground">
           <div className="inline-flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <BrandLoadingLogo className="h-4 w-4 text-foreground" inline label={null} size={16} />
             <span>Searching...</span>
           </div>
         </div>

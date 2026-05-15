@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { BlockService } from '@/services/blockService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const BlockRequestSchema = z.object({
   blockedUserId: z.string().uuid(),
@@ -12,12 +12,10 @@ const BlockRequestSchema = z.object({
 
 const blockActionRateLimiter = createRateLimiter('social-block-actions', 'LOW_FREQUENCY');
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -35,7 +33,10 @@ export async function GET() {
     }
 
     const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
-    const blockedUsers = await BlockService.getBlockedUsersForUser(user.id, readSupabase);
+    const blockedUsers = await BlockService.getBlockedUsersForUser(
+      authContext.user.id,
+      readSupabase
+    );
 
     return NextResponse.json({
       success: true,
@@ -52,17 +53,18 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const rateLimitResult = await checkRateLimit(blockActionRateLimiter, user.id);
+    const rateLimitResult = await checkRateLimit(
+      blockActionRateLimiter,
+      authContext.user.id
+    );
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please try again later.' },
@@ -80,8 +82,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await BlockService.blockUser(user.id, validation.data.blockedUserId, supabase);
-    await TrustLevelService.evaluateAndPersistTrustLevel(user.id, supabase);
+    await BlockService.blockUser(
+      authContext.user.id,
+      validation.data.blockedUserId,
+      authContext.supabase
+    );
+    await TrustLevelService.evaluateAndPersistTrustLevel(
+      authContext.user.id,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

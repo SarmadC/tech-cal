@@ -91,5 +91,92 @@ export function validateArrayLength<T>(
     return { valid: true };
 }
 
+type OriginAwareRequest = Pick<NextRequest, 'headers'> & {
+    nextUrl?: URL;
+    url?: string;
+};
+
+function getRequestOrigin(request: OriginAwareRequest): string | null {
+    if (request.nextUrl?.origin) {
+        return request.nextUrl.origin;
+    }
+
+    if (typeof request.url === 'string') {
+        try {
+            return new URL(request.url).origin;
+        } catch {
+            return null;
+        }
+    }
+
+    const forwardedHost =
+        request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+    if (!forwardedHost) {
+        return null;
+    }
+
+    const protocol = request.headers.get('x-forwarded-proto') ?? 'https';
+    return `${protocol}://${forwardedHost}`;
+}
+
+function normalizeOriginHeader(value: string | null): string | null {
+    if (!value) {
+        return null;
+    }
+
+    try {
+        return new URL(value).origin;
+    } catch {
+        return null;
+    }
+}
+
+export function validateSameOriginRequest(
+    request: OriginAwareRequest
+): string | null {
+    const requestOrigin = getRequestOrigin(request);
+    if (!requestOrigin) {
+        return null;
+    }
+
+    const originHeader = normalizeOriginHeader(request.headers.get('origin'));
+    const refererOrigin = normalizeOriginHeader(request.headers.get('referer'));
+
+    if (!originHeader && !refererOrigin) {
+        return null;
+    }
+
+    if (originHeader && originHeader !== requestOrigin) {
+        return 'Cross-site requests are not allowed.';
+    }
+
+    if (!originHeader && refererOrigin && refererOrigin !== requestOrigin) {
+        return 'Cross-site requests are not allowed.';
+    }
+
+    return null;
+}
+
+export function getClientIdentifier(
+    request: Pick<NextRequest, 'headers'>
+): string | null {
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+        const [firstAddress] = forwardedFor
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+        if (firstAddress) {
+            return firstAddress;
+        }
+    }
+
+    const directAddress =
+        request.headers.get('cf-connecting-ip') ??
+        request.headers.get('x-real-ip');
+
+    return directAddress?.trim() || null;
+}
 
 

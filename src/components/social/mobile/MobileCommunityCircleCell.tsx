@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CircleNotch } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import type { CommunityLaunchpadCircle } from '@/types/community';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import {
   formatCommunityCircleName,
   getCommunityCircleColor,
@@ -114,7 +114,7 @@ export default function MobileCommunityCircleCell({
           className="h-7 shrink-0 rounded-full px-3 text-[10px] font-semibold"
         >
           {isLoading ? (
-            <CircleNotch size={12} className="animate-spin" />
+            <BrandLoadingLogo className="h-3 w-3 text-current" inline label={null} size={12} />
           ) : optimisticJoined ? (
             'Joined'
           ) : (

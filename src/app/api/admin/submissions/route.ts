@@ -6,9 +6,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import {
+    appendEventSubmissionRiskFlag,
+    mergeEventSubmissionValidationSummary,
+} from '@/lib/eventSubmission';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
+import { validateUrlForServerFetch } from '@/lib/ssrfProtection';
 
 async function getAdminServiceClient(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
     const isAdmin = await isAdminUser(userId, supabase);
@@ -19,6 +24,89 @@ async function getAdminServiceClient(supabase: Awaited<ReturnType<typeof createC
     if (!supabaseUrl || !supabaseServiceKey) return null;
 
     return createServiceClient(supabaseUrl, supabaseServiceKey);
+}
+
+async function findDuplicateEvents(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tableClient: any,
+    input: { registrationUrl: string | null; startDate: string; title: string }
+) {
+    const matches = new Map<string, { id: string; start_time: string | null; title: string }>();
+
+    const collect = async (
+        query: PromiseLike<{
+            data?: Array<{ id: string; start_time: string | null; title: string }>;
+            error?: { message?: string } | null;
+        }>
+    ) => {
+        const { data, error } = await query;
+        if (error) {
+            console.warn('[admin/submissions] Dedupe lookup failed:', error);
+            return;
+        }
+
+        for (const item of data ?? []) {
+            matches.set(item.id, item);
+        }
+    };
+
+    if (input.registrationUrl) {
+        await collect(
+            tableClient
+                .from('events')
+                .select('id, title, start_time')
+                .eq('registration_url', input.registrationUrl)
+                .limit(5)
+        );
+    }
+
+    await collect(
+        tableClient
+            .from('events')
+            .select('id, title, start_time')
+            .eq('title', input.title)
+            .eq('start_time', input.startDate)
+            .limit(5)
+    );
+
+    return Array.from(matches.values());
+}
+
+async function markSubmissionRisk(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tableClient: any,
+    input: {
+        extraFields?: Record<string, unknown>;
+        flag: Parameters<typeof appendEventSubmissionRiskFlag>[1];
+        submission: {
+            id: string;
+            risk_flags?: unknown;
+            validation_summary?: unknown;
+        };
+        warning: string;
+    }
+) {
+    const { error } = await tableClient
+        .from('user_submitted_events')
+        .update({
+            risk_flags: appendEventSubmissionRiskFlag(
+                input.submission.risk_flags,
+                input.flag
+            ),
+            validation_summary: mergeEventSubmissionValidationSummary(
+                input.submission.validation_summary,
+                input.warning,
+                input.extraFields
+            ),
+        })
+        .eq('id', input.submission.id)
+        .eq('status', 'pending')
+        .is('reviewed_at', null)
+        .is('event_id', null);
+
+    if (error) {
+        console.warn('[admin/submissions] Failed to persist submission risk metadata:', error);
+    }
 }
 
 export async function GET(request: NextRequest) {
@@ -124,6 +212,54 @@ export async function PATCH(request: NextRequest) {
     let eventId: string | null = null;
 
     if (action === 'approve') {
+        if (submission.registration_url) {
+            const registrationUrlValidation = await validateUrlForServerFetch(
+                submission.registration_url,
+                { allowUnresolvedHostnames: true }
+            );
+
+            if (!registrationUrlValidation.valid) {
+                await markSubmissionRisk(tableClient, {
+                    flag: 'unsafe_submitted_url',
+                    submission,
+                    warning:
+                        'Submission contains a URL that is not safe to fetch server-side.',
+                });
+
+                return NextResponse.json(
+                    { error: 'Registration URL must be publicly reachable' },
+                    { status: 400 }
+                );
+            }
+        }
+
+        const duplicateCandidates = await findDuplicateEvents(tableClient, {
+            registrationUrl: submission.registration_url ?? null,
+            startDate: submission.start_date,
+            title: submission.title,
+        });
+
+        if (duplicateCandidates.length > 0) {
+            await markSubmissionRisk(tableClient, {
+                extraFields: {
+                    duplicate_event_count: duplicateCandidates.length,
+                },
+                flag: 'possible_duplicate_event',
+                submission,
+                warning:
+                    'Possible duplicate event exists in the public events table.',
+            });
+
+            return NextResponse.json(
+                {
+                    duplicate_candidates: duplicateCandidates,
+                    error:
+                        'Possible duplicate event found. Review the submission warnings before approving.',
+                },
+                { status: 409 }
+            );
+        }
+
         // Create a minimal event record in the events table
         const eventFormat = submission.is_virtual ? 'Online' : 'In-person';
 
@@ -137,6 +273,13 @@ export async function PATCH(request: NextRequest) {
                 location: submission.location,
                 event_format: eventFormat,
                 source_url: null,
+                registration_mode:
+                    typeof submission.registration_mode === 'string' &&
+                    submission.registration_mode
+                        ? submission.registration_mode
+                        : submission.registration_url
+                          ? 'external'
+                          : 'native',
                 registration_url: submission.registration_url,
                 status: 'active',
                 ingestion_provenance: 'user_submitted',

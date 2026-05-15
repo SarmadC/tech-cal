@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { FollowService } from '@/services/followService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const FollowRequestSchema = z.object({
   userId: z.string().uuid(),
@@ -29,17 +29,18 @@ const getStatusForError = (error: unknown): number => {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    const authContext = await getAuthenticatedRequestContext(request);
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const rateLimitResult = await checkRateLimit(followActionRateLimiter, user.id);
+    const rateLimitResult = await checkRateLimit(
+      followActionRateLimiter,
+      authContext.user.id
+    );
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please try again later.' },
@@ -55,7 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trust = await TrustLevelService.evaluateAndPersistTrustLevel(user.id, supabase);
+    const trust = await TrustLevelService.evaluateAndPersistTrustLevel(
+      authContext.user.id,
+      authContext.supabase
+    );
     if (trust.level < 1) {
       return NextResponse.json(
         {
@@ -66,7 +70,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await FollowService.followUser(user.id, validation.data.userId, supabase);
+    await FollowService.followUser(
+      authContext.user.id,
+      validation.data.userId,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

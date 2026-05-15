@@ -11,6 +11,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import * as Sentry from '@sentry/nextjs';
 
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -681,10 +682,10 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                     variant="ghost"
                     onClick={refetchData}
                     disabled={isRefreshing}
-                    className={cn("h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary", isRefreshing && "animate-spin")}
+                    className="h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary"
                     title="Refresh queue"
                 >
-                    <MaterialIcon name="refresh" size={14} />
+                    {isRefreshing ? <BrandLoadingLogo size={14} inline label={null} /> : <MaterialIcon name="refresh" size={14} />}
                 </Button>
                 <div ref={columnsPanelRef} className="relative">
                     <Button

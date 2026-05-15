@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 
 interface BlockUserButtonProps {
   userId: string;
@@ -85,7 +85,7 @@ export default function BlockUserButton({
     >
       {isSubmitting ? (
         <>
-          <CircleNotchIcon className="h-3.5 w-3.5 animate-spin" />
+          <BrandLoadingLogo className="h-3.5 w-3.5 text-current" inline label={null} size={14} />
           {isBlocked ? 'Unblocking' : 'Blocking'}
         </>
       ) : isBlocked ? (

@@ -2,8 +2,9 @@
 
 import { useSubscription } from '@/hooks/useSubscription';
 import { openCustomerPortal } from '@/lib/paddle';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button } from '@/components/ui/button';
-import { Spinner, Warning, Check } from '@phosphor-icons/react';
+import { Warning } from '@phosphor-icons/react';
 
 const SettingSection = ({
     title,
@@ -141,7 +142,7 @@ export default function BillingSettings() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center p-24">
-                <Spinner className="h-5 w-5 animate-spin text-zinc-400" />
+                <BrandLoadingLogo size={24} className="text-zinc-400" />
             </div>
         );
     }

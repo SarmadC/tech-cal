@@ -44,7 +44,7 @@ const fontSans = Platform.select({
 });
 
 export default function ForgotPasswordScreen() {
-  const { loading, resetPassword } = useAuth();
+  const { loading, requestPasswordReset } = useAuth();
   const { width } = useWindowDimensions();
   const [email, setEmail] = useState('');
   const [focused, setFocused] = useState(false);
@@ -67,9 +67,14 @@ export default function ForgotPasswordScreen() {
     setSubmitting(true);
     setError(null);
 
-    const result = await resetPassword(email);
-    if (result.error) {
-      setError(result.error);
+    try {
+      await requestPasswordReset(email);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send reset instructions.'
+      );
       setSubmitting(false);
       return;
     }

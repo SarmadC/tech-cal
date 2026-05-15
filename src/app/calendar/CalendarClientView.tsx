@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useResizeListener } from '@/hooks/useEventListener';
 import { useBackClose } from '@/hooks/useBackClose';
 
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -504,9 +505,9 @@ export default function CalendarClientView({
         if (eventData.isLoading) {
             return (
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading events...</p>
+                    <div className="text-center text-foreground-secondary">
+                        <BrandLoadingLogo className="mx-auto mb-4 h-8 w-8 text-foreground-primary" inline size={32} />
+                        <p>Loading events...</p>
                     </div>
                 </div>
             );

@@ -2,7 +2,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
-import { CircleNotchIcon } from '@phosphor-icons/react';
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { Button, type ButtonProps } from '@/components/ui/button';
 
 interface SubmitButtonProps extends ButtonProps {
@@ -14,7 +14,7 @@ export function SubmitButton({ children, ...props }: SubmitButtonProps) {
 
     return (
         <Button type="submit" disabled={pending} {...props}>
-            {pending ? <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {pending ? <BrandLoadingLogo className="mr-2 h-4 w-4 text-current" inline label={null} size={16} /> : null}
             {children}
         </Button>
     );

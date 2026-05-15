@@ -152,7 +152,7 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
     const { slug } = await params;
-    const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? '';
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
     const data = await getCategoryData(slug);
 
     if (!data) notFound();

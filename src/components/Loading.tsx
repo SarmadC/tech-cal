@@ -1,23 +1,13 @@
 import React from 'react';
 
+import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
+
 // --- Main Loading Components (Unchanged) ---
 export default function Loading() {
     return (
         <div className="min-h-screen bg-background-main flex items-center justify-center">
-            <div className="text-center">
-                <div className="relative">
-                    <div className="w-20 h-20 bg-accent-primary/10 rounded-2xl flex items-center justify-center animate-pulse">
-                        <svg className="w-10 h-10 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <div className="flex justify-center mt-6 space-x-2">
-                        <div className="w-2 h-2 bg-accent-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-accent-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-accent-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                </div>
-                <p className="mt-4 text-foreground-secondary">Loading...</p>
+            <div className="flex items-center justify-center rounded-[28px] border border-border-default bg-background-secondary/70 p-8 shadow-[var(--shadow-lg)] backdrop-blur-sm">
+                <BrandLoadingLogo className="text-foreground-primary" size={72} />
             </div>
         </div>
     );
@@ -112,10 +102,12 @@ export function LoadingButton({ loading, children, onClick, disabled = false, cl
             className={`${baseClasses} ${variantClasses[variant]} ${className}`}
         >
             {loading && (
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <BrandLoadingLogo
+                    className="-ml-1 mr-2 h-4 w-4 shrink-0"
+                    inline
+                    label={null}
+                    size={16}
+                />
             )}
             <span>{children}</span>
         </button>

@@ -43,10 +43,10 @@ describe('mobile env helpers', () => {
   });
 
   it('throws when a required env var is missing', () => {
-    delete process.env.EXPO_PUBLIC_API_URL;
+    delete process.env.EXPO_PUBLIC_SUPABASE_URL;
 
-    expect(() => getRequiredMobileEnv('EXPO_PUBLIC_API_URL')).toThrow(
-      'EXPO_PUBLIC_API_URL is missing from the mobile environment.'
+    expect(() => getRequiredMobileEnv('EXPO_PUBLIC_SUPABASE_URL')).toThrow(
+      'EXPO_PUBLIC_SUPABASE_URL is missing from the mobile environment.'
     );
   });
 
@@ -90,6 +90,18 @@ describe('mobile env helpers', () => {
     expect(getMobileRuntimeMetadata()).toEqual({
       appName: 'KureCal Dev',
       easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+      scheme: 'kurecal-dev',
+      slug: 'kurecal-mobile',
+    });
+  });
+
+  it('switches runtime metadata to production when APP_VARIANT=production', () => {
+    process.env.APP_VARIANT = 'production';
+
+    expect(getMobileRuntimeMetadata()).toEqual({
+      appName: 'KureCal',
+      easProjectId: '788fd018-fbcd-4809-9760-9fed5af7d221',
+      scheme: 'kurecal',
       slug: 'kurecal-mobile',
     });
   });

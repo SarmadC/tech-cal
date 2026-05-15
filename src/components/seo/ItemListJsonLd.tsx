@@ -16,7 +16,7 @@ interface ItemListEvent {
 
 interface ItemListJsonLdProps {
     items: ItemListEvent[];
-    nonce: string;
+    nonce?: string;
 }
 
 /**
