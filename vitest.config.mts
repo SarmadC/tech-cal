@@ -26,6 +26,7 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
             'expo-constants': path.resolve(__dirname, './test-support/expo-constants.ts'),
             'expo-secure-store': path.resolve(__dirname, './test-support/expo-secure-store.ts'),
+            'react-native': path.resolve(__dirname, './test-support/react-native.ts'),
             '@kurecal/brand': path.resolve(__dirname, './packages/brand/src/index.ts'),
             '@kurecal/domain': path.resolve(__dirname, './packages/domain/src/index.ts'),
         },

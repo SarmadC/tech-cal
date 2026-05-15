@@ -160,6 +160,16 @@ export function getMobileApiBaseUrl(): string {
   throw new Error('EXPO_PUBLIC_API_URL is missing from the mobile environment.');
 }
 
+export function getMobilePasswordResetRedirectUrl(): string {
+  return `${getMobileApiBaseUrl()}/auth/callback?type=recovery`;
+}
+
+export function getMobileEmailConfirmationRedirectUrl(): string {
+  const url = new URL('/auth/callback', getMobileApiBaseUrl());
+  url.searchParams.set('next', '/discover');
+  return url.toString();
+}
+
 export function getSupabaseRuntimeConfig() {
   return {
     anonKey: getRequiredMobileEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
@@ -219,4 +229,8 @@ export function getMobileRuntimeMetadata() {
     scheme: variant.scheme ?? mobileAppConfig.expo?.scheme ?? 'kurecal-dev',
     slug: variant.slug ?? mobileAppConfig.expo?.slug ?? 'kurecal-mobile',
   };
+}
+
+export function getMobileAppScheme(): string {
+  return mobileAppConfig.expo?.scheme ?? 'kurecal-dev';
 }
