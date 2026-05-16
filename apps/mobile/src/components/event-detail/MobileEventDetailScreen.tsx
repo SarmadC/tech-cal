@@ -270,9 +270,9 @@ export function MobileEventDetailScreen({
                       { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
                     ]}
                   >
-                    <FontAwesome name="share-alt" size={14} color={tokens.colors.textSecondary} />
+                    <FontAwesome name="link" size={14} color={tokens.colors.textSecondary} />
                     <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      Share event
+                      Copy link
                     </Text>
                   </Pressable>
 

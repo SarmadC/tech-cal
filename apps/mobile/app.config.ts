@@ -55,6 +55,11 @@ export default function getMobileExpoConfig() {
             : DEV_FACE_ID_DESCRIPTION,
         },
       },
+      android: {
+        package: isProduction
+          ? 'com.kurecal.mobile'
+          : 'com.kurecal.mobile.dev',
+      },
       name: isProduction ? 'KureCal' : 'KureCal Dev',
       scheme: isProduction ? 'kurecal' : 'kurecal-dev',
     },

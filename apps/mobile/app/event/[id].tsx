@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Share, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -101,21 +102,24 @@ export default function EventDetailRoute() {
     await openUrl(buildGoogleCalendarUrl(data));
   }
 
-  async function handleShareEvent() {
+  async function handleCopyEventLink() {
     if (!data) {
       return;
     }
 
+    const eventLink = data.event.registrationUrl ?? data.event.sourceUrl;
+    if (!eventLink) {
+      Alert.alert('No link available', 'This event does not have a public link yet.');
+      return;
+    }
+
     try {
-      await Share.share({
-        message: [data.event.title, data.event.sourceUrl, data.event.registrationUrl]
-          .filter(Boolean)
-          .join('\n'),
-      });
+      await Clipboard.setStringAsync(eventLink);
+      Alert.alert('Link copied', 'The event link is on your clipboard.');
     } catch (nextError) {
       Alert.alert(
-        'Unable to share event',
-        nextError instanceof Error ? nextError.message : 'Please try again.'
+        'Unable to copy link',
+        nextError instanceof Error ? nextError.message : 'Please try again.',
       );
     }
   }
@@ -251,7 +255,7 @@ export default function EventDetailRoute() {
           void openUrl(buildMapsSearchUrl(location));
         }}
         onShareEvent={() => {
-          void handleShareEvent();
+          void handleCopyEventLink();
         }}
       />
     </>
