@@ -116,6 +116,19 @@ export class ProfileService {
         supabaseClient: SupabaseClientType
     ): Promise<AppProfile> {
         try {
+            // Reject avatar URLs that aren't https. React Native's <Image> will
+            // happily render `data:`, `file:`, or even `javascript:` schemes on
+            // some platforms, so the safest gate is at the write boundary.
+            // `https://` is the only scheme we ever store from the upload path
+            // (uploadAvatar uses `urlData.publicUrl` which is always https).
+            if (
+                Object.prototype.hasOwnProperty.call(updates, 'avatarUrl') &&
+                updates.avatarUrl != null &&
+                !/^https:\/\//i.test(updates.avatarUrl)
+            ) {
+                throw new Error('Avatar URL must use https.');
+            }
+
             const supabaseUpdates = profileTransformer.toSupabase(updates);
             const { data, error } = await supabaseClient
                 .from('profiles')
