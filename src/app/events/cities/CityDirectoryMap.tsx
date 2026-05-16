@@ -14,10 +14,7 @@ import type {
 } from 'geojson';
 import Link from 'next/link';
 import {
-    ArrowClockwise,
     CaretRight,
-    Minus,
-    Plus,
     X,
 } from '@phosphor-icons/react';
 import maplibregl, {
@@ -45,8 +42,10 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
 const ATLAS_BOUNDS: [[number, number], [number, number]] = [
     [-165, -54],
-    [190, 78],
+    [179, 78],
 ];
+const ATLAS_SVG_WIDTH = 1000;
+const ATLAS_SVG_HEIGHT = 520;
 
 const ATLAS_STYLE: StyleSpecification = {
     version: 8,
@@ -130,8 +129,8 @@ function buildNormalizedCountryCounts(countryEventCounts: Record<string, number>
 function buildCountryFillExpression(maxCountryEvents: number): FillLayerSpecification['paint'] {
     if (maxCountryEvents <= 0) {
         return {
-            'fill-color': '#11141a',
-            'fill-opacity': 0.92,
+            'fill-color': '#1f2937',
+            'fill-opacity': 0.74,
         };
     }
 
@@ -143,12 +142,19 @@ function buildCountryFillExpression(maxCountryEvents: number): FillLayerSpecific
             'interpolate',
             ['linear'],
             ['coalesce', ['get', 'eventCount'], 0],
-            0, '#11141a',
-            1, '#465166',
-            high, '#2d3647',
-            peak, '#1a2230',
+            0, '#1f2937',
+            1, '#334155',
+            high, '#155e75',
+            peak, '#0891b2',
         ],
-        'fill-opacity': 0.96,
+        'fill-opacity': [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', 'eventCount'], 0],
+            0, 0.54,
+            1, 0.68,
+            peak, 0.82,
+        ],
     };
 }
 
@@ -164,7 +170,7 @@ const COUNTRY_ACTIVE_LINE_LAYER_BASE: Omit<LineLayerSpecification, 'filter'> = {
     source: 'atlas-countries',
     paint: {
         'line-color': '#a5f3fc',
-        'line-width': 1.5,
+        'line-width': 2,
         'line-opacity': 0.9,
     },
 };
@@ -174,7 +180,7 @@ const COUNTRY_LINE_LAYER: LineLayerSpecification = {
     type: 'line',
     source: 'atlas-countries',
     paint: {
-        'line-color': 'rgba(148, 163, 184, 0.18)',
+        'line-color': 'rgba(203, 213, 225, 0.42)',
         'line-width': 0.8,
     },
 };
@@ -236,6 +242,59 @@ export function normalizeAtlasGeometry(geometry: Geometry): Geometry {
     }
 
     return geometry;
+}
+
+function projectAtlasPosition([longitude, latitude]: Position): [number, number] {
+    const normalizedLongitude = Math.max(-180, Math.min(180, longitude));
+    const normalizedLatitude = Math.max(-85, Math.min(85, latitude));
+
+    return [
+        ((normalizedLongitude + 180) / 360) * ATLAS_SVG_WIDTH,
+        ((85 - normalizedLatitude) / 170) * ATLAS_SVG_HEIGHT,
+    ];
+}
+
+function buildAtlasRingPath(ring: Position[]): string {
+    return ring
+        .map((position, index) => {
+            const [x, y] = projectAtlasPosition(position);
+            return `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .join(' ');
+}
+
+function buildAtlasGeometryPath(geometry: Geometry): string {
+    if (geometry.type === 'Polygon') {
+        return geometry.coordinates
+            .filter((ring) => ring.length > 0)
+            .map((ring) => `${buildAtlasRingPath(ring)} Z`)
+            .join(' ');
+    }
+
+    if (geometry.type === 'MultiPolygon') {
+        return geometry.coordinates
+            .flatMap((polygon) => polygon.filter((ring) => ring.length > 0))
+            .map((ring) => `${buildAtlasRingPath(ring)} Z`)
+            .join(' ');
+    }
+
+    return '';
+}
+
+function getAtlasCountryFill(eventCount?: number): string {
+    if (!eventCount) {
+        return 'rgba(57, 57, 58, 0.54)';
+    }
+
+    if (eventCount >= 24) {
+        return 'rgba(94, 106, 210, 0.46)';
+    }
+
+    if (eventCount >= 12) {
+        return 'rgba(94, 106, 210, 0.34)';
+    }
+
+    return 'rgba(69, 70, 82, 0.62)';
 }
 
 function isAtlasDrifted(map: ReturnType<NonNullable<MapRef['getMap']>>) {
@@ -602,6 +661,17 @@ export default function CityDirectoryMap({
             }),
         };
     }, [countryGeoJson, countrySummaryByKey, normalizedCountryCounts]);
+    const countrySvgPaths = useMemo(() => (
+        countriesWithCounts?.features
+            .map((country, index) => ({
+                key: `${country.properties?.normalizedName ?? 'country'}-${index}`,
+                d: buildAtlasGeometryPath(country.geometry),
+                eventCount: country.properties?.eventCount,
+                countryKey: country.properties?.normalizedName ?? null,
+                countryName: country.properties?.displayName ?? country.properties?.name ?? 'Country',
+            }))
+            .filter((country) => country.d.length > 0) ?? []
+    ), [countriesWithCounts]);
 
     if (mappedCities.length === 0) {
         return (
@@ -631,21 +701,6 @@ export default function CityDirectoryMap({
             duration: 650,
             padding: getFocusPadding(),
         });
-    };
-
-    const resetMap = () => {
-        onSelectedCitySlugChange(null);
-        setSelectedCountryKey(null);
-        fitAtlasBoard(650);
-    };
-
-    const zoomBy = (delta: number) => {
-        const nextZoom = clampZoom(mapZoom + delta);
-        mapRef.current?.easeTo({
-            zoom: nextZoom,
-            duration: 350,
-        });
-        setMapZoom(nextZoom);
     };
 
     const handleMapClick = (event: MapLayerMouseEvent) => {
@@ -679,10 +734,9 @@ export default function CityDirectoryMap({
             <h2 id="interactive-city-atlas" className="sr-only">
                 Interactive city atlas
             </h2>
-            <div className="relative overflow-hidden rounded-[36px] border border-border-subtle bg-[#05070c] shadow-[0_16px_60px_-42px_rgba(15,23,42,0.65)]">
+            <div className="relative overflow-hidden rounded-lg border border-[#454652] bg-[#0d0e0f]">
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/[0.02] to-transparent" />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(69,70,82,0.24)_1px,transparent_1px),linear-gradient(to_bottom,rgba(69,70,82,0.2)_1px,transparent_1px)] bg-[size:32px_32px]" />
                 </div>
 
                 <div className="relative h-[50vh] min-h-[24rem] sm:h-[55vh] lg:h-[70vh]">
@@ -732,10 +786,62 @@ export default function CityDirectoryMap({
                             </Source>
                         ) : null}
                     </MapLibreMap>
+                    {countrySvgPaths.length > 0 ? (
+                        <svg
+                            aria-label="Shaded event regions"
+                            className="absolute inset-0 z-10 h-full w-full opacity-95"
+                            data-testid="atlas-country-silhouette"
+                            preserveAspectRatio="xMidYMid meet"
+                            role="img"
+                            viewBox={`0 0 ${ATLAS_SVG_WIDTH} ${ATLAS_SVG_HEIGHT}`}
+                        >
+                            <g>
+                                {countrySvgPaths.map((country) => {
+                                    const isInteractive = Boolean(country.countryKey && country.eventCount && country.eventCount > 0);
+                                    const isSelected = country.countryKey === selectedCountryKey;
+
+                                    return (
+                                        <path
+                                            key={country.key}
+                                            aria-label={isInteractive ? `Select ${country.countryName}` : undefined}
+                                            className={isInteractive ? 'cursor-pointer focus:outline-none' : undefined}
+                                            d={country.d}
+                                            data-testid={country.countryKey ? `atlas-country-${country.countryKey}` : undefined}
+                                            fill={getAtlasCountryFill(country.eventCount)}
+                                            role={isInteractive ? 'button' : undefined}
+                                            stroke={isSelected ? '#bdc2ff' : 'rgba(144, 143, 158, 0.28)'}
+                                            strokeWidth={isSelected ? '1.4' : '0.45'}
+                                            tabIndex={isInteractive ? 0 : undefined}
+                                            vectorEffect="non-scaling-stroke"
+                                            onClick={() => {
+                                                if (!country.countryKey || !isInteractive) {
+                                                    return;
+                                                }
+
+                                                onSelectedCitySlugChange(null);
+                                                setSelectedCountryKey(country.countryKey);
+                                            }}
+                                            onKeyDown={(event) => {
+                                                if (!country.countryKey || !isInteractive) {
+                                                    return;
+                                                }
+
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    onSelectedCitySlugChange(null);
+                                                    setSelectedCountryKey(country.countryKey);
+                                                }
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </g>
+                        </svg>
+                    ) : null}
                 </div>
 
-                <div className="pointer-events-none absolute bottom-4 left-4 z-20 max-w-sm rounded-[20px] border border-white/10 bg-black/45 px-4 py-3 text-xs leading-5 text-zinc-300 backdrop-blur-md sm:bottom-6 sm:left-6">
-                    <p>Shaded countries show regional event density. Click a country to inspect activity.</p>
+                <div className="pointer-events-none absolute bottom-4 left-4 z-20 max-w-sm rounded-md border border-[#454652] bg-[#121314] px-3 py-2 text-xs leading-5 text-[#c6c5d5] sm:bottom-6 sm:left-6">
+                    <p>Shaded regions show upcoming event density. Click a country to inspect activity.</p>
                     {topologyStatus === 'loading' ? (
                         <p className="mt-2 inline-flex items-center gap-2 text-zinc-400">
                             <BrandLoadingLogo className="h-3 w-3 text-current" inline label={null} size={12} />
@@ -747,33 +853,6 @@ export default function CityDirectoryMap({
                             Atlas country shading is unavailable right now. Use the directory below while it reloads.
                         </p>
                     ) : null}
-                </div>
-
-                <div className="absolute right-4 top-[8.5rem] z-20 flex flex-col gap-2 sm:right-6 sm:top-[9rem]">
-                    <button
-                        type="button"
-                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/35 text-zinc-100 backdrop-blur-md transition-colors hover:bg-black/50"
-                        aria-label="Zoom in"
-                        onClick={() => zoomBy(0.55)}
-                    >
-                        <Plus size={18} weight="bold" />
-                    </button>
-                    <button
-                        type="button"
-                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/35 text-zinc-100 backdrop-blur-md transition-colors hover:bg-black/50"
-                        aria-label="Zoom out"
-                        onClick={() => zoomBy(-0.55)}
-                    >
-                        <Minus size={18} weight="bold" />
-                    </button>
-                    <button
-                        type="button"
-                        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/35 text-zinc-100 backdrop-blur-md transition-colors hover:bg-black/50"
-                        aria-label="Reset map"
-                        onClick={resetMap}
-                    >
-                        <ArrowClockwise size={18} weight="bold" />
-                    </button>
                 </div>
 
                 {selectedCity || selectedCountry ? (

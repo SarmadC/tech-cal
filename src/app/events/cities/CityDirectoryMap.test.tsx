@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import CityDirectoryMap, { normalizeAtlasGeometry } from './CityDirectoryMap';
@@ -25,12 +25,30 @@ vi.mock('topojson-client', () => ({
         features: [
             {
                 type: 'Feature',
-                geometry: { type: 'Polygon', coordinates: [] },
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                        [130, 30],
+                        [146, 30],
+                        [146, 46],
+                        [130, 46],
+                        [130, 30],
+                    ]],
+                },
                 properties: { name: 'Japan' },
             },
             {
                 type: 'Feature',
-                geometry: { type: 'Polygon', coordinates: [] },
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                        [-8, 49],
+                        [2, 49],
+                        [2, 59],
+                        [-8, 59],
+                        [-8, 49],
+                    ]],
+                },
                 properties: { name: 'United Kingdom' },
             },
         ],
@@ -174,25 +192,31 @@ describe('CityDirectoryMap', () => {
         });
 
         expect(screen.getByTestId('layer-atlas-country-fill')).toBeInTheDocument();
+        expect(screen.getByTestId('atlas-country-silhouette')).toBeInTheDocument();
         expect(screen.queryByTestId('source-atlas-cities')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('layer-atlas-city-halo')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('layer-atlas-city-points')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('layer-atlas-city-labels')).not.toBeInTheDocument();
         expect(screen.getByText(/Click a country to inspect activity/i)).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Select Japan' }));
+        expect(screen.getByRole('heading', { name: 'Japan' })).toBeInTheDocument();
+        await user.click(screen.getByLabelText('Clear country selection'));
 
         await user.click(screen.getByRole('button', { name: 'Select Japan On Map' }));
         expect(screen.getByRole('heading', { name: 'Japan' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Tokyo Build Week/i })).toHaveAttribute('href', '/events/tokyo-build-week');
-        expect(screen.getByRole('button', { name: /Tokyo/i })).toBeInTheDocument();
+        const countryCityButton = screen.getByRole('button', { name: /Tokyo 14 upcoming events/i });
+        expect(countryCityButton).toBeInTheDocument();
 
-        await user.click(screen.getByRole('button', { name: /Tokyo/i }));
+        await user.click(countryCityButton);
         expect(screen.getByRole('heading', { name: 'Tokyo' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Tokyo Build Week/i })).toHaveAttribute('href', '/events/tokyo-build-week');
         expect(screen.getByRole('link', { name: /View city calendar/i })).toHaveAttribute('href', '/events/cities/tokyo');
 
-        act(() => {
-            easeToMock.mockClear();
-        });
-
-        await user.click(screen.getByLabelText('Reset map'));
-        expect(fitBoundsMock).toHaveBeenCalled();
+        expect(screen.queryByLabelText('Zoom in')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Zoom out')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Reset map')).not.toBeInTheDocument();
     });
 
     it('shows a visible atlas fallback message when country geometry fails to load', async () => {
