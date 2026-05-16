@@ -9,7 +9,12 @@ import { CommunityModerationService } from '@/services/communityModerationServic
 interface CommunityReportRow {
   id: string;
   reporter_id: string;
-  subject_type: 'post' | 'comment' | 'profile';
+  subject_type:
+    | 'post'
+    | 'comment'
+    | 'profile'
+    | 'event_thread'
+    | 'event_thread_comment';
   subject_id: string;
   reason: CommunityReportInput['reason'];
   details: string | null;

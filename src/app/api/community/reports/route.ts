@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { communityReportSchema } from '@/lib/communitySchemas';
+import { gateMutation } from '@/lib/api/mobileMutationRateLimit';
 import { CommunityReportService } from '@/services/communityReportService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -13,6 +14,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const rateLimitResponse = await gateMutation(
+      'community-report',
+      authContext.user.id,
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
     const payload = communityReportSchema.parse(await request.json());
     const report = await CommunityReportService.createReport(
       authContext.user.id,
@@ -25,8 +32,9 @@ export async function POST(request: Request) {
       message: 'Thanks. Your report has been submitted for review.',
     });
   } catch (error) {
+    console.error('[community.reports] Failed to submit report', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to submit report' },
+      { success: false, error: 'Failed to submit report.' },
       { status: 400 }
     );
   }
