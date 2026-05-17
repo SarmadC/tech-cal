@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { communityCommentDraftSchema } from '@/lib/communitySchemas';
+import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { CommunityMutationsService } from '@/services/communityMutationsService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -11,6 +12,12 @@ export async function POST(request: Request) {
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
+    }
+    if (authContext.authMethod === 'cookie') {
+      const sameOriginError = validateSameOriginRequest(request as NextRequest);
+      if (sameOriginError) {
+        return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 });
+      }
     }
 
     const payload = communityCommentDraftSchema.parse(await request.json());
