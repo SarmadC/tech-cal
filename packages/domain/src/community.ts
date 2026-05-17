@@ -40,8 +40,16 @@ export const communityVoteSchema = z.object({
   voteType: voteValueSchema,
 });
 
+export const communityReportSubjectTypeSchema = z.enum([
+  "post",
+  "comment",
+  "profile",
+  "event_thread",
+  "event_thread_comment",
+]);
+
 export const communityReportSchema = z.object({
-  subjectType: z.enum(["post", "comment", "profile"]),
+  subjectType: communityReportSubjectTypeSchema,
   subjectId: z.string().uuid(),
   reason: z.enum([
     "spam",
@@ -71,7 +79,7 @@ export const communityReportResolutionSchema = z.enum([
 export const communityReportRecordSchema = z.object({
   id: z.string().uuid(),
   reporterId: z.string().uuid(),
-  subjectType: z.enum(["post", "comment", "profile"]),
+  subjectType: communityReportSubjectTypeSchema,
   subjectId: z.string().uuid(),
   reason: communityReportSchema.shape.reason,
   details: z.string().nullable(),
@@ -384,6 +392,184 @@ export const mobileCommunityHubHomeSchema =
       .optional(),
   });
 
+export const mobileCommunityRoomEventSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  title: z.string(),
+  startTime: z.string(),
+  endTime: z.string().nullable().optional(),
+  location: z.string().nullable(),
+  format: z.string().nullable(),
+  imageUrl: z.string().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+});
+
+export const mobileCommunityRoomViewerStateSchema = z.object({
+  isAttending: z.boolean(),
+  isSaved: z.boolean(),
+  isVisible: z.boolean(),
+});
+
+export const mobileCommunityRoomStatsSchema = z.object({
+  totalAttendeeCount: z.number().int().nonnegative(),
+  visibleAttendeeCount: z.number().int().nonnegative(),
+  networkAttendingCount: z.number().int().nonnegative(),
+  activeNowCount: z.number().int().nonnegative(),
+  threadCount: z.number().int().nonnegative(),
+});
+
+export const mobileCommunityRoomRelationshipSchema = z.enum([
+  "mutual",
+  "follows_you",
+  "in_network",
+  "stranger",
+]);
+
+export const mobileCommunityRoomAttendeeSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().nullable(),
+  username: z.string(),
+  avatarUrl: z.string().nullable(),
+  headline: z.string().nullable(),
+  currentRole: z.string().nullable(),
+  industry: z.string().nullable(),
+  location: z.string().nullable(),
+  isInNetwork: z.boolean(),
+  followsViewer: z.boolean(),
+  isMutualFollow: z.boolean(),
+  mutualConnectionsCount: z.number().int().nonnegative(),
+  relationship: mobileCommunityRoomRelationshipSchema,
+  matchReason: z.string().nullable(),
+});
+
+export const mobileCommunityRoomSignalKindSchema = z.enum([
+  "joined_attending",
+  "saved",
+  "mutual_arrived",
+]);
+
+export const mobileCommunityRoomSignalActorSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().nullable(),
+  username: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+
+export const mobileCommunityRoomSignalSchema = z.object({
+  id: z.string(),
+  kind: mobileCommunityRoomSignalKindSchema,
+  occurredAt: z.string(),
+  actor: mobileCommunityRoomSignalActorSchema,
+});
+
+export const mobileCommunityRoomThreadAuthorSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().nullable(),
+  username: z.string(),
+  avatarUrl: z.string().nullable(),
+  headline: z.string().nullable().optional(),
+});
+
+export const mobileCommunityRoomThreadSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  body: z.string(),
+  commentCount: z.number().int().nonnegative(),
+  createdAt: z.string(),
+  lastActivityAt: z.string(),
+  author: mobileCommunityRoomThreadAuthorSchema,
+  isAuthor: z.boolean(),
+  editedAt: z.string().nullable(),
+});
+
+export const mobileCommunityRoomThreadDraftSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(5000),
+});
+
+export const mobileCommunityRoomThreadEditDraftSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(5000),
+});
+
+export const mobileCommunityRoomDetailSchema = z.object({
+  event: mobileCommunityRoomEventSchema,
+  viewer: mobileCommunityRoomViewerStateSchema,
+  stats: mobileCommunityRoomStatsSchema,
+  attendees: z.array(mobileCommunityRoomAttendeeSchema),
+  signals: z.array(mobileCommunityRoomSignalSchema),
+});
+
+export const mobileCommunityRoomThreadListSchema = z.object({
+  threads: z.array(mobileCommunityRoomThreadSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export const mobileCommunityRoomThreadCommentAuthorSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().nullable(),
+  username: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+
+// Child comments (depth-1) cannot themselves have nested replies — the service
+// layer collapses any "reply-to-a-reply" onto the top-level parent, capping
+// the tree at one level. Declaring this as a separate non-recursive schema
+// keeps the Zod types ergonomic.
+export const mobileCommunityRoomThreadChildCommentSchema = z.object({
+  id: z.string().uuid(),
+  threadId: z.string().uuid(),
+  parentId: z.string().uuid().nullable(),
+  body: z.string(),
+  createdAt: z.string(),
+  author: mobileCommunityRoomThreadCommentAuthorSchema,
+  isAuthor: z.boolean(),
+  isOp: z.boolean(),
+  isDeleted: z.boolean(),
+  editedAt: z.string().nullable(),
+});
+
+export const mobileCommunityRoomThreadCommentSchema = z.object({
+  id: z.string().uuid(),
+  threadId: z.string().uuid(),
+  parentId: z.string().uuid().nullable(),
+  body: z.string(),
+  createdAt: z.string(),
+  author: mobileCommunityRoomThreadCommentAuthorSchema,
+  isAuthor: z.boolean(),
+  isOp: z.boolean(),
+  isDeleted: z.boolean(),
+  editedAt: z.string().nullable(),
+  replies: z.array(mobileCommunityRoomThreadChildCommentSchema),
+});
+
+export const mobileCommunityRoomThreadCommentPageSchema = z.object({
+  comments: z.array(mobileCommunityRoomThreadCommentSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+  loadedCount: z.number().int().nonnegative(),
+});
+
+export const mobileCommunityRoomThreadCommentDraftSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+  parentCommentId: z.string().uuid().nullable().optional(),
+});
+
+export const mobileCommunityRoomThreadCommentEditDraftSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+});
+
+export const mobileCommunityRoomCommentSortSchema = z.enum([
+  "newest",
+  "oldest",
+]);
+
+export const mobileCommunityRoomThreadDetailSchema = z.object({
+  thread: mobileCommunityRoomThreadSchema,
+  comments: z.array(mobileCommunityRoomThreadCommentSchema),
+  commentPage: mobileCommunityRoomThreadCommentPageSchema,
+});
+
 export const mobileFollowStatusSchema = z.object({
   isFollowing: z.boolean(),
   isFollowedBy: z.boolean(),
@@ -615,6 +801,72 @@ export type MobileCommunityNetworkingFollowUpCard = z.infer<
 >;
 export type MobileCommunityNetworkingStarterProfile = z.infer<
   typeof mobileCommunityNetworkingStarterProfileSchema
+>;
+export type MobileCommunityRoomEvent = z.infer<
+  typeof mobileCommunityRoomEventSchema
+>;
+export type MobileCommunityRoomViewerState = z.infer<
+  typeof mobileCommunityRoomViewerStateSchema
+>;
+export type MobileCommunityRoomStats = z.infer<
+  typeof mobileCommunityRoomStatsSchema
+>;
+export type MobileCommunityRoomRelationship = z.infer<
+  typeof mobileCommunityRoomRelationshipSchema
+>;
+export type MobileCommunityRoomAttendee = z.infer<
+  typeof mobileCommunityRoomAttendeeSchema
+>;
+export type MobileCommunityRoomSignalKind = z.infer<
+  typeof mobileCommunityRoomSignalKindSchema
+>;
+export type MobileCommunityRoomSignal = z.infer<
+  typeof mobileCommunityRoomSignalSchema
+>;
+export type MobileCommunityRoomThreadAuthor = z.infer<
+  typeof mobileCommunityRoomThreadAuthorSchema
+>;
+export type MobileCommunityRoomThread = z.infer<
+  typeof mobileCommunityRoomThreadSchema
+>;
+export type MobileCommunityRoomThreadDraft = z.infer<
+  typeof mobileCommunityRoomThreadDraftSchema
+>;
+export type MobileCommunityRoomDetail = z.infer<
+  typeof mobileCommunityRoomDetailSchema
+>;
+export type MobileCommunityRoomThreadList = z.infer<
+  typeof mobileCommunityRoomThreadListSchema
+>;
+export type MobileCommunityRoomThreadCommentAuthor = z.infer<
+  typeof mobileCommunityRoomThreadCommentAuthorSchema
+>;
+export type MobileCommunityRoomThreadChildComment = z.infer<
+  typeof mobileCommunityRoomThreadChildCommentSchema
+>;
+export type MobileCommunityRoomThreadComment = z.infer<
+  typeof mobileCommunityRoomThreadCommentSchema
+>;
+export type MobileCommunityRoomThreadCommentPage = z.infer<
+  typeof mobileCommunityRoomThreadCommentPageSchema
+>;
+export type MobileCommunityRoomThreadCommentDraft = z.infer<
+  typeof mobileCommunityRoomThreadCommentDraftSchema
+>;
+export type MobileCommunityRoomThreadCommentEditDraft = z.infer<
+  typeof mobileCommunityRoomThreadCommentEditDraftSchema
+>;
+export type MobileCommunityRoomThreadEditDraft = z.infer<
+  typeof mobileCommunityRoomThreadEditDraftSchema
+>;
+export type MobileCommunityRoomCommentSort = z.infer<
+  typeof mobileCommunityRoomCommentSortSchema
+>;
+export type CommunityReportSubjectType = z.infer<
+  typeof communityReportSubjectTypeSchema
+>;
+export type MobileCommunityRoomThreadDetail = z.infer<
+  typeof mobileCommunityRoomThreadDetailSchema
 >;
 export type MobileCommunityPost = z.infer<typeof mobileCommunityPostSchema>;
 export type MobileFollowStatus = z.infer<typeof mobileFollowStatusSchema>;

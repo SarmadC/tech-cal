@@ -25,6 +25,18 @@ interface ProfileSubjectRow {
   community_moderation_status: 'active' | 'restricted' | 'removed';
 }
 
+interface EventThreadSubjectRow {
+  id: string;
+  author_id: string;
+  deleted_at: string | null;
+}
+
+interface EventThreadCommentSubjectRow {
+  id: string;
+  author_id: string;
+  deleted_at: string | null;
+}
+
 export const COMMUNITY_ACCESS_RESTRICTED_ERROR =
   'Your community access is currently limited.';
 export const REMOVED_POST_PLACEHOLDER = 'This post was removed by moderators.';
@@ -80,6 +92,15 @@ export class CommunityModerationService {
       subject.community_moderation_status === 'removed'
     ) {
       throw new Error('This member is already unavailable in community.');
+    }
+
+    if (
+      (payload.subjectType === 'event_thread' ||
+        payload.subjectType === 'event_thread_comment') &&
+      'deleted_at' in subject &&
+      subject.deleted_at !== null
+    ) {
+      throw new Error('This content is already unavailable in community.');
     }
   }
 
@@ -176,12 +197,54 @@ export class CommunityModerationService {
       return;
     }
 
+    if (params.subjectType === 'event_thread') {
+      await this.removeEventThread(params.subjectId, supabase);
+      return;
+    }
+
+    if (params.subjectType === 'event_thread_comment') {
+      await this.removeEventThreadComment(params.subjectId, supabase);
+      return;
+    }
+
     await this.removeProfile(
       params.subjectId,
       params.reviewerId,
       params.resolutionNotes,
       supabase
     );
+  }
+
+  private static async removeEventThread(
+    threadId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('event_room_threads')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', threadId)
+      .is('deleted_at', null);
+
+    if (error) {
+      throw new Error(error.message ?? 'Failed to remove the reported thread.');
+    }
+  }
+
+  private static async removeEventThreadComment(
+    commentId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('event_room_thread_comments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', commentId)
+      .is('deleted_at', null);
+
+    if (error) {
+      throw new Error(
+        error.message ?? 'Failed to remove the reported comment.',
+      );
+    }
   }
 
   private static async removePost(
@@ -265,7 +328,46 @@ export class CommunityModerationService {
     subjectType: SubjectType,
     subjectId: string,
     supabase: SupabaseClientType
-  ): Promise<PostSubjectRow | CommentSubjectRow | ProfileSubjectRow | null> {
+  ): Promise<
+    | PostSubjectRow
+    | CommentSubjectRow
+    | ProfileSubjectRow
+    | EventThreadSubjectRow
+    | EventThreadCommentSubjectRow
+    | null
+  > {
+    if (subjectType === 'event_thread') {
+      const { data, error } = await (supabase as any)
+        .from('event_room_threads')
+        .select('id, author_id, deleted_at')
+        .eq('id', subjectId)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          error.message ?? 'Unable to load the reported thread.',
+        );
+      }
+
+      return (data as EventThreadSubjectRow | null) ?? null;
+    }
+
+    if (subjectType === 'event_thread_comment') {
+      const { data, error } = await (supabase as any)
+        .from('event_room_thread_comments')
+        .select('id, author_id, deleted_at')
+        .eq('id', subjectId)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          error.message ?? 'Unable to load the reported comment.',
+        );
+      }
+
+      return (data as EventThreadCommentSubjectRow | null) ?? null;
+    }
+
     if (subjectType === 'post') {
       const { data, error } = await supabase
         .from('circle_posts')
