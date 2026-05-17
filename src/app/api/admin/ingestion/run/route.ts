@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
+import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { IngestionOrchestrator } from '@/services/ingestion/IngestionOrchestrator';
 import { NormalizationProcessor } from '@/services/ingestion/NormalizationProcessor';
 import * as Sentry from '@sentry/nextjs';
@@ -20,6 +21,11 @@ export const maxDuration = 300; // 5 minutes max execution time
  */
 export async function POST(request: NextRequest) {
     try {
+        const sameOriginError = validateSameOriginRequest(request);
+        if (sameOriginError) {
+            return NextResponse.json({ error: sameOriginError }, { status: 403 });
+        }
+
         // Get service-role client (bypasses RLS)
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -113,4 +119,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-

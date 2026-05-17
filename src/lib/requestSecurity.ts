@@ -143,7 +143,7 @@ export function validateSameOriginRequest(
     const refererOrigin = normalizeOriginHeader(request.headers.get('referer'));
 
     if (!originHeader && !refererOrigin) {
-        return null;
+        return 'Origin or Referer header is required.';
     }
 
     if (originHeader && originHeader !== requestOrigin) {
@@ -178,5 +178,4 @@ export function getClientIdentifier(
 
     return directAddress?.trim() || null;
 }
-
 

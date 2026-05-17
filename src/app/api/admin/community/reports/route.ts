@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { requireAdmin } from '@/lib/adminAuth';
+import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { CommunityReportService } from '@/services/communityReportService';
 
 const resolutionSchema = z.object({
@@ -51,6 +52,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const sameOriginError = validateSameOriginRequest(request as never);
+    if (sameOriginError) {
+      return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
