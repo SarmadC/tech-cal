@@ -43,6 +43,7 @@ export default function getMobileExpoConfig() {
   return {
     expo: {
       ...baseConfig.expo,
+      plugins: [...(baseConfig.expo.plugins ?? []), 'expo-notifications'],
       ios: {
         ...baseConfig.expo.ios,
         bundleIdentifier: isProduction
@@ -53,6 +54,16 @@ export default function getMobileExpoConfig() {
           NSFaceIDUsageDescription: isProduction
             ? PROD_FACE_ID_DESCRIPTION
             : DEV_FACE_ID_DESCRIPTION,
+          UIBackgroundModes: Array.from(
+            new Set([
+              ...((baseConfig.expo.ios.infoPlist as { UIBackgroundModes?: string[] })
+                ?.UIBackgroundModes ?? []),
+              'remote-notification',
+            ])
+          ),
+        },
+        entitlements: {
+          'aps-environment': isProduction ? 'production' : 'development',
         },
       },
       name: isProduction ? 'KureCal' : 'KureCal Dev',

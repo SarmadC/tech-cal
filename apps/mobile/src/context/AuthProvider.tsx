@@ -23,6 +23,10 @@ import {
   isMobileAuthCallbackUrl,
 } from '../lib/authRedirect';
 import { loadMobileProfileState } from '../lib/mobileApi';
+import {
+  registerForPushNotificationsAsync,
+  unregisterPushNotificationsAsync,
+} from '../lib/pushNotifications';
 import { syncRevenueCatIdentity } from '../lib/revenuecat';
 import { supabase } from '../lib/supabase';
 
@@ -154,6 +158,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       void syncRevenueCatIdentity(nextSession.user.id).catch((error) => {
         console.error('Failed to sync RevenueCat identity.', error);
+      });
+
+      void registerForPushNotificationsAsync().catch((error) => {
+        console.warn('Failed to register push notifications.', error);
       });
     },
     []
@@ -409,6 +417,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAuthCompletionState();
         lastAuthCallbackUrlRef.current = null;
         lastHandledIncomingUrlRef.current = null;
+
+        await unregisterPushNotificationsAsync().catch((error) => {
+          console.warn('Failed to unregister push notifications.', error);
+        });
 
         const { error } = await supabase.auth.signOut();
 
