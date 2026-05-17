@@ -543,6 +543,13 @@ export const mobileCommunityRoomThreadCommentSchema = z.object({
   replies: z.array(mobileCommunityRoomThreadChildCommentSchema),
 });
 
+export const mobileCommunityRoomThreadCommentPageSchema = z.object({
+  comments: z.array(mobileCommunityRoomThreadCommentSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+  loadedCount: z.number().int().nonnegative(),
+});
+
 export const mobileCommunityRoomThreadCommentDraftSchema = z.object({
   body: z.string().trim().min(1).max(2000),
   parentCommentId: z.string().uuid().nullable().optional(),
@@ -560,6 +567,7 @@ export const mobileCommunityRoomCommentSortSchema = z.enum([
 export const mobileCommunityRoomThreadDetailSchema = z.object({
   thread: mobileCommunityRoomThreadSchema,
   comments: z.array(mobileCommunityRoomThreadCommentSchema),
+  commentPage: mobileCommunityRoomThreadCommentPageSchema,
 });
 
 export const mobileFollowStatusSchema = z.object({
@@ -838,6 +846,9 @@ export type MobileCommunityRoomThreadChildComment = z.infer<
 >;
 export type MobileCommunityRoomThreadComment = z.infer<
   typeof mobileCommunityRoomThreadCommentSchema
+>;
+export type MobileCommunityRoomThreadCommentPage = z.infer<
+  typeof mobileCommunityRoomThreadCommentPageSchema
 >;
 export type MobileCommunityRoomThreadCommentDraft = z.infer<
   typeof mobileCommunityRoomThreadCommentDraftSchema

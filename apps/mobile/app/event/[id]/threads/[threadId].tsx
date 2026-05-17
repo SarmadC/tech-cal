@@ -41,10 +41,13 @@ import {
   createMobileEventThreadComment,
   deleteMobileEventThread,
   deleteMobileEventThreadComment,
+  loadMobileEventThreadComment,
+  loadMobileEventThreadComments,
   loadMobileEventThread,
   updateMobileEventThread,
   updateMobileEventThreadComment,
 } from "../../../../src/lib/mobileApi";
+import { supabase } from "../../../../src/lib/supabase";
 import { useAppTheme } from "../../../../src/providers/ThemeProvider";
 
 type MenuTarget =
@@ -133,6 +136,143 @@ function findCommentById(
   return null;
 }
 
+function countRenderedComments(
+  comments: MobileCommunityRoomThreadComment[],
+): number {
+  return comments.reduce(
+    (total, comment) => total + 1 + comment.replies.length,
+    0,
+  );
+}
+
+function hasCommentInTree(
+  comments: MobileCommunityRoomThreadComment[],
+  commentId: string,
+): boolean {
+  return findCommentById(comments, commentId) !== null;
+}
+
+function sortRootComments(
+  comments: MobileCommunityRoomThreadComment[],
+  sort: MobileCommunityRoomCommentSort,
+): MobileCommunityRoomThreadComment[] {
+  const direction = sort === "newest" ? -1 : 1;
+  return [...comments].sort(
+    (a, b) =>
+      direction *
+        (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) ||
+      direction * a.id.localeCompare(b.id),
+  );
+}
+
+function sortReplies(
+  replies: MobileCommunityRoomThreadChildComment[],
+): MobileCommunityRoomThreadChildComment[] {
+  return [...replies].sort(
+    (a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
+      a.id.localeCompare(b.id),
+  );
+}
+
+function mergeCommentIntoTree(
+  comments: MobileCommunityRoomThreadComment[],
+  incoming: MobileCommunityRoomThreadComment,
+  sort: MobileCommunityRoomCommentSort,
+): {
+  comments: MobileCommunityRoomThreadComment[];
+  inserted: boolean;
+  rendered: boolean;
+} {
+  if (incoming.parentId) {
+    let inserted = false;
+    let rendered = false;
+    const next = comments.map((comment) => {
+      if (comment.id !== incoming.parentId) return comment;
+      rendered = true;
+      const child: MobileCommunityRoomThreadChildComment = {
+        id: incoming.id,
+        threadId: incoming.threadId,
+        parentId: incoming.parentId,
+        body: incoming.body,
+        createdAt: incoming.createdAt,
+        author: incoming.author,
+        isAuthor: incoming.isAuthor,
+        isOp: incoming.isOp,
+        isDeleted: incoming.isDeleted,
+        editedAt: incoming.editedAt,
+      };
+      const existed = comment.replies.some((reply) => reply.id === child.id);
+      inserted = !existed;
+      return {
+        ...comment,
+        replies: sortReplies([
+          ...comment.replies.filter((reply) => reply.id !== child.id),
+          child,
+        ]),
+      };
+    });
+    return { comments: next, inserted, rendered };
+  }
+
+  const existed = comments.some((comment) => comment.id === incoming.id);
+  const next = sortRootComments(
+    [...comments.filter((comment) => comment.id !== incoming.id), incoming],
+    sort,
+  );
+  return { comments: next, inserted: !existed, rendered: true };
+}
+
+function mergeCommentPageIntoTree(
+  current: MobileCommunityRoomThreadComment[],
+  incoming: MobileCommunityRoomThreadComment[],
+  sort: MobileCommunityRoomCommentSort,
+): MobileCommunityRoomThreadComment[] {
+  return incoming.reduce(
+    (comments, comment) => {
+      const mergedRoot = mergeCommentIntoTree(comments, comment, sort).comments;
+      return comment.replies.reduce((withReplies, reply) => {
+        const replyAsComment: MobileCommunityRoomThreadComment = {
+          ...reply,
+          replies: [],
+        };
+        return mergeCommentIntoTree(withReplies, replyAsComment, sort).comments;
+      }, mergedRoot);
+    },
+    current,
+  );
+}
+
+function removeCommentFromTree(
+  comments: MobileCommunityRoomThreadComment[],
+  commentId: string,
+): {
+  comments: MobileCommunityRoomThreadComment[];
+  removed: boolean;
+} {
+  let removed = false;
+  const roots = comments.filter((comment) => {
+    if (comment.id === commentId) {
+      removed = true;
+      return false;
+    }
+    return true;
+  });
+  const next = roots.map((comment) => {
+    const replies = comment.replies.filter((reply) => {
+      if (reply.id === commentId) {
+        removed = true;
+        return false;
+      }
+      return true;
+    });
+    return replies.length === comment.replies.length
+      ? comment
+      : { ...comment, replies };
+  });
+  return { comments: next, removed };
+}
+
 function buildMenuOptions(target: MenuTarget): ThreadActionOption[] {
   const options: ThreadActionOption[] = [];
   if (target.isAuthor) {
@@ -170,6 +310,7 @@ export default function EventThreadDetailScreen() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyError, setReplyError] = useState<string | null>(null);
@@ -231,12 +372,30 @@ export default function EventThreadDetailScreen() {
     async (body: string, parentRootId: string | null, localId: string) => {
       if (!eventId || !threadId) return;
       try {
-        await createMobileEventThreadComment(eventId, threadId, {
+        const comment = await createMobileEventThreadComment(eventId, threadId, {
           body,
           parentCommentId: parentRootId,
         });
         setPending((prev) => prev.filter((entry) => entry.localId !== localId));
-        await load();
+        setDetail((current) => {
+          if (!current) return current;
+          const merged = mergeCommentIntoTree(current.comments, comment, sort);
+          return {
+            ...current,
+            thread: {
+              ...current.thread,
+              commentCount: merged.inserted
+                ? current.thread.commentCount + 1
+                : current.thread.commentCount,
+            },
+            comments: merged.comments,
+            commentPage: {
+              ...current.commentPage,
+              comments: merged.comments,
+              loadedCount: countRenderedComments(merged.comments),
+            },
+          };
+        });
       } catch (nextError) {
         console.warn("createMobileEventThreadComment failed", nextError);
         setReplyError("Couldn't post your reply. Try again.");
@@ -247,7 +406,7 @@ export default function EventThreadDetailScreen() {
         );
       }
     },
-    [eventId, threadId, load],
+    [eventId, threadId, sort],
   );
 
   const handlePostReply = async () => {
@@ -376,6 +535,146 @@ export default function EventThreadDetailScreen() {
     if (next === sort) return;
     setSort(next);
   };
+
+  const handleLoadMore = async () => {
+    if (!detail || !eventId || !threadId || loadingMore) return;
+    const cursor = detail.commentPage.nextCursor;
+    if (!cursor) return;
+
+    setLoadingMore(true);
+    try {
+      const page = await loadMobileEventThreadComments(eventId, threadId, {
+        cursor,
+        sort,
+      });
+      setDetail((current) => {
+        if (!current) return current;
+        const comments = mergeCommentPageIntoTree(
+          current.comments,
+          page.comments,
+          sort,
+        );
+        return {
+          ...current,
+          comments,
+          commentPage: {
+            ...page,
+            comments,
+            loadedCount: countRenderedComments(comments),
+          },
+        };
+      });
+    } catch (nextError) {
+      console.warn("loadMobileEventThreadComments failed", nextError);
+      Alert.alert("Couldn't load more", "Pull to refresh or try again.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!eventId || !threadId) return;
+    let disposed = false;
+    const channel = supabase
+      .channel(`event-thread-comments:${threadId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "event_room_thread_comments",
+          filter: `thread_id=eq.${threadId}`,
+        },
+        async (payload) => {
+          const eventType = payload.eventType;
+          const rawNew = payload.new as { id?: unknown } | null;
+          const rawOld = payload.old as { id?: unknown } | null;
+          const commentId =
+            typeof rawNew?.id === "string"
+              ? rawNew.id
+              : typeof rawOld?.id === "string"
+                ? rawOld.id
+                : null;
+          if (!commentId || disposed) return;
+
+          if (eventType === "DELETE") {
+            setDetail((current) => {
+              if (!current) return current;
+              const removed = removeCommentFromTree(current.comments, commentId);
+              if (!removed.removed) return current;
+              return {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  commentCount: Math.max(0, current.thread.commentCount - 1),
+                },
+                comments: removed.comments,
+                commentPage: {
+                  ...current.commentPage,
+                  comments: removed.comments,
+                  loadedCount: countRenderedComments(removed.comments),
+                },
+              };
+            });
+            return;
+          }
+
+          try {
+            const comment = await loadMobileEventThreadComment(
+              eventId,
+              threadId,
+              commentId,
+            );
+            if (disposed) return;
+            setPending((current) =>
+              current.filter(
+                (entry) =>
+                  !(
+                    entry.body === comment.body &&
+                    entry.parentRootId === comment.parentId
+                  ),
+              ),
+            );
+            setDetail((current) => {
+              if (!current) return current;
+              const alreadyHadComment = hasCommentInTree(
+                current.comments,
+                comment.id,
+              );
+              const merged = mergeCommentIntoTree(
+                current.comments,
+                comment,
+                sort,
+              );
+              return {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  commentCount:
+                    eventType === "INSERT" && !alreadyHadComment
+                      ? current.thread.commentCount + 1
+                      : current.thread.commentCount,
+                },
+                comments: merged.comments,
+                commentPage: {
+                  ...current.commentPage,
+                  comments: merged.comments,
+                  loadedCount: countRenderedComments(merged.comments),
+                },
+              };
+            });
+          } catch (nextError) {
+            console.warn("Realtime comment refresh failed", nextError);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      disposed = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [eventId, threadId, sort]);
 
   const handleOpenThreadMenu = () => {
     if (!detail) return;
@@ -704,6 +1003,39 @@ export default function EventThreadDetailScreen() {
               onSaveEdit={handleSaveCommentEdit}
             />
           ))}
+
+          {detail.thread.commentCount > countRenderedComments(detail.comments) ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={loadingMore || !detail.commentPage.nextCursor}
+              onPress={() => void handleLoadMore()}
+              style={({ pressed }) => [
+                styles.loadMoreButton,
+                {
+                  backgroundColor: tokens.colors.surface,
+                  borderColor: tokens.colors.border,
+                  borderRadius: tokens.radius.sm,
+                  opacity:
+                    loadingMore || !detail.commentPage.nextCursor ? 0.55 : 1,
+                },
+                pressed && styles.pressed,
+              ]}
+            >
+              {loadingMore ? (
+                <ActivityIndicator color={tokens.colors.textSecondary} />
+              ) : null}
+              <Text
+                style={{
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 13,
+                  fontWeight: "700",
+                }}
+              >
+                Load more
+              </Text>
+            </Pressable>
+          ) : null}
 
           {topLevelPending.map((entry) => (
             <PendingRow
@@ -1793,6 +2125,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: -0.2,
     lineHeight: 20,
+  },
+  loadMoreButton: {
+    alignItems: "center",
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: 14,
   },
   composerActions: {
     alignItems: "center",

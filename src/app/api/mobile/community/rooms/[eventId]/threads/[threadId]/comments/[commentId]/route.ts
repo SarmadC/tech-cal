@@ -40,6 +40,42 @@ function notFoundResponse(error: CommunityRoomThreadNotFoundError) {
   );
 }
 
+export async function GET(request: Request, { params }: RouteContext) {
+  try {
+    const { eventId, threadId, commentId } = await params;
+    if (
+      !isValidUuid(eventId) ||
+      !isValidUuid(threadId) ||
+      !isValidUuid(commentId)
+    ) {
+      return invalidRequest();
+    }
+
+    const authContext = await getAuthenticatedRequestContext(
+      request as NextRequest,
+    );
+    if (!authContext) return authRequired();
+
+    const readClient = getServiceClient();
+    if (!readClient) return serviceUnavailable();
+
+    const comment = await CommunityRoomThreadService.getThreadComment({
+      eventId,
+      threadId,
+      commentId,
+      viewerId: authContext.user.id,
+      readClient,
+    });
+
+    return NextResponse.json({ success: true, data: comment });
+  } catch (error) {
+    if (error instanceof CommunityRoomThreadNotFoundError) {
+      return notFoundResponse(error);
+    }
+    return genericFailure(CONTEXT, "Failed to load comment.", error);
+  }
+}
+
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const { eventId, threadId, commentId } = await params;

@@ -26,6 +26,7 @@ import {
   loadMobileCommunityCircle,
   loadMobileCommunityHome,
   loadMobileCommunityPost,
+  loadMobileEventThreadComments,
   loadMobileDiscoverFeed,
   loadMobileEventDetail,
   loadMobileFollowStatus,
@@ -202,6 +203,43 @@ describe('mobile api helpers', () => {
 
     await expect(loadMobileEventDetail('missing-event')).rejects.toThrow(
       'Event not found'
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads paged event thread comments with cursor query params', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            comments: [],
+            nextCursor: 'next-page',
+            hasMore: true,
+            loadedCount: 0,
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const page = await loadMobileEventThreadComments(
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+      {
+        cursor: 'cursor-one',
+        limit: 25,
+        sort: 'newest',
+      }
+    );
+
+    expect(page.hasMore).toBe(true);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/community/rooms/11111111-1111-4111-8111-111111111111/threads/22222222-2222-4222-8222-222222222222/comments?sort=newest&cursor=cursor-one&limit=25'
     );
 
     fetchSpy.mockRestore();

@@ -3,6 +3,7 @@ import type {
   MobileCommunityRoomThread,
   MobileCommunityRoomThreadChildComment,
   MobileCommunityRoomThreadComment,
+  MobileCommunityRoomThreadCommentPage,
   MobileCommunityRoomThreadCommentDraft,
   MobileCommunityRoomThreadCommentEditDraft,
   MobileCommunityRoomThreadDetail,
@@ -16,7 +17,8 @@ import type { SupabaseClientType } from "@/types";
 
 const THREAD_LIST_DEFAULT_LIMIT = 20;
 const THREAD_LIST_MAX_LIMIT = 50;
-const COMMENT_LIST_LIMIT = 200;
+const COMMENT_PAGE_DEFAULT_LIMIT = 200;
+const COMMENT_PAGE_MAX_LIMIT = 200;
 
 // See communityRoomService.ts — event_room_threads isn't in the generated
 // Database types yet. Remove once `supabase gen types` has been re-run.
@@ -81,6 +83,40 @@ const COMMENT_COLUMNS =
 
 const DELETED_AUTHOR_ID = "00000000-0000-0000-0000-000000000000";
 const DELETED_BODY = "[deleted]";
+
+interface CommentCursor {
+  createdAt: string;
+  id: string;
+}
+
+function encodeCommentCursor(cursor: CommentCursor): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+function decodeCommentCursor(value: string | null | undefined): CommentCursor | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    if (
+      typeof parsed?.createdAt === "string" &&
+      typeof parsed?.id === "string"
+    ) {
+      return { createdAt: parsed.createdAt, id: parsed.id };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function countRenderedComments(
+  comments: MobileCommunityRoomThreadComment[],
+): number {
+  return comments.reduce(
+    (total, comment) => total + 1 + comment.replies.length,
+    0,
+  );
+}
 
 function shapeThread(
   row: ThreadRow,
@@ -262,6 +298,210 @@ export class CommunityRoomThreadService {
     readClient: SupabaseClientType;
     sort?: MobileCommunityRoomCommentSort;
   }): Promise<MobileCommunityRoomThreadDetail> {
+    const { row, author } = await this.getThreadRowAndAuthor({
+      eventId,
+      threadId,
+      readClient,
+    });
+    const commentPage = await this.getThreadCommentsPage({
+      threadId,
+      viewerId,
+      threadAuthorId: row.author_id,
+      readClient,
+      sort,
+    });
+
+    return {
+      thread: shapeThread(row, author, viewerId),
+      comments: commentPage.comments,
+      commentPage,
+    };
+  }
+
+  static async getThreadCommentsPage({
+    eventId,
+    threadId,
+    viewerId,
+    threadAuthorId,
+    readClient,
+    sort = "oldest",
+    cursor,
+    limit = COMMENT_PAGE_DEFAULT_LIMIT,
+  }: {
+    eventId?: string;
+    threadId: string;
+    viewerId: string;
+    threadAuthorId?: string;
+    readClient: SupabaseClientType;
+    sort?: MobileCommunityRoomCommentSort;
+    cursor?: string | null;
+    limit?: number;
+  }): Promise<MobileCommunityRoomThreadCommentPage> {
+    let resolvedThreadAuthorId = threadAuthorId;
+    if (!resolvedThreadAuthorId) {
+      let threadQuery = untypedClient(readClient)
+        .from("event_room_threads")
+        .select("author_id, deleted_at")
+        .eq("id", threadId);
+      if (eventId) threadQuery = threadQuery.eq("event_id", eventId);
+      const threadResult = (await threadQuery.maybeSingle()) as {
+        data: { author_id: string; deleted_at: string | null } | null;
+        error: { message?: string } | null;
+      };
+      if (threadResult.error) {
+        fail("Failed to verify comment thread.", threadResult.error);
+      }
+      if (!threadResult.data || threadResult.data.deleted_at) {
+        throw new CommunityRoomThreadNotFoundError(threadId);
+      }
+      resolvedThreadAuthorId = threadResult.data.author_id;
+    }
+
+    const cappedLimit = Math.min(
+      Math.max(Math.floor(limit), 1),
+      COMMENT_PAGE_MAX_LIMIT,
+    );
+    const ascending = sort !== "newest";
+    const decodedCursor = decodeCommentCursor(cursor);
+
+    let rootsQuery = untypedClient(readClient)
+      .from("event_room_thread_comments")
+      .select(COMMENT_COLUMNS)
+      .eq("thread_id", threadId)
+      .is("parent_comment_id", null)
+      .order("created_at", { ascending })
+      .order("id", { ascending })
+      .limit(cappedLimit + 1);
+
+    if (decodedCursor) {
+      const operator = ascending ? "gt" : "lt";
+      rootsQuery = rootsQuery.or(
+        `created_at.${operator}.${decodedCursor.createdAt},and(created_at.eq.${decodedCursor.createdAt},id.${operator}.${decodedCursor.id})`,
+      );
+    }
+
+    const rootsResult = (await rootsQuery) as {
+      data: unknown;
+      error: { message?: string } | null;
+    };
+
+    if (rootsResult.error) {
+      fail("Failed to load thread comment roots.", rootsResult.error);
+    }
+
+    const rootRows = (rootsResult.data ?? []) as CommentRow[];
+    const hasMore = rootRows.length > cappedLimit;
+    const pageRoots = hasMore ? rootRows.slice(0, cappedLimit) : rootRows;
+    const rootIds = pageRoots.map((row) => row.id);
+
+    let commentRows = pageRoots;
+    if (rootIds.length > 0) {
+      const repliesResult = (await untypedClient(readClient)
+        .from("event_room_thread_comments")
+        .select(COMMENT_COLUMNS)
+        .eq("thread_id", threadId)
+        .in("parent_comment_id", rootIds)
+        .order("created_at", { ascending: true })) as {
+        data: unknown;
+        error: { message?: string } | null;
+      };
+
+      if (repliesResult.error) {
+        fail("Failed to load thread comment replies.", repliesResult.error);
+      }
+      commentRows = [...pageRoots, ...((repliesResult.data ?? []) as CommentRow[])];
+    }
+
+    const comments = await this.shapeCommentRows({
+      commentRows,
+      rootIds: new Set(rootIds),
+      threadAuthorId: resolvedThreadAuthorId,
+      viewerId,
+      readClient,
+      sort,
+      bubbleOrphans: false,
+    });
+
+    const nextRoot = hasMore ? pageRoots[pageRoots.length - 1] : null;
+    return {
+      comments,
+      nextCursor: nextRoot
+        ? encodeCommentCursor({ createdAt: nextRoot.created_at, id: nextRoot.id })
+        : null,
+      hasMore,
+      loadedCount: countRenderedComments(comments),
+    };
+  }
+
+  static async getThreadComment({
+    eventId,
+    threadId,
+    commentId,
+    viewerId,
+    readClient,
+  }: {
+    eventId?: string;
+    threadId: string;
+    commentId: string;
+    viewerId: string;
+    readClient: SupabaseClientType;
+  }): Promise<MobileCommunityRoomThreadComment> {
+    const commentResult = (await untypedClient(readClient)
+      .from("event_room_thread_comments")
+      .select(COMMENT_COLUMNS)
+      .eq("thread_id", threadId)
+      .eq("id", commentId)
+      .maybeSingle()) as {
+      data: unknown;
+      error: { message?: string } | null;
+    };
+
+    if (commentResult.error) {
+      fail("Failed to load thread comment.", commentResult.error);
+    }
+    if (!commentResult.data) {
+      throw new CommunityRoomThreadNotFoundError(commentId);
+    }
+
+    const commentRow = commentResult.data as CommentRow;
+    let threadQuery = untypedClient(readClient)
+      .from("event_room_threads")
+      .select("author_id")
+      .eq("id", threadId);
+    if (eventId) threadQuery = threadQuery.eq("event_id", eventId);
+    const threadResult = (await threadQuery.maybeSingle()) as {
+      data: { author_id: string } | null;
+      error: { message?: string } | null;
+    };
+    if (threadResult.error || !threadResult.data) {
+      fail("Failed to verify comment thread.", threadResult.error);
+    }
+
+    const comments = await this.shapeCommentRows({
+      commentRows: [commentRow],
+      rootIds: new Set(commentRow.parent_comment_id ? [] : [commentRow.id]),
+      threadAuthorId: threadResult.data.author_id,
+      viewerId,
+      readClient,
+      sort: "oldest",
+      bubbleOrphans: true,
+    });
+    const shaped = comments[0];
+    if (!shaped) {
+      throw new CommunityRoomThreadNotFoundError(commentId);
+    }
+    return shaped;
+  }
+
+  private static async getThreadRowAndAuthor({
+    eventId,
+    threadId,
+    readClient,
+  }: {
+    eventId: string;
+    threadId: string;
+    readClient: SupabaseClientType;
+  }): Promise<{ row: ThreadRow; author: AuthorProfileRow }> {
     const threadResult = (await untypedClient(readClient)
       .from("event_room_threads")
       .select(THREAD_COLUMNS)
@@ -280,36 +520,18 @@ export class CommunityRoomThreadService {
     }
 
     const row = threadResult.data as ThreadRow;
-
-    // Soft-deleted threads behave as if they no longer exist.
     if (row.deleted_at) {
       throw new CommunityRoomThreadNotFoundError(threadId);
     }
 
-    const [authorResult, commentsResult] = await Promise.all([
-      readClient
-        .from("profiles")
-        .select("id, full_name, avatar_url, username, headline")
-        .eq("id", row.author_id)
-        .maybeSingle(),
-      untypedClient(readClient)
-        .from("event_room_thread_comments")
-        .select(COMMENT_COLUMNS)
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true })
-        .limit(COMMENT_LIST_LIMIT),
-    ]);
+    const authorResult = await readClient
+      .from("profiles")
+      .select("id, full_name, avatar_url, username, headline")
+      .eq("id", row.author_id)
+      .maybeSingle();
 
     if (authorResult.error || !authorResult.data) {
       throw new Error("Failed to load thread author.");
-    }
-
-    const commentsRaw = commentsResult as {
-      data: unknown;
-      error: { message?: string } | null;
-    };
-    if (commentsRaw.error) {
-      fail("Failed to load thread comments.", commentsRaw.error);
     }
 
     const author = authorResult.data as AuthorProfileRow;
@@ -317,7 +539,26 @@ export class CommunityRoomThreadService {
       throw new Error("Thread author profile is incomplete.");
     }
 
-    const commentRows = (commentsRaw.data ?? []) as CommentRow[];
+    return { row, author };
+  }
+
+  private static async shapeCommentRows({
+    commentRows,
+    rootIds,
+    threadAuthorId,
+    viewerId,
+    readClient,
+    sort,
+    bubbleOrphans,
+  }: {
+    commentRows: CommentRow[];
+    rootIds: Set<string>;
+    threadAuthorId: string;
+    viewerId: string;
+    readClient: SupabaseClientType;
+    sort: MobileCommunityRoomCommentSort;
+    bubbleOrphans: boolean;
+  }): Promise<MobileCommunityRoomThreadComment[]> {
     const commenterIds = Array.from(
       new Set(commentRows.map((c) => c.author_id)),
     );
@@ -339,15 +580,6 @@ export class CommunityRoomThreadService {
       }
     }
 
-    const threadAuthorId = row.author_id;
-    const rootIds = new Set(
-      commentRows.filter((c) => c.parent_comment_id === null).map((c) => c.id),
-    );
-
-    // Hide comments authored by users the viewer has blocked. We render the
-    // same tombstone we use for soft-deletes so tree structure is preserved
-    // (e.g. replies under a blocked author's parent stay visible) without
-    // leaking the blocked author's content or identity.
     const blockedIds =
       commenterIds.length > 0
         ? await BlockService.getBlockedUserIdsForViewer(
@@ -357,37 +589,27 @@ export class CommunityRoomThreadService {
           )
         : new Set<string>();
 
+    function baseDeleted(commentRow: CommentRow) {
+      return {
+        id: commentRow.id,
+        threadId: commentRow.thread_id,
+        body: DELETED_BODY,
+        createdAt: commentRow.deleted_at ?? commentRow.created_at,
+        author: maskedAuthor(),
+        isAuthor: false,
+        isOp: false,
+        isDeleted: true,
+        editedAt: null,
+      };
+    }
+
     function buildChild(
       commentRow: CommentRow,
     ): MobileCommunityRoomThreadChildComment | null {
-      if (commentRow.deleted_at) {
+      if (commentRow.deleted_at || blockedIds.has(commentRow.author_id)) {
         return {
-          id: commentRow.id,
-          threadId: commentRow.thread_id,
+          ...baseDeleted(commentRow),
           parentId: commentRow.parent_comment_id,
-          body: DELETED_BODY,
-          // Use the deletion timestamp so the original posting time isn't
-          // leaked to anyone who can request the thread after deletion.
-          createdAt: commentRow.deleted_at,
-          author: maskedAuthor(),
-          isAuthor: false,
-          isOp: false,
-          isDeleted: true,
-          editedAt: null,
-        };
-      }
-      if (blockedIds.has(commentRow.author_id)) {
-        return {
-          id: commentRow.id,
-          threadId: commentRow.thread_id,
-          parentId: commentRow.parent_comment_id,
-          body: DELETED_BODY,
-          createdAt: commentRow.created_at,
-          author: maskedAuthor(),
-          isAuthor: false,
-          isOp: false,
-          isDeleted: true,
-          editedAt: null,
         };
       }
       const commenter = commenterProfilesById.get(commentRow.author_id);
@@ -414,33 +636,10 @@ export class CommunityRoomThreadService {
     function buildRoot(
       commentRow: CommentRow,
     ): MobileCommunityRoomThreadComment | null {
-      if (commentRow.deleted_at) {
+      if (commentRow.deleted_at || blockedIds.has(commentRow.author_id)) {
         return {
-          id: commentRow.id,
-          threadId: commentRow.thread_id,
-          parentId: null,
-          body: DELETED_BODY,
-          createdAt: commentRow.deleted_at,
-          author: maskedAuthor(),
-          isAuthor: false,
-          isOp: false,
-          isDeleted: true,
-          editedAt: null,
-          replies: [],
-        };
-      }
-      if (blockedIds.has(commentRow.author_id)) {
-        return {
-          id: commentRow.id,
-          threadId: commentRow.thread_id,
-          parentId: null,
-          body: DELETED_BODY,
-          createdAt: commentRow.created_at,
-          author: maskedAuthor(),
-          isAuthor: false,
-          isOp: false,
-          isDeleted: true,
-          editedAt: null,
+          ...baseDeleted(commentRow),
+          parentId: commentRow.parent_comment_id,
           replies: [],
         };
       }
@@ -449,7 +648,7 @@ export class CommunityRoomThreadService {
       return {
         id: commentRow.id,
         threadId: commentRow.thread_id,
-        parentId: null,
+        parentId: commentRow.parent_comment_id,
         body: commentRow.body,
         createdAt: commentRow.created_at,
         author: {
@@ -486,9 +685,7 @@ export class CommunityRoomThreadService {
           continue;
         }
       }
-
-      // Orphan: parent missing. Bubble up as top-level for graceful degradation.
-      orphanedChildren.push(child);
+      if (bubbleOrphans) orphanedChildren.push(child);
     }
 
     const comments: MobileCommunityRoomThreadComment[] = Array.from(
@@ -498,7 +695,7 @@ export class CommunityRoomThreadService {
     for (const orphan of orphanedChildren) {
       comments.push({
         ...orphan,
-        parentId: null,
+        parentId: orphan.parentId,
         replies: [],
       });
     }
@@ -507,13 +704,10 @@ export class CommunityRoomThreadService {
     comments.sort(
       (a, b) =>
         direction *
-        (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+          (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) ||
+        direction * a.id.localeCompare(b.id),
     );
-
-    return {
-      thread: shapeThread(row, author, viewerId),
-      comments,
-    };
+    return comments;
   }
 
   static async createComment({

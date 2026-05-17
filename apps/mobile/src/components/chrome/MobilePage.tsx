@@ -33,7 +33,7 @@ interface MobilePageProps extends PropsWithChildren {
   showAccentGlow?: boolean;
   footerInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
-  scrollRef?: RefObject<ScrollView>;
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
 export function MobilePage({
