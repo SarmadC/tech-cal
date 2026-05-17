@@ -8,6 +8,7 @@ import {
   mobileCommunityHomeSchema,
   mobileCommunityNetworkingHomeSchema,
   mobileCommunityPostPageSchema,
+  mobileCommunityRoomThreadDetailSchema,
   mobilePublicProfileSchema,
   mobileSpeakerDetailSchema,
 } from "./community";
@@ -405,5 +406,36 @@ describe("community domain contracts", () => {
     });
 
     expect(blocked.username).toBe("blocked-member");
+  });
+
+  it("parses paged mobile room thread comments", () => {
+    const parsed = mobileCommunityRoomThreadDetailSchema.parse({
+      thread: {
+        id: "11111111-1111-4111-8111-111111111111",
+        title: "Realtime comments",
+        body: "Discuss live updates.",
+        commentCount: 1,
+        createdAt: "2026-05-16T18:00:00.000Z",
+        lastActivityAt: "2026-05-16T18:01:00.000Z",
+        author: {
+          id: "22222222-2222-4222-8222-222222222222",
+          fullName: "Ada Lovelace",
+          username: "ada",
+          avatarUrl: null,
+          headline: null,
+        },
+        isAuthor: false,
+        editedAt: null,
+      },
+      comments: [],
+      commentPage: {
+        comments: [],
+        nextCursor: "cursor",
+        hasMore: true,
+        loadedCount: 0,
+      },
+    });
+
+    expect(parsed.commentPage.hasMore).toBe(true);
   });
 });

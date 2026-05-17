@@ -15,6 +15,7 @@ import {
   mobileCommunityRoomDetailSchema,
   mobileCommunityRoomThreadCommentDraftSchema,
   mobileCommunityRoomThreadCommentEditDraftSchema,
+  mobileCommunityRoomThreadCommentPageSchema,
   mobileCommunityRoomThreadCommentSchema,
   mobileCommunityRoomThreadDetailSchema,
   mobileCommunityRoomThreadDraftSchema,
@@ -59,6 +60,7 @@ import {
   type MobileCommunityRoomThreadComment,
   type MobileCommunityRoomThreadCommentDraft,
   type MobileCommunityRoomThreadCommentEditDraft,
+  type MobileCommunityRoomThreadCommentPage,
   type MobileCommunityRoomThreadDetail,
   type MobileCommunityRoomThreadDraft,
   type MobileCommunityRoomThreadEditDraft,
@@ -331,6 +333,56 @@ export async function loadMobileEventThread(
   return fetchMobileContract(
     `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}${query}`,
     mobileCommunityRoomThreadDetailSchema
+  );
+}
+
+export async function loadMobileEventThreadComments(
+  eventId: string,
+  threadId: string,
+  {
+    cursor,
+    limit,
+    sort,
+  }: {
+    cursor?: string | null;
+    limit?: number;
+    sort?: MobileCommunityRoomCommentSort;
+  } = {}
+): Promise<MobileCommunityRoomThreadCommentPage> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  const params = new URLSearchParams();
+  if (sort) params.set('sort', sort);
+  if (cursor) params.set('cursor', cursor);
+  if (limit != null) params.set('limit', String(limit));
+  const query = params.toString();
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments${query ? `?${query}` : ''}`,
+    mobileCommunityRoomThreadCommentPageSchema
+  );
+}
+
+export async function loadMobileEventThreadComment(
+  eventId: string,
+  threadId: string,
+  commentId: string
+): Promise<MobileCommunityRoomThreadComment> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  if (!commentId.trim()) {
+    throw new Error('Comment id is required');
+  }
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+    mobileCommunityRoomThreadCommentSchema
   );
 }
 

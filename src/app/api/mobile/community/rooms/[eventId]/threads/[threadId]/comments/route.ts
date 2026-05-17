@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { mobileCommunityRoomThreadCommentDraftSchema } from "@kurecal/domain";
+import {
+  mobileCommunityRoomCommentSortSchema,
+  mobileCommunityRoomThreadCommentDraftSchema,
+} from "@kurecal/domain";
 
 import { gateMutation } from "@/lib/api/mobileMutationRateLimit";
 import {
@@ -17,6 +20,56 @@ import { createServiceClient } from "@/utils/supabase/service";
 import { getAuthenticatedRequestContext } from "@/utils/supabase/requestAuth";
 
 const CONTEXT = "community.rooms.threads.comments";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ eventId: string; threadId: string }> },
+) {
+  try {
+    const { eventId, threadId } = await params;
+    if (!isValidUuid(eventId) || !isValidUuid(threadId)) {
+      return invalidRequest();
+    }
+
+    const authContext = await getAuthenticatedRequestContext(
+      request as NextRequest,
+    );
+    if (!authContext) return authRequired();
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) return serviceUnavailable();
+
+    const url = new URL(request.url);
+    const sortRaw = url.searchParams.get("sort");
+    const sortParsed = sortRaw
+      ? mobileCommunityRoomCommentSortSchema.safeParse(sortRaw)
+      : null;
+    const limitRaw = url.searchParams.get("limit");
+    const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
+
+    const readClient = createServiceClient(supabaseUrl, serviceRoleKey);
+    const page = await CommunityRoomThreadService.getThreadCommentsPage({
+      eventId,
+      threadId,
+      viewerId: authContext.user.id,
+      readClient,
+      sort: sortParsed?.success ? sortParsed.data : undefined,
+      cursor: url.searchParams.get("cursor"),
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+
+    return NextResponse.json({ success: true, data: page });
+  } catch (error) {
+    if (error instanceof CommunityRoomThreadNotFoundError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 404 },
+      );
+    }
+    return genericFailure(CONTEXT, "Failed to load comments.", error);
+  }
+}
 
 export async function POST(
   request: Request,
