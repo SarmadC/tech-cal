@@ -66,7 +66,7 @@ import {
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
 } from '@kurecal/domain';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import { getMobileApiBaseUrl } from './env';
 import { sessionStorage } from './sessionStorage';
@@ -613,6 +613,43 @@ export async function skipMobileCareerOnboarding(): Promise<MobileOnboardingStat
       body: JSON.stringify({
         action: 'skip',
       }),
+    }
+  );
+}
+
+const pushTokenRegisterResponseSchema = z.object({
+  ok: z.literal(true),
+});
+
+export interface RegisterPushTokenInput {
+  expoPushToken: string;
+  deviceId: string;
+  platform: 'ios' | 'android';
+  appVersion?: string;
+}
+
+export async function registerPushToken(
+  input: RegisterPushTokenInput
+): Promise<void> {
+  await fetchMobileContract(
+    '/api/mobile/push/register',
+    pushTokenRegisterResponseSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function unregisterPushToken(input: {
+  deviceId: string;
+}): Promise<void> {
+  await fetchMobileContract(
+    '/api/mobile/push/register',
+    pushTokenRegisterResponseSchema,
+    {
+      method: 'DELETE',
+      body: JSON.stringify(input),
     }
   );
 }
