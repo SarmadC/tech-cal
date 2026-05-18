@@ -83,7 +83,7 @@
     "@tanstack/react-query-devtools": "^5.83.0",
     "@tiptap/extension-code-block-lowlight": "^3.19.0",
     "@tiptap/extension-color": "^3.19.0",
-    "@tiptap/extension-highlight": "^3.19.0",
+    "@tiptap/extension-highlight": "^3.23.4",
     "@tiptap/extension-image": "^3.19.0",
     "@tiptap/extension-link": "^3.19.0",
     "@tiptap/extension-table": "^3.19.0",
