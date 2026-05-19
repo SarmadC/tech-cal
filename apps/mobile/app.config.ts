@@ -43,7 +43,11 @@ export default function getMobileExpoConfig() {
   return {
     expo: {
       ...baseConfig.expo,
-      plugins: [...(baseConfig.expo.plugins ?? []), 'expo-notifications'],
+      plugins: [
+        ...(baseConfig.expo.plugins ?? []),
+        'expo-notifications',
+        './plugins/withPrivacyManifest',
+      ],
       ios: {
         ...baseConfig.expo.ios,
         bundleIdentifier: isProduction
