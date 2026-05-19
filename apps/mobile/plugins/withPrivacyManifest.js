@@ -92,6 +92,14 @@ const COLLECTED_DATA_TYPES = [
     NSPrivacyCollectedDataTypeTracking: false,
     NSPrivacyCollectedDataTypePurposes: [APP_FUNCTIONALITY],
   },
+  {
+    // Discover search queries flow to the backend as part of the user's
+    // request body — declared even though we don't persist them long-term.
+    NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeSearchHistory',
+    NSPrivacyCollectedDataTypeLinked: true,
+    NSPrivacyCollectedDataTypeTracking: false,
+    NSPrivacyCollectedDataTypePurposes: [APP_FUNCTIONALITY],
+  },
 ];
 
 function mergeCollectedDataTypes(existing) {
