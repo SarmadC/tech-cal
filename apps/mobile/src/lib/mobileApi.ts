@@ -5,6 +5,7 @@ import {
   communityReportSchema,
   communityVoteSchema,
   normalizedSubscriptionSchema,
+  mobileCalendarConnectionStatusSchema,
   mobileCalendarFeedRequestSchema,
   mobileCalendarFeedSchema,
   mobileCareerOnboardingBootstrapSchema,
@@ -21,6 +22,8 @@ import {
   mobileEventEngagementSchema,
   mobileEventEngagementUpdateSchema,
   mobileFollowStatusSchema,
+  mobileGoogleCalendarBulkSyncResultSchema,
+  mobileGoogleCalendarSyncInputSchema,
   mobileLinkedInOutreachLogSchema,
   mobileNetworkingContactRecordSchema,
   mobileNetworkingContactUpdateSchema,
@@ -37,6 +40,7 @@ import {
   type CommunityReportInput,
   type CommunityVoteInput,
   type BlockedUserSummary,
+  type MobileCalendarConnectionStatus,
   type MobileCalendarFeed,
   type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
@@ -53,6 +57,7 @@ import {
   type MobileEventEngagement,
   type MobileEventEngagementUpdate,
   type MobileFollowStatus,
+  type MobileGoogleCalendarBulkSyncResult,
   type MobileLinkedInOutreachLog,
   type MobileNetworkingContactRecord,
   type MobileNetworkingContactUpdate,
@@ -65,6 +70,27 @@ import {
   type NormalizedSubscription,
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
+  mobileCommunityRoomDetailSchema,
+  mobileCommunityRoomThreadCommentDraftSchema,
+  mobileCommunityRoomThreadCommentEditDraftSchema,
+  mobileCommunityRoomThreadCommentPageSchema,
+  mobileCommunityRoomThreadCommentSchema,
+  mobileCommunityRoomThreadDetailSchema,
+  mobileCommunityRoomThreadDraftSchema,
+  mobileCommunityRoomThreadEditDraftSchema,
+  mobileCommunityRoomThreadListSchema,
+  mobileCommunityRoomThreadSchema,
+  type MobileCommunityRoomCommentSort,
+  type MobileCommunityRoomDetail,
+  type MobileCommunityRoomThread,
+  type MobileCommunityRoomThreadComment,
+  type MobileCommunityRoomThreadCommentDraft,
+  type MobileCommunityRoomThreadCommentEditDraft,
+  type MobileCommunityRoomThreadCommentPage,
+  type MobileCommunityRoomThreadDetail,
+  type MobileCommunityRoomThreadDraft,
+  type MobileCommunityRoomThreadEditDraft,
+  type MobileCommunityRoomThreadList,
 } from '@kurecal/domain';
 import { z, type ZodType } from 'zod';
 
@@ -243,6 +269,61 @@ export async function loadMobileCalendarFeed(
     {
       method: 'POST',
       body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function loadMobileGoogleCalendarStatus(): Promise<MobileCalendarConnectionStatus> {
+  return fetchMobileContract(
+    '/api/mobile/calendar/google/status',
+    mobileCalendarConnectionStatusSchema
+  );
+}
+
+export async function disconnectMobileGoogleCalendar(): Promise<MobileCalendarConnectionStatus> {
+  return fetchMobileContract(
+    '/api/mobile/calendar/google/disconnect',
+    mobileCalendarConnectionStatusSchema,
+    {
+      method: 'POST',
+    }
+  );
+}
+
+export async function syncMobileGoogleCalendarEvent(
+  eventId: string
+): Promise<void> {
+  const payload = mobileGoogleCalendarSyncInputSchema.parse({
+    eventId,
+    action: 'sync',
+  });
+
+  await fetchMobileEnvelope('/api/mobile/calendar/google/sync', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function unsyncMobileGoogleCalendarEvent(
+  eventId: string
+): Promise<void> {
+  const payload = mobileGoogleCalendarSyncInputSchema.parse({
+    eventId,
+    action: 'delete',
+  });
+
+  await fetchMobileEnvelope('/api/mobile/calendar/google/sync', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function bulkSyncMobileGoogleCalendar(): Promise<MobileGoogleCalendarBulkSyncResult> {
+  return fetchMobileContract(
+    '/api/mobile/calendar/google/bulk-sync',
+    mobileGoogleCalendarBulkSyncResultSchema,
+    {
+      method: 'POST',
     }
   );
 }
@@ -651,5 +732,227 @@ export async function unregisterPushToken(input: {
       method: 'DELETE',
       body: JSON.stringify(input),
     }
+  );
+}
+
+// ─── Event Room + Thread API ──────────────────────────────────────────────────
+
+export async function loadMobileCommunityRoom(
+  eventId: string
+): Promise<MobileCommunityRoomDetail> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}`,
+    mobileCommunityRoomDetailSchema
+  );
+}
+
+export async function loadMobileEventThreads(
+  eventId: string,
+  cursor?: string | null
+): Promise<MobileCommunityRoomThreadList> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  const params = new URLSearchParams();
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+  const query = params.toString();
+  const path = `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads${query ? `?${query}` : ''}`;
+  return fetchMobileContract(path, mobileCommunityRoomThreadListSchema);
+}
+
+export async function loadMobileEventThread(
+  eventId: string,
+  threadId: string,
+  sort?: MobileCommunityRoomCommentSort
+): Promise<MobileCommunityRoomThreadDetail> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  const query = sort ? `?sort=${encodeURIComponent(sort)}` : '';
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}${query}`,
+    mobileCommunityRoomThreadDetailSchema
+  );
+}
+
+export async function createMobileCommunityRoomThread(
+  eventId: string,
+  draft: MobileCommunityRoomThreadDraft
+): Promise<MobileCommunityRoomThread> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  const payload = mobileCommunityRoomThreadDraftSchema.parse(draft);
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads`,
+    mobileCommunityRoomThreadSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function updateMobileEventThread(
+  eventId: string,
+  threadId: string,
+  draft: MobileCommunityRoomThreadEditDraft
+): Promise<MobileCommunityRoomThread> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  const payload = mobileCommunityRoomThreadEditDraftSchema.parse(draft);
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}`,
+    mobileCommunityRoomThreadSchema,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function deleteMobileEventThread(
+  eventId: string,
+  threadId: string
+): Promise<void> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  await fetchMobileEnvelope(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}`,
+    { method: 'DELETE' }
+  );
+}
+
+export async function createMobileEventThreadComment(
+  eventId: string,
+  threadId: string,
+  draft: MobileCommunityRoomThreadCommentDraft
+): Promise<MobileCommunityRoomThreadComment> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  const payload = mobileCommunityRoomThreadCommentDraftSchema.parse(draft);
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments`,
+    mobileCommunityRoomThreadCommentSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function updateMobileEventThreadComment(
+  eventId: string,
+  threadId: string,
+  commentId: string,
+  draft: MobileCommunityRoomThreadCommentEditDraft
+): Promise<MobileCommunityRoomThreadComment> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  if (!commentId.trim()) {
+    throw new Error('Comment id is required');
+  }
+  const payload = mobileCommunityRoomThreadCommentEditDraftSchema.parse(draft);
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+    mobileCommunityRoomThreadCommentSchema,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function deleteMobileEventThreadComment(
+  eventId: string,
+  threadId: string,
+  commentId: string
+): Promise<void> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  if (!commentId.trim()) {
+    throw new Error('Comment id is required');
+  }
+  await fetchMobileEnvelope(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+    { method: 'DELETE' }
+  );
+}
+
+export async function loadMobileEventThreadComments(
+  eventId: string,
+  threadId: string,
+  {
+    cursor,
+    limit,
+    sort,
+  }: {
+    cursor?: string | null;
+    limit?: number;
+    sort?: MobileCommunityRoomCommentSort;
+  } = {}
+): Promise<MobileCommunityRoomThreadCommentPage> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  const params = new URLSearchParams();
+  if (sort) params.set('sort', sort);
+  if (cursor) params.set('cursor', cursor);
+  if (limit != null) params.set('limit', String(limit));
+  const query = params.toString();
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments${query ? `?${query}` : ''}`,
+    mobileCommunityRoomThreadCommentPageSchema
+  );
+}
+
+export async function loadMobileEventThreadComment(
+  eventId: string,
+  threadId: string,
+  commentId: string
+): Promise<MobileCommunityRoomThreadComment> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  if (!threadId.trim()) {
+    throw new Error('Thread id is required');
+  }
+  if (!commentId.trim()) {
+    throw new Error('Comment id is required');
+  }
+  return fetchMobileContract(
+    `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
+    mobileCommunityRoomThreadCommentSchema
   );
 }
