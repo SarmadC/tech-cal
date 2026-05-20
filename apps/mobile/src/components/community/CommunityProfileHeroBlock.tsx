@@ -17,6 +17,7 @@ interface CommunityProfileHeroBlockProps {
   username?: string | null;
   avatarUrl?: string | null;
   headerImageUrl?: string | null;
+  hideCover?: boolean;
   showAvatar?: boolean;
   headline?: string | null;
   summary?: string | null;
@@ -40,6 +41,7 @@ export function CommunityProfileHeroBlock({
   username,
   avatarUrl,
   headerImageUrl,
+  hideCover = false,
   showAvatar = true,
   headline,
   summary,
@@ -57,7 +59,7 @@ export function CommunityProfileHeroBlock({
   });
   const isProfile = size === 'profile';
   const avatarSize = isProfile ? 86 : 70;
-  const headerHeight = headerImageUrl ? (isProfile ? 188 : 154) : isProfile ? 86 : 64;
+  const headerHeight = hideCover ? 0 : headerImageUrl ? (isProfile ? 188 : 154) : isProfile ? 86 : 64;
   const metaItems = [
     username ? `@${username}` : null,
     ...badges.slice(0, isProfile ? 2 : 1),

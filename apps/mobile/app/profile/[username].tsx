@@ -226,6 +226,7 @@ export default function PublicProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <CommunityProfileHeroBlock
+            hideCover
             action={
               !profile.isViewerOwner ? (
                 <CommunityFollowButton
@@ -279,7 +280,7 @@ export default function PublicProfileScreen() {
             </View>
           ) : null}
 
-          {profile.isViewerOwner ? (
+          {profile.isViewerOwner && getStrengthItems(profile).some((i) => i.state === 'open') ? (
             <View
               style={[
                 styles.section,
