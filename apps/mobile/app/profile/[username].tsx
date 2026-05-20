@@ -1,25 +1,25 @@
 import type { MobilePublicProfile } from '@kurecal/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
-import { ScreenStateView } from '../../src/components/ScreenStateView';
+import { HeaderActionButton, MobilePage } from '../../src/components/chrome/MobilePage';
+import { KureButton } from '../../src/components/chrome/KureButton';
+import { ScreenState } from '../../src/components/chrome/ScreenState';
+import { CommunityAvatar } from '../../src/components/community/CommunityAvatar';
+import { CommunityFollowButton } from '../../src/components/community/CommunityFollowButton';
+import { CommunityProfileHeroBlock } from '../../src/components/community/CommunityProfileHeroBlock';
+import { CommunitySection } from '../../src/components/community/CommunitySection';
+import { CommunityUpcomingEventRow } from '../../src/components/community/CommunityUpcomingEventRow';
 import {
   applyFollowStateToStatus,
-  buildAvatarInitials,
   formatCommunityCompactCount,
-  formatCommunityEventTime,
+  formatCommunityTabCount,
   formatMutualConnectionsLabel,
+  getNetworkingRelationshipLabels,
   getPublicProfileCareerSummary,
 } from '../../src/components/community/presentation';
+import { useAppTheme } from '../../src/providers/ThemeProvider';
 import {
   followMobileUser,
   loadMobilePublicProfile,
@@ -27,27 +27,54 @@ import {
   updateMobileNetworkingContact,
 } from '../../src/lib/mobileApi';
 
-const colors = {
-  accent: '#BDC2FF',
-  background: '#0D0E0F',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderStrong: 'rgba(189, 194, 255, 0.36)',
-  danger: '#FFB4AB',
-  surface: '#121314',
-  surfaceHigh: '#1B1C1D',
-  text: '#E3E2E3',
-  textMuted: '#C6C5D5',
-  textSubtle: '#908F9E',
-};
+function getProfileHeroBadges(
+  profile: MobilePublicProfile,
+  relationshipLabels: string[]
+): string[] {
+  const badges: string[] = [];
 
-function getInitials(name: string | null, username: string | null): string {
-  if (name) {
-    return buildAvatarInitials(name);
+  if (relationshipLabels[0]) {
+    badges.push(relationshipLabels[0]);
   }
-  return (username?.[0] ?? '?').toUpperCase();
+
+  if (profile.recentAttendingEvents.length > 0) {
+    badges.push(
+      `${formatCommunityCompactCount(profile.recentAttendingEvents.length)} recent event${profile.recentAttendingEvents.length === 1 ? '' : 's'}`
+    );
+  } else if (profile.mutualConnectionsCount > 0) {
+    badges.push(formatMutualConnectionsLabel(profile.mutualConnectionsCount));
+  } else {
+    badges.push('Public profile');
+  }
+
+  return badges.slice(0, 2);
+}
+
+function getProfileHeroSummary(profile: MobilePublicProfile): string {
+  const detailParts = [
+    profile.careerProfile?.industry?.trim() || null,
+    profile.mutualConnectionsCount > 0
+      ? formatMutualConnectionsLabel(profile.mutualConnectionsCount)
+      : null,
+  ].filter(Boolean);
+
+  if (detailParts.length > 0) {
+    return detailParts.join(' · ');
+  }
+
+  if (profile.recentAttendingEvents.length > 0) {
+    return `${formatCommunityCompactCount(profile.recentAttendingEvents.length)} recent event${profile.recentAttendingEvents.length === 1 ? '' : 's'} visible on profile.`;
+  }
+
+  if (profile.followerCount > 0) {
+    return `${formatCommunityCompactCount(profile.followerCount)} follower${profile.followerCount === 1 ? '' : 's'} on this public profile.`;
+  }
+
+  return 'Public networking profile';
 }
 
 export default function PublicProfileScreen() {
+  const { tokens } = useAppTheme();
   const { username } = useLocalSearchParams<{ username: string | string[] }>();
   const resolvedUsername = Array.isArray(username) ? username[0] : username;
   const requestSequenceRef = useRef(0);
@@ -77,12 +104,14 @@ export default function PublicProfileScreen() {
       if (requestId !== requestSequenceRef.current) {
         return;
       }
+
       setProfile(nextProfile);
       setError(null);
     } catch (nextError) {
       if (requestId !== requestSequenceRef.current) {
         return;
       }
+
       setError(
         nextError instanceof Error
           ? nextError.message
@@ -101,9 +130,23 @@ export default function PublicProfileScreen() {
     }, [loadProfile])
   );
 
-  const headline = useMemo(
-    () => getPublicProfileCareerSummary(profile?.careerProfile ?? null, profile?.headline),
+  const relationshipLabels = useMemo(
+    () =>
+      profile
+        ? getNetworkingRelationshipLabels({
+            isInNetwork: profile.relationship?.isFollowing ?? false,
+            followsViewer: profile.relationship?.isFollowedBy ?? false,
+            isMutualFollow:
+              (profile.relationship?.isFollowing ?? false) &&
+              (profile.relationship?.isFollowedBy ?? false),
+          })
+        : [],
     [profile]
+  );
+
+  const headline = getPublicProfileCareerSummary(
+    profile?.careerProfile ?? null,
+    profile?.headline
   );
 
   async function handleToggleFollow() {
@@ -125,13 +168,18 @@ export default function PublicProfileScreen() {
         if (!current) {
           return current;
         }
+
         const nextRelationship = applyFollowStateToStatus(
           current.relationship,
           !isFollowing
         );
+
         return {
           ...current,
-          followerCount: Math.max(0, current.followerCount + (!isFollowing ? 1 : -1)),
+          followerCount: Math.max(
+            0,
+            current.followerCount + (!isFollowing ? 1 : -1)
+          ),
           relationship: nextRelationship,
         };
       });
@@ -158,562 +206,405 @@ export default function PublicProfileScreen() {
 
     try {
       const result = await updateMobileNetworkingContact({
-        target: { kind: 'profile', id: profile.id },
+        target: {
+          kind: 'profile',
+          id: profile.id,
+        },
         action,
       });
+
       setProfile((current) =>
-        current ? { ...current, networkingState: result.networkingState } : current
+        current
+          ? {
+              ...current,
+              networkingState: result.networkingState,
+            }
+          : current
       );
     } catch (nextError) {
       Alert.alert(
         action === 'mark_request_sent'
           ? 'Unable to log request'
           : 'Unable to confirm connection',
-        nextError instanceof Error ? nextError.message : 'Please try again.'
+        nextError instanceof Error
+          ? nextError.message
+          : 'Please try again.'
       );
     } finally {
       setNetworkingActionPending(null);
     }
   }
 
-  const isConnected = profile?.networkingState?.status === 'connected';
-  const isRequested = profile?.networkingState?.status === 'requested';
-  const isFollowing = profile?.relationship?.isFollowing ?? false;
-  const followsViewer = profile?.relationship?.isFollowedBy ?? false;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }: { pressed: boolean }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.backLabel}>← Back</Text>
-        </Pressable>
-      </View>
-
-      {loading && !profile ? (
-        <View style={styles.stateWrap}>
-          <ScreenStateView
+    <MobilePage
+      action={<HeaderActionButton label="Back" onPress={() => router.back()} />}
+      subtitle="Public networking context and recent activity."
+      title="Profile"
+    >
+      <View style={styles.contentWrap}>
+        {loading && !profile ? (
+          <ScreenState
             mode="loading"
             title="Loading profile"
             description="Pulling profile details, recent events, and follow context."
           />
-        </View>
-      ) : null}
+        ) : null}
 
-      {error && !profile ? (
-        <View style={styles.stateWrap}>
-          <ScreenStateView
+        {error && !profile ? (
+          <ScreenState
             mode="error"
             title="Profile unavailable"
             description={error}
-            onRetry={() => { void loadProfile(); }}
+            action={
+              <HeaderActionButton
+                label="Retry"
+                onPress={() => {
+                  void loadProfile();
+                }}
+              />
+            }
           />
-        </View>
-      ) : null}
+        ) : null}
 
-      {profile ? (
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.heroRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarInitials}>
-                  {getInitials(profile.fullName, profile.username)}
-                </Text>
-              </View>
+        {profile ? (
+          <>
+            <CommunityProfileHeroBlock
+              action={
+                !profile.isViewerOwner ? (
+                  <CommunityFollowButton
+                    appearance="default"
+                    followsViewer={profile.relationship?.isFollowedBy ?? false}
+                    isFollowing={profile.relationship?.isFollowing ?? false}
+                    isPending={followPending}
+                    size="compact"
+                    accessibilityLabel={`${profile.relationship?.isFollowing ? 'Unfollow' : 'Follow'} ${profile.fullName || profile.username}`}
+                    onPress={handleToggleFollow}
+                    showPlusIcon
+                  />
+                ) : null
+              }
+              avatarUrl={profile.avatarUrl}
+              badges={getProfileHeroBadges(profile, relationshipLabels)}
+              displayName={profile.fullName || `@${profile.username}`}
+              headline={headline}
+              size="profile"
+              summary={getProfileHeroSummary(profile)}
+              toneInput={{
+                currentRole: profile.careerProfile?.currentRole,
+                industry: profile.careerProfile?.industry,
+                seed: profile.username,
+                isInNetwork: profile.relationship?.isFollowing ?? false,
+                followsViewer: profile.relationship?.isFollowedBy ?? false,
+                isMutualFollow:
+                  (profile.relationship?.isFollowing ?? false) &&
+                  (profile.relationship?.isFollowedBy ?? false),
+              }}
+              username={profile.username}
+            />
 
-              <View style={styles.heroMeta}>
-                <Text style={styles.heroName} numberOfLines={1}>
-                  {profile.fullName || `@${profile.username}`}
-                </Text>
-                {profile.username ? (
-                  <Text style={styles.heroUsername}>@{profile.username}</Text>
-                ) : null}
-              </View>
+            <ProfileStatsStrip
+              items={[
+                {
+                  label: 'Followers',
+                  value: formatCommunityCompactCount(profile.followerCount),
+                },
+                {
+                  label: 'Following',
+                  value: formatCommunityCompactCount(profile.followingCount),
+                },
+                {
+                  label: 'Shared',
+                  value: formatCommunityCompactCount(profile.mutualConnectionsCount),
+                },
+              ]}
+            />
 
-              {!profile.isViewerOwner ? (
-                <Pressable
-                  onPress={() => { void handleToggleFollow(); }}
-                  disabled={followPending}
-                  style={({ pressed }: { pressed: boolean }) => [
-                    styles.followButton,
-                    isFollowing && styles.followButtonActive,
-                    (pressed || followPending) && styles.pressed,
-                  ]}
-                >
+            {!profile.isViewerOwner ? (
+              <View
+                style={[
+                  styles.networkingCard,
+                  {
+                    backgroundColor: tokens.colors.surfaceStrong,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.md,
+                  },
+                ]}
+              >
+                <View style={styles.networkingCopy}>
                   <Text
-                    style={[
-                      styles.followButtonLabel,
-                      isFollowing && styles.followButtonLabelActive,
-                    ]}
+                    style={{
+                      color: tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 16,
+                      lineHeight: 20,
+                      fontWeight: '800',
+                    }}
                   >
-                    {followPending
-                      ? '...'
-                      : isFollowing
-                        ? 'Following'
-                        : followsViewer
-                          ? 'Follow back'
-                          : 'Follow'}
+                    Networking
                   </Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            {headline ? (
-              <Text style={styles.heroHeadline}>{headline}</Text>
-            ) : null}
-
-            {profile.mutualConnectionsCount > 0 ? (
-              <Text style={styles.heroContext}>
-                {formatMutualConnectionsLabel(profile.mutualConnectionsCount)}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>
-                {formatCommunityCompactCount(profile.followerCount)}
-              </Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>
-                {formatCommunityCompactCount(profile.followingCount)}
-              </Text>
-              <Text style={styles.statLabel}>Following</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>
-                {formatCommunityCompactCount(profile.mutualConnectionsCount)}
-              </Text>
-              <Text style={styles.statLabel}>Shared</Text>
-            </View>
-          </View>
-
-          {/* Networking card */}
-          {!profile.isViewerOwner ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionEyebrow}>Networking</Text>
-                <Text style={styles.sectionTitle}>Track your outreach</Text>
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.cardDescription}>
-                  {isConnected
-                    ? 'Confirmed as a real connection.'
-                    : isRequested
-                      ? 'Request logged. Confirm it once the connection is real.'
-                      : 'Use this profile to track outreach and confirmed connections.'}
-                </Text>
-
-                <View style={styles.actionStack}>
-                  {!isConnected ? (
-                    <Pressable
-                      onPress={() => { void handleNetworkingAction('mark_request_sent'); }}
-                      disabled={Boolean(networkingActionPending)}
-                      style={({ pressed }: { pressed: boolean }) => [
-                        styles.actionButton,
-                        isRequested ? styles.actionButtonSecondary : styles.actionButtonPrimary,
-                        (pressed || Boolean(networkingActionPending)) && styles.pressed,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.actionButtonLabel,
-                          isRequested
-                            ? styles.actionButtonLabelSecondary
-                            : styles.actionButtonLabelPrimary,
-                        ]}
-                      >
-                        {networkingActionPending === 'request' ? 'Saving...' : 'Mark request sent'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-
-                  <Pressable
-                    onPress={() => { void handleNetworkingAction('confirm_connection'); }}
-                    disabled={Boolean(networkingActionPending) || isConnected}
-                    style={({ pressed }: { pressed: boolean }) => [
-                      styles.actionButton,
-                      isConnected ? styles.actionButtonSecondary : styles.actionButtonPrimary,
-                      (pressed || Boolean(networkingActionPending) || isConnected) &&
-                        styles.pressed,
-                    ]}
+                  <Text
+                    style={{
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 13,
+                      lineHeight: 18,
+                      fontWeight: '600',
+                    }}
                   >
-                    <Text
-                      style={[
-                        styles.actionButtonLabel,
-                        isConnected
-                          ? styles.actionButtonLabelSecondary
-                          : styles.actionButtonLabelPrimary,
-                      ]}
+                    {profile.networkingState?.status === 'connected'
+                      ? 'Confirmed as a real connection.'
+                      : profile.networkingState?.status === 'requested'
+                        ? 'Request logged. Confirm it once the connection is real.'
+                        : 'Use this profile to track outreach and confirmed connections.'}
+                  </Text>
+                </View>
+                <View style={styles.networkingActions}>
+                  {profile.networkingState?.status !== 'connected' ? (
+                    <View style={styles.networkingAction}>
+                      <KureButton
+                        variant={
+                          profile.networkingState?.status === 'requested'
+                            ? 'secondary'
+                            : 'primary'
+                        }
+                        onPress={() => {
+                          void handleNetworkingAction('mark_request_sent');
+                        }}
+                        disabled={Boolean(networkingActionPending)}
+                      >
+                        {networkingActionPending === 'request'
+                          ? 'Saving...'
+                          : 'Mark request sent'}
+                      </KureButton>
+                    </View>
+                  ) : null}
+                  <View style={styles.networkingAction}>
+                    <KureButton
+                      onPress={() => {
+                        void handleNetworkingAction('confirm_connection');
+                      }}
+                      disabled={
+                        Boolean(networkingActionPending) ||
+                        profile.networkingState?.status === 'connected'
+                      }
                     >
                       {networkingActionPending === 'confirm'
                         ? 'Saving...'
-                        : isConnected
+                        : profile.networkingState?.status === 'connected'
                           ? 'Connection confirmed'
                           : 'Confirm connection'}
-                    </Text>
-                  </Pressable>
+                    </KureButton>
+                  </View>
                 </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {/* Mutual connections */}
-          {profile.mutualConnections.length > 0 ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionEyebrow}>Mutual context</Text>
-                <Text style={styles.sectionTitle}>
-                  {formatCommunityCompactCount(profile.mutualConnectionsCount)} shared
-                </Text>
-              </View>
-
-              <View style={styles.stack}>
-                {profile.mutualConnections.map((connection) => (
-                  <View key={connection.id} style={styles.connectionCard}>
-                    <View style={styles.connectionAvatar}>
-                      <Text style={styles.connectionAvatarText}>
-                        {getInitials(connection.fullName, connection.username)}
-                      </Text>
-                    </View>
-                    <View style={styles.connectionMeta}>
-                      <Text style={styles.connectionName} numberOfLines={1}>
-                        {connection.fullName || `@${connection.username}`}
-                      </Text>
-                      {connection.headline ? (
-                        <Text style={styles.connectionHeadline} numberOfLines={1}>
-                          {connection.headline}
+            {profile.mutualConnections.length > 0 ? (
+              <CommunitySection
+                title="Mutual context"
+                meta={`${formatCommunityTabCount(profile.mutualConnectionsCount)} shared`}
+              >
+                <View style={styles.sectionInner}>
+                  {profile.mutualConnections.map((connection) => (
+                    <View
+                      key={connection.id}
+                      style={[
+                        styles.connectionRow,
+                        {
+                          borderColor: tokens.colors.divider,
+                        },
+                      ]}
+                    >
+                      <CommunityAvatar
+                        avatarUrl={connection.avatarUrl}
+                        name={connection.fullName}
+                        size={38}
+                      />
+                      <View style={styles.connectionCopy}>
+                        <Text
+                          style={{
+                            color: tokens.colors.textPrimary,
+                            fontFamily: tokens.typography.sans,
+                            fontSize: 14,
+                            fontWeight: '700',
+                          }}
+                        >
+                          {connection.fullName || `@${connection.username}`}
                         </Text>
-                      ) : null}
+                        {connection.headline ? (
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              color: tokens.colors.textSecondary,
+                              fontFamily: tokens.typography.sans,
+                              fontSize: 12,
+                              fontWeight: '600',
+                            }}
+                          >
+                            {connection.headline}
+                          </Text>
+                        ) : null}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
+                  ))}
+                </View>
+              </CommunitySection>
+            ) : null}
 
-          {/* Recent events */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Recent events</Text>
-              <Text style={styles.sectionTitle}>
-                {profile.recentAttendingEvents.length > 0
-                  ? `${formatCommunityCompactCount(profile.recentAttendingEvents.length)} visible`
-                  : 'Activity'}
-              </Text>
-            </View>
-
-            {profile.recentAttendingEvents.length > 0 ? (
-              <View style={styles.stack}>
-                {profile.recentAttendingEvents.map((event) => (
-                  <Pressable
-                    key={event.id}
-                    onPress={() => router.push(`/event/${event.id}`)}
-                    style={({ pressed }: { pressed: boolean }) => [styles.eventCard, pressed && styles.cardPressed]}
+            <CommunitySection
+              title="Recent events"
+              meta={`${formatCommunityTabCount(profile.recentAttendingEvents.length)} events`}
+            >
+              <View style={styles.sectionInner}>
+                {profile.recentAttendingEvents.length > 0 ? (
+                  <View
+                    style={[
+                      styles.eventList,
+                      {
+                        backgroundColor: tokens.colors.surfaceStrong,
+                        borderColor: tokens.colors.border,
+                        borderRadius: tokens.radius.md,
+                      },
+                    ]}
                   >
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventMeta}>
-                      {formatCommunityEventTime(event.startTime)}
-                      {event.location ? ` · ${event.location}` : ''}
-                    </Text>
-                  </Pressable>
-                ))}
+                    {profile.recentAttendingEvents.map((event, index) => (
+                      <CommunityUpcomingEventRow
+                        key={event.id}
+                        meta={event.location || 'Attended event'}
+                        startTime={event.startTime}
+                        title={event.title}
+                        showDivider={index < profile.recentAttendingEvents.length - 1}
+                        onPress={() => router.push(`/event/${event.id}`)}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <ScreenState
+                    mode="empty"
+                    title="No public events yet"
+                    description="Recent attending events will appear here when attendance is visible."
+                    variant="plain"
+                  />
+                )}
               </View>
-            ) : (
-              <ScreenStateView
-                mode="empty"
-                title="No public events yet"
-                description="Recent attending events will appear here when attendance is visible."
-              />
-            )}
-          </View>
-        </ScrollView>
-      ) : null}
-    </SafeAreaView>
+            </CommunitySection>
+          </>
+        ) : null}
+      </View>
+    </MobilePage>
+  );
+}
+
+function ProfileStatsStrip({
+  items,
+}: {
+  items: Array<{ label: string; value: string }>;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.statsStrip,
+        {
+          backgroundColor: tokens.colors.surfaceStrong,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.md,
+        },
+      ]}
+    >
+      {items.map((item, index) => (
+        <View
+          key={item.label}
+          style={[
+            styles.metricCell,
+            index < items.length - 1 && {
+              borderRightColor: tokens.colors.divider,
+              borderRightWidth: StyleSheet.hairlineWidth,
+            },
+          ]}
+        >
+          <Text
+            style={{
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+              fontSize: 10,
+              fontWeight: '800',
+              letterSpacing: 1.1,
+              textTransform: 'uppercase',
+            }}
+          >
+            {item.label}
+          </Text>
+          <Text
+            style={{
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+              fontSize: 18,
+              lineHeight: 22,
+              fontWeight: '800',
+            }}
+          >
+            {item.value}
+          </Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  actionButton: {
+  connectionCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  connectionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 14,
+    gap: 12,
     paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  contentWrap: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    gap: 14,
+  },
+  eventList: {
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  networkingAction: {
     width: '100%',
   },
-  actionButtonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  actionButtonLabelPrimary: {
-    color: colors.background,
-  },
-  actionButtonLabelSecondary: {
-    color: colors.textMuted,
-  },
-  actionButtonPrimary: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  actionButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: colors.border,
-  },
-  actionStack: {
-    gap: 8,
-    marginTop: 10,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceHigh,
-    borderColor: colors.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-  },
-  avatarInitials: {
-    color: colors.accent,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  backLabel: {
-    color: colors.accent,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  cardDescription: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  cardPressed: {
-    opacity: 0.84,
-  },
-  connectionAvatar: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceHigh,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  connectionAvatarText: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  connectionCard: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
+  networkingActions: {
     gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
-  connectionHeadline: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  connectionMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  connectionName: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  content: {
-    gap: 16,
-    paddingBottom: 28,
-    paddingHorizontal: 20,
-    paddingTop: 4,
-  },
-  eventCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 6,
+  networkingCard: {
     borderWidth: 1,
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  eventMeta: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  eventTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  followButton: {
-    borderColor: colors.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  followButtonActive: {
-    backgroundColor: 'rgba(189, 194, 255, 0.10)',
-    borderColor: colors.borderStrong,
-  },
-  followButtonLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 17,
-  },
-  followButtonLabelActive: {
-    color: colors.accent,
-  },
-  header: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-  },
-  hero: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    gap: 8,
-    paddingBottom: 14,
-  },
-  heroContext: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  heroHeadline: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  heroMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  heroName: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 21,
-  },
-  heroRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
     gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  heroUsername: {
-    color: colors.textSubtle,
-    fontSize: 13,
-    lineHeight: 17,
+  networkingCopy: {
+    gap: 4,
   },
-  pressed: {
-    opacity: 0.7,
-  },
-  safeArea: {
-    backgroundColor: colors.background,
+  metricCell: {
     flex: 1,
+    minHeight: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 4,
+    justifyContent: 'space-between',
   },
-  section: {
-    gap: 8,
+  sectionInner: {
+    padding: 16,
+    gap: 10,
   },
-  sectionEyebrow: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.66,
-    lineHeight: 16,
-    textTransform: 'uppercase',
-  },
-  sectionHeader: {
-    gap: 2,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  stack: {
-    gap: 8,
-  },
-  statCell: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 2,
-    paddingVertical: 10,
-  },
-  statDivider: {
-    backgroundColor: colors.border,
-    height: '60%',
-    width: 1,
-  },
-  statLabel: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-    lineHeight: 14,
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 24,
-  },
-  statsRow: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 6,
-    borderWidth: 1,
+  statsStrip: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-  stateWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
 });
