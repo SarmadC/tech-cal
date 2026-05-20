@@ -91,6 +91,40 @@ function getCircleSlug(circle: MobileCommunityCircle): string {
   return circle.slug || circle.id;
 }
 
+const CIRCLE_ICON_MAP: Array<{
+  keywords: string[];
+  icon: keyof typeof FontAwesome.glyphMap;
+}> = [
+  { keywords: ["ai", "artificial", "machine", "ml", "llm", "gpt"], icon: "magic" },
+  { keywords: ["product", "pm", "roadmap"], icon: "th-large" },
+  { keywords: ["founder", "startup", "venture", "vc"], icon: "rocket" },
+  { keywords: ["engineer", "dev", "code", "software", "backend", "frontend", "fullstack"], icon: "code" },
+  { keywords: ["design", "ux", "ui", "figma", "creative"], icon: "paint-brush" },
+  { keywords: ["data", "analytics", "bi", "sql"], icon: "database" },
+  { keywords: ["marketing", "growth", "seo", "content"], icon: "bullhorn" },
+  { keywords: ["sales", "revenue", "crm", "bdr"], icon: "bar-chart" },
+  { keywords: ["mobile", "ios", "android", "react native"], icon: "mobile" },
+  { keywords: ["web", "frontend", "browser"], icon: "globe" },
+  { keywords: ["security", "privacy", "infosec", "cyber"], icon: "lock" },
+  { keywords: ["community", "networking", "social"], icon: "users" },
+  { keywords: ["finance", "fintech", "crypto", "defi", "invest"], icon: "money" },
+  { keywords: ["health", "wellness", "fitness", "bio"], icon: "heartbeat" },
+  { keywords: ["gaming", "game", "esports"], icon: "gamepad" },
+  { keywords: ["science", "research", "lab"], icon: "flask" },
+  { keywords: ["legal", "compliance", "policy"], icon: "balance-scale" },
+  { keywords: ["ops", "operations", "infra", "devops", "platform"], icon: "cogs" },
+];
+
+function getCircleIcon(name: string): keyof typeof FontAwesome.glyphMap {
+  const lower = name.toLowerCase();
+  for (const entry of CIRCLE_ICON_MAP) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) {
+      return entry.icon;
+    }
+  }
+  return "users";
+}
+
 function getInitials(name: string): string {
   return name
     .split(/\s+/)
@@ -168,20 +202,26 @@ function getRoomStatus(event: MobileCommunityNetworkingEvent): string {
   return `${formatShortRelativeTime(event.startTime)} · ${activityLabel}`;
 }
 
-function getRoomQuote(event: MobileCommunityNetworkingEvent): string {
-  if (event.attendeePreview.length > 0) {
-    return "Attendees are starting to coordinate.";
-  }
+function getCompactTime(startTime: string | null): string {
+  if (!startTime) return "Soon";
+  const diffMs = new Date(startTime).getTime() - Date.now();
+  const absMinutes = Math.max(1, Math.round(Math.abs(diffMs) / 60_000));
+  if (absMinutes < 60) return `${absMinutes}m`;
+  const hours = Math.round(absMinutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
 
-  if ((event.speakerPreview?.length ?? 0) > 0) {
-    return "Speaker signal is forming.";
+function getRoomCompactMeta(event: MobileCommunityNetworkingEvent): string {
+  const isActive =
+    (event.recentTrackerCount ?? 0) > 0 || event.visibleAttendeeCount > 0;
+  if (isActive) {
+    const count = event.visibleAttendeeCount || event.networkAttendingCount;
+    return count > 0
+      ? `Active · ${formatCommunityTabCount(count)} here`
+      : "Active now";
   }
-
-  if (event.visibleAttendeeCount > 0 || event.networkAttendingCount > 0) {
-    return "Early attendee momentum.";
-  }
-
-  return "Attendee signal is still forming.";
+  return getCompactTime(event.startTime);
 }
 
 function filterRooms(
@@ -264,6 +304,9 @@ export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<CommunityTab>("pulse");
   const [roomLens, setRoomLens] = useState<RoomLens>("for_you");
   const [peopleLens, setPeopleLens] = useState<PeopleLens>("for_you");
+  function handleOpenRoom(eventId: string) {
+    router.push(`/event/${eventId}`);
+  }
 
   const loadCommunity = useCallback(async (mode: LoadMode = "initial") => {
     const requestId = ++requestSequenceRef.current;
@@ -386,6 +429,7 @@ export default function CommunityScreen() {
                 home={home}
                 onOpenPeople={() => setActiveTab("people")}
                 onOpenRooms={() => setActiveTab("rooms")}
+                onOpenRoom={handleOpenRoom}
               />
             ) : null}
 
@@ -395,6 +439,7 @@ export default function CommunityScreen() {
                 followUps={home.followUpNow}
                 lens={roomLens}
                 onChangeLens={setRoomLens}
+                onOpenRoom={handleOpenRoom}
               />
             ) : null}
 
@@ -431,7 +476,7 @@ function SegmentedTabs({
         styles.segmentedControl,
         {
           backgroundColor: tokens.colors.surfaceMuted,
-          borderRadius: tokens.radius.sm,
+          borderRadius: tokens.radius.xs,
         },
       ]}
     >
@@ -444,13 +489,8 @@ function SegmentedTabs({
           style={[
             styles.segmentedItem,
             activeTab === tab.id && {
-              backgroundColor: tokens.colors.surface,
-              borderRadius: tokens.radius.sm - 4,
-              shadowColor: tokens.shadow.shadowColor,
-              shadowOpacity: tokens.mode === "dark" ? 0.12 : 0.08,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 2,
+              backgroundColor: tokens.colors.pillActive,
+              borderRadius: tokens.radius.xs,
             },
           ]}
         >
@@ -458,12 +498,13 @@ function SegmentedTabs({
             style={{
               color:
                 activeTab === tab.id
-                  ? tokens.colors.textPrimary
-                  : tokens.colors.textSecondary,
+                  ? tokens.colors.pillActiveText
+                  : tokens.colors.textTertiary,
               fontFamily: tokens.typography.sans,
-              fontSize: 15,
-              lineHeight: 20,
-              fontWeight: "800",
+              fontSize: 13,
+              lineHeight: 18,
+              fontWeight: "700",
+              letterSpacing: 0.1,
             }}
           >
             {tab.label}
@@ -477,10 +518,12 @@ function SegmentedTabs({
 function PulseTab({
   home,
   onOpenPeople,
+  onOpenRoom,
   onOpenRooms,
 }: {
   home: MobileCommunityHome;
   onOpenPeople: () => void;
+  onOpenRoom: (eventId: string) => void;
   onOpenRooms: () => void;
 }) {
   const { tokens } = useAppTheme();
@@ -515,6 +558,7 @@ function PulseTab({
               styles.activityCard,
               {
                 backgroundColor: tokens.colors.surface,
+                borderColor: tokens.colors.border,
                 shadowColor: tokens.shadow.shadowColor,
               },
             ]}
@@ -537,18 +581,7 @@ function PulseTab({
             actionLabel="See all"
             onPress={onOpenRooms}
           />
-          <View style={styles.stack}>
-            {roomPreview.map((event, index) => (
-              <RoomCard
-                key={event.id}
-                compact={index > 0}
-                event={event}
-                primaryActionLabel={
-                  index === 0 ? "Open Room" : "Introduce yourself"
-                }
-              />
-            ))}
-          </View>
+          <RoomList events={roomPreview} onOpenRoom={onOpenRoom} />
         </>
       ) : null}
 
@@ -618,6 +651,7 @@ function PulseSummaryCard({
         styles.summaryCard,
         {
           backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
           shadowColor: tokens.shadow.shadowColor,
         },
       ]}
@@ -661,7 +695,7 @@ function SummaryRow({
         pressed && styles.pressed,
       ]}
     >
-      <FontAwesome name={icon} size={19} color={tokens.colors.success} />
+      <FontAwesome name={icon} size={19} color={tokens.colors.accent} />
       <Text
         style={[
           styles.summaryText,
@@ -687,11 +721,13 @@ function RoomsTab({
   followUps,
   lens,
   onChangeLens,
+  onOpenRoom,
 }: {
   activeRooms: MobileCommunityNetworkingEvent[];
   followUps: MobileCommunityNetworkingFollowUpCard[];
   lens: RoomLens;
   onChangeLens: (lens: RoomLens) => void;
+  onOpenRoom: (eventId: string) => void;
 }) {
   const pastFollowUp = followUps[0];
   const pastEvent = pastFollowUp ? getPrimaryEvent(pastFollowUp) : null;
@@ -714,18 +750,7 @@ function RoomsTab({
           <SectionEmptyNote title="No past rooms with follow-up yet" />
         )
       ) : activeRooms.length > 0 ? (
-        <View style={styles.stack}>
-          {activeRooms.map((event, index) => (
-            <RoomCard
-              key={event.id}
-              event={event}
-              primaryActionLabel={index === 0 ? "Open Room" : "Open Room"}
-              secondaryActionLabel={
-                event.viewerContext === "attending" ? "Going" : "View Event"
-              }
-            />
-          ))}
-        </View>
+        <RoomList events={activeRooms} onOpenRoom={onOpenRoom} />
       ) : (
         <SectionEmptyNote title="No rooms in this view yet" />
       )}
@@ -733,113 +758,100 @@ function RoomsTab({
   );
 }
 
-function RoomCard({
-  event,
+function RoomList({
+  events,
+  onOpenRoom,
 }: {
-  compact?: boolean;
+  events: MobileCommunityNetworkingEvent[];
+  onOpenRoom: (eventId: string) => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.roomList,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
+          borderRadius: tokens.radius.sm,
+        },
+      ]}
+    >
+      {events.map((event, index) => (
+        <RoomRow
+          key={event.id}
+          event={event}
+          isLast={index === events.length - 1}
+          onOpenRoom={onOpenRoom}
+        />
+      ))}
+    </View>
+  );
+}
+
+function RoomRow({
+  event,
+  isLast,
+  onOpenRoom,
+}: {
   event: MobileCommunityNetworkingEvent;
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
+  isLast: boolean;
+  onOpenRoom: (eventId: string) => void;
 }) {
   const { tokens } = useAppTheme();
   const isWarm =
     event.viewerContext === "attending" || event.visibleAttendeeCount > 0;
-  const status = getRoomStatus(event);
-  const discussionPreview = getRoomQuote(event);
+  const meta = getRoomCompactMeta(event);
 
   return (
     <Pressable
       accessibilityLabel={`Open room for ${event.title}`}
       accessibilityRole="button"
-      onPress={() => router.push(`/event/${event.id}`)}
+      onPress={() => onOpenRoom(event.id)}
       style={({ pressed }) => [
-        styles.roomCard,
-        {
-          backgroundColor: "#111214",
-          borderColor: "rgba(255, 255, 255, 0.07)",
-          borderRadius: 10,
-          shadowColor: "#000000",
+        styles.roomRow,
+        !isLast && {
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.colors.divider,
         },
-        pressed && styles.roomCardPressed,
+        pressed && { backgroundColor: tokens.colors.surfaceMuted },
       ]}
     >
-      <View style={styles.roomTopRow}>
-        <View style={styles.roomCopy}>
-          <Text
-            style={[
-              styles.roomReason,
-              {
-                color: "rgba(255, 255, 255, 0.5)",
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {getRoomReason(event)}
-          </Text>
-          <Text
-            numberOfLines={2}
-            style={[
-              styles.roomEventTitle,
-              {
-                color: "#F7F8F8",
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {event.title}
-          </Text>
-          <View style={styles.roomTelemetryRow}>
-            <View
-              style={[
-                styles.roomStatusDot,
-                {
-                  backgroundColor: isWarm
-                    ? "#5EEAD4"
-                    : "rgba(255, 255, 255, 0.34)",
-                },
-              ]}
-            />
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.roomTelemetryText,
-                {
-                  color: "rgba(255, 255, 255, 0.4)",
-                  fontFamily: tokens.typography.sans,
-                },
-              ]}
-            >
-              {status}
-            </Text>
-          </View>
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.roomSnippet,
-              {
-                color: "rgba(255, 255, 255, 0.46)",
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {discussionPreview}
-          </Text>
-        </View>
-
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.roomRowTitle,
+          {
+            color: tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {event.title}
+      </Text>
+      <View style={styles.roomRowMeta}>
         <View
           style={[
-            styles.roomArrow,
+            styles.roomStatusDot,
             {
-              borderColor: "rgba(255, 255, 255, 0.07)",
+              backgroundColor: isWarm
+                ? tokens.colors.accent
+                : tokens.colors.textTertiary,
+            },
+          ]}
+        />
+        <Text
+          style={[
+            styles.roomRowMetaText,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
             },
           ]}
         >
-          <FontAwesome
-            name="long-arrow-right"
-            size={10}
-            color="rgba(255, 255, 255, 0.5)"
-          />
-        </View>
+          {meta}
+        </Text>
       </View>
     </Pressable>
   );
@@ -991,7 +1003,7 @@ function ActivityRow({
           style={[
             styles.activityBody,
             {
-              color: tokens.colors.textPrimary,
+              color: tokens.colors.textSecondary,
               fontFamily: tokens.typography.sans,
             },
           ]}
@@ -1002,7 +1014,7 @@ function ActivityRow({
           style={[
             styles.activityMeta,
             {
-              color: tokens.colors.success,
+              color: tokens.colors.accent,
               fontFamily: tokens.typography.sans,
             },
           ]}
@@ -1037,14 +1049,16 @@ function CircleCard({ circle }: { circle: MobileCommunityCircle }) {
           styles.circleIcon,
           {
             backgroundColor: tokens.colors.surfaceMuted,
-            borderRadius: tokens.radius.sm,
+            borderRadius: tokens.radius.xs,
+            borderWidth: 1,
+            borderColor: tokens.colors.border,
           },
         ]}
       >
         <FontAwesome
-          name="microchip"
-          size={18}
-          color={tokens.colors.textPrimary}
+          name={getCircleIcon(circle.name)}
+          size={16}
+          color={tokens.colors.textTertiary}
         />
       </View>
       <Text
@@ -1062,7 +1076,7 @@ function CircleCard({ circle }: { circle: MobileCommunityCircle }) {
         style={[
           styles.cardMeta,
           {
-            color: tokens.colors.textSecondary,
+            color: tokens.colors.textTertiary,
             fontFamily: tokens.typography.sans,
           },
         ]}
@@ -1072,7 +1086,12 @@ function CircleCard({ circle }: { circle: MobileCommunityCircle }) {
       <Text
         style={[
           styles.circleSignal,
-          { color: tokens.colors.success, fontFamily: tokens.typography.sans },
+          {
+            color: circle.isJoined
+              ? tokens.colors.accent
+              : tokens.colors.textTertiary,
+            fontFamily: tokens.typography.sans,
+          },
         ]}
       >
         {circle.isJoined ? "Joined" : "Discover"}
@@ -1181,11 +1200,13 @@ function PastRoomCard({
   return (
     <View
       style={[
-        styles.roomCard,
+        styles.roomList,
         {
           backgroundColor: tokens.colors.surfaceStrong,
           borderColor: tokens.colors.border,
-          borderRadius: tokens.radius.md,
+          borderRadius: tokens.radius.sm,
+          padding: 12,
+          gap: 8,
         },
       ]}
     >
@@ -1316,7 +1337,7 @@ function LensRail({
                 activeId === item.id
                   ? tokens.colors.pillActive
                   : tokens.colors.surfaceMuted,
-              borderRadius: tokens.radius.md,
+              borderRadius: tokens.radius.xs,
             },
             pressed && styles.pressed,
           ]}
@@ -1348,7 +1369,7 @@ function SectionTitle({ title }: { title: string }) {
       style={[
         styles.sectionTitle,
         {
-          color: tokens.colors.textPrimary,
+          color: tokens.colors.textTertiary,
           fontFamily: tokens.typography.sans,
         },
       ]}
@@ -1377,7 +1398,7 @@ function SectionHeaderLink({
           style={[
             styles.headerLink,
             {
-              color: tokens.colors.textPrimary,
+              color: tokens.colors.accent,
               fontFamily: tokens.typography.sans,
             },
           ]}
@@ -1458,7 +1479,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   activityCard: {
-    borderRadius: 6,
+    borderRadius: 4,
+    borderWidth: 1,
     overflow: "hidden",
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -1609,122 +1631,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  roomCard: {
+  roomList: {
     borderWidth: 1,
-    padding: 12,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
+    overflow: "hidden",
   },
-  roomCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.995 }],
-  },
-  roomActionRow: {
+  roomRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 8,
-    paddingTop: 2,
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  roomArrow: {
+  roomRowMeta: {
     alignItems: "center",
-    borderWidth: 1,
-    height: 21,
-    justifyContent: "center",
-    width: 21,
-  },
-  roomCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  roomEventTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: -0.25,
-    lineHeight: 18,
-  },
-  roomHeaderRow: {
-    alignItems: "flex-start",
     flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
+    gap: 5,
+    flexShrink: 0,
   },
-  roomIcon: {
-    alignItems: "center",
-    height: 46,
-    justifyContent: "center",
-    width: 46,
-  },
-  roomQuote: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  roomQuoteText: {
-    fontSize: 15,
-    fontWeight: "600",
-    lineHeight: 21,
-  },
-  roomPrimaryAction: {
-    alignItems: "center",
-    borderWidth: 1,
-    justifyContent: "center",
-    minHeight: 28,
-    paddingHorizontal: 10,
-  },
-  roomPrimaryActionText: {
-    fontSize: 12,
-    fontWeight: "800",
-    lineHeight: 15,
-  },
-  roomReason: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0,
-    lineHeight: 12,
-  },
-  roomSecondaryAction: {
-    alignItems: "center",
-    borderWidth: 1,
-    justifyContent: "center",
-    minHeight: 28,
-    paddingHorizontal: 10,
-  },
-  roomSecondaryActionText: {
-    fontSize: 12,
-    fontWeight: "800",
-    lineHeight: 15,
-  },
-  roomSnippet: {
+  roomRowMetaText: {
     fontSize: 12,
     fontWeight: "500",
-    lineHeight: 15,
-    paddingTop: 1,
+    lineHeight: 16,
+  },
+  roomRowTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.1,
+    lineHeight: 18,
   },
   roomStatusDot: {
     borderRadius: 2,
     height: 4,
     width: 4,
-  },
-  roomTelemetryRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 6,
-  },
-  roomTelemetryText: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: "500",
-    lineHeight: 14,
-  },
-  roomTitleWrap: {
-    flex: 1,
-    gap: 5,
-  },
-  roomTopRow: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    gap: 10,
   },
   secondaryAction: {
     alignItems: "center",
@@ -1744,11 +1684,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: -0.1,
-    lineHeight: 20,
-    paddingTop: 4,
+    letterSpacing: 0.9,
+    lineHeight: 16,
+    paddingTop: 6,
   },
   segmentedControl: {
     flexDirection: "row",
@@ -1764,7 +1704,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryCard: {
-    borderRadius: 6,
+    borderRadius: 4,
+    borderWidth: 1,
     overflow: "hidden",
     shadowOpacity: 0,
     shadowRadius: 0,
