@@ -25,6 +25,7 @@ import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
+import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
 import { formatCommunityTabCount } from "../../src/components/community/presentation";
 import { summarizeCommunityPost } from "../../src/lib/communityPresentation";
 import {
@@ -304,8 +305,10 @@ export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<CommunityTab>("pulse");
   const [roomLens, setRoomLens] = useState<RoomLens>("for_you");
   const [peopleLens, setPeopleLens] = useState<PeopleLens>("for_you");
+  const [roomSheetEventId, setRoomSheetEventId] = useState<string | null>(null);
+
   function handleOpenRoom(eventId: string) {
-    router.push(`/event/${eventId}`);
+    setRoomSheetEventId(eventId);
   }
 
   const loadCommunity = useCallback(async (mode: LoadMode = "initial") => {
@@ -457,6 +460,10 @@ export default function CommunityScreen() {
           </>
         ) : null}
       </View>
+      <CommunityRoomSheet
+        eventId={roomSheetEventId}
+        onClose={() => setRoomSheetEventId(null)}
+      />
     </MobilePage>
   );
 }

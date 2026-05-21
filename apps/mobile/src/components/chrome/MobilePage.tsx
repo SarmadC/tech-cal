@@ -3,6 +3,7 @@ import {
   useState,
   type PropsWithChildren,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
   type LayoutChangeEvent,
@@ -32,6 +33,7 @@ interface MobilePageProps extends PropsWithChildren {
   showAccentGlow?: boolean;
   footerInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
 export function MobilePage({
@@ -44,6 +46,7 @@ export function MobilePage({
   children,
   footerInset,
   contentStyle,
+  scrollRef,
 }: MobilePageProps) {
   const { tokens } = useAppTheme();
   const { handleScroll, isVisible } = useTabBarVisibility();
@@ -149,6 +152,7 @@ export function MobilePage({
         </View>
       ) : null}
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           {
