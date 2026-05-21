@@ -87,6 +87,7 @@ export interface PublicProfileResult {
   careerProfile: PublicCareerProfile | null;
   mutualConnections: MutualConnection[];
   mutualConnectionsCount: number;
+  sharedEventsCount: number;
 }
 
 export class PublicProfileService {
@@ -192,6 +193,7 @@ export class PublicProfileService {
       recentAttendingEvents,
       careerProfile,
       mutualConnectionsResult,
+      sharedEventsCount,
     ] = await Promise.all([
       readClient
         .from('user_social_stats')
@@ -207,6 +209,9 @@ export class PublicProfileService {
       viewerId && !isViewerOwner
         ? this.getMutualConnections(readClient, typedProfile.id, viewerId)
         : Promise.resolve({ connections: [], count: 0 }),
+      viewerId && !isViewerOwner
+        ? this.getSharedEventsCount(readClient, typedProfile.id, viewerId)
+        : Promise.resolve(0),
     ]);
 
     if (statsResult.error) {
@@ -227,7 +232,39 @@ export class PublicProfileService {
       careerProfile,
       mutualConnections: mutualConnectionsResult.connections,
       mutualConnectionsCount: mutualConnectionsResult.count,
+      sharedEventsCount,
     };
+  }
+
+  private static async getSharedEventsCount(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<number> {
+    const { data: viewerRows, error: viewerError } = await readClient
+      .from('user_events')
+      .select('event_id')
+      .eq('user_id', viewerId)
+      .eq('status', 'attending');
+
+    if (viewerError || !viewerRows?.length) {
+      return 0;
+    }
+
+    const viewerEventIds = new Set(viewerRows.map((row) => row.event_id));
+
+    const { data: profileRows, error: profileError } = await readClient
+      .from('user_events')
+      .select('event_id')
+      .eq('user_id', profileUserId)
+      .eq('status', 'attending')
+      .in('event_id', Array.from(viewerEventIds));
+
+    if (profileError) {
+      return 0;
+    }
+
+    return profileRows?.length ?? 0;
   }
 
   private static async getCareerProfile(

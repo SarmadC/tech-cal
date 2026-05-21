@@ -61,7 +61,7 @@ export function CommunityProfileHeroBlock({
   const avatarSize = isProfile ? 86 : 70;
   const headerHeight = hideCover ? 0 : headerImageUrl ? (isProfile ? 188 : 154) : isProfile ? 86 : 64;
   const metaItems = [
-    username ? `@${username}` : null,
+    isProfile ? null : username ? `@${username}` : null,
     ...badges.slice(0, isProfile ? 2 : 1),
   ].filter(Boolean) as string[];
   const metaText = metaItems.join(' • ');
@@ -190,6 +190,20 @@ export function CommunityProfileHeroBlock({
             >
               {displayName}
             </Text>
+
+            {isProfile && username ? (
+              <Text
+                style={{
+                  color: tokens.colors.textTertiary,
+                  fontFamily: tokens.typography.mono,
+                  fontSize: 12,
+                  fontWeight: '600',
+                  lineHeight: 16,
+                }}
+              >
+                @{username}
+              </Text>
+            ) : null}
 
             {headline ? (
               <Text

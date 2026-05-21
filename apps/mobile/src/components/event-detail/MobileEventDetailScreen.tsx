@@ -71,6 +71,8 @@ export function MobileEventDetailScreen({
   onBack,
   onPrimaryAction,
   onAddToCalendar,
+  calendarStatusLabel,
+  calendarStatusTone = 'neutral',
   onToggleBookmark,
   onToggleAttendance,
   onOpenEventPage,
@@ -84,6 +86,8 @@ export function MobileEventDetailScreen({
   onBack: () => void;
   onPrimaryAction: () => void;
   onAddToCalendar: () => void;
+  calendarStatusLabel?: string | null;
+  calendarStatusTone?: 'neutral' | 'success' | 'warning' | 'danger';
   onToggleBookmark: () => void;
   onToggleAttendance: () => void;
   onOpenEventPage: () => void;
@@ -121,6 +125,14 @@ export function MobileEventDetailScreen({
   const isLocationInteractive = hasMappableLocation(event.location);
   const isAttending = engagement?.status === 'attending';
   const isBookmarked = Boolean(engagement?.isBookmarked);
+  const calendarStatusColor =
+    calendarStatusTone === 'success'
+      ? tokens.colors.success
+      : calendarStatusTone === 'warning'
+        ? tokens.colors.warning
+        : calendarStatusTone === 'danger'
+          ? tokens.colors.danger
+          : tokens.colors.textTertiary;
 
   function toggleAgendaDay(dayKey: string) {
     setExpandedAgendaDays((current) =>
@@ -346,6 +358,16 @@ export function MobileEventDetailScreen({
               <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                 {formatEventDateTime(event.startTime, event.endTime, event.timezone)}
               </Text>
+              {calendarStatusLabel ? (
+                <Text
+                  style={[
+                    styles.calendarStatusLabel,
+                    { color: calendarStatusColor, fontFamily: tokens.typography.sans },
+                  ]}
+                >
+                  {calendarStatusLabel}
+                </Text>
+              ) : null}
             </IconMetaRow>
 
             {event.location ? (
@@ -771,6 +793,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
+  },
+  calendarStatusLabel: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
   },
   metaDivider: {
     height: StyleSheet.hairlineWidth,

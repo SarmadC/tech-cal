@@ -1,7 +1,4 @@
-import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { registerPushToken, unregisterPushToken } from './mobileApi';
@@ -10,9 +7,76 @@ import { sessionStorage } from './sessionStorage';
 const DEVICE_ID_KEY = 'kurecal_push_device_id';
 
 let handlerConfigured = false;
+let nativeModuleWarningLogged = false;
+
+interface NotificationResponseLike {
+  notification: {
+    request: {
+      content: {
+        data?: Record<string, unknown>;
+      };
+    };
+  };
+}
+
+interface NotificationsModule {
+  addNotificationResponseReceivedListener: (
+    listener: (response: NotificationResponseLike) => void
+  ) => { remove: () => void };
+  getExpoPushTokenAsync: (input: {
+    projectId: string;
+  }) => Promise<{ data?: string }>;
+  getLastNotificationResponseAsync: () => Promise<NotificationResponseLike | null>;
+  getPermissionsAsync: () => Promise<{ status: string }>;
+  requestPermissionsAsync: () => Promise<{ status: string }>;
+  setNotificationHandler: (handler: unknown) => void;
+}
+
+function logMissingNativeModule() {
+  if (nativeModuleWarningLogged) {
+    return;
+  }
+
+  nativeModuleWarningLogged = true;
+  console.warn(
+    '[push] Native push notification modules are unavailable. Rebuild the Expo dev client to enable push notifications.'
+  );
+}
+
+function getNotificationsModule(): NotificationsModule | null {
+  try {
+    return require('expo-notifications') as NotificationsModule;
+  } catch {
+    logMissingNativeModule();
+    return null;
+  }
+}
+
+function isPhysicalDevice(): boolean {
+  try {
+    return Boolean(
+      (require('expo-device') as { isDevice?: boolean }).isDevice
+    );
+  } catch {
+    return Boolean((Constants as { isDevice?: boolean }).isDevice ?? true);
+  }
+}
+
+function getNativeApplicationVersion(): string | undefined {
+  try {
+    return (require('expo-application') as {
+      nativeApplicationVersion?: string | null;
+    }).nativeApplicationVersion ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function setupNotificationHandler(): void {
   if (handlerConfigured) return;
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
   handlerConfigured = true;
 
   Notifications.setNotificationHandler({
@@ -46,8 +110,32 @@ function resolveExpoProjectId(): string | null {
   return projectId ?? null;
 }
 
+export async function getLastNotificationData(): Promise<Record<string, unknown> | null> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) {
+    return null;
+  }
+
+  const response = await Notifications.getLastNotificationResponseAsync();
+  return response?.notification.request.content.data ?? null;
+}
+
+export function addNotificationResponseListener(
+  listener: (data: Record<string, unknown>) => void
+): { remove: () => void } {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) {
+    return { remove: () => undefined };
+  }
+
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    listener(response.notification.request.content.data ?? {});
+  });
+}
+
 export async function registerForPushNotificationsAsync(): Promise<void> {
-  if (!Device.isDevice) {
+  const Notifications = getNotificationsModule();
+  if (!Notifications || !isPhysicalDevice()) {
     return;
   }
 
@@ -84,7 +172,7 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
       expoPushToken,
       deviceId,
       platform: Platform.OS,
-      appVersion: Application.nativeApplicationVersion ?? undefined,
+      appVersion: getNativeApplicationVersion(),
     });
   } catch (error) {
     console.warn('[push] Failed to register for push notifications.', error);

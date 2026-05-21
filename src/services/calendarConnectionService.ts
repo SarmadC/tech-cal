@@ -223,6 +223,54 @@ export class CalendarConnectionService {
     }
 
     /**
+     * Replace all stored calendar credentials without deleting the connection row.
+     */
+    static async replaceConnectionCredentials(
+        userId: string,
+        provider: string,
+        accessToken: string,
+        refreshToken: string | null,
+        tokenExpiry: Date,
+        calendarId: string,
+        supabase: SupabaseClientType
+    ): Promise<void> {
+        try {
+            const encryptedAccessToken = encryptToken(accessToken);
+            const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+            const tokenUpdates = refreshToken
+                ? {
+                    refresh_token: encryptedRefreshToken,
+                    has_refresh_token: true,
+                }
+                : {};
+
+            const { error } = await supabase
+                .from('calendar_connections')
+                .update({
+                    access_token: encryptedAccessToken,
+                    token_expiry: tokenExpiry.toISOString(),
+                    calendar_id: calendarId,
+                    is_active: true,
+                    last_sync_status: 'success',
+                    last_sync_error: null,
+                    updated_at: new Date().toISOString(),
+                    ...tokenUpdates,
+                })
+                .eq('user_id', userId)
+                .eq('provider', provider);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error replacing calendar credentials:', error);
+            Sentry.captureException(error, {
+                tags: { service: 'calendar_connection', operation: 'replace_credentials' },
+                extra: { userId, provider }
+            });
+            throw new Error('Failed to replace calendar credentials.');
+        }
+    }
+
+    /**
      * Update connection settings (is_active, etc.)
      */
     static async updateConnection(
@@ -335,4 +383,3 @@ export class CalendarConnectionService {
         }
     }
 }
-

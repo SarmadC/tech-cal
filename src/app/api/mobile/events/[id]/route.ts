@@ -5,6 +5,30 @@ import { toMobileEventDetail } from '@/app/api/mobile/serializers';
 import { EventService } from '@/services/eventServices';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
+async function loadMobileEventDetailSource(
+  id: string,
+  supabase: NonNullable<
+    Awaited<ReturnType<typeof getAuthenticatedRequestContext>>
+  >['supabase']
+) {
+  try {
+    return await EventService.getEventWithAgenda(id, supabase);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+
+    if (message.toLowerCase().includes('not found')) {
+      throw error;
+    }
+
+    console.warn(
+      '[mobile/events] Agenda detail query failed; falling back to base event detail',
+      { eventId: id, message }
+    );
+
+    return EventService.getEventById(id, supabase);
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +43,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const event = await EventService.getEventWithAgenda(id, authContext.supabase);
+    const event = await loadMobileEventDetailSource(id, authContext.supabase);
     const engagementMap = await loadEngagementMap(
       authContext.supabase,
       authContext.user.id,

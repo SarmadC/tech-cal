@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 
-import { useAuth } from '../../context/AuthProvider';
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { BrandLoadingLogo } from './BrandLoadingLogo';
 
 const FADE_DURATION_MS = 220;
 
-export function AppStartupOverlay() {
-  const { isCompletingAuth, loading } = useAuth();
+export function AppStartupOverlay({ visible }: { visible: boolean }) {
   const { tokens } = useAppTheme();
-  const visible = loading || isCompletingAuth;
   const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [mounted, setMounted] = useState(visible);
 
