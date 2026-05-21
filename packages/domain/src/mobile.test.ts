@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  mobileCalendarConnectionStatusSchema,
   mobileCalendarFeedSchema,
+  mobileCalendarSyncStateSchema,
   mobileCareerOnboardingBootstrapSchema,
   mobileDashboardSummarySchema,
   mobileDiscoverFeedSchema,
@@ -112,6 +114,31 @@ describe('mobile domain contracts', () => {
         ],
       }).events[0]?.engagement?.status
     ).toBe('attending');
+  });
+
+  it('parses calendar connection and event sync state contracts', () => {
+    expect(
+      mobileCalendarConnectionStatusSchema.parse({
+        provider: 'google',
+        connected: true,
+        isActive: true,
+        hasRefreshToken: true,
+        status: 'connected',
+        calendarId: 'primary',
+        lastSyncStatus: 'success',
+        lastSyncAt: '2026-05-01T00:00:00.000Z',
+        lastSyncError: null,
+      }).status
+    ).toBe('connected');
+
+    expect(
+      mobileCalendarSyncStateSchema.parse({
+        provider: 'google',
+        status: 'synced',
+        syncedAt: '2026-05-01T00:00:00.000Z',
+        externalEventId: 'google-event-1',
+      }).externalEventId
+    ).toBe('google-event-1');
   });
 
   it('parses dashboard summaries with hero and section cards', () => {

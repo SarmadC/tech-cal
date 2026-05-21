@@ -1,35 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Share, View } from 'react-native';
+import { Alert, Linking, Platform, Share, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import type { MobileEventDetail } from '@kurecal/domain';
+import type {
+  MobileCalendarConnectionStatus,
+  MobileEventDetail,
+  MobileEventEngagement,
+} from '@kurecal/domain';
 
 import { MobileEventDetailScreen } from '../../src/components/event-detail/MobileEventDetailScreen';
 import { buildMapsSearchUrl } from '../../src/components/event-detail/eventDetailUtils';
 import { ScreenStateView } from '../../src/components/ScreenStateView';
 import {
+  getDeviceCalendarMapping,
+  removeEventFromDeviceCalendar,
+  syncEventToDeviceCalendar,
+  type DeviceCalendarEventMapping,
+} from '../../src/lib/deviceCalendarSync';
+import {
   loadMobileEventDetail,
+  loadMobileGoogleCalendarStatus,
+  syncMobileGoogleCalendarEvent,
+  unsyncMobileGoogleCalendarEvent,
   updateMobileEventEngagement,
 } from '../../src/lib/mobileApi';
-
-function buildGoogleCalendarUrl(detail: MobileEventDetail) {
-  const event = detail.event;
-  const start = new Date(event.startTime)
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}Z$/, 'Z');
-  const end = new Date(event.endTime ?? event.startTime)
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}Z$/, 'Z');
-  const location = event.location ? `&location=${encodeURIComponent(event.location)}` : '';
-  const details = event.description
-    ? `&details=${encodeURIComponent(event.description)}`
-    : '';
-
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start}/${end}${location}${details}`;
-}
 
 export default function EventDetailRoute() {
   const { id } = useLocalSearchParams<{
@@ -41,6 +36,13 @@ export default function EventDetailRoute() {
   const [loading, setLoading] = useState(true);
   const [bookmarkPending, setBookmarkPending] = useState(false);
   const [attendancePending, setAttendancePending] = useState(false);
+  const [calendarPending, setCalendarPending] = useState(false);
+  const [googleStatus, setGoogleStatus] =
+    useState<MobileCalendarConnectionStatus | null>(null);
+  const [appleMapping, setAppleMapping] =
+    useState<DeviceCalendarEventMapping | null>(null);
+  const platformSettingsLabel =
+    Platform.OS === 'ios' ? 'iOS Settings' : 'your device settings';
 
   async function loadDetail() {
     if (!eventId) {
@@ -52,8 +54,13 @@ export default function EventDetailRoute() {
     setLoading(true);
 
     try {
-      const nextData = await loadMobileEventDetail(eventId);
+      const [nextData, nextGoogleStatus] = await Promise.all([
+        loadMobileEventDetail(eventId),
+        loadMobileGoogleCalendarStatus().catch(() => null),
+      ]);
       setData(nextData);
+      setGoogleStatus(nextGoogleStatus);
+      setAppleMapping(await getDeviceCalendarMapping(nextData.event.id));
       setError(null);
     } catch (nextError) {
       setError(
@@ -90,15 +97,80 @@ export default function EventDetailRoute() {
       return;
     }
 
-    await openUrl(data.event.registrationUrl ?? data.event.sourceUrl);
+    const primaryUrl = data.event.registrationUrl ?? data.event.sourceUrl;
+    if (primaryUrl) {
+      await openUrl(primaryUrl);
+      return;
+    }
+
+    handleAddToCalendar();
   }
 
-  async function handleAddToCalendar() {
+  function updateEngagementState(engagement: MobileEventEngagement) {
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            event: {
+              ...current.event,
+              engagement,
+            },
+          }
+        : current
+    );
+  }
+
+  function handleAddToCalendar() {
     if (!data) {
       return;
     }
 
-    await openUrl(buildGoogleCalendarUrl(data));
+    const googleSynced =
+      data.event.engagement?.calendarSync?.provider === 'google' &&
+      data.event.engagement.calendarSync.status === 'synced';
+    const googleAvailable = Boolean(
+      googleStatus?.connected && googleStatus.isActive && !googleStatus.requiresUpgrade
+    );
+
+    Alert.alert('Calendar sync', 'Choose where to sync this event.', [
+      {
+        text: googleSynced ? 'Remove Google sync' : 'Sync to Google',
+        onPress: () => {
+          if (!googleAvailable) {
+            Alert.alert(
+              'Connect Google Calendar',
+              googleStatus?.requiresUpgrade
+                ? 'Google Calendar sync is included with KureCal Pro.'
+                : 'Connect Google Calendar from Settings before syncing events.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: googleStatus?.requiresUpgrade ? 'Upgrade' : 'Settings',
+                  onPress: () =>
+                    router.push(
+                      googleStatus?.requiresUpgrade ? '../paywall' : '../settings'
+                    ),
+                },
+              ]
+            );
+            return;
+          }
+
+          void (googleSynced
+            ? handleUnsyncGoogleCalendar()
+            : handleSyncGoogleCalendar());
+        },
+      },
+      {
+        text: appleMapping ? 'Remove Device Calendar' : 'Save to Device Calendar',
+        onPress: () => {
+          void (appleMapping
+            ? handleRemoveAppleCalendar()
+            : handleSyncAppleCalendar());
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   async function handleShareEvent() {
@@ -120,6 +192,167 @@ export default function EventDetailRoute() {
     }
   }
 
+  async function syncGoogleAfterEngagementChange(
+    engagement: MobileEventEngagement
+  ) {
+    if (!data || !googleStatus?.connected || googleStatus.requiresUpgrade) {
+      return;
+    }
+
+    try {
+      const shouldSync =
+        engagement.isBookmarked ||
+        engagement.status === 'attending' ||
+        engagement.status === 'attended';
+
+      if (shouldSync) {
+        await syncMobileGoogleCalendarEvent(data.event.id);
+      } else {
+        await unsyncMobileGoogleCalendarEvent(data.event.id);
+      }
+
+      const [nextDetail, nextGoogleStatus] = await Promise.all([
+        loadMobileEventDetail(data.event.id),
+        loadMobileGoogleCalendarStatus().catch(() => googleStatus),
+      ]);
+      setData(nextDetail);
+      setGoogleStatus(nextGoogleStatus);
+    } catch (nextError) {
+      console.warn('Google Calendar sync after engagement change failed', nextError);
+    }
+  }
+
+  async function ensureTrackedForCalendarSync(): Promise<boolean> {
+    if (!data) {
+      return false;
+    }
+
+    const engagement = data.event.engagement;
+    const isTracked =
+      engagement?.isBookmarked ||
+      engagement?.status === 'attending' ||
+      engagement?.status === 'attended';
+
+    if (isTracked) {
+      return true;
+    }
+
+    const nextEngagement = await updateMobileEventEngagement(data.event.id, {
+      isBookmarked: true,
+    });
+    updateEngagementState(nextEngagement);
+    return true;
+  }
+
+  async function handleSyncGoogleCalendar() {
+    if (!data || calendarPending) {
+      return;
+    }
+
+    setCalendarPending(true);
+    try {
+      await ensureTrackedForCalendarSync();
+      await syncMobileGoogleCalendarEvent(data.event.id);
+      const [nextDetail, nextStatus] = await Promise.all([
+        loadMobileEventDetail(data.event.id),
+        loadMobileGoogleCalendarStatus().catch(() => googleStatus),
+      ]);
+      setData(nextDetail);
+      setGoogleStatus(nextStatus);
+      Alert.alert('Calendar synced', 'This event is synced to Google Calendar.');
+    } catch (nextError) {
+      Alert.alert(
+        'Google sync failed',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setCalendarPending(false);
+    }
+  }
+
+  async function handleUnsyncGoogleCalendar() {
+    if (!data || calendarPending) {
+      return;
+    }
+
+    setCalendarPending(true);
+    try {
+      await unsyncMobileGoogleCalendarEvent(data.event.id);
+      const [nextDetail, nextStatus] = await Promise.all([
+        loadMobileEventDetail(data.event.id),
+        loadMobileGoogleCalendarStatus().catch(() => googleStatus),
+      ]);
+      setData(nextDetail);
+      setGoogleStatus(nextStatus);
+      Alert.alert(
+        'Calendar sync removed',
+        'Google Calendar sync is removed for this event.'
+      );
+    } catch (nextError) {
+      Alert.alert(
+        'Remove sync failed',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setCalendarPending(false);
+    }
+  }
+
+  async function handleSyncAppleCalendar() {
+    if (!data || calendarPending) {
+      return;
+    }
+
+    setCalendarPending(true);
+    try {
+      const result = await syncEventToDeviceCalendar(data);
+      if (result.status === 'permission_denied') {
+        Alert.alert(
+          'Calendar permission needed',
+          `Allow calendar access in ${platformSettingsLabel} to save events to Device Calendar.`
+        );
+      } else if (result.status === 'unavailable') {
+        Alert.alert(
+          'Calendar unavailable',
+          'No writable device calendar is available.'
+        );
+      } else {
+        setAppleMapping(result.mapping);
+        Alert.alert('Saved to Device Calendar', 'This event is saved on this device.');
+      }
+    } catch (nextError) {
+      Alert.alert(
+        'Device Calendar sync failed',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setCalendarPending(false);
+    }
+  }
+
+  async function handleRemoveAppleCalendar() {
+    if (!data || calendarPending) {
+      return;
+    }
+
+    setCalendarPending(true);
+    try {
+      const result = await removeEventFromDeviceCalendar(data.event.id);
+      setAppleMapping(result.mapping);
+      Alert.alert(
+        'Removed from Device Calendar',
+        'This device calendar entry is removed.'
+      );
+    } catch (nextError) {
+      Alert.alert(
+        'Remove Device Calendar failed',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setCalendarPending(false);
+    }
+  }
+
   async function handleToggleBookmark() {
     if (!data || bookmarkPending) {
       return;
@@ -133,17 +366,8 @@ export default function EventDetailRoute() {
         isBookmarked: nextValue,
       });
 
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              event: {
-                ...current.event,
-                engagement,
-              },
-            }
-          : current
-      );
+      updateEngagementState(engagement);
+      void syncGoogleAfterEngagementChange(engagement);
     } catch (nextError) {
       Alert.alert(
         'Unable to update bookmark',
@@ -168,17 +392,8 @@ export default function EventDetailRoute() {
         status: nextStatus,
       });
 
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              event: {
-                ...current.event,
-                engagement,
-              },
-            }
-          : current
-      );
+      updateEngagementState(engagement);
+      void syncGoogleAfterEngagementChange(engagement);
     } catch (nextError) {
       Alert.alert(
         'Unable to update attendance',
@@ -224,36 +439,59 @@ export default function EventDetailRoute() {
     return null;
   }
 
+  const googleSync = data.event.engagement?.calendarSync;
+  const calendarStatusLabel = calendarPending
+    ? 'Calendar sync in progress'
+    : googleSync?.status === 'synced' && appleMapping
+      ? 'Synced to Google and Device Calendar'
+      : googleSync?.status === 'synced'
+        ? 'Synced to Google Calendar'
+        : appleMapping
+          ? 'Saved to Device Calendar'
+          : googleStatus?.requiresUpgrade
+            ? 'Google Calendar sync requires Pro'
+            : googleStatus?.connected
+              ? 'Google Calendar connected'
+              : 'Calendar sync not connected';
+  const calendarStatusTone =
+    googleSync?.status === 'failed'
+      ? 'danger'
+      : googleSync?.status === 'synced' || appleMapping
+        ? 'success'
+        : googleStatus?.requiresUpgrade
+          ? 'warning'
+          : 'neutral';
+
   return (
-    <>
-      <MobileEventDetailScreen
-        detail={data}
-        engagement={data.event.engagement}
-        isBookmarkPending={bookmarkPending}
-        isAttendancePending={attendancePending}
-        onBack={() => router.back()}
-        onPrimaryAction={() => {
-          void handlePrimaryAction();
-        }}
-        onAddToCalendar={() => {
-          void handleAddToCalendar();
-        }}
-        onToggleBookmark={() => {
-          void handleToggleBookmark();
-        }}
-        onToggleAttendance={() => {
-          void handleToggleAttendance();
-        }}
-        onOpenEventPage={() => {
-          void openUrl(data.event.sourceUrl);
-        }}
-        onOpenLocation={(location) => {
-          void openUrl(buildMapsSearchUrl(location));
-        }}
-        onShareEvent={() => {
-          void handleShareEvent();
-        }}
-      />
-    </>
+    <MobileEventDetailScreen
+      detail={data}
+      engagement={data.event.engagement}
+      isBookmarkPending={bookmarkPending}
+      isAttendancePending={attendancePending}
+      calendarStatusLabel={calendarStatusLabel}
+      calendarStatusTone={calendarStatusTone}
+      onBack={() => router.back()}
+      onPrimaryAction={() => {
+        void handlePrimaryAction();
+      }}
+      onAddToCalendar={() => {
+        handleAddToCalendar();
+      }}
+      onToggleBookmark={() => {
+        void handleToggleBookmark();
+      }}
+      onToggleAttendance={() => {
+        void handleToggleAttendance();
+      }}
+      onOpenEventPage={() => {
+        void openUrl(data.event.sourceUrl);
+      }}
+      onOpenLocation={(location) => {
+        void openUrl(buildMapsSearchUrl(location));
+      }}
+      onShareEvent={() => {
+        void handleShareEvent();
+      }}
+    />
   );
 }

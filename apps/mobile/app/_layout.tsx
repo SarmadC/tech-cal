@@ -1,15 +1,17 @@
 import { useFonts } from 'expo-font';
-import * as Notifications from 'expo-notifications';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AppStartupOverlay } from '../src/components/brand/AppStartupOverlay';
 import { AuthProvider } from '../src/context/AuthProvider';
 import { MobileThemeProvider, useAppTheme } from '../src/providers/ThemeProvider';
-import { setupNotificationHandler } from '../src/lib/pushNotifications';
+import {
+  addNotificationResponseListener,
+  getLastNotificationData,
+  setupNotificationHandler,
+} from '../src/lib/pushNotifications';
 
 setupNotificationHandler();
 
@@ -72,26 +74,20 @@ export default function RootLayout() {
     // remount (font reload, background→foreground). Handle it at most once.
     if (!coldStartNotificationHandled) {
       coldStartNotificationHandled = true;
-      void Notifications.getLastNotificationResponseAsync().then((response) => {
-        const path = routeForNotificationData(
-          response?.notification.request.content.data as Record<string, unknown>
-        );
+      void getLastNotificationData().then((data) => {
+        const path = routeForNotificationData(data);
         if (path) {
           router.push(path as never);
         }
       });
     }
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const path = routeForNotificationData(
-          response.notification.request.content.data as Record<string, unknown>
-        );
-        if (path) {
-          router.push(path as never);
-        }
+    const subscription = addNotificationResponseListener((data) => {
+      const path = routeForNotificationData(data);
+      if (path) {
+        router.push(path as never);
       }
-    );
+    });
 
     return () => subscription.remove();
   }, []);
@@ -130,7 +126,6 @@ function RootNavigation() {
           }}
         />
       </Stack>
-      <AppStartupOverlay />
     </>
   );
 }

@@ -471,6 +471,7 @@ export function toMobilePublicProfile(
     avatarUrl: profile.avatarUrl,
     username: profile.username,
     headline: profile.headline,
+    showAttendance: profile.showAttendance,
     isViewerOwner: profile.isViewerOwner,
     followerCount: profile.followerCount,
     followingCount: profile.followingCount,
@@ -494,6 +495,12 @@ export function toMobilePublicProfile(
           currentRole: profile.careerProfile.currentRole,
           seniority: profile.careerProfile.seniority,
           industry: profile.careerProfile.industry,
+          primarySkills: profile.careerProfile.primarySkills,
+          skillsToLearn: profile.careerProfile.skillsToLearn,
+          interests: profile.careerProfile.interests,
+          careerGoals: profile.careerProfile.careerGoals,
+          networkingGoals: profile.careerProfile.networkingGoals,
+          preferredEventTypes: profile.careerProfile.preferredEventTypes,
         }
       : null,
     mutualConnections: profile.mutualConnections.map((connection) => ({
@@ -504,6 +511,7 @@ export function toMobilePublicProfile(
       headline: connection.headline,
     })),
     mutualConnectionsCount: profile.mutualConnectionsCount,
+    sharedEventsCount: profile.sharedEventsCount,
     networkingState: networkingState
       ? mobileNetworkingStateSchema.parse(networkingState)
       : undefined,

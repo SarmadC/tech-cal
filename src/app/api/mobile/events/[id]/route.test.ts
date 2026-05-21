@@ -6,6 +6,7 @@ import { GET } from './route';
 
 const mocks = vi.hoisted(() => ({
   getAuthenticatedRequestContext: vi.fn(),
+  getEventById: vi.fn(),
   getEventWithAgenda: vi.fn(),
   loadEngagementMap: vi.fn(),
 }));
@@ -17,6 +18,7 @@ vi.mock('@/utils/supabase/requestAuth', () => ({
 
 vi.mock('@/services/eventServices', () => ({
   EventService: {
+    getEventById: (...args: unknown[]) => mocks.getEventById(...args),
     getEventWithAgenda: (...args: unknown[]) =>
       mocks.getEventWithAgenda(...args),
   },
@@ -100,6 +102,7 @@ describe('GET /api/mobile/events/[id]', () => {
       user: { id: 'user-1' },
     });
     mocks.getEventWithAgenda.mockResolvedValue(eventDetail);
+    mocks.getEventById.mockResolvedValue(eventDetail);
     mocks.loadEngagementMap.mockResolvedValue(
       new Map([
         [
@@ -132,6 +135,38 @@ describe('GET /api/mobile/events/[id]', () => {
     expect(parsed.event.engagement?.status).toBe('attending');
     expect(parsed.agenda?.[0]?.title).toBe('Opening keynote');
     expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
+  });
+
+  it('falls back to base event detail when agenda hydration fails', async () => {
+    mocks.getEventWithAgenda.mockRejectedValueOnce(
+      new Error('Failed to fetch event with agenda for ID: event-1.')
+    );
+    mocks.getEventById.mockResolvedValueOnce({
+      ...eventDetail,
+      agenda: [],
+      speakerLineup: [],
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+    expect(mocks.getEventById).toHaveBeenCalledWith(
+      eventDetail.id,
+      expect.anything()
+    );
+
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+    expect(parsed.event.title).toBe('Expo Ship Week');
+    expect(parsed.agenda).toEqual([]);
   });
 
   it('returns 401 when authentication is missing', async () => {

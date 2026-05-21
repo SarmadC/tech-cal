@@ -14,12 +14,15 @@ vi.mock('./supabase', () => ({
 
 import {
   blockMobileUser,
+  bulkSyncMobileGoogleCalendar,
   createMobileCommunityComment,
   createMobileCommunityPost,
+  disconnectMobileGoogleCalendar,
   joinMobileCommunityCircle,
   leaveMobileCommunityCircle,
   loadMobileCalendarFeed,
   loadMobileBlockedUsers,
+  loadMobileGoogleCalendarStatus,
   completeMobileCareerOnboarding,
   loadMobileDashboardSummary,
   loadMobileCareerOnboardingBootstrap,
@@ -40,7 +43,9 @@ import {
   skipMobileCareerOnboarding,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
+  syncMobileGoogleCalendarEvent,
   unfollowMobileUser,
+  unsyncMobileGoogleCalendarEvent,
   updateMobileEventEngagement,
   updateMobileProfile,
 } from './mobileApi';
@@ -621,6 +626,97 @@ describe('mobile api helpers', () => {
           cost: 'free',
         }),
         headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('supports Google Calendar status, sync, unsync, bulk sync, and disconnect helpers', async () => {
+    const statusPayload = {
+      provider: 'google',
+      connected: true,
+      isActive: true,
+      hasRefreshToken: true,
+      status: 'connected',
+      calendarId: 'primary',
+      lastSyncStatus: 'success',
+      lastSyncAt: '2026-05-01T00:00:00.000Z',
+      lastSyncError: null,
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: statusPayload }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { ok: true } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { ok: true } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: { total: 2, synced: 1, failed: 1, errors: ['retry later'] },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              ...statusPayload,
+              provider: null,
+              connected: false,
+              isActive: false,
+              hasRefreshToken: false,
+              status: 'not_connected',
+              calendarId: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const status = await loadMobileGoogleCalendarStatus();
+    await syncMobileGoogleCalendarEvent('event-1');
+    await unsyncMobileGoogleCalendarEvent('event-1');
+    const bulkResult = await bulkSyncMobileGoogleCalendar();
+    const disconnected = await disconnectMobileGoogleCalendar();
+
+    expect(status.connected).toBe(true);
+    expect(bulkResult.failed).toBe(1);
+    expect(disconnected.connected).toBe(false);
+    expect(fetchSpy.mock.calls.map((call) => call[0])).toEqual([
+      'https://mobile.kurecal.test/api/mobile/calendar/google/status',
+      'https://mobile.kurecal.test/api/mobile/calendar/google/sync',
+      'https://mobile.kurecal.test/api/mobile/calendar/google/sync',
+      'https://mobile.kurecal.test/api/mobile/calendar/google/bulk-sync',
+      'https://mobile.kurecal.test/api/mobile/calendar/google/disconnect',
+    ]);
+    expect(fetchSpy.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ eventId: 'event-1', action: 'sync' }),
+      })
+    );
+    expect(fetchSpy.mock.calls[2]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ eventId: 'event-1', action: 'delete' }),
       })
     );
 

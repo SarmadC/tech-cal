@@ -6,6 +6,14 @@ const DEV_FACE_ID_DESCRIPTION =
   'Allow KureCal Dev to securely unlock saved sessions.';
 const PROD_FACE_ID_DESCRIPTION =
   'Allow KureCal to securely unlock saved sessions.';
+const DEV_CALENDAR_DESCRIPTION =
+  'Allow KureCal Dev to add, update, and remove events in your calendar.';
+const PROD_CALENDAR_DESCRIPTION =
+  'Allow KureCal to add, update, and remove events in your calendar.';
+const DEV_REMINDERS_DESCRIPTION =
+  'Allow KureCal Dev to add reminders for saved calendar events.';
+const PROD_REMINDERS_DESCRIPTION =
+  'Allow KureCal to add reminders for saved calendar events.';
 
 function normalizeVariant(value: string | undefined): MobileAppVariant | null {
   const normalized = value?.trim().toLowerCase();
@@ -43,7 +51,21 @@ export default function getMobileExpoConfig() {
   return {
     expo: {
       ...baseConfig.expo,
-      plugins: [...(baseConfig.expo.plugins ?? []), 'expo-notifications'],
+      plugins: [
+        ...(baseConfig.expo.plugins ?? []),
+        [
+          'expo-calendar',
+          {
+            calendarPermission: isProduction
+              ? PROD_CALENDAR_DESCRIPTION
+              : DEV_CALENDAR_DESCRIPTION,
+            remindersPermission: isProduction
+              ? PROD_REMINDERS_DESCRIPTION
+              : DEV_REMINDERS_DESCRIPTION,
+          },
+        ],
+        'expo-notifications',
+      ],
       ios: {
         ...baseConfig.expo.ios,
         bundleIdentifier: isProduction
@@ -51,6 +73,18 @@ export default function getMobileExpoConfig() {
           : 'com.kurecal.mobile.dev',
         infoPlist: {
           ...baseConfig.expo.ios.infoPlist,
+          NSCalendarsUsageDescription: isProduction
+            ? PROD_CALENDAR_DESCRIPTION
+            : DEV_CALENDAR_DESCRIPTION,
+          NSCalendarsFullAccessUsageDescription: isProduction
+            ? PROD_CALENDAR_DESCRIPTION
+            : DEV_CALENDAR_DESCRIPTION,
+          NSCalendarsWriteOnlyAccessUsageDescription: isProduction
+            ? PROD_CALENDAR_DESCRIPTION
+            : DEV_CALENDAR_DESCRIPTION,
+          NSRemindersUsageDescription: isProduction
+            ? PROD_REMINDERS_DESCRIPTION
+            : DEV_REMINDERS_DESCRIPTION,
           NSFaceIDUsageDescription: isProduction
             ? PROD_FACE_ID_DESCRIPTION
             : DEV_FACE_ID_DESCRIPTION,

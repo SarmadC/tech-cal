@@ -16,9 +16,52 @@ export const mobileEventAttendanceStatusSchema = z.enum([
   'cancelled',
 ]);
 
+export const mobileCalendarProviderSchema = z.enum(['google', 'apple']);
+
+export const mobileCalendarProviderStatusSchema = z.enum([
+  'not_connected',
+  'connected',
+  'synced',
+  'needs_reauth',
+  'failed',
+]);
+
+export const mobileCalendarSyncStateSchema = z.object({
+  provider: mobileCalendarProviderSchema,
+  status: mobileCalendarProviderStatusSchema,
+  syncedAt: z.string().nullable().optional(),
+  externalEventId: z.string().nullable().optional(),
+});
+
+export const mobileCalendarConnectionStatusSchema = z.object({
+  provider: z.literal('google').nullable(),
+  connected: z.boolean(),
+  isActive: z.boolean(),
+  hasRefreshToken: z.boolean(),
+  status: mobileCalendarProviderStatusSchema,
+  calendarId: z.string().nullable().optional(),
+  lastSyncStatus: z.string().nullable().optional(),
+  lastSyncAt: z.string().nullable().optional(),
+  lastSyncError: z.string().nullable().optional(),
+  requiresUpgrade: z.boolean().optional(),
+});
+
+export const mobileGoogleCalendarSyncInputSchema = z.object({
+  eventId: z.string().min(1),
+  action: z.enum(['sync', 'delete']),
+});
+
+export const mobileGoogleCalendarBulkSyncResultSchema = z.object({
+  total: z.number().int().nonnegative(),
+  synced: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  errors: z.array(z.string()),
+});
+
 export const mobileEventEngagementSchema = z.object({
   isBookmarked: z.boolean(),
   status: mobileEventAttendanceStatusSchema.nullable().optional(),
+  calendarSync: mobileCalendarSyncStateSchema.nullable().optional(),
 });
 
 export const mobileEventEngagementUpdateSchema = z
@@ -727,6 +770,24 @@ export type MobileEventAttendanceStatus = z.infer<
 >;
 export type MobileSurfaceHeader = z.infer<typeof mobileSurfaceHeaderSchema>;
 export type MobileEventEngagement = z.infer<typeof mobileEventEngagementSchema>;
+export type MobileCalendarProvider = z.infer<
+  typeof mobileCalendarProviderSchema
+>;
+export type MobileCalendarProviderStatus = z.infer<
+  typeof mobileCalendarProviderStatusSchema
+>;
+export type MobileCalendarSyncState = z.infer<
+  typeof mobileCalendarSyncStateSchema
+>;
+export type MobileCalendarConnectionStatus = z.infer<
+  typeof mobileCalendarConnectionStatusSchema
+>;
+export type MobileGoogleCalendarSyncInput = z.infer<
+  typeof mobileGoogleCalendarSyncInputSchema
+>;
+export type MobileGoogleCalendarBulkSyncResult = z.infer<
+  typeof mobileGoogleCalendarBulkSyncResultSchema
+>;
 export type MobileEventEngagementUpdate = z.infer<
   typeof mobileEventEngagementUpdateSchema
 >;

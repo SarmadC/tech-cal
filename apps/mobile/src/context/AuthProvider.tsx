@@ -29,6 +29,7 @@ import {
 } from '../lib/pushNotifications';
 import { syncRevenueCatIdentity } from '../lib/revenuecat';
 import { supabase } from '../lib/supabase';
+import { AppStartupOverlay } from '../components/brand/AppStartupOverlay';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -496,7 +497,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <AppStartupOverlay visible={value.loading || value.isCompletingAuth} />
+    </AuthContext.Provider>
+  );
 }
 
 function getErrorMessage(error: unknown) {
