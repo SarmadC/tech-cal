@@ -17,7 +17,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@supabase/supabase-js": "^2.101.1",
-    "expo": "~55.0.24",
+    "expo": "~55.0.25",
     "expo-apple-authentication": "~55.0.13",
     "expo-calendar": "^55.0.14",
     "expo-clipboard": "~55.0.13",
