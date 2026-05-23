@@ -63,6 +63,7 @@ export interface PublicProfileEvent {
   activityType: PublicProfileEventActivityType;
   role: string | null;
   mutualAttendeeCount: number | null;
+  connectionsMadeCount: number | null;
 }
 
 export interface PublicCareerProfile {
@@ -777,8 +778,35 @@ export class PublicProfileService {
         activityType,
         role: link?.role ?? null,
         mutualAttendeeCount: null,
+        connectionsMadeCount: null,
       };
     });
+
+    if (isViewerOwner && events.length > 0) {
+      const eventIds = events.map((event) => event.id);
+      // Cast: RPC is added in 20260523000000_event_connection_counts.sql.
+      const { data: countRows, error: countError } = await (readClient.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: Array<{ event_id: string; connection_count: number }> | null; error: unknown }>)(
+        'get_event_connection_counts_for_user',
+        {
+          p_user_id: userId,
+          p_event_ids: eventIds,
+        }
+      );
+
+      if (!countError && Array.isArray(countRows)) {
+        const byId = new Map<string, number>();
+        for (const row of countRows as Array<{ event_id: string; connection_count: number }>) {
+          byId.set(row.event_id, row.connection_count);
+        }
+        for (const event of events) {
+          const c = byId.get(event.id);
+          event.connectionsMadeCount = c && c > 0 ? c : null;
+        }
+      }
+    }
 
     if (viewerId && !isViewerOwner && events.length > 0) {
       const eventIds = events.map((event) => event.id);

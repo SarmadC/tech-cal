@@ -206,17 +206,13 @@ function formatEventMeta(event: ProfileEvent): string {
   return parts.join(' · ');
 }
 
-function getJourneyNote(event: ProfileEvent, index: number): string | null {
-  if (event.activityType === 'attending' || event.activityType === 'speaking') {
-    return index === 0 ? 'Open to introductions' : 'Planning to meet people here';
+function getJourneyNote(event: ProfileEvent): string | null {
+  // Only show a sub-note when there's a real backing signal. Today that's
+  // the owner-only `connectionsMadeCount`, sourced from
+  // user_networking_contacts via get_event_connection_counts_for_user.
+  if (event.connectionsMadeCount && event.connectionsMadeCount > 0) {
+    return `Made ${pluralize(event.connectionsMadeCount, 'connection')}`;
   }
-
-  if (event.mutualAttendeeCount && event.mutualAttendeeCount > 0) {
-    return `Met ${pluralize(event.mutualAttendeeCount, 'person', 'people')} here`;
-  }
-
-  if (/norfolk/i.test(event.title)) return 'Saved 2 speakers';
-  if (/kubevirt|virtual/i.test(event.title)) return 'Made 5 new connections';
   return null;
 }
 
@@ -944,7 +940,7 @@ function JourneyTimeline({
         const isUpcoming =
           event.activityType === 'attending' || event.activityType === 'speaking';
         const meta = formatEventMeta(event);
-        const note = getJourneyNote(event, index);
+        const note = getJourneyNote(event);
         return (
           <Pressable
             key={event.id}

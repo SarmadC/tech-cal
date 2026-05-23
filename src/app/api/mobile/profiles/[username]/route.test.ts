@@ -88,6 +88,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
           activityType: 'attending',
           role: null,
           mutualAttendeeCount: null,
+          connectionsMadeCount: null,
         },
       ],
       careerProfile: {
