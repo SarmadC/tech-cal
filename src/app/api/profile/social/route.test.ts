@@ -43,6 +43,7 @@ describe('/api/profile/social', () => {
       avatarUrl: null,
       username: 'demo-user',
       headline: 'Builder',
+      bio: 'Building useful event connections.',
       profileVisibility: 'connections',
       showAttendance: true,
     });
@@ -52,6 +53,7 @@ describe('/api/profile/social', () => {
       avatarUrl: null,
       username: 'demo-user',
       headline: 'Updated builder',
+      bio: 'Updated profile intro.',
       profileVisibility: 'public',
       showAttendance: false,
     });

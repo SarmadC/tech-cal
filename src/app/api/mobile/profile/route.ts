@@ -54,14 +54,12 @@ export async function PATCH(request: Request) {
     await ensureMobileProfile(authContext, request);
 
     if (
-      Object.prototype.hasOwnProperty.call(payload, 'fullName') ||
-      Object.prototype.hasOwnProperty.call(payload, 'timezone')
+      Object.prototype.hasOwnProperty.call(payload, 'fullName')
     ) {
       await ProfileService.updateProfile(
         authContext.user.id,
         {
           fullName: payload.fullName,
-          timezone: payload.timezone,
         },
         authContext.supabase
       );
@@ -70,6 +68,7 @@ export async function PATCH(request: Request) {
     if (
       Object.prototype.hasOwnProperty.call(payload, 'username') ||
       Object.prototype.hasOwnProperty.call(payload, 'headline') ||
+      Object.prototype.hasOwnProperty.call(payload, 'bio') ||
       Object.prototype.hasOwnProperty.call(payload, 'profileVisibility') ||
       Object.prototype.hasOwnProperty.call(payload, 'showAttendance')
     ) {
@@ -78,6 +77,7 @@ export async function PATCH(request: Request) {
         {
           username: payload.username,
           headline: payload.headline,
+          bio: payload.bio,
           profileVisibility: payload.profileVisibility,
           showAttendance: payload.showAttendance,
         },

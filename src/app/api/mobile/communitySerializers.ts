@@ -471,10 +471,13 @@ export function toMobilePublicProfile(
     avatarUrl: profile.avatarUrl,
     username: profile.username,
     headline: profile.headline,
+    bio: profile.bio,
     showAttendance: profile.showAttendance,
     isViewerOwner: profile.isViewerOwner,
     followerCount: profile.followerCount,
     followingCount: profile.followingCount,
+    location: profile.location,
+    linkedinUrl: profile.linkedinUrl,
     relationship: relationship
       ? {
           isFollowing: relationship.isFollowing,
@@ -488,8 +491,13 @@ export function toMobilePublicProfile(
       slug: event.slug,
       title: event.title,
       startTime: event.startTime,
+      endTime: event.endTime,
       location: event.location,
+      activityType: event.activityType,
+      role: event.role,
+      mutualAttendeeCount: event.mutualAttendeeCount,
     })),
+    eventCounts: profile.eventCounts,
     careerProfile: profile.careerProfile
       ? {
           currentRole: profile.careerProfile.currentRole,
@@ -512,6 +520,11 @@ export function toMobilePublicProfile(
     })),
     mutualConnectionsCount: profile.mutualConnectionsCount,
     sharedEventsCount: profile.sharedEventsCount,
+    sharedTopics: profile.sharedTopics,
+    sharedCircles: profile.sharedCircles,
+    sharedCirclesCount: profile.sharedCirclesCount,
+    recommendedBy: profile.recommendedBy,
+    sharedCareerGoals: profile.sharedCareerGoals,
     networkingState: networkingState
       ? mobileNetworkingStateSchema.parse(networkingState)
       : undefined,

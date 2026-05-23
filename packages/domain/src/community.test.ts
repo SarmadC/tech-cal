@@ -288,6 +288,8 @@ describe("community domain contracts", () => {
       avatarUrl: null,
       username: "ada",
       headline: "Staff engineer",
+      bio: "Leads applied AI research.",
+      showAttendance: true,
       isViewerOwner: false,
       followerCount: 12,
       followingCount: 8,
@@ -302,9 +304,16 @@ describe("community domain contracts", () => {
         currentRole: "Engineer",
         seniority: "staff",
         industry: "Developer tools",
+        primarySkills: [],
+        skillsToLearn: [],
+        interests: [],
+        careerGoals: [],
+        networkingGoals: [],
+        preferredEventTypes: [],
       },
       mutualConnections: [],
       mutualConnectionsCount: 0,
+      sharedEventsCount: 0,
     });
 
     const speaker = mobileSpeakerDetailSchema.parse({

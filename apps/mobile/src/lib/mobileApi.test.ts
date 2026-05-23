@@ -742,6 +742,7 @@ describe('mobile api helpers', () => {
               avatarUrl: null,
               username: 'ada',
               headline: 'Builder',
+              bio: 'Unlocking stories through data.',
               profileVisibility: 'connections',
               showAttendance: true,
             },
@@ -899,6 +900,8 @@ describe('mobile api helpers', () => {
               avatarUrl: null,
               username: 'ada',
               headline: 'Staff engineer',
+              bio: 'Leads applied AI research.',
+              showAttendance: true,
               isViewerOwner: false,
               followerCount: 12,
               followingCount: 8,
@@ -913,9 +916,16 @@ describe('mobile api helpers', () => {
                 currentRole: 'Engineer',
                 seniority: 'staff',
                 industry: 'Developer tools',
+                primarySkills: [],
+                skillsToLearn: [],
+                interests: [],
+                careerGoals: [],
+                networkingGoals: [],
+                preferredEventTypes: [],
               },
               mutualConnections: [],
               mutualConnectionsCount: 0,
+              sharedEventsCount: 0,
             },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -1224,6 +1234,7 @@ describe('mobile api helpers', () => {
                 avatarUrl: null,
                 username: 'ada',
                 headline: 'Builder',
+                bio: 'Unlocking stories through data.',
                 profileVisibility: 'connections',
                 showAttendance: true,
               },
@@ -1258,6 +1269,15 @@ describe('mobile api helpers', () => {
     );
     expect(fetchSpy.mock.calls[2]?.[0]).toBe(
       'https://mobile.kurecal.test/api/mobile/profile'
+    );
+    expect(fetchSpy.mock.calls[2]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          fullName: 'Ada Lovelace',
+          username: 'ada',
+        }),
+      })
     );
 
     fetchSpy.mockRestore();

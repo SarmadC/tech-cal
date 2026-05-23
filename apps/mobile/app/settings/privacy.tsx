@@ -171,31 +171,32 @@ export default function SettingsPrivacyRoute() {
 
 const styles = StyleSheet.create({
   group: {
-    gap: 12,
-    padding: 16,
+    gap: 8,
+    padding: 12,
   },
   segmentRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   segment: {
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 6,
     borderWidth: 1,
     flex: 1,
     justifyContent: "center",
-    minHeight: 52,
+    minHeight: 32,
     paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   segmentLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    lineHeight: 19,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
     textAlign: "center",
   },
   description: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "400",
     lineHeight: 18,
   },
   pressed: {

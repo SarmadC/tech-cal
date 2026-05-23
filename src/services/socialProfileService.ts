@@ -26,6 +26,7 @@ type SocialProfileRow = {
   avatar_url: string | null;
   username: string | null;
   headline: string | null;
+  bio: string | null;
   profile_visibility: string;
   show_attendance: boolean;
 };
@@ -59,6 +60,7 @@ export class SocialProfileService {
       avatarUrl: row.avatar_url,
       username: row.username,
       headline: row.headline,
+      bio: row.bio,
       profileVisibility: visibility,
       showAttendance: row.show_attendance,
     };
@@ -70,7 +72,7 @@ export class SocialProfileService {
   ): Promise<SocialProfile> {
     const { data, error } = await supabaseClient
       .from('profiles')
-      .select('id, full_name, avatar_url, username, headline, profile_visibility, show_attendance')
+      .select('id, full_name, avatar_url, username, headline, bio, profile_visibility, show_attendance')
       .eq('id', userId)
       .single();
 
@@ -89,6 +91,7 @@ export class SocialProfileService {
     const payload: {
       username?: string | null;
       headline?: string | null;
+      bio?: string | null;
       profile_visibility?: ProfileVisibility;
       show_attendance?: boolean;
       updated_at: string;
@@ -120,6 +123,10 @@ export class SocialProfileService {
       payload.headline = updates.headline?.trim() || null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(updates, 'bio')) {
+      payload.bio = updates.bio?.trim() || null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(updates, 'profileVisibility') && updates.profileVisibility) {
       payload.profile_visibility = updates.profileVisibility;
     }
@@ -132,7 +139,7 @@ export class SocialProfileService {
       .from('profiles')
       .update(payload)
       .eq('id', userId)
-      .select('id, full_name, avatar_url, username, headline, profile_visibility, show_attendance')
+      .select('id, full_name, avatar_url, username, headline, bio, profile_visibility, show_attendance')
       .single();
 
     if (error) {

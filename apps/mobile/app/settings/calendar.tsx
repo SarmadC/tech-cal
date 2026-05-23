@@ -231,12 +231,12 @@ export default function SettingsCalendarRoute() {
 
 const styles = StyleSheet.create({
   group: {
-    gap: 12,
-    padding: 16,
+    gap: 8,
+    padding: 12,
   },
   description: {
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 18,
   },
 });

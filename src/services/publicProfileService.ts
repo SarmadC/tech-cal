@@ -8,6 +8,9 @@ interface ProfileRow {
   avatar_url: string | null;
   username: string | null;
   headline: string | null;
+  bio: string | null;
+  location: string | null;
+  linkedin_url: string | null;
   profile_visibility: string;
   show_attendance: boolean;
 }
@@ -35,17 +38,31 @@ interface EventRow {
   slug: string;
   title: string | null;
   start_time: string;
+  end_time: string | null;
   location: string | null;
+  user_events: Array<{
+    user_id: string;
+    activity_type: PublicProfileEventActivityType | null;
+    role: string | null;
+  }>;
 }
 
-
+export type PublicProfileEventActivityType =
+  | 'attending'
+  | 'attended'
+  | 'saved'
+  | 'speaking';
 
 export interface PublicProfileEvent {
   id: string;
   slug: string;
   title: string;
   startTime: string;
+  endTime: string | null;
   location: string | null;
+  activityType: PublicProfileEventActivityType;
+  role: string | null;
+  mutualAttendeeCount: number | null;
 }
 
 export interface PublicCareerProfile {
@@ -79,15 +96,44 @@ export interface PublicProfileResult {
   avatarUrl: string | null;
   username: string;
   headline: string | null;
+  bio: string | null;
   showAttendance: boolean;
   isViewerOwner: boolean;
   followerCount: number;
   followingCount: number;
+  location: string | null;
+  linkedinUrl: string | null;
   recentAttendingEvents: PublicProfileEvent[];
+  eventCounts: EventActivityCounts;
   careerProfile: PublicCareerProfile | null;
   mutualConnections: MutualConnection[];
   mutualConnectionsCount: number;
   sharedEventsCount: number;
+  sharedTopics: string[];
+  sharedCircles: SharedCircle[];
+  sharedCirclesCount: number;
+  recommendedBy: RecommendedBy[];
+  sharedCareerGoals: string[];
+}
+
+export interface SharedCircle {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export interface RecommendedBy {
+  id: string;
+  username: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface EventActivityCounts {
+  attending: number;
+  attended: number;
+  speaking: number;
+  saved: number;
 }
 
 export class PublicProfileService {
@@ -106,7 +152,7 @@ export class PublicProfileService {
 
     const { data: profile, error: profileError } = await readClient
       .from('profiles')
-      .select('id, full_name, avatar_url, username, headline, profile_visibility, show_attendance')
+      .select('id, full_name, avatar_url, username, headline, bio, location, linkedin_url, profile_visibility, show_attendance')
       .ilike('username', escapedUsername)
       .maybeSingle();
 
@@ -133,7 +179,7 @@ export class PublicProfileService {
 
     const { data: profile, error: profileError } = await readClient
       .from('profiles')
-      .select('id, full_name, avatar_url, username, headline, profile_visibility, show_attendance')
+      .select('id, full_name, avatar_url, username, headline, bio, location, linkedin_url, profile_visibility, show_attendance')
       .eq('id', normalizedProfileId)
       .maybeSingle();
 
@@ -192,8 +238,13 @@ export class PublicProfileService {
       statsResult,
       recentAttendingEvents,
       careerProfile,
+      eventCounts,
       mutualConnectionsResult,
       sharedEventsCount,
+      sharedTopics,
+      sharedCirclesResult,
+      recommendedBy,
+      sharedCareerGoals,
     ] = await Promise.all([
       readClient
         .from('user_social_stats')
@@ -203,15 +254,30 @@ export class PublicProfileService {
       this.getRecentAttendingEvents({
         readClient,
         userId: typedProfile.id,
+        viewerId,
+        isViewerOwner,
         canViewAttendance: typedProfile.show_attendance || isViewerOwner,
       }),
       this.getCareerProfile(readClient, typedProfile.id),
+      this.getEventActivityCounts(readClient, typedProfile.id),
       viewerId && !isViewerOwner
         ? this.getMutualConnections(readClient, typedProfile.id, viewerId)
         : Promise.resolve({ connections: [], count: 0 }),
       viewerId && !isViewerOwner
         ? this.getSharedEventsCount(readClient, typedProfile.id, viewerId)
         : Promise.resolve(0),
+      viewerId && !isViewerOwner
+        ? this.getSharedTopics(readClient, typedProfile.id, viewerId)
+        : Promise.resolve([] as string[]),
+      viewerId && !isViewerOwner
+        ? this.getSharedCircles(readClient, typedProfile.id, viewerId)
+        : Promise.resolve({ circles: [] as SharedCircle[], count: 0 }),
+      viewerId && !isViewerOwner
+        ? this.getRecommendedBy(readClient, typedProfile.id, viewerId)
+        : Promise.resolve([] as RecommendedBy[]),
+      viewerId && !isViewerOwner
+        ? this.getSharedCareerGoals(readClient, typedProfile.id, viewerId)
+        : Promise.resolve([] as string[]),
     ]);
 
     if (statsResult.error) {
@@ -224,16 +290,278 @@ export class PublicProfileService {
       avatarUrl: typedProfile.avatar_url,
       username: usernameValue,
       headline: typedProfile.headline,
+      bio: typedProfile.bio,
       showAttendance: typedProfile.show_attendance,
       isViewerOwner,
       followerCount: statsResult.data?.follower_count ?? 0,
       followingCount: statsResult.data?.following_count ?? 0,
+      location: typedProfile.location,
+      linkedinUrl: typedProfile.linkedin_url,
       recentAttendingEvents,
+      eventCounts,
       careerProfile,
       mutualConnections: mutualConnectionsResult.connections,
       mutualConnectionsCount: mutualConnectionsResult.count,
       sharedEventsCount,
+      sharedTopics,
+      sharedCircles: sharedCirclesResult.circles,
+      sharedCirclesCount: sharedCirclesResult.count,
+      recommendedBy,
+      sharedCareerGoals,
     };
+  }
+
+  private static async getEventActivityCounts(
+    readClient: SupabaseClientType,
+    userId: string
+  ): Promise<EventActivityCounts> {
+    const empty: EventActivityCounts = {
+      attending: 0,
+      attended: 0,
+      speaking: 0,
+      saved: 0,
+    };
+
+    const { data, error } = await readClient
+      .from('user_events')
+      .select('activity_type')
+      .eq('user_id', userId)
+      .not('activity_type', 'is', null);
+
+    if (error || !data) {
+      return empty;
+    }
+
+    const counts: EventActivityCounts = { ...empty };
+    const rows = data as unknown as Array<{
+      activity_type: keyof EventActivityCounts | null;
+    }>;
+    for (const row of rows) {
+      const key = row.activity_type;
+      if (key && key in counts) {
+        counts[key] += 1;
+      }
+    }
+    return counts;
+  }
+
+  private static async getSharedCircles(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<{ circles: SharedCircle[]; count: number }> {
+    const { data, error } = await readClient
+      .from('circle_members')
+      .select('user_id, circle_id, membership_state')
+      .in('user_id', [profileUserId, viewerId])
+      .in('membership_state', ['joined', 'following']);
+
+    if (error || !data) {
+      return { circles: [], count: 0 };
+    }
+
+    const rows = data as Array<{
+      user_id: string;
+      circle_id: string;
+      membership_state: string;
+    }>;
+
+    const viewerCircles = new Set<string>();
+    const targetCircles = new Set<string>();
+    for (const row of rows) {
+      if (row.user_id === viewerId) viewerCircles.add(row.circle_id);
+      else if (row.user_id === profileUserId) targetCircles.add(row.circle_id);
+    }
+
+    const sharedIds = [...viewerCircles].filter((id) => targetCircles.has(id));
+    if (sharedIds.length === 0) {
+      return { circles: [], count: 0 };
+    }
+
+    const { data: circleRows, error: circleError } = await readClient
+      .from('circles')
+      .select('id, slug, name, visibility')
+      .in('id', sharedIds)
+      .eq('visibility', 'public');
+
+    if (circleError || !circleRows) {
+      return { circles: [], count: 0 };
+    }
+
+    const visible = (circleRows as Array<{
+      id: string;
+      slug: string;
+      name: string;
+    }>).map((row) => ({ id: row.id, slug: row.slug, name: row.name }));
+
+    return { circles: visible.slice(0, 2), count: visible.length };
+  }
+
+  private static async getRecommendedBy(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<RecommendedBy[]> {
+    const { data: viewerFollowing, error: viewerError } = await readClient
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', viewerId);
+
+    if (viewerError || !viewerFollowing?.length) {
+      return [];
+    }
+
+    const viewerFollowingIds = viewerFollowing.map((row) => row.following_id);
+
+    // Of the people the viewer follows, who also follows the target?
+    const { data: targetFollowers, error: targetError } = await readClient
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', profileUserId)
+      .in('follower_id', viewerFollowingIds);
+
+    if (targetError || !targetFollowers?.length) {
+      return [];
+    }
+
+    const recommenderIds = Array.from(
+      new Set(targetFollowers.map((row) => row.follower_id))
+    );
+
+    const { data: profiles, error: profilesError } = await readClient
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, profile_visibility')
+      .in('id', recommenderIds);
+
+    if (profilesError || !profiles) {
+      return [];
+    }
+
+    const visible = (profiles as Array<{
+      id: string;
+      full_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+      profile_visibility: string;
+    }>)
+      .filter((p) => p.profile_visibility === 'public' && p.username)
+      .slice(0, 1)
+      .map((p) => ({
+        id: p.id,
+        username: p.username as string,
+        fullName: p.full_name,
+        avatarUrl: p.avatar_url,
+      }));
+
+    return visible;
+  }
+
+  private static async getSharedCareerGoals(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<string[]> {
+    const { data, error } = await readClient
+      .from('career_profiles')
+      .select('user_id, career_goals')
+      .in('user_id', [profileUserId, viewerId]);
+
+    if (error || !data) {
+      return [];
+    }
+
+    const rows = data as Array<{
+      user_id: string;
+      career_goals: string[] | null;
+    }>;
+
+    const collect = (userId: string): Set<string> => {
+      const row = rows.find((r) => r.user_id === userId);
+      const out = new Set<string>();
+      (row?.career_goals ?? []).forEach((value) => {
+        const trimmed = value?.trim();
+        if (trimmed) out.add(trimmed.toLocaleLowerCase());
+      });
+      return out;
+    };
+
+    const viewerGoals = collect(viewerId);
+    const targetGoals = collect(profileUserId);
+
+    const targetRow = rows.find((r) => r.user_id === profileUserId);
+    const displayBySlug = new Map<string, string>();
+    (targetRow?.career_goals ?? []).forEach((value) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLocaleLowerCase();
+      if (!displayBySlug.has(key)) displayBySlug.set(key, trimmed);
+    });
+
+    const intersect: string[] = [];
+    for (const slug of targetGoals) {
+      if (viewerGoals.has(slug) && intersect.length < 2) {
+        intersect.push(displayBySlug.get(slug) ?? slug);
+      }
+    }
+    return intersect;
+  }
+
+  private static async getSharedTopics(
+    readClient: SupabaseClientType,
+    profileUserId: string,
+    viewerId: string
+  ): Promise<string[]> {
+    const { data, error } = await readClient
+      .from('career_profiles')
+      .select('user_id, primary_skills, interests')
+      .in('user_id', [profileUserId, viewerId]);
+
+    if (error || !data) {
+      return [];
+    }
+
+    const rows = data as Array<{
+      user_id: string;
+      primary_skills: string[] | null;
+      interests: string[] | null;
+    }>;
+
+    const collect = (userId: string): Set<string> => {
+      const row = rows.find((r) => r.user_id === userId);
+      const out = new Set<string>();
+      const push = (values: string[] | null | undefined) => {
+        (values ?? []).forEach((value) => {
+          const trimmed = value?.trim();
+          if (trimmed) out.add(trimmed.toLocaleLowerCase());
+        });
+      };
+      push(row?.primary_skills);
+      push(row?.interests);
+      return out;
+    };
+
+    const target = collect(profileUserId);
+    const viewer = collect(viewerId);
+
+    // Preserve casing from the target's stored values for display.
+    const targetRow = rows.find((r) => r.user_id === profileUserId);
+    const displayBySlug = new Map<string, string>();
+    [...(targetRow?.primary_skills ?? []), ...(targetRow?.interests ?? [])].forEach(
+      (value) => {
+        const trimmed = value?.trim();
+        if (!trimmed) return;
+        const key = trimmed.toLocaleLowerCase();
+        if (!displayBySlug.has(key)) displayBySlug.set(key, trimmed);
+      }
+    );
+
+    const intersect: string[] = [];
+    for (const slug of target) {
+      if (viewer.has(slug) && intersect.length < 2) {
+        intersect.push(displayBySlug.get(slug) ?? slug);
+      }
+    }
+    return intersect;
   }
 
   private static async getSharedEventsCount(
@@ -374,69 +702,112 @@ export class PublicProfileService {
   private static async getRecentAttendingEvents({
     readClient,
     userId,
+    viewerId,
+    isViewerOwner,
     canViewAttendance,
   }: {
     readClient: SupabaseClientType;
     userId: string;
+    viewerId: string | null;
+    isViewerOwner: boolean;
     canViewAttendance: boolean;
   }): Promise<PublicProfileEvent[]> {
     if (!canViewAttendance) {
       return [];
     }
 
-    // Get upcoming events first (next 5), then past events if needed
-    // This uses a join with user_events to get only events the user is attending
+    // Pull a recency-ordered mix of all activity types (attending, attended,
+    // saved, speaking). Upcoming events sort by soonest first; everything
+    // else sorts by most recent.
     const now = new Date().toISOString();
+    const limit = 6;
 
-    // First try to get upcoming events
-    const { data: upcomingEvents, error: upcomingError } = await readClient
+    const upcomingPromise = readClient
       .from('events')
-      .select('id, slug, title, start_time, location, user_events!inner(user_id)')
+      .select(
+        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role)'
+      )
       .eq('user_events.user_id', userId)
-      .eq('user_events.status', 'attending')
+      .in('user_events.activity_type', ['attending', 'speaking', 'saved'])
       .eq('status', 'confirmed')
       .gte('start_time', now)
       .order('start_time', { ascending: true })
-      .limit(5);
+      .limit(limit);
 
-    if (upcomingError) {
+    const pastPromise = readClient
+      .from('events')
+      .select(
+        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role)'
+      )
+      .eq('user_events.user_id', userId)
+      .in('user_events.activity_type', ['attended', 'speaking'])
+      .eq('status', 'confirmed')
+      .lt('start_time', now)
+      .order('start_time', { ascending: false })
+      .limit(limit);
+
+    const [upcomingResult, pastResult] = await Promise.all([
+      upcomingPromise,
+      pastPromise,
+    ]);
+
+    if (upcomingResult.error) {
       throw new Error('Failed to fetch upcoming events.');
     }
+    if (pastResult.error) {
+      throw new Error('Failed to fetch past events.');
+    }
 
-    const upcoming = (upcomingEvents || []) as unknown as EventRow[];
+    const upcoming = (upcomingResult.data || []) as unknown as EventRow[];
+    const past = (pastResult.data || []) as unknown as EventRow[];
 
-    // If we have upcoming events, return them
-    if (upcoming.length > 0) {
-      return upcoming.map((event) => ({
+    const combined = [...upcoming, ...past].slice(0, limit);
+
+    const events: PublicProfileEvent[] = combined.map((event) => {
+      const link = event.user_events?.[0];
+      const activityType = link?.activity_type
+        ?? (new Date(event.start_time) >= new Date(now) ? 'attending' : 'attended');
+      return {
         id: event.id,
         slug: event.slug,
         title: event.title || 'Untitled event',
         startTime: event.start_time,
+        endTime: event.end_time,
         location: event.location,
-      }));
+        activityType,
+        role: link?.role ?? null,
+        mutualAttendeeCount: null,
+      };
+    });
+
+    if (viewerId && !isViewerOwner && events.length > 0) {
+      const eventIds = events.map((event) => event.id);
+      // Cast: RPC is added in 20260521000000_event_activity_model.sql; supabase
+      // types will pick it up on next regeneration.
+      const { data: mutualRows, error: mutualError } = await (readClient.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: Array<{ event_id: string; mutual_count: number }> | null; error: unknown }>)(
+        'get_mutual_attendees_for_events',
+        {
+          p_viewer_id: viewerId,
+          p_target_id: userId,
+          p_event_ids: eventIds,
+        }
+      );
+
+      if (!mutualError && Array.isArray(mutualRows)) {
+        const countByEventId = new Map<string, number>();
+        for (const row of mutualRows as Array<{ event_id: string; mutual_count: number }>) {
+          countByEventId.set(row.event_id, row.mutual_count);
+        }
+        for (const event of events) {
+          const count = countByEventId.get(event.id);
+          event.mutualAttendeeCount = count && count > 0 ? count : null;
+        }
+      }
     }
 
-    // Otherwise, get the most recent past events
-    const { data: pastEvents, error: pastError } = await readClient
-      .from('events')
-      .select('id, slug, title, start_time, location, user_events!inner(user_id)')
-      .eq('user_events.user_id', userId)
-      .eq('user_events.status', 'attending')
-      .eq('status', 'confirmed')
-      .lt('start_time', now)
-      .order('start_time', { ascending: false })
-      .limit(5);
-
-    if (pastError) {
-      throw new Error('Failed to fetch past events.');
-    }
-
-    return ((pastEvents || []) as unknown as EventRow[]).map((event) => ({
-      id: event.id,
-      slug: event.slug,
-      title: event.title || 'Untitled event',
-      startTime: event.start_time,
-      location: event.location,
-    }));
+    return events;
   }
 }
