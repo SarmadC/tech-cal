@@ -103,17 +103,17 @@ export default function SettingsSubscriptionRoute() {
 
 const styles = StyleSheet.create({
   group: {
-    gap: 12,
-    padding: 16,
+    gap: 8,
+    padding: 12,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 28,
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 24,
   },
   description: {
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 18,
   },
 });

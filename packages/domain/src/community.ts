@@ -391,12 +391,23 @@ export const mobileFollowStatusSchema = z.object({
   hasBlockedUser: z.boolean(),
 });
 
+export const mobilePublicProfileEventActivityTypeSchema = z.enum([
+  'attending',
+  'attended',
+  'saved',
+  'speaking',
+]);
+
 export const mobilePublicProfileEventSchema = z.object({
   id: z.string().uuid(),
   slug: z.string(),
   title: z.string(),
   startTime: z.string(),
+  endTime: z.string().nullable().optional(),
   location: z.string().nullable(),
+  activityType: mobilePublicProfileEventActivityTypeSchema,
+  role: z.string().nullable().optional(),
+  mutualAttendeeCount: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const mobilePublicProfileCareerSchema = z.object({
@@ -419,22 +430,51 @@ export const mobilePublicProfileMutualConnectionSchema = z.object({
   headline: z.string().nullable(),
 });
 
+export const mobilePublicProfileSharedCircleSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  name: z.string(),
+});
+
+export const mobilePublicProfileRecommendedBySchema = z.object({
+  id: z.string().uuid(),
+  username: z.string(),
+  fullName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+
 export const mobilePublicProfileSchema = z.object({
   id: z.string().uuid(),
   fullName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   username: z.string(),
   headline: z.string().nullable(),
+  bio: z.string().nullable().optional(),
   showAttendance: z.boolean(),
   isViewerOwner: z.boolean(),
   followerCount: z.number().int().nonnegative(),
   followingCount: z.number().int().nonnegative(),
+  location: z.string().nullable().optional(),
+  linkedinUrl: z.string().nullable().optional(),
   relationship: mobileFollowStatusSchema.nullable(),
   recentAttendingEvents: z.array(mobilePublicProfileEventSchema),
+  eventCounts: z
+    .object({
+      attending: z.number().int().nonnegative(),
+      attended: z.number().int().nonnegative(),
+      speaking: z.number().int().nonnegative(),
+      saved: z.number().int().nonnegative(),
+    })
+    .optional(),
   careerProfile: mobilePublicProfileCareerSchema.nullable(),
   mutualConnections: z.array(mobilePublicProfileMutualConnectionSchema),
   mutualConnectionsCount: z.number().int().nonnegative(),
   sharedEventsCount: z.number().int().nonnegative(),
+  sharedTopics: z.array(z.string()).optional(),
+  sharedCircles: z.array(mobilePublicProfileSharedCircleSchema).optional(),
+  sharedCirclesCount: z.number().int().nonnegative().optional(),
+  recommendedBy: z.array(mobilePublicProfileRecommendedBySchema).optional(),
+  sharedCareerGoals: z.array(z.string()).optional(),
   networkingState: mobileNetworkingStateSchema.optional(),
 });
 

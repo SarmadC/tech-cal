@@ -11,11 +11,29 @@ import {
   mobileEventNetworkingFeedbackSchema,
   mobileEventNetworkingFeedbackUpdateSchema,
   mobileEventEngagementUpdateSchema,
+  mobileProfileUpdateSchema,
   mobileProfileStateSchema,
   mobileSavedEventsFeedSchema,
 } from './mobile';
 
 describe('mobile domain contracts', () => {
+  it('parses mobile profile updates without user-editable timezone', () => {
+    const parsed = mobileProfileUpdateSchema.parse({
+      fullName: 'Ada Lovelace',
+      timezone: 'America/Edmonton',
+      username: 'ada',
+      headline: 'Builder',
+      bio: 'Unlocking stories through data.',
+    });
+
+    expect(parsed).toEqual({
+      fullName: 'Ada Lovelace',
+      username: 'ada',
+      headline: 'Builder',
+      bio: 'Unlocking stories through data.',
+    });
+  });
+
   it('parses discover feeds with event engagement metadata', () => {
     expect(
       mobileDiscoverFeedSchema.parse({
@@ -553,6 +571,7 @@ describe('mobile domain contracts', () => {
         avatarUrl: null,
         username: 'ada',
         headline: 'Builder',
+        bio: 'Unlocking stories through data.',
         profileVisibility: 'connections',
         showAttendance: true,
       },

@@ -72,7 +72,7 @@ function themedStyles(tokens: AppThemeTokens) {
 
   return {
     card: {
-      backgroundColor: isDark ? "rgba(31, 32, 34, 0.94)" : "#FFFFFF",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderColor: isDark
         ? "rgba(255, 255, 255, 0.075)"
         : "rgba(15, 23, 42, 0.085)",
@@ -522,17 +522,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     paddingBottom: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
   },
   headerButton: {
     alignItems: "center",
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    height: 38,
+    height: 32,
     justifyContent: "center",
-    width: 38,
+    width: 32,
   },
   headerTitleWrap: {
     alignItems: "center",
@@ -541,48 +541,50 @@ const styles = StyleSheet.create({
   },
   headerAction: {
     alignItems: "flex-end",
-    minWidth: 38,
+    minWidth: 32,
   },
   detailTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 22,
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 24,
   },
   detailSubtitle: {
     fontSize: 11,
     fontWeight: "600",
     lineHeight: 14,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
   },
   detailContent: {
-    gap: 14,
-    paddingHorizontal: 18,
-    paddingTop: 16,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 10,
-    paddingHorizontal: 18,
+    gap: 8,
+    paddingHorizontal: 20,
     paddingTop: 12,
   },
   group: {
-    borderRadius: 22,
+    borderRadius: 6,
     borderWidth: 1,
     overflow: "hidden",
   },
   row: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
-    minHeight: 64,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: 8,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   rowIcon: {
     alignItems: "center",
-    borderRadius: 12,
-    height: 32,
+    borderRadius: 4,
+    height: 28,
     justifyContent: "center",
-    width: 32,
+    width: 28,
   },
   rowCopy: {
     flex: 1,
@@ -590,24 +592,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   rowTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    lineHeight: 21,
+    lineHeight: 20,
   },
   rowSubtitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    lineHeight: 16,
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 18,
   },
   rightLabel: {
     flexShrink: 1,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "400",
     maxWidth: 118,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 60,
+    marginLeft: 48,
   },
   avatar: {
     alignItems: "center",
@@ -619,15 +621,16 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: "center",
-    borderRadius: 22,
+    borderRadius: 6,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 54,
-    paddingHorizontal: 18,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
   },
   fieldLabelWrap: {
     gap: 4,
@@ -641,7 +644,7 @@ const styles = StyleSheet.create({
   },
   fieldHelper: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "400",
     lineHeight: 16,
   },
   pressed: {

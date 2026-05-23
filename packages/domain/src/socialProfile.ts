@@ -16,6 +16,7 @@ export const socialProfileSchema = z.object({
   avatarUrl: z.string().nullable(),
   username: z.string().nullable(),
   headline: z.string().nullable(),
+  bio: z.string().nullable(),
   profileVisibility: profileVisibilitySchema,
   showAttendance: z.boolean(),
 });
@@ -25,6 +26,7 @@ export type SocialProfile = z.infer<typeof socialProfileSchema>;
 export const socialProfileUpdateSchema = z.object({
   username: z.string().trim().max(30).nullable().optional(),
   headline: z.string().trim().max(120).nullable().optional(),
+  bio: z.string().trim().max(220).nullable().optional(),
   profileVisibility: profileVisibilitySchema.optional(),
   showAttendance: z.boolean().optional(),
 });

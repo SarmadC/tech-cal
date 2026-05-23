@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 
 import type { MobileProfileUpdate } from "@kurecal/domain";
 
 import {
   SettingsButton,
   SettingsDetailScaffold,
-  SettingsFieldLabel,
-  SettingsGroup,
 } from "../../src/components/settings/mobile-settings-ui";
 import { useAuth } from "../../src/context/AuthProvider";
 import { updateMobileProfile } from "../../src/lib/mobileApi";
@@ -17,10 +15,13 @@ export default function SettingsProfileRoute() {
   const { profile, refreshProfile } = useAuth();
   const { tokens } = useAppTheme();
   const [saving, setSaving] = useState(false);
+  const [focusedField, setFocusedField] = useState<
+    "fullName" | "username" | "headline" | "bio" | null
+  >(null);
   const [draft, setDraft] = useState<MobileProfileUpdate>({
+    bio: null,
     fullName: null,
     headline: null,
-    timezone: null,
     username: null,
   });
 
@@ -30,9 +31,9 @@ export default function SettingsProfileRoute() {
     }
 
     setDraft({
+      bio: profile.socialProfile.bio ?? null,
       fullName: profile.profile.fullName ?? null,
       headline: profile.socialProfile.headline ?? null,
-      timezone: profile.profile.timezone ?? null,
       username: profile.socialProfile.username ?? null,
     });
   }, [profile]);
@@ -63,6 +64,8 @@ export default function SettingsProfileRoute() {
       borderColor: tokens.colors.borderStrong,
       color: tokens.colors.textPrimary,
       fontFamily: tokens.typography.sans,
+      fontSize: tokens.typography.body,
+      borderRadius: tokens.radius.md,
     },
   ];
 
@@ -77,92 +80,175 @@ export default function SettingsProfileRoute() {
           }}
         />
       }
-      subtitle="Identity"
       title="Profile fields"
     >
-      <SettingsGroup style={styles.formGroup}>
+      <View style={styles.formGroup}>
         <View style={styles.field}>
-          <SettingsFieldLabel>Full name</SettingsFieldLabel>
+          <ProfileFieldLabel label="Full name" />
           <TextInput
             onChangeText={(value) =>
               setDraft((current) => ({ ...current, fullName: value || null }))
             }
+            onFocus={() => setFocusedField("fullName")}
+            onBlur={() => setFocusedField(null)}
             placeholder="Full name"
             placeholderTextColor={tokens.colors.textTertiary}
-            style={inputStyle}
+            style={[
+              inputStyle,
+              focusedField === "fullName"
+                ? { borderColor: tokens.colors.accent }
+                : null,
+            ]}
             value={draft.fullName ?? ""}
           />
         </View>
 
         <View style={styles.field}>
-          <SettingsFieldLabel helper="Current username.">
-            Username
-          </SettingsFieldLabel>
+          <ProfileFieldLabel
+            helper="Shown on your public profile URL."
+            label="Username"
+          />
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
             onChangeText={(value) =>
               setDraft((current) => ({ ...current, username: value || null }))
             }
+            onFocus={() => setFocusedField("username")}
+            onBlur={() => setFocusedField(null)}
             placeholder="Username"
             placeholderTextColor={tokens.colors.textTertiary}
-            style={inputStyle}
+            style={[
+              inputStyle,
+              focusedField === "username"
+                ? { borderColor: tokens.colors.accent }
+                : null,
+            ]}
             value={draft.username ?? ""}
           />
         </View>
 
         <View style={styles.field}>
-          <SettingsFieldLabel>Headline</SettingsFieldLabel>
+          <ProfileFieldLabel
+            helper="Your role, team, or professional label."
+            label="Role headline"
+          />
           <TextInput
-            multiline
             onChangeText={(value) =>
               setDraft((current) => ({ ...current, headline: value || null }))
             }
-            placeholder="Headline"
+            onFocus={() => setFocusedField("headline")}
+            onBlur={() => setFocusedField(null)}
+            placeholder="Data Analyst at Explore Edmonton"
             placeholderTextColor={tokens.colors.textTertiary}
-            style={[inputStyle, styles.multilineInput]}
-            textAlignVertical="top"
+            style={[
+              inputStyle,
+              focusedField === "headline"
+                ? { borderColor: tokens.colors.accent }
+                : null,
+            ]}
             value={draft.headline ?? ""}
           />
         </View>
 
         <View style={styles.field}>
-          <SettingsFieldLabel>Timezone</SettingsFieldLabel>
+          <ProfileFieldLabel
+            helper="One or two sentences visitors see under your name."
+            label="About"
+          />
           <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
+            maxLength={220}
+            multiline
             onChangeText={(value) =>
-              setDraft((current) => ({ ...current, timezone: value || null }))
+              setDraft((current) => ({ ...current, bio: value || null }))
             }
-            placeholder="America/Denver"
+            onFocus={() => setFocusedField("bio")}
+            onBlur={() => setFocusedField(null)}
+            placeholder="Unlocking stories through data. Building bridges in the tech ecosystem."
             placeholderTextColor={tokens.colors.textTertiary}
-            style={inputStyle}
-            value={draft.timezone ?? ""}
+            style={[
+              inputStyle,
+              styles.bioInput,
+              focusedField === "bio"
+                ? { borderColor: tokens.colors.accent }
+                : null,
+            ]}
+            textAlignVertical="top"
+            value={draft.bio ?? ""}
           />
         </View>
-      </SettingsGroup>
+      </View>
     </SettingsDetailScaffold>
+  );
+}
+
+function ProfileFieldLabel({
+  helper,
+  label,
+}: {
+  helper?: string;
+  label: string;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.labelWrap}>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {label}
+      </Text>
+      {helper ? (
+        <Text
+          style={[
+            styles.helper,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {helper}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   formGroup: {
-    gap: 18,
-    padding: 16,
+    gap: 12,
   },
   field: {
-    gap: 8,
+    gap: 6,
   },
   input: {
-    borderRadius: 10,
     borderWidth: 1,
-    fontSize: 17,
-    fontWeight: "600",
-    minHeight: 52,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    fontWeight: "400",
+    minHeight: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  multilineInput: {
-    minHeight: 112,
+  labelWrap: {
+    gap: 2,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  helper: {
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+  },
+  bioInput: {
+    minHeight: 96,
   },
 });

@@ -29,12 +29,14 @@ describe('domain social profile contract', () => {
       socialProfileUpdateSchema.parse({
         username: 'demo-user',
         headline: 'Builder',
+        bio: 'Building useful event connections.',
         profileVisibility: 'connections',
         showAttendance: true,
       })
     ).toEqual({
       username: 'demo-user',
       headline: 'Builder',
+      bio: 'Building useful event connections.',
       profileVisibility: 'connections',
       showAttendance: true,
     });

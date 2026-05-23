@@ -7,7 +7,7 @@ export default function ProfileTabScreen() {
   const username = profile?.socialProfile.username?.trim();
 
   if (username) {
-    return <PublicProfileView username={username} />;
+    return <PublicProfileView showSettingsAction username={username} />;
   }
 
   return <SettingsScreen />;

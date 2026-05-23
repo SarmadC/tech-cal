@@ -33,12 +33,44 @@ function isProfileNotFound(error: unknown): boolean {
   return error instanceof Error && error.name === 'ProfileNotFoundError';
 }
 
+function getRequestTimezone(request: Request): string | null {
+  return request.headers.get('x-timezone')?.trim() || null;
+}
+
+async function syncProfileTimezone(
+  authContext: AuthenticatedRequestContext,
+  profile: Awaited<ReturnType<typeof ProfileService.getProfile>>,
+  request: Request
+) {
+  const timezone = getRequestTimezone(request);
+
+  if (!timezone || profile.timezone === timezone) {
+    return profile;
+  }
+
+  try {
+    return await ProfileService.updateProfile(
+      authContext.user.id,
+      { timezone },
+      authContext.supabase
+    );
+  } catch (error) {
+    console.warn('[mobile/profile] Failed to sync device timezone:', error);
+    return profile;
+  }
+}
+
 export async function ensureMobileProfile(
   authContext: AuthenticatedRequestContext,
   request: Request
 ) {
   try {
-    return await ProfileService.getProfile(authContext.user.id, authContext.supabase);
+    const profile = await ProfileService.getProfile(
+      authContext.user.id,
+      authContext.supabase
+    );
+
+    return syncProfileTimezone(authContext, profile, request);
   } catch (error) {
     if (!isProfileNotFound(error)) {
       throw error;
@@ -47,7 +79,7 @@ export async function ensureMobileProfile(
     const metadata = authContext.user.user_metadata as Record<string, unknown> | undefined;
     const avatarUrl =
       typeof metadata?.avatar_url === 'string' ? metadata.avatar_url : null;
-    const timezone = request.headers.get('x-timezone')?.trim() || null;
+    const timezone = getRequestTimezone(request);
 
     return ProfileService.createProfile(
       {

@@ -664,9 +664,9 @@ export const mobileProfileStateSchema = z.object({
 
 export const mobileProfileUpdateSchema = z.object({
   fullName: z.string().trim().min(1).max(120).nullable().optional(),
-  timezone: z.string().trim().max(120).nullable().optional(),
   username: z.string().trim().max(30).nullable().optional(),
   headline: z.string().trim().max(120).nullable().optional(),
+  bio: z.string().trim().max(220).nullable().optional(),
   profileVisibility: profileVisibilitySchema.optional(),
   showAttendance: z.boolean().optional(),
 });

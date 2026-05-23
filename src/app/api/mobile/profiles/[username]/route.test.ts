@@ -72,6 +72,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
       avatarUrl: null,
       username: 'ada',
       headline: 'Staff engineer',
+      bio: 'Leads applied AI research.',
       showAttendance: true,
       isViewerOwner: false,
       followerCount: 12,
@@ -82,7 +83,11 @@ describe('GET /api/mobile/profiles/[username]', () => {
           slug: 'design-review-week',
           title: 'Design Review Week',
           startTime: '2026-04-02T18:00:00.000Z',
+          endTime: null,
           location: 'Remote',
+          activityType: 'attending',
+          role: null,
+          mutualAttendeeCount: null,
         },
       ],
       careerProfile: {
@@ -101,6 +106,8 @@ describe('GET /api/mobile/profiles/[username]', () => {
         preferredEventTypes: [],
         lastUpdated: '2026-03-20T18:00:00.000Z',
       },
+      location: 'Edmonton, CA',
+      linkedinUrl: null,
       mutualConnections: [
         {
           id: '44444444-4444-4444-8444-444444444444',
@@ -111,6 +118,12 @@ describe('GET /api/mobile/profiles/[username]', () => {
         },
       ],
       mutualConnectionsCount: 1,
+      sharedEventsCount: 0,
+      sharedTopics: [],
+      sharedCircles: [],
+      sharedCirclesCount: 0,
+      recommendedBy: [],
+      sharedCareerGoals: [],
     });
     mocks.getFollowStatus.mockResolvedValue({
       isFollowing: true,
@@ -143,6 +156,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
     expect(payload.success).toBe(true);
     const parsed = mobilePublicProfileSchema.parse(payload.data);
     expect(parsed.username).toBe('ada');
+    expect(parsed.bio).toBe('Leads applied AI research.');
     expect(parsed.networkingState?.status).toBe('requested');
   });
 

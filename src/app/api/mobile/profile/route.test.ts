@@ -49,6 +49,7 @@ const mobileProfileState = {
     avatarUrl: null,
     username: 'ada',
     headline: 'Builder',
+    bio: 'Unlocking stories through data.',
     profileVisibility: 'connections',
     showAttendance: true,
   },
@@ -97,9 +98,9 @@ describe('/api/mobile/profile', () => {
         },
         body: JSON.stringify({
           fullName: 'Ada Lovelace',
-          timezone: 'America/Edmonton',
           username: 'ada',
           headline: 'Builder',
+          bio: 'Unlocking stories through data.',
           profileVisibility: 'public',
           showAttendance: false,
         }),
@@ -112,20 +113,42 @@ describe('/api/mobile/profile', () => {
       'user-1',
       expect.objectContaining({
         fullName: 'Ada Lovelace',
-        timezone: 'America/Edmonton',
       }),
       {}
+    );
+    expect(mocks.updateProfile.mock.calls[0]?.[1]).not.toHaveProperty(
+      'timezone'
     );
     expect(mocks.updateSocialProfile).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
         username: 'ada',
+        bio: 'Unlocking stories through data.',
         profileVisibility: 'public',
         showAttendance: false,
       }),
       {}
     );
     expect(payload.success).toBe(true);
+  });
+
+  it('does not manually patch timezone from mobile profile updates', async () => {
+    const response = await PATCH(
+      new Request('http://localhost/api/mobile/profile', {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Bearer token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timezone: 'America/Vancouver',
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.updateProfile).not.toHaveBeenCalled();
+    expect(mocks.updateSocialProfile).not.toHaveBeenCalled();
   });
 
   it('returns 401 when unauthenticated', async () => {

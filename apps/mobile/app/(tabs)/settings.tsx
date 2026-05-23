@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
   Alert,
+  Image,
   Linking,
   Pressable,
   RefreshControl,
@@ -62,6 +63,11 @@ function getCalendarLabel(
   }
 
   return "Not connected";
+}
+
+function isSafeAvatarUrl(url: string | null | undefined): url is string {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url);
 }
 
 export default function SettingsScreen() {
@@ -274,16 +280,22 @@ export default function SettingsScreen() {
           style={({ pressed }) => [
             styles.profileCard,
             {
-              backgroundColor:
-                tokens.mode === "dark"
-                  ? "rgba(31, 32, 34, 0.96)"
-                  : "#FFFFFF",
-              borderColor: tokens.colors.border,
+              backgroundColor: tokens.colors.surfaceStrong,
+              borderColor: tokens.colors.borderStrong,
             },
             pressed ? styles.pressed : null,
           ]}
         >
-          <SettingsAvatar initials={identity.initials} />
+          {isSafeAvatarUrl(profile.profile.avatarUrl ?? profile.socialProfile.avatarUrl) ? (
+            <Image
+              source={{
+                uri: profile.profile.avatarUrl ?? profile.socialProfile.avatarUrl ?? "",
+              }}
+              style={styles.profileAvatar}
+            />
+          ) : (
+            <SettingsAvatar initials={identity.initials} size={40} />
+          )}
           <View style={styles.profileCopy}>
             <Text
               numberOfLines={1}
@@ -357,11 +369,6 @@ export default function SettingsScreen() {
                 ? "Checking"
                 : formatSubscriptionSummary(subscription)
             }
-            subtitle={
-              hasPaidAccess(subscription)
-                ? "Manage renewals and restore access"
-                : "Unlock Pro recommendations and calendar sync"
-            }
             title="KureCal Pro"
           />
           <SettingsDivider />
@@ -379,10 +386,6 @@ export default function SettingsScreen() {
             icon="sparkles"
             onPress={() => router.push("/settings/career" as never)}
             rightLabel={hasCompletedOnboarding ? "Ready" : "Set up"}
-            subtitle={
-              careerSummary ??
-              "Recommendation inputs for your career goals and interests"
-            }
             title="Recommendation inputs"
           />
         </SettingsGroup>
@@ -484,65 +487,72 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignItems: "center",
-    borderRadius: 20,
+    borderRadius: 6,
     borderWidth: 1,
-    height: 42,
+    height: 32,
     justifyContent: "center",
-    width: 42,
+    width: 32,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     lineHeight: 24,
   },
   headerSpacer: {
-    width: 42,
+    width: 32,
   },
   content: {
-    gap: 18,
+    gap: 12,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
   profileCard: {
     alignItems: "center",
-    borderRadius: 24,
+    borderRadius: 6,
     borderWidth: 1,
     flexDirection: "row",
-    gap: 14,
-    minHeight: 92,
-    padding: 18,
+    gap: 10,
+    minHeight: 56,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  profileAvatar: {
+    borderRadius: 20,
+    height: 40,
+    width: 40,
   },
   profileCopy: {
     flex: 1,
-    gap: 3,
+    gap: 2,
     minWidth: 0,
   },
   profileName: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     lineHeight: 23,
   },
   profileMeta: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "400",
     lineHeight: 18,
   },
   logoutButton: {
     alignItems: "center",
-    borderRadius: 28,
+    borderRadius: 6,
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     justifyContent: "center",
-    minHeight: 58,
-    paddingHorizontal: 20,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   logoutLabel: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "600",
   },
   inlineError: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "400",
     lineHeight: 18,
     paddingHorizontal: 4,
   },
