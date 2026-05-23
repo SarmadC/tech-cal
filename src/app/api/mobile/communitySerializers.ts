@@ -496,6 +496,7 @@ export function toMobilePublicProfile(
       activityType: event.activityType,
       role: event.role,
       mutualAttendeeCount: event.mutualAttendeeCount,
+      connectionsMadeCount: event.connectionsMadeCount,
     })),
     eventCounts: profile.eventCounts,
     careerProfile: profile.careerProfile

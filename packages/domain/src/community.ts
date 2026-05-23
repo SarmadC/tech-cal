@@ -408,6 +408,7 @@ export const mobilePublicProfileEventSchema = z.object({
   activityType: mobilePublicProfileEventActivityTypeSchema,
   role: z.string().nullable().optional(),
   mutualAttendeeCount: z.number().int().nonnegative().nullable().optional(),
+  connectionsMadeCount: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const mobilePublicProfileCareerSchema = z.object({
