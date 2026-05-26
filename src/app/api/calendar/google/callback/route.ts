@@ -2,6 +2,10 @@ import { logger } from '@/utils/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { GoogleCalendarService } from '@/services/googleCalendarService';
+import {
+    getGoogleOAuthClientId,
+    getGoogleOAuthClientSecret,
+} from '@/services/googleCalendarOAuthConfig';
 import { encryptToken } from '@/utils/tokenEncryption';
 import crypto from 'crypto';
 
@@ -59,8 +63,8 @@ async function handleCallback(request: NextRequest) {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
-                client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+                client_id: getGoogleOAuthClientId(),
+                client_secret: getGoogleOAuthClientSecret(),
                 code,
                 grant_type: 'authorization_code',
                 redirect_uri: `${origin}/api/calendar/google/callback`,

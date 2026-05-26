@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getGoogleOAuthClientId } from '@/services/googleCalendarOAuthConfig';
 import type { SubscriptionStatus } from '@/types/subscription';
 
 const OAUTH_STATE_COOKIE = 'calendar_oauth_state';
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
         const origin = new URL(request.url).origin;
         const state = crypto.randomUUID();
         const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-        authUrl.searchParams.set('client_id', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '');
+        authUrl.searchParams.set('client_id', getGoogleOAuthClientId());
         authUrl.searchParams.set('redirect_uri', `${origin}/api/calendar/google/callback`);
         authUrl.searchParams.set('response_type', 'code');
         authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/calendar');

@@ -21,6 +21,34 @@ Set these for paid subscriptions:
 - `EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID`
 - `EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID`
 
+## Google Calendar OAuth
+
+Web and mobile calendar sync use one server-owned Google OAuth web client. Configure
+the API deployment with:
+
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+
+Do not configure a separate `NEXT_PUBLIC_GOOGLE_CLIENT_ID` for calendar sync. Add
+both callback paths to the same Google Cloud OAuth client's authorized redirect
+URIs. For local development:
+
+```text
+http://localhost:3000/api/calendar/google/callback
+http://localhost:3000/api/mobile/calendar/google/callback
+```
+
+For production, using the API URL below:
+
+```text
+https://www.kure-cal.com/api/calendar/google/callback
+https://www.kure-cal.com/api/mobile/calendar/google/callback
+```
+
+The native return URLs, `kurecal-dev://calendar/google/callback` and
+`kurecal://calendar/google/callback`, are handled after the server callback and
+are not Google Cloud authorized redirect URIs.
+
 ## Production setup
 
 1. Log in to Expo with `npx eas-cli login`.

@@ -3,13 +3,12 @@ import { NextResponse } from 'next/server';
 
 import { CalendarConnectionService } from '@/services/calendarConnectionService';
 import { GoogleCalendarService } from '@/services/googleCalendarService';
-import { createAdminClient } from '@/utils/supabase/server';
-
 import {
   getGoogleOAuthClientId,
   getGoogleOAuthClientSecret,
-  getStateSecret,
-} from '../start/route';
+  getGoogleOAuthStateSecret,
+} from '@/services/googleCalendarOAuthConfig';
+import { createAdminClient } from '@/utils/supabase/server';
 
 interface OAuthStatePayload {
   expiresAt: number;
@@ -34,7 +33,7 @@ function decodeState(state: string | null): OAuthStatePayload | null {
   }
 
   const expectedSignature = crypto
-    .createHmac('sha256', getStateSecret())
+    .createHmac('sha256', getGoogleOAuthStateSecret())
     .update(body)
     .digest('base64url');
 

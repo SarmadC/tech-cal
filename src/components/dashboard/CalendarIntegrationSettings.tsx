@@ -7,7 +7,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BrandLoadingLogo } from '@/components/brand/BrandLoadingLogo';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -27,6 +28,8 @@ interface CalendarStatus {
 }
 
 export default function CalendarIntegrationSettings() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [status, setStatus] = useState<CalendarStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [connecting, setConnecting] = useState(false);
@@ -34,6 +37,7 @@ export default function CalendarIntegrationSettings() {
     const [bulkSyncing, setBulkSyncing] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeVariant, setUpgradeVariant] = useState<'trialStart' | 'featureLocked' | 'upgradePrompt'>('featureLocked');
+    const handledCallbackResult = useRef(false);
     const { showSuccess, showError } = useSnackbar();
     const {
         isPro,
@@ -68,6 +72,35 @@ export default function CalendarIntegrationSettings() {
     useEffect(() => {
         fetchStatus();
     }, [fetchStatus]);
+
+    useEffect(() => {
+        if (handledCallbackResult.current) {
+            return;
+        }
+
+        const connected = searchParams.get('connected') === 'true';
+        const callbackError = searchParams.get('error');
+        if (!connected && !callbackError) {
+            return;
+        }
+
+        handledCallbackResult.current = true;
+        if (connected) {
+            showSuccess('Google Calendar connected successfully');
+        } else {
+            const errorMessages: Record<string, string> = {
+                callback_error: 'Google Calendar connection failed. Please try again.',
+                invalid_request: 'Google Calendar authorization expired. Please connect again.',
+                missing_tokens: 'Google did not provide the required calendar permissions. Please connect again.',
+                not_authenticated: 'Your session expired before calendar connection completed. Please sign in again.',
+                oauth_error: 'Google Calendar authorization was cancelled or denied.',
+                token_exchange_failed: 'Google Calendar authorization could not be completed. Please connect again.',
+            };
+            showError(errorMessages[callbackError ?? ''] ?? 'Google Calendar connection failed. Please try again.');
+        }
+
+        router.replace('/dashboard/settings?tab=integrations', { scroll: false });
+    }, [router, searchParams, showError, showSuccess]);
 
     const requireProAccess = (): boolean => {
         if (isPro || isTrialing) return true;

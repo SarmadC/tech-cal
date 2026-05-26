@@ -6,34 +6,13 @@ import {
   requireCalendarSyncEntitlement,
   requireMobileAuth,
 } from '../_shared';
+import {
+  getGoogleOAuthClientId,
+  getGoogleOAuthClientSecret,
+  getGoogleOAuthStateSecret,
+} from '@/services/googleCalendarOAuthConfig';
 
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
-
-function getRequiredEnv(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} is not configured.`);
-  }
-
-  return value;
-}
-
-function getGoogleOAuthClientId() {
-  return getRequiredEnv('GOOGLE_OAUTH_CLIENT_ID');
-}
-
-function getGoogleOAuthClientSecret() {
-  return getRequiredEnv('GOOGLE_OAUTH_CLIENT_SECRET');
-}
-
-function getStateSecret() {
-  return (
-    process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXTAUTH_SECRET ||
-    getRequiredEnv('GOOGLE_OAUTH_CLIENT_SECRET')
-  );
-}
 
 function encodeState(payload: {
   expiresAt: number;
@@ -42,7 +21,7 @@ function encodeState(payload: {
 }) {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', getStateSecret())
+    .createHmac('sha256', getGoogleOAuthStateSecret())
     .update(body)
     .digest('base64url');
 
@@ -129,5 +108,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
-export { getGoogleOAuthClientId, getGoogleOAuthClientSecret, getStateSecret };

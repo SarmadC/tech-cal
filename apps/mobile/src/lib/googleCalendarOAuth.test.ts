@@ -92,4 +92,30 @@ describe('Google Calendar OAuth helper', () => {
 
     await expect(startGoogleCalendarOAuth()).rejects.toThrow('Sign in required');
   });
+
+  it('surfaces a backend OAuth callback error instead of reporting cancellation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              authUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=abc',
+              returnUrl: 'kurecal://calendar/google/callback',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+    mocks.openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'kurecal://calendar/google/callback?error=token_exchange_failed',
+    });
+
+    await expect(startGoogleCalendarOAuth()).rejects.toThrow(
+      'Google Calendar authorization could not be completed. Please connect again.'
+    );
+  });
 });

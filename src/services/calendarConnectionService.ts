@@ -108,17 +108,13 @@ export class CalendarConnectionService {
                 .select('*')
                 .eq('user_id', userId)
                 .eq('provider', provider)
-                .single();
+                .maybeSingle();
 
             if (error) {
-                if (error.code === 'PGRST116') {
-                    // No rows returned
-                    return null;
-                }
                 throw error;
             }
 
-            return data as CalendarConnection;
+            return data as CalendarConnection | null;
         } catch (error) {
             console.error('Error getting calendar connection:', error);
             Sentry.captureException(error, {

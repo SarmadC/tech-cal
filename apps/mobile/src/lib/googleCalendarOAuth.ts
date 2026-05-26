@@ -6,6 +6,19 @@ import { supabase } from './supabase';
 
 const MOBILE_CALENDAR_OAUTH_RETURN_KEY = 'mobile_calendar_oauth_return_url';
 
+function getOAuthCallbackErrorMessage(errorCode: string): string {
+  switch (errorCode) {
+    case 'invalid_request':
+      return 'Google Calendar authorization expired. Please connect again.';
+    case 'missing_tokens':
+      return 'Google did not provide the required calendar permissions. Please connect again.';
+    case 'token_exchange_failed':
+      return 'Google Calendar authorization could not be completed. Please connect again.';
+    default:
+      return 'Google Calendar connection failed. Please try again.';
+  }
+}
+
 export async function startGoogleCalendarOAuth(): Promise<boolean> {
   const {
     data: { session },
@@ -53,7 +66,13 @@ export async function startGoogleCalendarOAuth(): Promise<boolean> {
     return false;
   }
 
-  return result.url.includes('connected=true');
+  const callbackUrl = new URL(result.url);
+  const callbackError = callbackUrl.searchParams.get('error');
+  if (callbackError) {
+    throw new Error(getOAuthCallbackErrorMessage(callbackError));
+  }
+
+  return callbackUrl.searchParams.get('connected') === 'true';
 }
 
 export async function loadGoogleCalendarOAuthReturnUrl(): Promise<string | null> {
