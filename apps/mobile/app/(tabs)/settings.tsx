@@ -35,11 +35,7 @@ import {
   loadMobileGoogleCalendarStatus,
   loadMobileSubscriptionStatus,
 } from "../../src/lib/mobileApi";
-import {
-  formatCareerSummary,
-  formatSubscriptionSummary,
-  hasPaidAccess,
-} from "../../src/lib/settingsPresentation";
+import { formatSubscriptionSummary } from "../../src/lib/settingsPresentation";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 function getVisibilityLabel(value: string): string {
@@ -133,11 +129,6 @@ export default function SettingsScreen() {
       secondary,
     };
   }, [profile, session?.user.email]);
-
-  const careerSummary = useMemo(
-    () => formatCareerSummary(profile?.careerProfile),
-    [profile?.careerProfile],
-  );
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -379,7 +370,7 @@ export default function SettingsScreen() {
               googleCalendarStatus,
               appleCalendarPermission,
             )}
-            title="Calendar integrations"
+            title="Integrations"
           />
           <SettingsDivider />
           <SettingsRow
