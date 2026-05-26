@@ -93,4 +93,56 @@ describe('/api/mobile/events/[id]/engagement', () => {
 
     expect(response.status).toBe(401);
   });
+
+  it('records and removes confirmed attendance through the existing endpoint', async () => {
+    mocks.isEventTracked
+      .mockResolvedValueOnce({
+        isTracked: true,
+        isBookmarked: true,
+        status: 'attended',
+      })
+      .mockResolvedValueOnce({
+        isTracked: true,
+        isBookmarked: true,
+        status: null,
+      });
+
+    const attendedResponse = await PATCH(
+      new Request('http://localhost/api/mobile/events/event-1/engagement', {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'attended' }),
+      }),
+      { params: Promise.resolve({ id: 'event-1' }) }
+    );
+    const clearedResponse = await PATCH(
+      new Request('http://localhost/api/mobile/events/event-1/engagement', {
+        method: 'PATCH',
+        body: JSON.stringify({ status: null }),
+      }),
+      { params: Promise.resolve({ id: 'event-1' }) }
+    );
+
+    expect(mocks.setAttendanceStatus).toHaveBeenNthCalledWith(
+      1,
+      'user-1',
+      'event-1',
+      'attended',
+      undefined,
+      {}
+    );
+    expect(mocks.setAttendanceStatus).toHaveBeenNthCalledWith(
+      2,
+      'user-1',
+      'event-1',
+      null,
+      undefined,
+      {}
+    );
+    expect(
+      mobileEventEngagementSchema.parse((await attendedResponse.json()).data).status
+    ).toBe('attended');
+    expect(
+      mobileEventEngagementSchema.parse((await clearedResponse.json()).data).status
+    ).toBeNull();
+  });
 });

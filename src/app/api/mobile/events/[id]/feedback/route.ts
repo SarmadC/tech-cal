@@ -78,6 +78,7 @@ export async function GET(request: Request, context: RouteContext) {
       success: true,
       data: mobileEventNetworkingFeedbackSchema.parse({
         eventId,
+        actualValueRating: feedback?.actualValueRating ?? null,
         connectionsMade: feedback?.connectionsMade ?? null,
         linkedinRequestsSent: networkingSummary?.linkedinRequestsSent ?? null,
       }),
@@ -131,41 +132,54 @@ export async function PATCH(request: Request, context: RouteContext) {
       ),
     ]);
 
+    let nextActualValueRating = existingFeedback?.actualValueRating ?? null;
     let nextConnectionsMade = existingFeedback?.connectionsMade ?? null;
     let nextLinkedInRequestsSent =
       existingNetworkingSummary?.linkedinRequestsSent ?? null;
 
+    if (Object.prototype.hasOwnProperty.call(payload, 'actualValueRating')) {
+      nextActualValueRating = payload.actualValueRating ?? null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(payload, 'connectionsMade')) {
       nextConnectionsMade = payload.connectionsMade ?? null;
+    }
 
-      if (existingFeedback) {
-        await EventFeedbackService.updateFeedback(
-          existingFeedback.id,
-          {
-            connectionsMade: nextConnectionsMade,
-          },
-          authContext.supabase
-        );
-      } else if (nextConnectionsMade != null) {
-        const event = await EventService.getEventById(
+    const isUpdatingFeedback =
+      Object.prototype.hasOwnProperty.call(payload, 'actualValueRating') ||
+      Object.prototype.hasOwnProperty.call(payload, 'connectionsMade');
+
+    if (isUpdatingFeedback && existingFeedback) {
+      await EventFeedbackService.updateFeedback(
+        existingFeedback.id,
+        {
+          actualValueRating: nextActualValueRating,
+          connectionsMade: nextConnectionsMade,
+        },
+        authContext.supabase
+      );
+    } else if (
+      isUpdatingFeedback &&
+      (nextActualValueRating != null || nextConnectionsMade != null)
+    ) {
+      const event = await EventService.getEventById(
+        eventId,
+        authContext.supabase
+      );
+      await EventFeedbackService.submitFeedback(
+        {
           eventId,
-          authContext.supabase
-        );
-        await EventFeedbackService.submitFeedback(
-          {
-            eventId,
-            userId: authContext.user.id,
-            actualValueRating: null,
-            careerBenefit: null,
-            connectionsMade: nextConnectionsMade,
-            skillsGained: null,
-            wouldRecommend: null,
-            feedbackText: null,
-            predictedScore: getPredictedScore(getEventOverallScore(event)),
-          },
-          authContext.supabase
-        );
-      }
+          userId: authContext.user.id,
+          actualValueRating: nextActualValueRating,
+          careerBenefit: null,
+          connectionsMade: nextConnectionsMade,
+          skillsGained: null,
+          wouldRecommend: null,
+          feedbackText: null,
+          predictedScore: getPredictedScore(getEventOverallScore(event)),
+        },
+        authContext.supabase
+      );
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, 'linkedinRequestsSent')) {
@@ -191,6 +205,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       success: true,
       data: mobileEventNetworkingFeedbackSchema.parse({
         eventId,
+        actualValueRating: nextActualValueRating,
         connectionsMade: nextConnectionsMade,
         linkedinRequestsSent: nextLinkedInRequestsSent,
       }),

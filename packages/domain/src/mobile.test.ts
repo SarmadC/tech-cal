@@ -527,14 +527,30 @@ describe('mobile domain contracts', () => {
           startTime: '2026-04-20T18:00:00.000Z',
           endTime: '2026-04-20T18:30:00.000Z',
           title: 'Opening keynote',
+          topics: ['Expo'],
+          isSaved: true,
           speakers: [],
         },
       ],
+      networkingPulse: {
+        state: 'active',
+        trendingTopic: {
+          label: 'Expo',
+          activityLabel: 'Highly active',
+        },
+        mostSavedSession: {
+          agendaItemId: 'agenda-1',
+          title: 'Opening keynote',
+          saveCount: 12,
+        },
+      },
     });
 
     expect(parsed.host?.name).toBe('KureCal');
     expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
     expect(parsed.agenda?.[0]?.title).toBe('Opening keynote');
+    expect(parsed.agenda?.[0]?.isSaved).toBe(true);
+    expect(parsed.networkingPulse?.trendingTopic?.label).toBe('Expo');
   });
 
   it('parses saved feeds and profile state payloads for phase 3 surfaces', () => {
@@ -645,17 +661,23 @@ describe('mobile domain contracts', () => {
   it('parses mobile networking feedback payloads', () => {
     const parsed = mobileEventNetworkingFeedbackSchema.parse({
       eventId: 'event-1',
+      actualValueRating: 4,
       connectionsMade: 2,
       linkedinRequestsSent: 4,
     });
 
+    expect(parsed.actualValueRating).toBe(4);
     expect(parsed.connectionsMade).toBe(2);
     expect(parsed.linkedinRequestsSent).toBe(4);
   });
 
-  it('requires at least one field when updating mobile networking feedback', () => {
+  it('accepts a review rating and requires at least one field when updating mobile feedback', () => {
+    expect(
+      mobileEventNetworkingFeedbackUpdateSchema.parse({ actualValueRating: 5 })
+        .actualValueRating
+    ).toBe(5);
     expect(() => mobileEventNetworkingFeedbackUpdateSchema.parse({})).toThrow(
-      'At least one networking field must be provided.'
+      'At least one feedback field must be provided.'
     );
   });
 });

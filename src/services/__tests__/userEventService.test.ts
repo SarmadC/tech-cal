@@ -166,6 +166,77 @@ describe('UserEventService', () => {
     });
   });
 
+  describe('setAttendanceStatus', () => {
+    it('clears past attendance activity when attendance is removed', async () => {
+      mockSupabase.maybeSingle.mockResolvedValue({
+        data: { status: 'attended', is_bookmarked: false, activity_type: 'attended' },
+        error: null,
+      });
+
+      const result = await UserEventService.setAttendanceStatus(
+        'user1',
+        'event1',
+        null,
+        undefined,
+        mockSupabase as unknown as SupabaseClient
+      );
+
+      expect(mockSupabase.select).toHaveBeenCalledWith('status, is_bookmarked, activity_type');
+      expect(mockSupabase.update).toHaveBeenCalledWith({
+        status: null,
+        notes: null,
+        activity_type: null,
+      });
+      expect(result).toEqual({
+        previousStatus: 'attended',
+        newStatus: null,
+        autoBookmarked: false,
+      });
+    });
+
+    it('retains a cleared bookmarked event as saved activity only', async () => {
+      mockSupabase.maybeSingle.mockResolvedValue({
+        data: { status: 'attended', is_bookmarked: true, activity_type: 'attended' },
+        error: null,
+      });
+
+      await UserEventService.setAttendanceStatus(
+        'user1',
+        'event1',
+        null,
+        undefined,
+        mockSupabase as unknown as SupabaseClient
+      );
+
+      expect(mockSupabase.update).toHaveBeenCalledWith({
+        status: null,
+        notes: null,
+        activity_type: 'saved',
+      });
+    });
+
+    it('preserves a speaking activity marker when attendance is removed', async () => {
+      mockSupabase.maybeSingle.mockResolvedValue({
+        data: { status: 'attended', is_bookmarked: true, activity_type: 'speaking' },
+        error: null,
+      });
+
+      await UserEventService.setAttendanceStatus(
+        'user1',
+        'event1',
+        null,
+        undefined,
+        mockSupabase as unknown as SupabaseClient
+      );
+
+      expect(mockSupabase.update).toHaveBeenCalledWith({
+        status: null,
+        notes: null,
+        activity_type: 'speaking',
+      });
+    });
+  });
+
   describe('untrackEvent', () => {
     it('should untrack an event successfully', async () => {
       mockSupabase.rpc.mockResolvedValue({

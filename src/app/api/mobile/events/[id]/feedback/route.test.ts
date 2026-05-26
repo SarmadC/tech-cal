@@ -59,6 +59,7 @@ describe('/api/mobile/events/[id]/feedback', () => {
   it('returns the merged networking feedback snapshot', async () => {
     mocks.getFeedbackForEvent.mockResolvedValue({
       id: 'feedback-1',
+      actualValueRating: 4,
       connectionsMade: 2,
     });
     mocks.getSummaryForEvent.mockResolvedValue({
@@ -77,6 +78,7 @@ describe('/api/mobile/events/[id]/feedback', () => {
     expect(response.status).toBe(200);
     expect(mobileEventNetworkingFeedbackSchema.parse(payload.data)).toEqual({
       eventId: 'event-1',
+      actualValueRating: 4,
       connectionsMade: 2,
       linkedinRequestsSent: 4,
     });
@@ -85,6 +87,7 @@ describe('/api/mobile/events/[id]/feedback', () => {
   it('updates both confirmed connections and linkedin requests', async () => {
     mocks.getFeedbackForEvent.mockResolvedValue({
       id: 'feedback-1',
+      actualValueRating: null,
       connectionsMade: 1,
     });
     mocks.getSummaryForEvent.mockResolvedValue({
@@ -111,7 +114,7 @@ describe('/api/mobile/events/[id]/feedback', () => {
     expect(response.status).toBe(200);
     expect(mocks.updateFeedback).toHaveBeenCalledWith(
       'feedback-1',
-      { connectionsMade: 2 },
+      { actualValueRating: null, connectionsMade: 2 },
       {}
     );
     expect(mocks.setLinkedInRequestsSent).toHaveBeenCalledWith(
@@ -150,10 +153,43 @@ describe('/api/mobile/events/[id]/feedback', () => {
       expect.objectContaining({
         eventId: 'event-1',
         userId: 'user-1',
+        actualValueRating: null,
         connectionsMade: 1,
         predictedScore: 83,
       }),
       {}
     );
+  });
+
+  it('creates a first quick review with a rating and optional connections', async () => {
+    mocks.getEventById.mockResolvedValue({
+      id: 'event-1',
+      careerImpact: { overall: 83 },
+    });
+
+    const response = await PATCH(
+      new Request('http://localhost/api/mobile/events/event-1/feedback', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualValueRating: 5,
+          connectionsMade: 2,
+        }),
+      }),
+      {
+        params: Promise.resolve({ id: 'event-1' }),
+      }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mocks.submitFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actualValueRating: 5,
+        connectionsMade: 2,
+      }),
+      {}
+    );
+    expect(mobileEventNetworkingFeedbackSchema.parse(payload.data).actualValueRating).toBe(5);
   });
 });

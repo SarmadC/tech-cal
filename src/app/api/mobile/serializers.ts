@@ -32,6 +32,7 @@ import {
   type MobileEventDetailAgendaItem,
   type MobileEventDetailSpeaker,
   type MobileEventEngagement,
+  type MobileEventNetworkingPulse,
   type MobileEventSummary,
   type MobileSurfaceHeader,
 } from '@kurecal/domain';
@@ -414,7 +415,10 @@ function toAgendaSpeakers(agendaItem: AgendaItem): MobileEventDetailSpeaker[] {
   return Array.from(deduped.values());
 }
 
-function toAgendaItem(agendaItem: AgendaItem): MobileEventDetailAgendaItem {
+function toAgendaItem(
+  agendaItem: AgendaItem,
+  savedAgendaItemIds?: Set<string>
+): MobileEventDetailAgendaItem {
   return {
     id: agendaItem.id,
     dayNumber:
@@ -427,6 +431,10 @@ function toAgendaItem(agendaItem: AgendaItem): MobileEventDetailAgendaItem {
     description: agendaItem.description?.trim() || null,
     location: agendaItem.location?.trim() || null,
     track: agendaItem.track?.trim() || null,
+    topics: (agendaItem.topics ?? [])
+      .map((topic) => topic.trim())
+      .filter(Boolean),
+    isSaved: savedAgendaItemIds?.has(agendaItem.id) ?? false,
     speakers: toAgendaSpeakers(agendaItem),
   };
 }
@@ -548,7 +556,11 @@ export function trackedRecordToEventCard(record: {
 
 export function toMobileEventDetail(
   event: Event,
-  engagement?: MobileEventEngagement | null
+  engagement?: MobileEventEngagement | null,
+  options: {
+    savedAgendaItemIds?: Set<string>;
+    networkingPulse?: MobileEventNetworkingPulse;
+  } = {}
 ): MobileEventDetail {
   const summary = toMobileEventSummary(event, engagement);
 
@@ -569,8 +581,11 @@ export function toMobileEventDetail(
           }
         : null,
     tags: summary.tags,
-    agenda: (event.agenda ?? []).map((agendaItem) => toAgendaItem(agendaItem)),
+    agenda: (event.agenda ?? []).map((agendaItem) =>
+      toAgendaItem(agendaItem, options.savedAgendaItemIds)
+    ),
     speakerLineup: collectSpeakerLineup(event),
+    networkingPulse: options.networkingPulse,
   });
 }
 

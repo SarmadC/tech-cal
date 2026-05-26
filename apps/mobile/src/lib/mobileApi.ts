@@ -16,6 +16,7 @@ import {
   mobileDashboardSummarySchema,
   mobileDiscoverFeedRequestSchema,
   mobileDiscoverFeedSchema,
+  mobileEventAgendaSaveSchema,
   mobileEventDetailSchema,
   mobileEventNetworkingFeedbackSchema,
   mobileEventNetworkingFeedbackUpdateSchema,
@@ -52,6 +53,7 @@ import {
   type MobileDiscoverFeed,
   type MobileDiscoverFeedRequest,
   type MobileEventDetail,
+  type MobileEventAgendaSave,
   type MobileEventNetworkingFeedback,
   type MobileEventNetworkingFeedbackUpdate,
   type MobileEventEngagement,
@@ -476,6 +478,27 @@ export async function updateMobileEventEngagement(
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function updateMobileEventAgendaSave(
+  eventId: string,
+  agendaItemId: string,
+  isSaved: boolean
+): Promise<MobileEventAgendaSave> {
+  const trimmedEventId = eventId.trim();
+  const trimmedAgendaItemId = agendaItemId.trim();
+
+  if (!trimmedEventId || !trimmedAgendaItemId) {
+    throw new Error('Event id and agenda item id are required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/events/${encodeURIComponent(trimmedEventId)}/agenda/${encodeURIComponent(trimmedAgendaItemId)}/save`,
+    mobileEventAgendaSaveSchema,
+    {
+      method: isSaved ? 'POST' : 'DELETE',
     }
   );
 }

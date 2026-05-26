@@ -2,6 +2,7 @@ import type {
   MobileEventDetail,
   MobileEventDetailAgendaItem,
   MobileEventDetailSpeaker,
+  MobileEventEngagement,
 } from '@kurecal/domain';
 
 const NON_MAPPABLE_LOCATIONS = new Set([
@@ -13,6 +14,68 @@ const NON_MAPPABLE_LOCATIONS = new Set([
 ]);
 
 export const SPEAKER_PREVIEW_COUNT = 4;
+
+export type AttendanceCtaState = {
+  action: 'toggle-rsvp' | 'confirm-attended' | 'review';
+  active: boolean;
+  accessibilityLabel: string;
+  icon: 'user-plus' | 'check-circle' | 'calendar-check-o';
+  label: string;
+};
+
+export function getAttendanceCtaState(
+  event: Pick<MobileEventDetail['event'], 'startTime' | 'endTime'>,
+  engagement?: MobileEventEngagement,
+  now = Date.now()
+): AttendanceCtaState {
+  const completionTime = new Date(event.endTime ?? event.startTime).getTime();
+  const hasEnded = !Number.isNaN(completionTime) && completionTime <= now;
+  const status = engagement?.status;
+
+  if (!hasEnded) {
+    return status === 'attending'
+      ? {
+          action: 'toggle-rsvp',
+          active: true,
+          accessibilityLabel: 'Remove RSVP',
+          icon: 'check-circle',
+          label: 'Attending',
+        }
+      : {
+          action: 'toggle-rsvp',
+          active: false,
+          accessibilityLabel: 'Mark attending',
+          icon: 'user-plus',
+          label: 'Attend',
+        };
+  }
+
+  if (status === 'attended') {
+    return {
+      action: 'review',
+      active: true,
+      accessibilityLabel: 'Review attended event',
+      icon: 'check-circle',
+      label: 'Attended',
+    };
+  }
+
+  return status === 'attending'
+    ? {
+        action: 'confirm-attended',
+        active: false,
+        accessibilityLabel: 'Confirm attendance',
+        icon: 'calendar-check-o',
+        label: 'Confirm attendance',
+      }
+    : {
+        action: 'confirm-attended',
+        active: false,
+        accessibilityLabel: 'Mark event attended',
+        icon: 'calendar-check-o',
+        label: 'I attended',
+      };
+}
 
 export type AgendaDayGroup = {
   key: string;
