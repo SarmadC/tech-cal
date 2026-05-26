@@ -344,7 +344,7 @@ export function PublicProfileView({
                 <IconHeaderButton
                   accessibilityLabel="Open settings"
                   iconName="gear"
-                  onPress={() => router.push('/settings')}
+                  onPress={() => router.push('/settings/all?from=profile')}
                 />
               ) : (
                 <CompactConnectButton
@@ -368,7 +368,7 @@ export function PublicProfileView({
               openToLine={openToLine}
               onBack={() => router.back()}
               profile={profile}
-              onSettings={() => router.push('/settings')}
+              onSettings={() => router.push('/settings/all?from=profile')}
             />
 
             {!profile.isViewerOwner ? (

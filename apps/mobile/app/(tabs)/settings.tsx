@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
@@ -66,7 +66,9 @@ function isSafeAvatarUrl(url: string | null | undefined): url is string {
   return /^https?:\/\//i.test(url);
 }
 
-export default function SettingsScreen() {
+export default function SettingsScreen({
+  headerLeft,
+}: { headerLeft?: ReactNode } = {}) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -213,26 +215,7 @@ export default function SettingsScreen() {
           },
         ]}
       >
-        <Pressable
-          accessibilityLabel="Back"
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: tokens.colors.surfaceStrong,
-              borderColor: tokens.colors.border,
-            },
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          <SymbolView
-            name="chevron.left"
-            size={17}
-            tintColor={tokens.colors.textPrimary}
-            type="monochrome"
-          />
-        </Pressable>
+        {headerLeft ?? <View style={styles.headerSpacer} />}
         <Text
           style={[
             styles.headerTitle,

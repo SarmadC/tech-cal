@@ -326,7 +326,7 @@ export default function DashboardScreen() {
           <View />
           <HeaderActionButton
             label="Settings"
-            onPress={() => router.push("../settings")}
+            onPress={() => router.push("/settings/all?from=dashboard")}
           />
         </View>
 
