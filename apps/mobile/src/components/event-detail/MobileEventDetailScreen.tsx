@@ -24,6 +24,7 @@ import {
   getInitials,
   hasMappableLocation,
   SPEAKER_PREVIEW_COUNT,
+  type AttendanceCtaState,
 } from './eventDetailUtils';
 import { KureButton } from '../chrome/KureButton';
 import { useAppTheme } from '../../providers/ThemeProvider';
@@ -33,7 +34,7 @@ function IconMetaRow({
   children,
   onPress,
 }: {
-  icon: string;
+  icon: keyof typeof FontAwesome.glyphMap;
   children: ReactNode;
   onPress?: () => void;
 }) {
@@ -41,7 +42,7 @@ function IconMetaRow({
 
   const inner = (
     <View style={styles.iconMetaRow}>
-      <FontAwesome name={icon as any} size={13} color={tokens.colors.textTertiary} style={styles.iconMetaIcon} />
+      <FontAwesome name={icon} size={13} color={tokens.colors.textTertiary} style={styles.iconMetaIcon} />
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -63,18 +64,98 @@ function IconMetaRow({
   return <View style={styles.iconMetaRowPressable}>{inner}</View>;
 }
 
+function NetworkingPulseSection({
+  pulse,
+}: {
+  pulse: NonNullable<MobileEventDetail['networkingPulse']>;
+}) {
+  const { tokens } = useAppTheme();
+  const hasActiveSignal =
+    pulse.state === 'active' && (pulse.trendingTopic || pulse.mostSavedSession);
+
+  if (!hasActiveSignal) {
+    return null;
+  }
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+          What attendees are focusing on
+        </Text>
+      </View>
+
+      <View style={styles.pulseGrid}>
+          {pulse.trendingTopic ? (
+            <View
+              style={[
+                styles.pulseMetric,
+                {
+                  backgroundColor: tokens.colors.surface,
+                  borderColor: tokens.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.pulseLabel, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
+                Trending topic
+              </Text>
+              <Text numberOfLines={1} style={[styles.pulseValue, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                {pulse.trendingTopic.label}
+              </Text>
+              <View style={styles.pulseMetaRow}>
+                <FontAwesome name="line-chart" size={13} color={tokens.colors.textSecondary} />
+                <Text style={[styles.pulseMeta, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+                  {pulse.trendingTopic.activityLabel}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {pulse.mostSavedSession ? (
+            <View
+              style={[
+                styles.pulseMetric,
+                {
+                  backgroundColor: tokens.colors.surface,
+                  borderColor: tokens.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.pulseLabel, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
+                Most saved session
+              </Text>
+              <Text numberOfLines={1} style={[styles.pulseValue, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                {pulse.mostSavedSession.title}
+              </Text>
+              <View style={styles.pulseMetaRow}>
+                <FontAwesome name="bookmark-o" size={13} color={tokens.colors.textSecondary} />
+                <Text style={[styles.pulseMeta, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+                  {pulse.mostSavedSession.saveCount} saves
+                </Text>
+              </View>
+            </View>
+          ) : null}
+      </View>
+    </View>
+  );
+}
+
 export function MobileEventDetailScreen({
   detail,
   engagement,
   isBookmarkPending = false,
   isAttendancePending = false,
+  attendanceCta,
   onBack,
   onPrimaryAction,
   onAddToCalendar,
   calendarStatusLabel,
   calendarStatusTone = 'neutral',
+  pendingAgendaSaveIds,
   onToggleBookmark,
   onToggleAttendance,
+  onRemoveAttendance,
+  onToggleAgendaSave,
   onOpenEventPage,
   onOpenLocation,
   onShareEvent,
@@ -83,13 +164,17 @@ export function MobileEventDetailScreen({
   engagement?: MobileEventEngagement;
   isBookmarkPending?: boolean;
   isAttendancePending?: boolean;
+  attendanceCta: AttendanceCtaState;
   onBack: () => void;
   onPrimaryAction: () => void;
   onAddToCalendar: () => void;
   calendarStatusLabel?: string | null;
   calendarStatusTone?: 'neutral' | 'success' | 'warning' | 'danger';
+  pendingAgendaSaveIds?: Set<string>;
   onToggleBookmark: () => void;
   onToggleAttendance: () => void;
+  onRemoveAttendance: () => void;
+  onToggleAgendaSave?: (agendaItemId: string, isSaved: boolean) => void;
   onOpenEventPage: () => void;
   onOpenLocation: (location: string) => void;
   onShareEvent: () => void;
@@ -104,8 +189,8 @@ export function MobileEventDetailScreen({
   const event = detail.event;
   const host = detail.host;
   const tags = detail.tags ?? [];
-  const agenda = detail.agenda ?? [];
-  const speakerLineup = detail.speakerLineup ?? [];
+  const agenda = useMemo(() => detail.agenda ?? [], [detail.agenda]);
+  const networkingPulse = detail.networkingPulse;
   const agendaDayGroups = useMemo(
     () => buildAgendaDayGroups(agenda, event.timezone),
     [agenda, event.timezone]
@@ -124,6 +209,7 @@ export function MobileEventDetailScreen({
   const primaryLabel = hasPrimaryUrl ? 'Register' : 'Add to calendar';
   const isLocationInteractive = hasMappableLocation(event.location);
   const isAttending = engagement?.status === 'attending';
+  const isAttended = engagement?.status === 'attended';
   const isBookmarked = Boolean(engagement?.isBookmarked);
   const calendarStatusColor =
     calendarStatusTone === 'success'
@@ -166,28 +252,146 @@ export function MobileEventDetailScreen({
           ]}
         >
           <View style={styles.headerRow}>
-            <Pressable
-              accessibilityLabel="Back"
-              onPress={onBack}
-              style={({ pressed }) => [
-                styles.iconButton,
-                { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
-              ]}
-            >
-              <FontAwesome name="angle-left" size={22} color={tokens.colors.textSecondary} />
-            </Pressable>
-
-            <View style={styles.headerCopy}>
-              {event.metaLabel ? (
-                <Text
-                  style={[
-                    styles.headerEyebrow,
-                    { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans },
+            <View style={styles.headerControls}>
+              <Pressable
+                accessibilityLabel="Back"
+                onPress={onBack}
+                style={({ pressed }) => [
+                  styles.headerBackButton,
+                  { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
+                ]}
+              >
+                <FontAwesome name="angle-left" size={20} color={tokens.colors.textSecondary} />
+              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  accessibilityLabel={isBookmarked ? 'Remove saved event' : 'Save event'}
+                  disabled={isBookmarkPending}
+                  onPress={onToggleBookmark}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    styles.iconStateButton,
+                    {
+                      backgroundColor: isBookmarked
+                        ? tokens.colors.warning
+                        : pressed
+                          ? tokens.colors.surfaceStrong
+                          : tokens.colors.surface,
+                      borderColor: isBookmarked ? tokens.colors.warning : tokens.colors.border,
+                      opacity: isBookmarkPending ? 0.45 : 1,
+                    },
                   ]}
                 >
-                  {event.metaLabel}
-                </Text>
-              ) : null}
+                  <FontAwesome
+                    name={isBookmarked ? 'bookmark' : 'bookmark-o'}
+                    size={15}
+                    color={isBookmarked ? tokens.colors.textInverse : tokens.colors.textSecondary}
+                  />
+                </Pressable>
+
+                <Pressable
+                  accessibilityLabel="More actions"
+                  onPress={() => setShowMenu((current) => !current)}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
+                  ]}
+                >
+                  <FontAwesome name="ellipsis-v" size={16} color={tokens.colors.textSecondary} />
+                </Pressable>
+
+                {showMenu ? (
+                  <View
+                    style={[
+                      styles.menu,
+                      {
+                        backgroundColor: tokens.colors.surface,
+                        borderColor: tokens.colors.borderStrong,
+                      },
+                    ]}
+                  >
+                    <Pressable
+                      onPress={() => { setShowMenu(false); onShareEvent(); }}
+                      style={({ pressed }) => [
+                        styles.menuItem,
+                        { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
+                      ]}
+                    >
+                      <FontAwesome name="share-alt" size={14} color={tokens.colors.textSecondary} />
+                      <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                        Share event
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => { setShowMenu(false); onAddToCalendar(); }}
+                      style={({ pressed }) => [
+                        styles.menuItem,
+                        { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
+                      ]}
+                    >
+                      <FontAwesome name="calendar-plus-o" size={14} color={tokens.colors.textSecondary} />
+                      <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                        Add to calendar
+                      </Text>
+                    </Pressable>
+
+                    {canOpenEventPage ? (
+                      <Pressable
+                        onPress={() => { setShowMenu(false); onOpenEventPage(); }}
+                        style={({ pressed }) => [
+                          styles.menuItem,
+                          { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
+                        ]}
+                      >
+                        <FontAwesome name="external-link" size={13} color={tokens.colors.textSecondary} />
+                        <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                          Visit event page
+                        </Text>
+                      </Pressable>
+                    ) : null}
+
+                    {isAttended ? (
+                      <Pressable
+                        disabled={isAttendancePending}
+                        onPress={() => { setShowMenu(false); onRemoveAttendance(); }}
+                        style={({ pressed }) => [
+                          styles.menuItem,
+                          {
+                            backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent',
+                            opacity: isAttendancePending ? 0.45 : 1,
+                          },
+                        ]}
+                      >
+                        <FontAwesome name="times-circle-o" size={14} color={tokens.colors.textSecondary} />
+                        <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                          Remove attendance
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        disabled={isAttendancePending}
+                        onPress={() => { setShowMenu(false); onToggleAttendance(); }}
+                        style={({ pressed }) => [
+                          styles.menuItem,
+                          {
+                            backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent',
+                            opacity: isAttendancePending ? 0.45 : 1,
+                          },
+                        ]}
+                      >
+                        <FontAwesome name="check-circle-o" size={14} color={tokens.colors.textSecondary} />
+                        <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                          {isAttending ? 'Remove RSVP' : attendanceCta.label}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.headerCopy}>
               <Text
                 testID="event-detail-title"
                 numberOfLines={2}
@@ -199,7 +403,6 @@ export function MobileEventDetailScreen({
                 {event.title}
               </Text>
 
-              {/* Compact meta cluster: badges + date + location */}
               <View style={styles.metaCluster}>
                 {event.formatLabel ? (
                   <View
@@ -227,114 +430,6 @@ export function MobileEventDetailScreen({
                 ) : null}
               </View>
             </View>
-
-            <View style={styles.headerActions}>
-              <Pressable
-                accessibilityLabel={isBookmarked ? 'Remove saved event' : 'Save event'}
-                disabled={isBookmarkPending}
-                onPress={onToggleBookmark}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  styles.iconStateButton,
-                  {
-                    backgroundColor: isBookmarked
-                      ? tokens.colors.warning
-                      : pressed
-                        ? tokens.colors.surfaceStrong
-                        : tokens.colors.surface,
-                    borderColor: isBookmarked ? tokens.colors.warning : tokens.colors.border,
-                    opacity: isBookmarkPending ? 0.45 : 1,
-                  },
-                ]}
-              >
-                <FontAwesome
-                  name={isBookmarked ? 'bookmark' : 'bookmark-o'}
-                  size={15}
-                  color={isBookmarked ? tokens.colors.textInverse : tokens.colors.textSecondary}
-                />
-              </Pressable>
-
-              <Pressable
-                accessibilityLabel="More actions"
-                onPress={() => setShowMenu((current) => !current)}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
-                ]}
-              >
-                <FontAwesome name="ellipsis-v" size={16} color={tokens.colors.textSecondary} />
-              </Pressable>
-
-              {showMenu ? (
-                <View
-                  style={[
-                    styles.menu,
-                    {
-                      backgroundColor: tokens.colors.surface,
-                      borderColor: tokens.colors.borderStrong,
-                    },
-                  ]}
-                >
-                  <Pressable
-                    onPress={() => { setShowMenu(false); onShareEvent(); }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
-                    ]}
-                  >
-                    <FontAwesome name="share-alt" size={14} color={tokens.colors.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      Share event
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => { setShowMenu(false); onAddToCalendar(); }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
-                    ]}
-                  >
-                    <FontAwesome name="calendar-plus-o" size={14} color={tokens.colors.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      Add to calendar
-                    </Text>
-                  </Pressable>
-
-                  {canOpenEventPage ? (
-                    <Pressable
-                      onPress={() => { setShowMenu(false); onOpenEventPage(); }}
-                      style={({ pressed }) => [
-                        styles.menuItem,
-                        { backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent' },
-                      ]}
-                    >
-                      <FontAwesome name="external-link" size={13} color={tokens.colors.textSecondary} />
-                      <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                        Visit event page
-                      </Text>
-                    </Pressable>
-                  ) : null}
-
-                  <Pressable
-                    disabled={isAttendancePending}
-                    onPress={() => { setShowMenu(false); onToggleAttendance(); }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      {
-                        backgroundColor: pressed ? tokens.colors.surfaceMuted : 'transparent',
-                        opacity: isAttendancePending ? 0.45 : 1,
-                      },
-                    ]}
-                  >
-                    <FontAwesome name="check-circle-o" size={14} color={tokens.colors.textSecondary} />
-                    <Text style={[styles.menuLabel, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                      {isAttending ? 'Remove RSVP' : 'Mark attending'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
           </View>
         </View>
 
@@ -344,10 +439,10 @@ export function MobileEventDetailScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Event meta sheet: date, location, organizer */}
+          {/* Event facts */}
           <View
             style={[
-              styles.metaSheet,
+              styles.factPanel,
               {
                 backgroundColor: tokens.colors.surface,
                 borderColor: tokens.colors.border,
@@ -355,7 +450,7 @@ export function MobileEventDetailScreen({
             ]}
           >
             <IconMetaRow icon="calendar">
-              <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+              <Text selectable style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                 {formatEventDateTime(event.startTime, event.endTime, event.timezone)}
               </Text>
               {calendarStatusLabel ? (
@@ -377,7 +472,7 @@ export function MobileEventDetailScreen({
                   icon="map-marker"
                   onPress={isLocationInteractive ? () => onOpenLocation(event.location!) : undefined}
                 >
-                  <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                  <Text selectable style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                     {event.location}
                   </Text>
                 </IconMetaRow>
@@ -407,7 +502,7 @@ export function MobileEventDetailScreen({
                       <Text style={[styles.organizerLabel, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
                         Organizer
                       </Text>
-                      <Text style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                      <Text selectable style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                         {host.name}
                       </Text>
                     </View>
@@ -417,18 +512,20 @@ export function MobileEventDetailScreen({
             ) : null}
           </View>
 
+          {networkingPulse ? (
+            <NetworkingPulseSection pulse={networkingPulse} />
+          ) : null}
+
           {/* Description */}
           {event.description ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionEyebrow, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
-                  Overview
-                </Text>
                 <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                   What this event is about
                 </Text>
               </View>
               <Text
+                selectable
                 numberOfLines={showFullDescription ? undefined : 5}
                 style={[styles.sectionBody, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}
               >
@@ -448,9 +545,6 @@ export function MobileEventDetailScreen({
           {tags.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionEyebrow, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
-                  Focus areas
-                </Text>
                 <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                   Tags
                 </Text>
@@ -495,27 +589,29 @@ export function MobileEventDetailScreen({
           {uniqueSpeakers.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionEyebrow, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
-                  Speakers
-                </Text>
                 <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                   Who is on stage
                 </Text>
               </View>
 
-              <View style={styles.cardStack}>
-                {visibleSpeakers.map((speaker) => {
+              <View
+                style={[
+                  styles.listPanel,
+                  {
+                    backgroundColor: tokens.colors.surface,
+                    borderColor: tokens.colors.border,
+                  },
+                ]}
+              >
+                {visibleSpeakers.map((speaker, index) => {
                   const secondary = buildSpeakerSecondaryText(speaker);
 
                   return (
                     <View
                       key={speaker.id || speaker.name}
                       style={[
-                        styles.infoCard,
-                        {
-                          backgroundColor: tokens.colors.surface,
-                          borderColor: tokens.colors.border,
-                        },
+                        styles.speakerListRow,
+                        index > 0 && { borderTopColor: tokens.colors.divider, borderTopWidth: StyleSheet.hairlineWidth },
                       ]}
                     >
                       <View style={styles.speakerRow}>
@@ -563,15 +659,12 @@ export function MobileEventDetailScreen({
           {agendaDayGroups.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionEyebrow, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
-                  Agenda
-                </Text>
                 <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                   Event schedule
                 </Text>
               </View>
 
-              <View style={styles.cardStack}>
+              <View style={styles.agendaStack}>
                 {agendaDayGroups.map((group) => {
                   const expanded = expandedAgendaDays.includes(group.key);
                   const visibleItems = expanded ? group.items : group.items.slice(0, 3);
@@ -580,7 +673,7 @@ export function MobileEventDetailScreen({
                     <View
                       key={group.key}
                       style={[
-                        styles.infoCard,
+                        styles.agendaPanel,
                         {
                           backgroundColor: tokens.colors.surface,
                           borderColor: tokens.colors.border,
@@ -631,6 +724,45 @@ export function MobileEventDetailScreen({
                                   </Text>
                                 ) : null}
                               </View>
+                              {onToggleAgendaSave ? (
+                                <Pressable
+                                  accessibilityLabel={
+                                    agendaItem.isSaved
+                                      ? 'Remove saved session'
+                                      : 'Save session'
+                                  }
+                                  disabled={pendingAgendaSaveIds?.has(agendaItem.id)}
+                                  onPress={() =>
+                                    onToggleAgendaSave(agendaItem.id, !agendaItem.isSaved)
+                                  }
+                                  style={({ pressed }) => [
+                                    styles.agendaSaveButton,
+                                    {
+                                      backgroundColor: agendaItem.isSaved
+                                        ? tokens.colors.accentSoft
+                                        : pressed
+                                          ? tokens.colors.surfaceMuted
+                                          : 'transparent',
+                                      borderColor: agendaItem.isSaved
+                                        ? tokens.colors.accent
+                                        : tokens.colors.border,
+                                      opacity: pendingAgendaSaveIds?.has(agendaItem.id)
+                                        ? 0.45
+                                        : 1,
+                                    },
+                                  ]}
+                                >
+                                  <FontAwesome
+                                    name={agendaItem.isSaved ? 'bookmark' : 'bookmark-o'}
+                                    size={12}
+                                    color={
+                                      agendaItem.isSaved
+                                        ? tokens.colors.accent
+                                        : tokens.colors.textSecondary
+                                    }
+                                  />
+                                </Pressable>
+                              ) : null}
                             </View>
                           );
                         })}
@@ -658,13 +790,42 @@ export function MobileEventDetailScreen({
             <View style={{ flex: 1 }}>
               <KureButton onPress={onPrimaryAction}>{primaryLabel}</KureButton>
             </View>
-            {canOpenEventPage ? (
-              <View style={{ flex: 1 }}>
-                <KureButton variant="secondary" onPress={onOpenEventPage}>
-                  Official site
-                </KureButton>
-              </View>
-            ) : null}
+            <Pressable
+              accessibilityLabel={attendanceCta.accessibilityLabel}
+              disabled={isAttendancePending}
+              onPress={onToggleAttendance}
+              style={({ pressed }) => [
+                styles.attendanceButton,
+                {
+                  backgroundColor: attendanceCta.active
+                    ? tokens.colors.accentSoft
+                    : pressed
+                      ? tokens.colors.surfaceMuted
+                      : tokens.colors.surface,
+                  borderColor: attendanceCta.active
+                    ? tokens.colors.accent
+                    : tokens.colors.borderStrong,
+                  opacity: isAttendancePending ? 0.45 : 1,
+                },
+              ]}
+            >
+              <FontAwesome
+                name={attendanceCta.icon}
+                size={13}
+                color={attendanceCta.active ? tokens.colors.accent : tokens.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.attendanceLabel,
+                  {
+                    color: attendanceCta.active ? tokens.colors.accent : tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              >
+                {attendanceCta.label}
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -681,40 +842,44 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingBottom: 14,
-    paddingHorizontal: 16,
+    paddingBottom: 24,
+    paddingHorizontal: 14,
   },
   headerRow: {
+    gap: 16,
+  },
+  headerControls: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerBackButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    gap: 12,
+    minHeight: 84,
   },
   headerTitle: {
-    fontSize: 28,
-    lineHeight: 30,
-    fontWeight: '800',
-    letterSpacing: -0.9,
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: 0,
   },
   metaCluster: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 6,
   },
   metaBadge: {
-    borderRadius: 999,
+    borderRadius: 3,
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   metaBadgeText: {
     fontSize: 10,
@@ -725,12 +890,12 @@ const styles = StyleSheet.create({
   headerActions: {
     position: 'relative',
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -743,42 +908,42 @@ const styles = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    top: 48,
+    top: 40,
     right: 0,
     width: 188,
-    borderRadius: 18,
+    borderRadius: 6,
     borderWidth: 1,
-    paddingVertical: 6,
+    paddingVertical: 4,
     zIndex: 3,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   menuLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    gap: 20,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 16,
+    gap: 30,
+    paddingHorizontal: 14,
+    paddingTop: 26,
+    paddingBottom: 36,
   },
-  metaSheet: {
-    borderRadius: 20,
+  factPanel: {
+    borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   iconMetaRowPressable: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   iconMetaRow: {
     flexDirection: 'row',
@@ -791,17 +956,17 @@ const styles = StyleSheet.create({
   },
   metaRowText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 18,
     fontWeight: '600',
   },
   calendarStatusLabel: {
     fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
+    lineHeight: 16,
+    marginTop: 2,
   },
   metaDivider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: 14,
+    marginHorizontal: 16,
   },
   organizerLabel: {
     fontSize: 11,
@@ -809,14 +974,14 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   hostLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 4,
   },
   hostFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -826,83 +991,135 @@ const styles = StyleSheet.create({
   },
   ctaBar: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingHorizontal: 14,
   },
   ctaRow: {
     flexDirection: 'row',
     gap: 10,
   },
+  attendanceButton: {
+    minWidth: 118,
+    minHeight: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  attendanceLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   section: {
-    gap: 12,
+    gap: 14,
   },
   sectionHeader: {
-    gap: 4,
-  },
-  sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
+    gap: 2,
   },
   sectionTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '800',
-    letterSpacing: -0.6,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '700',
+    letterSpacing: 0,
   },
   sectionBody: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 22,
   },
   linkLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   tagWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    columnGap: 6,
+    rowGap: 10,
   },
   tagBadge: {
-    minHeight: 30,
-    borderRadius: 999,
+    minHeight: 26,
+    borderRadius: 3,
     borderWidth: 1,
     justifyContent: 'center',
-    paddingHorizontal: 11,
+    paddingHorizontal: 9,
   },
   tagText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  cardStack: {
-    gap: 12,
+  pulseGrid: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  infoCard: {
-    borderRadius: 20,
+  pulseMetric: {
+    flex: 1,
+    minHeight: 96,
+    borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
-    padding: 14,
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  pulseLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  pulseValue: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  pulseMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pulseMeta: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  listPanel: {
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  agendaStack: {
+    gap: 8,
+  },
+  agendaPanel: {
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
   speakerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+  },
+  speakerListRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   speakerAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
+    width: 36,
+    height: 36,
+    borderRadius: 6,
   },
   speakerFallback: {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
+    width: 36,
+    height: 36,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   speakerFallbackText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
   },
   speakerCopy: {
@@ -910,8 +1127,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardTitle: {
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '700',
   },
   cardMeta: {
@@ -923,6 +1140,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   agendaHeaderCopy: {
     flex: 1,
@@ -933,18 +1152,28 @@ const styles = StyleSheet.create({
   },
   agendaItem: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   agendaTime: {
-    width: 58,
+    width: 72,
     fontSize: 12,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   agendaCopy: {
     flex: 1,
     gap: 4,
+  },
+  agendaSaveButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   agendaTitle: {
     fontSize: 14,

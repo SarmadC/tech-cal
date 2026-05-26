@@ -31,6 +31,7 @@ import {
   loadMobileCommunityPost,
   loadMobileDiscoverFeed,
   loadMobileEventDetail,
+  loadMobileEventNetworkingFeedback,
   loadMobileFollowStatus,
   loadMobileProfileState,
   loadMobilePublicProfile,
@@ -46,7 +47,9 @@ import {
   syncMobileGoogleCalendarEvent,
   unfollowMobileUser,
   unsyncMobileGoogleCalendarEvent,
+  updateMobileEventAgendaSave,
   updateMobileEventEngagement,
+  updateMobileEventNetworkingFeedback,
   updateMobileProfile,
 } from './mobileApi';
 
@@ -207,6 +210,94 @@ describe('mobile api helpers', () => {
 
     await expect(loadMobileEventDetail('missing-event')).rejects.toThrow(
       'Event not found'
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('saves agenda sessions through the event agenda save endpoint', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            eventId: 'event-1',
+            agendaItemId: 'agenda-1',
+            isSaved: true,
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const result = await updateMobileEventAgendaSave(
+      'event-1',
+      'agenda-1',
+      true
+    );
+
+    expect(result.isSaved).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/events/event-1/agenda/agenda-1/save',
+      expect.objectContaining({
+        method: 'POST',
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('loads and submits an event review rating with optional connections', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              eventId: 'event-1',
+              actualValueRating: null,
+              connectionsMade: null,
+              linkedinRequestsSent: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              eventId: 'event-1',
+              actualValueRating: 5,
+              connectionsMade: 2,
+              linkedinRequestsSent: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+    const initial = await loadMobileEventNetworkingFeedback('event-1');
+    const submitted = await updateMobileEventNetworkingFeedback('event-1', {
+      actualValueRating: 5,
+      connectionsMade: 2,
+    });
+
+    expect(initial.actualValueRating).toBeNull();
+    expect(submitted.actualValueRating).toBe(5);
+    expect(fetchSpy.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          actualValueRating: 5,
+          connectionsMade: 2,
+        }),
+      })
     );
 
     fetchSpy.mockRestore();

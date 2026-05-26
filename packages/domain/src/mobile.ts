@@ -78,6 +78,12 @@ export const mobileEventEngagementUpdateSchema = z
     }
   );
 
+export const mobileEventAgendaSaveSchema = z.object({
+  eventId: z.string(),
+  agendaItemId: z.string(),
+  isSaved: z.boolean(),
+});
+
 export const mobileLinkedInOutreachLogSchema = z.object({
   eventId: z.string(),
   connectionsMade: z.number().int().nonnegative(),
@@ -86,21 +92,24 @@ export const mobileLinkedInOutreachLogSchema = z.object({
 
 export const mobileEventNetworkingFeedbackSchema = z.object({
   eventId: z.string(),
+  actualValueRating: z.number().int().min(1).max(5).nullable(),
   connectionsMade: z.number().int().nonnegative().nullable(),
   linkedinRequestsSent: z.number().int().nonnegative().nullable(),
 });
 
 export const mobileEventNetworkingFeedbackUpdateSchema = z
   .object({
+    actualValueRating: z.number().int().min(1).max(5).nullable().optional(),
     connectionsMade: z.number().int().nonnegative().nullable().optional(),
     linkedinRequestsSent: z.number().int().nonnegative().nullable().optional(),
   })
   .refine(
     (value) =>
+      Object.prototype.hasOwnProperty.call(value, 'actualValueRating') ||
       Object.prototype.hasOwnProperty.call(value, 'connectionsMade') ||
       Object.prototype.hasOwnProperty.call(value, 'linkedinRequestsSent'),
     {
-      message: 'At least one networking field must be provided.',
+      message: 'At least one feedback field must be provided.',
     }
   );
 
@@ -605,7 +614,26 @@ export const mobileEventDetailAgendaItemSchema = z.object({
   description: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   track: z.string().nullable().optional(),
+  topics: z.array(z.string()).optional(),
+  isSaved: z.boolean().optional(),
   speakers: z.array(mobileEventDetailSpeakerSchema),
+});
+
+export const mobileEventNetworkingPulseSchema = z.object({
+  state: z.enum(['empty', 'active']),
+  trendingTopic: z
+    .object({
+      label: z.string(),
+      activityLabel: z.string(),
+    })
+    .nullable(),
+  mostSavedSession: z
+    .object({
+      agendaItemId: z.string(),
+      title: z.string(),
+      saveCount: z.number().int().nonnegative(),
+    })
+    .nullable(),
 });
 
 export const mobileEventDetailSchema = z.object({
@@ -626,6 +654,7 @@ export const mobileEventDetailSchema = z.object({
   tags: z.array(z.string()).optional(),
   agenda: z.array(mobileEventDetailAgendaItemSchema).optional(),
   speakerLineup: z.array(mobileEventDetailSpeakerSchema).optional(),
+  networkingPulse: mobileEventNetworkingPulseSchema.optional(),
 });
 
 export const mobileOnboardingStatusSchema = z.object({
@@ -904,6 +933,12 @@ export type MobileEventDetailSpeaker = z.infer<
 >;
 export type MobileEventDetailAgendaItem = z.infer<
   typeof mobileEventDetailAgendaItemSchema
+>;
+export type MobileEventNetworkingPulse = z.infer<
+  typeof mobileEventNetworkingPulseSchema
+>;
+export type MobileEventAgendaSave = z.infer<
+  typeof mobileEventAgendaSaveSchema
 >;
 export type MobileEventDetail = z.infer<typeof mobileEventDetailSchema>;
 export type MobileOnboardingStatus = z.infer<typeof mobileOnboardingStatusSchema>;

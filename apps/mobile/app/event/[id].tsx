@@ -7,10 +7,16 @@ import type {
   MobileCalendarConnectionStatus,
   MobileEventDetail,
   MobileEventEngagement,
+  MobileEventNetworkingFeedback,
+  MobileEventNetworkingFeedbackUpdate,
 } from '@kurecal/domain';
 
 import { MobileEventDetailScreen } from '../../src/components/event-detail/MobileEventDetailScreen';
-import { buildMapsSearchUrl } from '../../src/components/event-detail/eventDetailUtils';
+import { EventReviewSheet } from '../../src/components/event-detail/EventReviewSheet';
+import {
+  buildMapsSearchUrl,
+  getAttendanceCtaState,
+} from '../../src/components/event-detail/eventDetailUtils';
 import { ScreenStateView } from '../../src/components/ScreenStateView';
 import {
   getDeviceCalendarMapping,
@@ -20,10 +26,13 @@ import {
 } from '../../src/lib/deviceCalendarSync';
 import {
   loadMobileEventDetail,
+  loadMobileEventNetworkingFeedback,
   loadMobileGoogleCalendarStatus,
   syncMobileGoogleCalendarEvent,
   unsyncMobileGoogleCalendarEvent,
+  updateMobileEventAgendaSave,
   updateMobileEventEngagement,
+  updateMobileEventNetworkingFeedback,
 } from '../../src/lib/mobileApi';
 
 export default function EventDetailRoute() {
@@ -36,6 +45,13 @@ export default function EventDetailRoute() {
   const [loading, setLoading] = useState(true);
   const [bookmarkPending, setBookmarkPending] = useState(false);
   const [attendancePending, setAttendancePending] = useState(false);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewFeedback, setReviewFeedback] =
+    useState<MobileEventNetworkingFeedback | null>(null);
+  const [pendingAgendaSaveIds, setPendingAgendaSaveIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [calendarPending, setCalendarPending] = useState(false);
   const [googleStatus, setGoogleStatus] =
     useState<MobileCalendarConnectionStatus | null>(null);
@@ -378,13 +394,40 @@ export default function EventDetailRoute() {
     }
   }
 
+  async function openReviewSheet() {
+    if (!data) {
+      return;
+    }
+
+    setReviewVisible(true);
+    setReviewLoading(true);
+    try {
+      setReviewFeedback(await loadMobileEventNetworkingFeedback(data.event.id));
+    } catch (nextError) {
+      console.warn('Unable to load existing event review', nextError);
+      setReviewFeedback(null);
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
   async function handleToggleAttendance() {
     if (!data || attendancePending) {
       return;
     }
 
+    const action = getAttendanceCtaState(data.event, data.event.engagement).action;
+    if (action === 'review') {
+      await openReviewSheet();
+      return;
+    }
+
     const nextStatus =
-      data.event.engagement?.status === 'attending' ? null : 'attending';
+      action === 'confirm-attended'
+        ? 'attended'
+        : data.event.engagement?.status === 'attending'
+          ? null
+          : 'attending';
     setAttendancePending(true);
 
     try {
@@ -394,6 +437,9 @@ export default function EventDetailRoute() {
 
       updateEngagementState(engagement);
       void syncGoogleAfterEngagementChange(engagement);
+      if (nextStatus === 'attended') {
+        await openReviewSheet();
+      }
     } catch (nextError) {
       Alert.alert(
         'Unable to update attendance',
@@ -401,6 +447,63 @@ export default function EventDetailRoute() {
       );
     } finally {
       setAttendancePending(false);
+    }
+  }
+
+  async function handleRemoveAttendance() {
+    if (!data || attendancePending) {
+      return;
+    }
+
+    setAttendancePending(true);
+    try {
+      const engagement = await updateMobileEventEngagement(data.event.id, {
+        status: null,
+      });
+      updateEngagementState(engagement);
+      void syncGoogleAfterEngagementChange(engagement);
+    } catch (nextError) {
+      Alert.alert(
+        'Unable to remove attendance',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setAttendancePending(false);
+    }
+  }
+
+  async function handleSubmitReview(input: MobileEventNetworkingFeedbackUpdate) {
+    if (!data || input.actualValueRating == null) {
+      throw new Error('Select a rating to submit your review.');
+    }
+
+    const feedback = await updateMobileEventNetworkingFeedback(data.event.id, input);
+    setReviewFeedback(feedback);
+    setReviewVisible(false);
+  }
+
+  async function handleToggleAgendaSave(agendaItemId: string, isSaved: boolean) {
+    if (!data || pendingAgendaSaveIds.has(agendaItemId)) {
+      return;
+    }
+
+    setPendingAgendaSaveIds((current) => new Set(current).add(agendaItemId));
+
+    try {
+      await updateMobileEventAgendaSave(data.event.id, agendaItemId, isSaved);
+      const nextDetail = await loadMobileEventDetail(data.event.id);
+      setData(nextDetail);
+    } catch (nextError) {
+      Alert.alert(
+        isSaved ? 'Unable to save session' : 'Unable to remove saved session',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    } finally {
+      setPendingAgendaSaveIds((current) => {
+        const next = new Set(current);
+        next.delete(agendaItemId);
+        return next;
+      });
     }
   }
 
@@ -461,37 +564,56 @@ export default function EventDetailRoute() {
         : googleStatus?.requiresUpgrade
           ? 'warning'
           : 'neutral';
+  const attendanceCta = getAttendanceCtaState(data.event, data.event.engagement);
 
   return (
-    <MobileEventDetailScreen
-      detail={data}
-      engagement={data.event.engagement}
-      isBookmarkPending={bookmarkPending}
-      isAttendancePending={attendancePending}
-      calendarStatusLabel={calendarStatusLabel}
-      calendarStatusTone={calendarStatusTone}
-      onBack={() => router.back()}
-      onPrimaryAction={() => {
-        void handlePrimaryAction();
-      }}
-      onAddToCalendar={() => {
-        handleAddToCalendar();
-      }}
-      onToggleBookmark={() => {
-        void handleToggleBookmark();
-      }}
-      onToggleAttendance={() => {
-        void handleToggleAttendance();
-      }}
-      onOpenEventPage={() => {
-        void openUrl(data.event.sourceUrl);
-      }}
-      onOpenLocation={(location) => {
-        void openUrl(buildMapsSearchUrl(location));
-      }}
-      onShareEvent={() => {
-        void handleShareEvent();
-      }}
-    />
+    <>
+      <MobileEventDetailScreen
+        attendanceCta={attendanceCta}
+        detail={data}
+        engagement={data.event.engagement}
+        isBookmarkPending={bookmarkPending}
+        isAttendancePending={attendancePending}
+        pendingAgendaSaveIds={pendingAgendaSaveIds}
+        calendarStatusLabel={calendarStatusLabel}
+        calendarStatusTone={calendarStatusTone}
+        onBack={() => router.back()}
+        onPrimaryAction={() => {
+          void handlePrimaryAction();
+        }}
+        onAddToCalendar={() => {
+          handleAddToCalendar();
+        }}
+        onToggleBookmark={() => {
+          void handleToggleBookmark();
+        }}
+        onToggleAttendance={() => {
+          void handleToggleAttendance();
+        }}
+        onRemoveAttendance={() => {
+          void handleRemoveAttendance();
+        }}
+        onToggleAgendaSave={(agendaItemId, isSaved) => {
+          void handleToggleAgendaSave(agendaItemId, isSaved);
+        }}
+        onOpenEventPage={() => {
+          void openUrl(data.event.sourceUrl);
+        }}
+        onOpenLocation={(location) => {
+          void openUrl(buildMapsSearchUrl(location));
+        }}
+        onShareEvent={() => {
+          void handleShareEvent();
+        }}
+      />
+      <EventReviewSheet
+        eventTitle={data.event.title}
+        feedback={reviewFeedback}
+        isLoading={reviewLoading}
+        onDismiss={() => setReviewVisible(false)}
+        onSubmit={handleSubmitReview}
+        visible={reviewVisible}
+      />
+    </>
   );
 }

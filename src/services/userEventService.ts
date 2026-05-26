@@ -166,17 +166,26 @@ export class UserEventService {
                 // First, get the current status before clearing
                 const { data: existingRecord } = await supabaseClient
                     .from('user_events')
-                    .select('status')
+                    .select('status, is_bookmarked, activity_type')
                     .eq('user_id', userId)
                     .eq('event_id', eventId)
                     .maybeSingle();
 
                 const previousStatus = existingRecord?.status ?? null;
+                const clearedActivityType = existingRecord?.activity_type === 'speaking'
+                    ? 'speaking'
+                    : existingRecord?.is_bookmarked
+                        ? 'saved'
+                        : null;
 
-                // Update the record to set status to null
+                // Cleared attendance must not remain visible as attending/attended activity.
                 const { error: updateError } = await supabaseClient
                     .from('user_events')
-                    .update({ status: null, notes: notes ?? null })
+                    .update({
+                        status: null,
+                        notes: notes ?? null,
+                        activity_type: clearedActivityType
+                    })
                     .eq('user_id', userId)
                     .eq('event_id', eventId);
 

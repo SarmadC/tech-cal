@@ -44,6 +44,7 @@ interface EventRow {
     user_id: string;
     activity_type: PublicProfileEventActivityType | null;
     role: string | null;
+    status: 'attending' | 'attended' | 'cancelled' | null;
   }>;
 }
 
@@ -726,7 +727,7 @@ export class PublicProfileService {
     const upcomingPromise = readClient
       .from('events')
       .select(
-        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role)'
+        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role, status)'
       )
       .eq('user_events.user_id', userId)
       .in('user_events.activity_type', ['attending', 'speaking', 'saved'])
@@ -738,7 +739,7 @@ export class PublicProfileService {
     const pastPromise = readClient
       .from('events')
       .select(
-        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role)'
+        'id, slug, title, start_time, end_time, location, user_events!inner(user_id, activity_type, role, status)'
       )
       .eq('user_events.user_id', userId)
       .in('user_events.activity_type', ['attended', 'speaking'])
@@ -762,7 +763,15 @@ export class PublicProfileService {
     const upcoming = (upcomingResult.data || []) as unknown as EventRow[];
     const past = (pastResult.data || []) as unknown as EventRow[];
 
-    const combined = [...upcoming, ...past].slice(0, limit);
+    const combined = [...upcoming, ...past]
+      .filter((event) => {
+        const link = event.user_events?.[0];
+        if (link?.activity_type === 'attending' || link?.activity_type === 'attended') {
+          return link.status === 'attending' || link.status === 'attended';
+        }
+        return true;
+      })
+      .slice(0, limit);
 
     const events: PublicProfileEvent[] = combined.map((event) => {
       const link = event.user_events?.[0];

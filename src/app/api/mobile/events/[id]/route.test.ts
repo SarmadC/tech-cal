@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   getAuthenticatedRequestContext: vi.fn(),
   getEventById: vi.fn(),
   getEventWithAgenda: vi.fn(),
+  getSavedAgendaItemIds: vi.fn(),
+  buildNetworkingPulse: vi.fn(),
   loadEngagementMap: vi.fn(),
+  createAdminClient: vi.fn(),
 }));
 
 vi.mock('@/utils/supabase/requestAuth', () => ({
@@ -24,8 +27,21 @@ vi.mock('@/services/eventServices', () => ({
   },
 }));
 
+vi.mock('@/services/eventAgendaSaveService', () => ({
+  EventAgendaSaveService: {
+    getSavedAgendaItemIds: (...args: unknown[]) =>
+      mocks.getSavedAgendaItemIds(...args),
+    buildNetworkingPulse: (...args: unknown[]) =>
+      mocks.buildNetworkingPulse(...args),
+  },
+}));
+
 vi.mock('@/app/api/mobile/engagement', () => ({
   loadEngagementMap: (...args: unknown[]) => mocks.loadEngagementMap(...args),
+}));
+
+vi.mock('@/utils/supabase/server', () => ({
+  createAdminClient: (...args: unknown[]) => mocks.createAdminClient(...args),
 }));
 
 const eventDetail = {
@@ -103,6 +119,7 @@ describe('GET /api/mobile/events/[id]', () => {
     });
     mocks.getEventWithAgenda.mockResolvedValue(eventDetail);
     mocks.getEventById.mockResolvedValue(eventDetail);
+    mocks.createAdminClient.mockResolvedValue({ admin: true });
     mocks.loadEngagementMap.mockResolvedValue(
       new Map([
         [
@@ -114,6 +131,19 @@ describe('GET /api/mobile/events/[id]', () => {
         ],
       ])
     );
+    mocks.getSavedAgendaItemIds.mockResolvedValue(new Set(['agenda-1']));
+    mocks.buildNetworkingPulse.mockResolvedValue({
+      state: 'active',
+      trendingTopic: {
+        label: 'Fabric',
+        activityLabel: 'Highly active',
+      },
+      mostSavedSession: {
+        agendaItemId: 'agenda-1',
+        title: 'Opening keynote',
+        saveCount: 4,
+      },
+    });
   });
 
   it('returns a typed event detail payload with agenda and speakers', async () => {
@@ -134,7 +164,62 @@ describe('GET /api/mobile/events/[id]', () => {
     expect(parsed.host?.name).toBe('KureCal');
     expect(parsed.event.engagement?.status).toBe('attending');
     expect(parsed.agenda?.[0]?.title).toBe('Opening keynote');
+    expect(parsed.agenda?.[0]?.isSaved).toBe(true);
     expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
+    expect(parsed.networkingPulse?.mostSavedSession?.saveCount).toBe(4);
+  });
+
+  it('returns an empty networking pulse when aggregate signal is below threshold', async () => {
+    mocks.getSavedAgendaItemIds.mockResolvedValueOnce(new Set());
+    mocks.buildNetworkingPulse.mockResolvedValueOnce({
+      state: 'empty',
+      trendingTopic: null,
+      mostSavedSession: null,
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.networkingPulse?.state).toBe('empty');
+    expect(parsed.networkingPulse?.mostSavedSession).toBeNull();
+  });
+
+  it('keeps loading event detail when optional engagement and pulse data is unavailable', async () => {
+    mocks.loadEngagementMap.mockRejectedValueOnce({
+      message: 'user_events query failed',
+    });
+    mocks.getSavedAgendaItemIds.mockRejectedValueOnce({
+      message: 'relation "user_event_agenda_saves" does not exist',
+    });
+    mocks.buildNetworkingPulse.mockRejectedValueOnce({
+      message: 'user_event_agenda_saves aggregate query failed',
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.event.title).toBe('Expo Ship Week');
+    expect(parsed.event.engagement).toBeUndefined();
+    expect(parsed.agenda?.[0]?.isSaved).toBe(false);
+    expect(parsed.networkingPulse?.state).toBe('empty');
   });
 
   it('falls back to base event detail when agenda hydration fails', async () => {
