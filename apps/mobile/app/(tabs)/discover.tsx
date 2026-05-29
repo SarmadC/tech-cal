@@ -31,6 +31,7 @@ import {
 import { DiscoverRankingRail } from '../../src/components/discover/DiscoverRankingRail';
 import { DiscoverSearchBar } from '../../src/components/discover/DiscoverSearchBar';
 import { DiscoverShell } from '../../src/components/discover/DiscoverShell';
+import { TabMenuOverlay } from '../../src/components/chrome/TabMenuOverlay';
 import { DiscoverTopPicksSection } from '../../src/components/discover/DiscoverTopPicksSection';
 import { useAuth } from '../../src/context/AuthProvider';
 import { mergeDiscoverFeedPage } from '../../src/lib/discoverState';
@@ -428,6 +429,7 @@ export default function DiscoverScreen() {
           </Text>
         ) : null}
       </DiscoverShell>
+      <TabMenuOverlay />
 
       <DiscoverFilterSheet
         activeFilterCount={draftActiveFilterCount}

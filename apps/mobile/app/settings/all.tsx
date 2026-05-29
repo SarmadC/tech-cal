@@ -1,22 +1,19 @@
-// Non-tab entry to the settings overview. Reached via router.push from
-// other tabs (e.g. Profile's settings icon). Using router.dismissTo on
-// back so the iOS back stack returns the user to the originating tab,
-// since pushing the (tabs)/settings.tsx tab directly is a cross-tab
-// navigation that doesn't create a poppable stack entry.
+// Non-tab entry to the settings overview. Reached via router.push from the
+// hamburger menu (and other tabs). Back pops the pushed screen, returning
+// the user to whichever tab opened the menu.
 
 import { Pressable, StyleSheet, Text } from "react-native";
 import { SymbolView } from "expo-symbols";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 
 import SettingsScreen from "../(tabs)/settings";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 export default function SettingsHomeRoute() {
-  const { from } = useLocalSearchParams<{ from?: string }>();
-  return <SettingsScreen headerLeft={<HeaderBack from={from} />} />;
+  return <SettingsScreen headerLeft={<HeaderBack />} />;
 }
 
-function HeaderBack({ from }: { from?: string }) {
+function HeaderBack() {
   const { tokens } = useAppTheme();
 
   return (
@@ -25,12 +22,12 @@ function HeaderBack({ from }: { from?: string }) {
       accessibilityLabel="Back"
       hitSlop={12}
       onPress={() => {
-        // dismissTo pops the stack back to the originating tab, falling
-        // back to a replace if the route isn't in history. The `from`
-        // query param is set by whichever screen pushed us here.
-        const target: "/dashboard" | "/profile" =
-          from === "dashboard" ? "/dashboard" : "/profile";
-        router.dismissTo(target);
+        // Pop the pushed settings screen back to the tab that opened it.
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace("/discover");
+        }
       }}
       style={({ pressed }) => [
         styles.button,

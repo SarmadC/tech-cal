@@ -3419,6 +3419,164 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          comment_reply: boolean
+          mention: boolean
+          post_reply: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment_reply?: boolean
+          mention?: boolean
+          post_reply?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment_reply?: boolean
+          mention?: boolean
+          post_reply?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_avatar_url: string | null
+          actor_display_name: string | null
+          actor_id: string | null
+          circle_id: string | null
+          circle_slug: string | null
+          comment_id: string | null
+          created_at: string
+          entity_preview: string | null
+          id: string
+          post_id: string | null
+          read_at: string | null
+          recipient_id: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          actor_avatar_url?: string | null
+          actor_display_name?: string | null
+          actor_id?: string | null
+          circle_id?: string | null
+          circle_slug?: string | null
+          comment_id?: string | null
+          created_at?: string
+          entity_preview?: string | null
+          id?: string
+          post_id?: string | null
+          read_at?: string | null
+          recipient_id: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          actor_avatar_url?: string | null
+          actor_display_name?: string | null
+          actor_id?: string | null
+          circle_id?: string | null
+          circle_slug?: string | null
+          comment_id?: string | null
+          created_at?: string
+          entity_preview?: string | null
+          id?: string
+          post_id?: string | null
+          read_at?: string | null
+          recipient_id?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "circle_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "circle_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       onboarding_interest_options: {
         Row: {
           created_at: string
@@ -5673,6 +5831,88 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications_visible: {
+        Row: {
+          actor_avatar_url: string | null
+          actor_display_name: string | null
+          actor_id: string | null
+          circle_id: string | null
+          circle_slug: string | null
+          comment_id: string | null
+          created_at: string | null
+          entity_preview: string | null
+          id: string | null
+          post_id: string | null
+          read_at: string | null
+          recipient_id: string | null
+          type: Database["public"]["Enums"]["notification_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "circle_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "circle_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       telemetry_recommendation_batches_last7d: {
         Row: {
           avg_returned_count: number | null
@@ -5813,6 +6053,10 @@ export type Database = {
       }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_interactions: { Args: never; Returns: number }
+      create_circle_comment_with_notification: {
+        Args: { payload: Json }
+        Returns: Json
+      }
       event_room_thread_decrement_comment_count: {
         Args: { p_thread_id: string }
         Returns: undefined
@@ -6034,6 +6278,13 @@ export type Database = {
             }[]
           }
       get_analytics_health: { Args: never; Returns: Json }
+      get_event_connection_counts_for_user: {
+        Args: { p_event_ids: string[]; p_user_id: string }
+        Returns: {
+          connection_count: number
+          event_id: string
+        }[]
+      }
       get_event_types_with_counts: {
         Args: never
         Returns: {
@@ -6216,6 +6467,7 @@ export type Database = {
         | "find-employers"
         | "industry-insights"
         | "thought-leadership"
+      notification_type: "post_reply" | "comment_reply" | "mention"
       plan_type: "monthly" | "annual"
       pricing_type_enum: "Free" | "Paid" | "Varies"
       seniority_level:
@@ -6424,6 +6676,7 @@ export const Constants = {
         "industry-insights",
         "thought-leadership",
       ],
+      notification_type: ["post_reply", "comment_reply", "mention"],
       plan_type: ["monthly", "annual"],
       pricing_type_enum: ["Free", "Paid", "Varies"],
       seniority_level: [

@@ -23,6 +23,7 @@ import {
 import { KureButton } from "../../src/components/chrome/KureButton";
 import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
+import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
 import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
@@ -396,6 +397,7 @@ export default function CommunityScreen() {
 
   return (
     <MobilePage headerHidden showAccentGlow={false} title="Community">
+      <TabMenuOverlay />
       <View style={styles.contentWrap}>
         {loading && !home ? (
           <ScreenState

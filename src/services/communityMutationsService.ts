@@ -5,6 +5,7 @@ import type {
 } from '@/lib/communitySchemas';
 import type { SupabaseClientType } from '@/types';
 import { CommunityModerationService } from '@/services/communityModerationService';
+import { NotificationService } from '@/services/notificationService';
 
 export class CommunityMutationsService {
   static async createPost(
@@ -55,39 +56,56 @@ export class CommunityMutationsService {
     payload: CommunityCommentDraft,
     supabase: SupabaseClientType
   ): Promise<{ id: string }> {
-    await Promise.all([
-      CommunityModerationService.assertUserCanParticipate(userId, supabase),
-      CommunityModerationService.assertPostAllowsReplies(payload.postId, supabase),
-      ...(payload.parentId
-        ? [
-            CommunityModerationService.assertReplyParentMatchesPost(
-              payload.postId,
-              payload.parentId,
-              supabase
-            ),
-          ]
-        : []),
-    ]);
+    // Profile-level participation check still runs in app code so the user
+    // gets a friendlier error than the RPC's generic restrictions.
+    await CommunityModerationService.assertUserCanParticipate(userId, supabase);
 
-    const { data, error } = await supabase
-      .from('circle_comments')
-      .insert({
+    const { data, error } = await (
+      supabase as unknown as {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>
+        ) => Promise<{
+          data: { comment_id: string; notification_id: string | null } | null;
+          error: { code?: string; message?: string } | null;
+        }>;
+      }
+    ).rpc('create_circle_comment_with_notification', {
+      payload: {
         post_id: payload.postId,
-        author_id: userId,
-        content: payload.content.trim(),
         parent_id: payload.parentId ?? null,
-      })
-      .select('id')
-      .single();
+        content: payload.content.trim(),
+      },
+    });
 
-    if (error) {
-      if (error.code === '42501') {
+    if (error || !data) {
+      const code = error?.code;
+      const message = error?.message ?? '';
+      if (code === '42501' || /not_a_member/.test(message)) {
         throw new Error('You must join this circle to comment.');
       }
-      throw new Error(error.message ?? 'Failed to create comment.');
+      if (/post_not_replyable/.test(message)) {
+        throw new Error('You cannot reply to a removed discussion.');
+      }
+      if (/parent_post_mismatch/.test(message)) {
+        throw new Error('Replies must belong to the same discussion.');
+      }
+      if (/post_not_found/.test(message) || /parent_not_found/.test(message)) {
+        throw new Error('The discussion you replied to is no longer available.');
+      }
+      throw new Error(error?.message ?? 'Failed to create comment.');
     }
 
-    return { id: data.id };
+    if (data.notification_id) {
+      void NotificationService.dispatchPushForNotification(
+        data.notification_id,
+        supabase
+      ).catch((err) => {
+        console.warn('[notifications] push dispatch failed', err);
+      });
+    }
+
+    return { id: data.comment_id };
   }
 
   static async submitVote(
