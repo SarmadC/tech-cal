@@ -78,6 +78,13 @@ import {
   mobileCommunityRoomThreadCommentPageSchema,
   mobileCommunityRoomThreadCommentSchema,
   mobileCommunityRoomThreadDetailSchema,
+  mobileNotificationListResponseSchema,
+  mobileNotificationPreferencesSchema,
+  mobileNotificationUnreadCountSchema,
+  type MobileNotificationListResponse,
+  type MobileNotificationPreferences,
+  type MobileNotificationPreferencesUpdate,
+  type MobileNotificationUnreadCount,
   mobileCommunityRoomThreadDraftSchema,
   mobileCommunityRoomThreadEditDraftSchema,
   mobileCommunityRoomThreadListSchema,
@@ -977,5 +984,59 @@ export async function loadMobileEventThreadComment(
   return fetchMobileContract(
     `/api/mobile/community/rooms/${encodeURIComponent(eventId)}/threads/${encodeURIComponent(threadId)}/comments/${encodeURIComponent(commentId)}`,
     mobileCommunityRoomThreadCommentSchema
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export async function loadMobileNotifications(params?: {
+  cursor?: string | null;
+  limit?: number;
+}): Promise<MobileNotificationListResponse> {
+  const search = new URLSearchParams();
+  if (params?.cursor) search.set('cursor', params.cursor);
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return fetchMobileContract(
+    `/api/mobile/notifications${query ? `?${query}` : ''}`,
+    mobileNotificationListResponseSchema
+  );
+}
+
+export async function loadMobileNotificationUnreadCount(): Promise<MobileNotificationUnreadCount> {
+  return fetchMobileContract(
+    '/api/mobile/notifications/unread-count',
+    mobileNotificationUnreadCountSchema
+  );
+}
+
+export async function markMobileNotificationsRead(
+  body: { ids?: string[] } | { all: true }
+): Promise<void> {
+  await fetchMobileEnvelope('/api/mobile/notifications/mark-read', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function loadMobileNotificationPreferences(): Promise<MobileNotificationPreferences> {
+  return fetchMobileContract(
+    '/api/mobile/notifications/preferences',
+    mobileNotificationPreferencesSchema
+  );
+}
+
+export async function updateMobileNotificationPreferences(
+  patch: MobileNotificationPreferencesUpdate
+): Promise<MobileNotificationPreferences> {
+  return fetchMobileContract(
+    '/api/mobile/notifications/preferences',
+    mobileNotificationPreferencesSchema,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }
   );
 }

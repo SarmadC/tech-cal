@@ -29,6 +29,7 @@ import { CalendarMonthGrid } from "../../src/components/calendar/CalendarMonthGr
 import { CalendarQuickDatePicker } from "../../src/components/calendar/CalendarQuickDatePicker";
 import { CalendarToolbar } from "../../src/components/calendar/CalendarToolbar";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
+import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
 import { useAuth } from "../../src/context/AuthProvider";
 import {
   formatLocalDateKey,
@@ -414,6 +415,7 @@ export default function CalendarScreen() {
             },
           ]}
         >
+          <TabMenuOverlay />
           <View style={styles.headerInner}>
             <CalendarToolbar
               monthLabel={formatMonthButtonLabel(

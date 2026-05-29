@@ -966,3 +966,81 @@ export type MobileCareerOnboardingBootstrap = z.infer<
 export type MobileCareerOnboardingRequest = z.infer<
   typeof mobileCareerOnboardingRequestSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Notifications (in-app inbox)
+// ---------------------------------------------------------------------------
+
+export const mobileNotificationTypeSchema = z.enum([
+  'post_reply',
+  'comment_reply',
+  'mention',
+]);
+
+export const mobileNotificationItemSchema = z.object({
+  id: z.string().uuid(),
+  type: mobileNotificationTypeSchema,
+  createdAt: z.string(),
+  readAt: z.string().nullable(),
+  actor: z
+    .object({
+      id: z.string().uuid().nullable(),
+      displayName: z.string().nullable(),
+      avatarUrl: z.string().nullable(),
+    })
+    .nullable(),
+  circle: z
+    .object({
+      id: z.string().uuid().nullable(),
+      slug: z.string().nullable(),
+    })
+    .nullable(),
+  postId: z.string().uuid().nullable(),
+  commentId: z.string().uuid().nullable(),
+  preview: z.string().nullable(),
+});
+
+export const mobileNotificationListResponseSchema = z.object({
+  items: z.array(mobileNotificationItemSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export const mobileNotificationMarkReadRequestSchema = z
+  .object({
+    ids: z.array(z.string().uuid()).max(200).optional(),
+    all: z.boolean().optional(),
+  })
+  .refine((v) => Boolean(v.all) !== Boolean(v.ids && v.ids.length > 0), {
+    message: 'Provide either `ids` or `all`, not both.',
+  });
+
+export const mobileNotificationUnreadCountSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+
+export const mobileNotificationPreferencesSchema = z.object({
+  postReply: z.boolean(),
+  commentReply: z.boolean(),
+  mention: z.boolean(),
+});
+
+export const mobileNotificationPreferencesUpdateSchema =
+  mobileNotificationPreferencesSchema.partial();
+
+export type MobileNotificationType = z.infer<typeof mobileNotificationTypeSchema>;
+export type MobileNotificationItem = z.infer<typeof mobileNotificationItemSchema>;
+export type MobileNotificationListResponse = z.infer<
+  typeof mobileNotificationListResponseSchema
+>;
+export type MobileNotificationMarkReadRequest = z.infer<
+  typeof mobileNotificationMarkReadRequestSchema
+>;
+export type MobileNotificationUnreadCount = z.infer<
+  typeof mobileNotificationUnreadCountSchema
+>;
+export type MobileNotificationPreferences = z.infer<
+  typeof mobileNotificationPreferencesSchema
+>;
+export type MobileNotificationPreferencesUpdate = z.infer<
+  typeof mobileNotificationPreferencesUpdateSchema
+>;

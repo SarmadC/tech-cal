@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { SymbolView } from "expo-symbols";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BrandLoadingScreen } from "../../src/components/brand/BrandLoadingScreen";
@@ -10,6 +10,7 @@ import {
   useTabBarVisibility,
 } from "../../src/components/chrome/TabBarVisibilityProvider";
 import { useAuth } from "../../src/context/AuthProvider";
+import { useUnreadNotifications } from "../../src/hooks/useUnreadNotifications";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 import type { AppThemeTokens } from "../../src/theme/tokens";
 
@@ -18,7 +19,7 @@ const TAB_ICONS = {
   calendar: "calendar",
   community: "person.2",
   dashboard: "chart.bar.xaxis",
-  profile: "person.crop.circle",
+  notifications: "bell",
 } as const;
 
 const TAB_ACTIVE_ICONS = {
@@ -26,7 +27,7 @@ const TAB_ACTIVE_ICONS = {
   calendar: "calendar",
   community: "person.2.fill",
   dashboard: "chart.bar.xaxis",
-  profile: "person.crop.circle.fill",
+  notifications: "bell.fill",
 } as const;
 
 type TabName = keyof typeof TAB_ICONS;
@@ -52,6 +53,7 @@ function AppTabBar({
   tokens: AppThemeTokens;
 }) {
   const insets = useSafeAreaInsets();
+  const { count: unreadCount } = useUnreadNotifications();
   const bottomInset = Math.max(insets.bottom, 8);
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],
@@ -146,6 +148,26 @@ function AppTabBar({
                 type="monochrome"
                 weight={focused ? "medium" : "regular"}
               />
+              {route.name === "notifications" && unreadCount > 0 ? (
+                <View
+                  style={[
+                    styles.tabBadge,
+                    {
+                      backgroundColor: tokens.colors.accent,
+                      borderColor: tokens.colors.shell,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      { color: tokens.colors.textInverse },
+                    ]}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              ) : null}
             </Pressable>
           );
         })}
@@ -213,8 +235,8 @@ function TabsNavigator() {
         options={buildTabOptions("Dashboard")}
       />
       <Tabs.Screen
-        name="profile"
-        options={buildTabOptions("Profile")}
+        name="notifications"
+        options={buildTabOptions("Notifications")}
       />
       <Tabs.Screen
         name="submit-event"
@@ -273,6 +295,24 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.055)",
+  },
+  tabBadge: {
+    position: "absolute",
+    top: 2,
+    right: "50%",
+    marginRight: -22,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    fontFamily: "DMSans",
   },
 });
 

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
   MobileCommunityNetworkingSpeakerMatch,
@@ -8,14 +9,12 @@ import type {
   MobileDashboardSummary,
 } from "@kurecal/domain";
 
-import {
-  HeaderActionButton,
-  MobilePage,
-} from "../../src/components/chrome/MobilePage";
+import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { InlineNotice } from "../../src/components/chrome/InlineNotice";
 import { KureButton } from "../../src/components/chrome/KureButton";
 import { DashboardNetworkPulseCard } from "../../src/components/dashboard/DashboardNetworkPulseCard";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
+import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
 import { DashboardRecommendationsCarousel } from "../../src/components/dashboard/DashboardRecommendationsCarousel";
 import { EventImageSurface } from "../../src/components/shared/EventImageSurface";
 import {
@@ -62,6 +61,7 @@ function formatHeroMeta(
 
 export default function DashboardScreen() {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const hasLoadedRef = useRef(false);
   const [data, setData] = useState<MobileDashboardSummary | null>(null);
   const [speakerMatches, setSpeakerMatches] = useState<
@@ -319,16 +319,10 @@ export default function DashboardScreen() {
       title="Dashboard"
       headerHidden
       showAccentGlow={false}
-      contentStyle={styles.pageContent}
+      contentStyle={[styles.pageContent, { paddingTop: insets.top + 52 }]}
     >
+      <TabMenuOverlay />
       <View style={styles.canvas}>
-        <View style={styles.topBar}>
-          <View />
-          <HeaderActionButton
-            label="Settings"
-            onPress={() => router.push("/settings/all?from=dashboard")}
-          />
-        </View>
 
         {loading ? (
           <ScreenState
@@ -949,18 +943,11 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   pageContent: {
     alignItems: "center",
-    paddingTop: 18,
   },
   canvas: {
     width: "100%",
     maxWidth: 430,
     gap: 10,
-  },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 16,
   },
   stack: {
     gap: 10,
