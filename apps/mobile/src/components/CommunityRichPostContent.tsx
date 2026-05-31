@@ -82,16 +82,21 @@ export function CommunityRichPostContent({
       {media.length ? (
         <View style={styles.mediaGrid}>
           {media.slice(0, 4).map((item, index) => (
-            <Image
+            <View
               key={item.id ?? item.path}
-              source={{ uri: item.url }}
               style={[
                 styles.mediaImage,
                 media.length === 1 ? styles.mediaImageSingle : null,
                 media.length > 1 ? styles.mediaImageGrid : null,
                 index > 1 ? styles.mediaImageLower : null,
               ]}
-            />
+            >
+              <Image
+                source={{ uri: item.url }}
+                resizeMode="cover"
+                style={styles.mediaBitmap}
+              />
+            </View>
           ))}
         </View>
       ) : null}
@@ -187,6 +192,12 @@ const styles = StyleSheet.create({
   mediaImage: {
     backgroundColor: '#1B1C1D',
     borderRadius: 4,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mediaBitmap: {
+    height: '100%',
+    width: '100%',
   },
   mediaImageGrid: {
     aspectRatio: 1,
