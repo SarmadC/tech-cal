@@ -31,10 +31,6 @@ function HeaderBack() {
       }}
       style={({ pressed }) => [
         styles.button,
-        {
-          backgroundColor: tokens.colors.surfaceStrong,
-          borderColor: tokens.colors.border,
-        },
         pressed && styles.pressed,
       ]}
     >
@@ -56,7 +52,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
   },
   pressed: {
     opacity: 0.7,

@@ -124,10 +124,6 @@ export function SettingsDetailScaffold({
           onPress={() => router.back()}
           style={({ pressed }) => [
             styles.headerButton,
-            {
-              backgroundColor: tokens.colors.surfaceStrong,
-              borderColor: tokens.colors.border,
-            },
             pressed ? styles.pressed : null,
           ]}
         >
@@ -529,7 +525,6 @@ const styles = StyleSheet.create({
   headerButton: {
     alignItems: "center",
     borderRadius: 6,
-    borderWidth: 1,
     height: 32,
     justifyContent: "center",
     width: 32,

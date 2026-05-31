@@ -1,4 +1,5 @@
 export * from './community';
+export * from './communityContent';
 export * from './eventSubmission';
 export * from './mobile';
 export * from './socialProfile';

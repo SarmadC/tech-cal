@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MobileCommunityFeedPost } from '@kurecal/domain';
 
+import { EventSummaryCard } from './EventSummaryCard';
+import { CommunityRichPostContent } from './CommunityRichPostContent';
 import {
   formatCommunityRelativeTime,
-  summarizeCommunityPost,
 } from '../lib/communityPresentation';
 
 const colors = {
@@ -23,17 +24,24 @@ interface CommunityFeedCardProps {
   onPress?: () => void;
   post: MobileCommunityFeedPost;
   showCircle?: boolean;
+  variant?: 'card' | 'row';
+}
+
+function getAuthorInitial(post: MobileCommunityFeedPost): string {
+  return (post.author.fullName || post.author.id || 'M').slice(0, 1).toUpperCase();
 }
 
 function Content({
   post,
   showCircle,
+  variant,
 }: {
   post: MobileCommunityFeedPost;
   showCircle: boolean;
+  variant: 'card' | 'row';
 }) {
-  return (
-    <View style={styles.card}>
+  const body = (
+    <>
       <View style={styles.metaRow}>
         <Text style={styles.circleLabel}>
           {showCircle ? post.circle.name : post.author.fullName || 'Community member'}
@@ -41,7 +49,17 @@ function Content({
         <Text style={styles.metaText}>{formatCommunityRelativeTime(post.createdAt)}</Text>
       </View>
 
-      <Text style={styles.body}>{summarizeCommunityPost(post.content)}</Text>
+      <CommunityRichPostContent
+        content={post.content}
+        linkPreviews={post.linkPreviews}
+        media={post.media}
+        mentions={post.mentions}
+        numberOfLines={4}
+      />
+
+      {post.event ? (
+        <EventSummaryCard event={post.event} tone="highlight" />
+      ) : null}
 
       <View style={styles.footerRow}>
         <Text style={styles.footerText}>
@@ -68,6 +86,25 @@ function Content({
           ))}
         </View>
       ) : null}
+    </>
+  );
+
+  return (
+    <View style={[styles.card, variant === 'row' ? styles.rowCard : null]}>
+      {variant === 'row' ? (
+        <View style={styles.threadRow}>
+          <View style={styles.avatarFrame}>
+            {post.author.avatarUrl ? (
+              <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarInitial}>{getAuthorInitial(post)}</Text>
+            )}
+          </View>
+          <View style={styles.threadCopy}>{body}</View>
+        </View>
+      ) : (
+        body
+      )}
     </View>
   );
 }
@@ -76,9 +113,10 @@ export function CommunityFeedCard({
   onPress,
   post,
   showCircle = true,
+  variant = 'card',
 }: CommunityFeedCardProps) {
   if (!onPress) {
-    return <Content post={post} showCircle={showCircle} />;
+    return <Content post={post} showCircle={showCircle} variant={variant} />;
   }
 
   return (
@@ -89,17 +127,12 @@ export function CommunityFeedCard({
         pressed ? styles.pressablePressed : null,
       ]}
     >
-      <Content post={post} showCircle={showCircle} />
+      <Content post={post} showCircle={showCircle} variant={variant} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 18,
-  },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -109,14 +142,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  avatarFrame: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceHigh,
+    borderColor: colors.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 34,
+  },
+  avatarImage: {
+    height: '100%',
+    width: '100%',
+  },
+  avatarInitial: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  rowCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  threadCopy: {
+    flex: 1,
+    gap: 8,
+  },
+  threadRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 2,
+  },
   circleLabel: {
     color: colors.accent,
     flex: 1,
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.66,
     lineHeight: 16,
-    textTransform: 'uppercase',
   },
   footerRow: {
     alignItems: 'center',

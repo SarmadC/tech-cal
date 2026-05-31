@@ -1,11 +1,15 @@
-import { useCallback, useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -13,32 +17,132 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { MobileCommunityPostPage } from '@kurecal/domain';
+import type {
+  MobileCommunityComment,
+  MobileCommunityCurrentUser,
+  MobileCommunityPostPage,
+} from '@kurecal/domain';
 
 import { CommunityCommentThread } from '../../../../src/components/CommunityCommentThread';
+import { EventSummaryCard } from '../../../../src/components/EventSummaryCard';
+import { CommunityRichPostContent } from '../../../../src/components/CommunityRichPostContent';
 import { ScreenStateView } from '../../../../src/components/ScreenStateView';
+import { getMobileApiBaseUrl } from '../../../../src/lib/env';
 import {
   countCommunityComments,
   formatCommunityRelativeTime,
 } from '../../../../src/lib/communityPresentation';
 import {
   createMobileCommunityComment,
-  joinMobileCommunityCircle,
-  leaveMobileCommunityCircle,
   loadMobileCommunityPost,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
 } from '../../../../src/lib/mobileApi';
+
+const design = {
+  accent: '#bdc2ff',
+  accentText: '#121f8b',
+  background: '#121314',
+  border: '#454652',
+  borderQuiet: 'rgba(69, 70, 82, 0.44)',
+  danger: '#ffb4ab',
+  muted: '#908f9e',
+  surface: '#1b1c1d',
+  surfaceLowest: '#0d0e0f',
+  text: '#e3e2e3',
+  textVariant: '#c6c5d5',
+};
+
+type CommentSortMode = 'best' | 'new' | 'old';
+
+const commentSortLabels: Record<CommentSortMode, string> = {
+  best: 'Best',
+  new: 'New',
+  old: 'Old',
+};
+
+const commentSortOptions: CommentSortMode[] = ['best', 'new', 'old'];
+
+function formatPostTypeLabel(postType: string | undefined): string | null {
+  if (!postType) {
+    return null;
+  }
+
+  return postType
+    .split('_')
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function getCurrentUserDisplayName(currentUser: MobileCommunityCurrentUser | null): string {
+  return currentUser?.fullName || currentUser?.username || currentUser?.id || '';
+}
+
+function getCurrentUserInitial(currentUser: MobileCommunityCurrentUser | null): string {
+  return getCurrentUserDisplayName(currentUser).slice(0, 1).toUpperCase();
+}
+
+function getAuthorDisplayName(author: { fullName: string | null; id: string }): string {
+  return author.fullName || author.id.slice(0, 8);
+}
+
+function buildThreadShareUrl(circleSlug: string, postId: string, commentId?: string): string {
+  const base = getMobileApiBaseUrl().replace(/\/+$/, '');
+  const query = commentId ? `?comment=${commentId}` : '';
+  return `${base}/community/${encodeURIComponent(circleSlug)}/post/${encodeURIComponent(postId)}${query}`;
+}
+
+function compareCommentsBySortMode(
+  left: MobileCommunityComment,
+  right: MobileCommunityComment,
+  sortMode: CommentSortMode
+): number {
+  const leftCreatedAt = new Date(left.createdAt).getTime();
+  const rightCreatedAt = new Date(right.createdAt).getTime();
+
+  if (sortMode === 'new') {
+    return rightCreatedAt - leftCreatedAt;
+  }
+
+  if (sortMode === 'old') {
+    return leftCreatedAt - rightCreatedAt;
+  }
+
+  const scoreDelta = (right.score ?? 0) - (left.score ?? 0);
+  if (scoreDelta !== 0) {
+    return scoreDelta;
+  }
+
+  return rightCreatedAt - leftCreatedAt;
+}
+
+function sortCommentTree(
+  comments: MobileCommunityComment[],
+  sortMode: CommentSortMode
+): MobileCommunityComment[] {
+  return comments
+    .map((comment) => ({
+      ...comment,
+      replies: sortCommentTree(comment.replies, sortMode),
+    }))
+    .sort((left, right) => compareCommentsBySortMode(left, right, sortMode));
+}
 
 export default function CommunityPostScreen() {
   const { postId } = useLocalSearchParams<{ postId: string | string[] }>();
   const resolvedPostId = Array.isArray(postId) ? postId[0] : postId;
   const [data, setData] = useState<MobileCommunityPostPage | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [replyParent, setReplyParent] = useState<MobileCommunityComment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [commentSortMode, setCommentSortMode] = useState<CommentSortMode>('best');
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [working, setWorking] = useState(false);
+  const replyInputRef = useRef<TextInput>(null);
 
   const loadPost = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial') => {
@@ -83,32 +187,22 @@ export default function CommunityPostScreen() {
     [data?.post.comments]
   );
 
-  async function handleToggleMembership() {
-    if (!data || working) {
-      return;
+  const sortedComments = useMemo(
+    () => sortCommentTree(data?.post.comments ?? [], commentSortMode),
+    [commentSortMode, data?.post.comments]
+  );
+
+  useEffect(() => {
+    if (!isReplyOpen) {
+      return undefined;
     }
 
-    setWorking(true);
+    const focusTimer = setTimeout(() => {
+      replyInputRef.current?.focus();
+    }, 80);
 
-    try {
-      if (data.isJoined) {
-        await leaveMobileCommunityCircle(data.circle.id);
-      } else {
-        await joinMobileCommunityCircle(data.circle.id);
-      }
-
-      await loadPost('refresh');
-    } catch (nextError) {
-      Alert.alert(
-        data.isJoined ? 'Leave failed' : 'Join failed',
-        nextError instanceof Error
-          ? nextError.message
-          : 'Unable to update membership.'
-      );
-    } finally {
-      setWorking(false);
-    }
-  }
+    return () => clearTimeout(focusTimer);
+  }, [isReplyOpen, replyParent?.id]);
 
   async function handleVote(voteType: -1 | 1) {
     if (!data || working) {
@@ -138,6 +232,37 @@ export default function CommunityPostScreen() {
     }
   }
 
+  async function handleCommentVote(
+    comment: MobileCommunityComment,
+    voteType: -1 | 1
+  ) {
+    if (!data || working) {
+      return;
+    }
+
+    setWorking(true);
+
+    try {
+      const currentVote = comment.userVote ?? 0;
+      await submitMobileCommunityVote({
+        entityType: 'comment',
+        entityId: comment.id,
+        circleSlug: data.circle.slug,
+        voteType: currentVote === voteType ? 0 : voteType,
+      });
+      await loadPost('refresh');
+    } catch (nextError) {
+      Alert.alert(
+        'Vote failed',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to vote on this comment.'
+      );
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function handleReply() {
     if (!data || !replyDraft.trim() || working) {
       return;
@@ -150,8 +275,11 @@ export default function CommunityPostScreen() {
         postId: data.post.id,
         circleSlug: data.circle.slug,
         content: replyDraft,
+        parentId: replyParent?.id,
       });
       setReplyDraft('');
+      setIsReplyOpen(false);
+      setReplyParent(null);
       await loadPost('refresh');
     } catch (nextError) {
       Alert.alert(
@@ -193,8 +321,74 @@ export default function CommunityPostScreen() {
     ]);
   }
 
+  function handleCommentReply(comment: MobileCommunityComment) {
+    setReplyParent(comment);
+    setIsReplyOpen(true);
+  }
+
+  function handleCommentReport(comment: MobileCommunityComment) {
+    if (!data || working) {
+      return;
+    }
+
+    Alert.alert('Report comment', 'Choose a reason for this report.', [
+      {
+        text: 'Spam',
+        onPress: () => {
+          void submitReport('spam', 'comment', comment.id);
+        },
+      },
+      {
+        text: 'Harassment',
+        onPress: () => {
+          void submitReport('harassment', 'comment', comment.id);
+        },
+      },
+      {
+        text: 'Other',
+        onPress: () => {
+          void submitReport('other', 'comment', comment.id);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
+  async function handleShare(comment?: MobileCommunityComment) {
+    if (!data) {
+      return;
+    }
+
+    const url = buildThreadShareUrl(data.circle.slug, data.post.id, comment?.id);
+
+    try {
+      await Share.share({ message: url, url });
+    } catch (nextError) {
+      Alert.alert(
+        'Share failed',
+        nextError instanceof Error ? nextError.message : 'Please try again.'
+      );
+    }
+  }
+
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    if (data) {
+      router.replace({
+        pathname: '/community/[slug]',
+        params: { slug: data.circle.slug },
+      });
+    }
+  }
+
   async function submitReport(
-    reason: 'spam' | 'harassment' | 'other'
+    reason: 'spam' | 'harassment' | 'other',
+    subjectType: 'post' | 'comment' = 'post',
+    subjectId?: string
   ) {
     if (!data || working) {
       return;
@@ -204,8 +398,8 @@ export default function CommunityPostScreen() {
 
     try {
       await submitMobileCommunityReport({
-        subjectType: 'post',
-        subjectId: data.post.id,
+        subjectType,
+        subjectId: subjectId ?? data.post.id,
         reason,
       });
       Alert.alert('Report submitted', 'Thanks. Your report is now queued for review.');
@@ -223,7 +417,7 @@ export default function CommunityPostScreen() {
 
   if (loading && !data) {
     return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
+      <View style={styles.screen}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
@@ -233,13 +427,13 @@ export default function CommunityPostScreen() {
             />
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
     );
   }
 
   if (error && !data) {
     return (
-      <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
+      <View style={styles.screen}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
@@ -252,7 +446,7 @@ export default function CommunityPostScreen() {
             />
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
     );
   }
 
@@ -262,152 +456,210 @@ export default function CommunityPostScreen() {
 
   const currentVote = data.post.userVote ?? 0;
   const currentScore = data.post.score ?? 0;
+  const postTypeLabel = formatPostTypeLabel(data.post.postType);
+  const currentUserName = getCurrentUserDisplayName(data.currentUser);
 
   return (
-    <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
+    <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                void loadPost('refresh');
-              }}
-              tintColor="#2dd4bf"
-            />
-          }
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardAvoider}
         >
-          <View style={styles.headerRow}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => {
+                  void loadPost('refresh');
+                }}
+                tintColor={design.accent}
+              />
+            }
+          >
+            <View style={styles.topBar}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={handleBack}
               style={({ pressed }) => [
                 styles.backButton,
                 pressed ? styles.cardPressed : null,
               ]}
             >
-              <Text style={styles.backLabel}>Back</Text>
+              <Feather name="chevron-left" size={22} color={design.text} />
             </Pressable>
           </View>
 
-          <View style={styles.contextCard}>
-            <Text style={styles.contextLabel}>Circle</Text>
-            <Text style={styles.contextTitle}>{data.circle.name}</Text>
-            <Text style={styles.contextBody}>{data.circle.description}</Text>
-            <View style={styles.contextActions}>
+          <View style={styles.postSection}>
+            <View style={styles.postMetaRow}>
+              <Text numberOfLines={1} style={styles.metaLine}>
+                {data.circle.name} • Posted by {getAuthorDisplayName(data.post.author)} •{' '}
+                {formatCommunityRelativeTime(data.post.createdAt)}
+              </Text>
+              {postTypeLabel ? (
+                <View style={styles.flair}>
+                  <Text style={styles.flairLabel}>{postTypeLabel}</Text>
+                </View>
+              ) : null}
+            </View>
+            <CommunityRichPostContent
+              content={data.post.content}
+              linkPreviews={data.post.linkPreviews}
+              media={data.post.media}
+              mentions={data.post.mentions}
+              textVariant="post"
+            />
+            {data.post.event ? (
+              <EventSummaryCard event={data.post.event} tone="highlight" />
+            ) : null}
+
+            <View style={styles.voteRow}>
+              <View style={styles.voteCluster}>
+                <Pressable
+                  onPress={() => {
+                    void handleVote(1);
+                  }}
+                  style={({ pressed }) => [
+                    styles.voteIconButton,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                  accessibilityLabel="Upvote thread"
+                >
+                  <Feather
+                    name="arrow-up"
+                    size={17}
+                    color={currentVote === 1 ? design.accent : design.textVariant}
+                  />
+                </Pressable>
+                <Text style={styles.scoreLabel}>{currentScore}</Text>
+                <Pressable
+                  onPress={() => {
+                    void handleVote(-1);
+                  }}
+                  style={({ pressed }) => [
+                    styles.voteIconButton,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                  accessibilityLabel="Downvote thread"
+                >
+                  <Feather
+                    name="arrow-down"
+                    size={17}
+                    color={currentVote === -1 ? design.danger : design.textVariant}
+                  />
+                </Pressable>
+              </View>
+              <View style={styles.metaAction}>
+                <FontAwesome name="comment-o" size={15} color={design.textVariant} />
+                <Text style={styles.metaActionLabel}>
+                  {totalComments} repl{totalComments === 1 ? 'y' : 'ies'}
+                </Text>
+              </View>
               <Pressable
                 onPress={() => {
-                  void handleToggleMembership();
+                  void handleShare();
                 }}
                 style={({ pressed }) => [
-                  styles.secondaryAction,
+                  styles.metaAction,
                   pressed ? styles.cardPressed : null,
                 ]}
+                accessibilityLabel="Share thread"
               >
-                <Text style={styles.secondaryActionLabel}>
-                  {working
-                    ? 'Working...'
-                    : data.isJoined
-                      ? 'Leave circle'
-                      : 'Join circle'}
-                </Text>
+                <FontAwesome name="share" size={15} color={design.textVariant} />
+                <Text style={styles.metaActionLabel}>Share</Text>
               </Pressable>
               <Pressable
                 onPress={handleReport}
                 style={({ pressed }) => [
-                  styles.secondaryAction,
+                  styles.metaAction,
                   pressed ? styles.cardPressed : null,
                 ]}
+                accessibilityLabel="Report thread"
               >
-                <Text style={styles.secondaryActionLabel}>Report</Text>
+                <FontAwesome name="flag-o" size={15} color={design.textVariant} />
+                <Text style={styles.metaActionLabel}>Report</Text>
               </Pressable>
             </View>
           </View>
 
-          <View style={styles.postCard}>
-            <Text style={styles.metaLine}>
-              {data.post.author.fullName || 'Community member'} •{' '}
-              {formatCommunityRelativeTime(data.post.createdAt)} • {totalComments}{' '}
-              repl{totalComments === 1 ? 'y' : 'ies'}
-            </Text>
-            <Text style={styles.postBody}>{data.post.content}</Text>
-
-            <View style={styles.voteRow}>
-              <Pressable
-                onPress={() => {
-                  void handleVote(1);
-                }}
-                style={({ pressed }) => [
-                  styles.voteButton,
-                  currentVote === 1 ? styles.voteButtonActive : null,
-                  pressed ? styles.cardPressed : null,
-                ]}
-              >
-                <Text style={styles.voteLabel}>Upvote</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  void handleVote(-1);
-                }}
-                style={({ pressed }) => [
-                  styles.voteButton,
-                  currentVote === -1 ? styles.voteButtonActiveDanger : null,
-                  pressed ? styles.cardPressed : null,
-                ]}
-              >
-                <Text style={styles.voteLabel}>Downvote</Text>
-              </Pressable>
-              <View style={styles.scoreChip}>
-                <Text style={styles.scoreLabel}>Score {currentScore}</Text>
-              </View>
-            </View>
-          </View>
-
-          {data.isJoined ? (
-            <View style={styles.replyCard}>
-              <Text style={styles.sectionTitle}>Add a reply</Text>
-              <TextInput
-                multiline
-                value={replyDraft}
-                onChangeText={setReplyDraft}
-                placeholder="Write your reply"
-                placeholderTextColor="#64748b"
-                style={styles.input}
-              />
-              <Pressable
-                onPress={() => {
-                  void handleReply();
-                }}
-                style={({ pressed }) => [
-                  styles.primaryAction,
-                  (!replyDraft.trim() || working) ? styles.disabledAction : null,
-                  pressed ? styles.cardPressed : null,
-                ]}
-                disabled={!replyDraft.trim() || working}
-              >
-                <Text style={styles.primaryActionLabel}>
-                  {working ? 'Sending...' : 'Send reply'}
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
+          {!data.isJoined ? (
             <ScreenStateView
               mode="empty"
               title="Join to reply"
               description="You can read the thread now. Join the circle to add your reply."
             />
-          )}
+          ) : null}
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Replies</Text>
-              <Text style={styles.sectionTitle}>Thread</Text>
-            </View>
+            <View style={styles.sortWrap}>
+              <Pressable
+                onPress={() => setIsSortOpen((current) => !current)}
+                style={({ pressed }) => [
+                  styles.sortRow,
+                  pressed ? styles.cardPressed : null,
+                ]}
+                accessibilityLabel="Sort replies"
+              >
+                <Text style={styles.sortLabel}>Sort by:</Text>
+                <Text style={styles.sortValue}>{commentSortLabels[commentSortMode]}</Text>
+                <FontAwesome
+                  name={isSortOpen ? 'chevron-up' : 'chevron-down'}
+                  size={11}
+                  color={design.textVariant}
+                />
+              </Pressable>
+              {isSortOpen ? (
+                <View style={styles.sortDropdown}>
+                  {commentSortOptions.map((option) => {
+                    const isSelected = option === commentSortMode;
 
-            {data.post.comments.length ? (
+                    return (
+                      <Pressable
+                        key={option}
+                        onPress={() => {
+                          setCommentSortMode(option);
+                          setIsSortOpen(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.sortOption,
+                          isSelected ? styles.sortOptionSelected : null,
+                          pressed ? styles.cardPressed : null,
+                        ]}
+                        accessibilityLabel={`Sort replies by ${commentSortLabels[option]}`}
+                      >
+                        <Text
+                          style={[
+                            styles.sortOptionText,
+                            isSelected ? styles.sortOptionTextSelected : null,
+                          ]}
+                        >
+                          {commentSortLabels[option]}
+                        </Text>
+                        {isSelected ? (
+                          <FontAwesome name="check" size={11} color={design.accent} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+            {sortedComments.length ? (
               <View style={styles.stack}>
-                {data.post.comments.map((comment) => (
-                  <CommunityCommentThread key={comment.id} comment={comment} />
+                {sortedComments.map((comment) => (
+                  <CommunityCommentThread
+                    key={comment.id}
+                    comment={comment}
+                    onReply={handleCommentReply}
+                    onReport={handleCommentReport}
+                    onShare={(targetComment) => {
+                      void handleShare(targetComment);
+                    }}
+                    onVote={handleCommentVote}
+                    originalPosterId={data.post.author.id}
+                    votingDisabled={working}
+                  />
                 ))}
               </View>
             ) : (
@@ -418,212 +670,346 @@ export default function CommunityPostScreen() {
               />
             )}
           </View>
-        </ScrollView>
+          </ScrollView>
+          {data.isJoined && isReplyOpen ? (
+            <View style={styles.bottomComposer}>
+              {data.currentUser ? (
+                <View style={styles.replyIdentity}>
+                  <View style={styles.replyAvatar}>
+                    {data.currentUser.avatarUrl ? (
+                      <Image
+                        source={{ uri: data.currentUser.avatarUrl }}
+                        style={styles.replyAvatarImage}
+                      />
+                    ) : (
+                      <Text style={styles.replyAvatarInitial}>
+                        {getCurrentUserInitial(data.currentUser)}
+                      </Text>
+                    )}
+                  </View>
+                  <Text numberOfLines={1} style={styles.replyIdentityText}>
+                    {replyParent
+                      ? `Replying to ${getAuthorDisplayName(replyParent.author)} as ${currentUserName}`
+                      : `Replying as ${currentUserName}`}
+                  </Text>
+                </View>
+              ) : null}
+              <TextInput
+                ref={replyInputRef}
+                multiline
+                value={replyDraft}
+                onChangeText={setReplyDraft}
+                placeholder="Add a comment"
+                placeholderTextColor={design.muted}
+                style={styles.input}
+              />
+              <View style={styles.composerActions}>
+                <Pressable
+                  onPress={() => {
+                    setReplyDraft('');
+                    setIsReplyOpen(false);
+                    setReplyParent(null);
+                  }}
+                  style={({ pressed }) => [
+                    styles.composerSecondaryAction,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                >
+                  <Text style={styles.composerSecondaryLabel}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    void handleReply();
+                  }}
+                  style={({ pressed }) => [
+                    styles.primaryAction,
+                    (!replyDraft.trim() || working) ? styles.disabledAction : null,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                  disabled={!replyDraft.trim() || working}
+                >
+                  <Text style={styles.primaryActionLabel}>
+                    {working ? 'Sending...' : 'Comment'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   backButton: {
     alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 4,
     justifyContent: 'center',
-    minHeight: 42,
-    minWidth: 72,
-    paddingHorizontal: 14,
-  },
-  backLabel: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+    minHeight: 34,
+    width: 34,
   },
   cardPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
+    opacity: 0.84,
+  },
+  bottomComposer: {
+    backgroundColor: 'rgba(18, 19, 20, 0.98)',
+    borderTopColor: design.borderQuiet,
+    borderTopWidth: 1,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  composerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+  },
+  composerSecondaryAction: {
+    alignItems: 'center',
+    borderRadius: 4,
+    justifyContent: 'center',
+    minHeight: 32,
+    paddingHorizontal: 12,
+  },
+  composerSecondaryLabel: {
+    color: design.textVariant,
+    fontSize: 13,
+    fontWeight: '600',
   },
   content: {
-    gap: 18,
-    padding: 22,
-  },
-  contextActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  contextBody: {
-    color: '#94a3b8',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  contextCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 10,
-    padding: 18,
+    paddingBottom: 4,
   },
   contextLabel: {
-    color: '#2dd4bf',
+    color: design.muted,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  contextTitle: {
-    color: '#f8fafc',
-    fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   disabledAction: {
     opacity: 0.5,
   },
-  gradient: {
+  screen: {
+    backgroundColor: design.background,
     flex: 1,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
   input: {
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-    borderColor: 'rgba(148, 163, 184, 0.16)',
-    borderRadius: 16,
+    backgroundColor: design.surfaceLowest,
+    borderColor: design.borderQuiet,
+    borderRadius: 4,
     borderWidth: 1,
-    color: '#f8fafc',
-    fontSize: 15,
-    minHeight: 110,
-    padding: 14,
+    color: design.text,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 96,
+    padding: 12,
     textAlignVertical: 'top',
   },
-  metaLine: {
-    color: '#94a3b8',
-    fontSize: 13,
+  keyboardAvoider: {
+    flex: 1,
+  },
+  flair: {
+    alignSelf: 'flex-start',
+    backgroundColor: design.surfaceLowest,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  flairLabel: {
+    color: design.textVariant,
+    fontSize: 11,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 14,
   },
-  postBody: {
-    color: '#e2e8f0',
-    fontSize: 16,
-    lineHeight: 24,
+  metaLine: {
+    color: design.muted,
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '500',
+    lineHeight: 16,
   },
-  postCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 14,
-    padding: 18,
+  metaAction: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 30,
+  },
+  metaActionLabel: {
+    color: design.muted,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  postMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  postSection: {
+    backgroundColor: design.background,
+    borderBottomColor: design.borderQuiet,
+    borderBottomWidth: 1,
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   primaryAction: {
     alignItems: 'center',
-    backgroundColor: '#2dd4bf',
-    borderRadius: 18,
+    backgroundColor: design.accent,
+    borderColor: design.accent,
+    borderRadius: 4,
+    borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 16,
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   primaryActionLabel: {
-    color: '#042f2e',
-    fontSize: 14,
-    fontWeight: '700',
+    color: design.accentText,
+    fontSize: 13,
+    fontWeight: '600',
   },
-  replyCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 14,
-    padding: 18,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scoreChip: {
+  replyPrompt: {
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 999,
-    borderWidth: 1,
+    borderColor: design.borderQuiet,
+    borderRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     minHeight: 40,
     paddingHorizontal: 12,
   },
-  scoreLabel: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+  replyPromptText: {
+    color: design.muted,
+    fontSize: 14,
   },
-  secondaryAction: {
+  replyAvatar: {
     alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderRadius: 18,
-    borderWidth: 1,
-    flex: 1,
+    backgroundColor: design.surface,
+    borderRadius: 4,
+    height: 24,
     justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 14,
+    overflow: 'hidden',
+    width: 24,
   },
-  secondaryActionLabel: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+  replyAvatarImage: {
+    height: '100%',
+    width: '100%',
   },
-  section: {
-    gap: 14,
-  },
-  sectionEyebrow: {
-    color: '#2dd4bf',
+  replyAvatarInitial: {
+    color: design.accent,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
   },
-  sectionHeader: {
-    gap: 6,
+  replyIdentity: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 20,
+  replyIdentityText: {
+    color: design.muted,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scoreLabel: {
+    color: design.text,
+    fontSize: 13,
     fontWeight: '700',
+    minWidth: 16,
+    textAlign: 'center',
+  },
+  section: {
+    backgroundColor: design.background,
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  sortLabel: {
+    color: design.muted,
+    fontSize: 12,
+  },
+  sortDropdown: {
+    alignSelf: 'flex-start',
+    backgroundColor: design.surfaceLowest,
+    borderColor: design.borderQuiet,
+    borderRadius: 4,
+    borderWidth: 1,
+    marginTop: 6,
+    minWidth: 112,
+    overflow: 'hidden',
+  },
+  sortOption: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+  sortOptionSelected: {
+    backgroundColor: 'rgba(189, 194, 255, 0.08)',
+  },
+  sortOptionText: {
+    color: design.muted,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  sortOptionTextSelected: {
+    color: design.text,
+    fontWeight: '600',
+  },
+  sortRow: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 30,
+  },
+  sortValue: {
+    color: design.textVariant,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sortWrap: {
+    alignSelf: 'flex-start',
   },
   stack: {
-    gap: 12,
+    gap: 2,
   },
   stateWrap: {
     flex: 1,
     justifyContent: 'center',
     padding: 22,
   },
-  voteButton: {
+  voteCluster: {
     alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: 4,
+    flexDirection: 'row',
+    gap: 4,
     justifyContent: 'center',
-    minHeight: 42,
-    minWidth: 92,
-    paddingHorizontal: 14,
+    minHeight: 28,
   },
-  voteButtonActive: {
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: 'rgba(45, 212, 191, 0.32)',
-  },
-  voteButtonActiveDanger: {
-    backgroundColor: 'rgba(248, 113, 113, 0.16)',
-    borderColor: 'rgba(248, 113, 113, 0.32)',
-  },
-  voteLabel: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '700',
+  voteIconButton: {
+    alignItems: 'center',
+    borderRadius: 4,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
   },
   voteRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+  },
+  topBar: {
+    alignItems: 'center',
+    borderBottomColor: design.borderQuiet,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
 });

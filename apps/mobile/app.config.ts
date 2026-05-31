@@ -14,6 +14,10 @@ const DEV_REMINDERS_DESCRIPTION =
   'Allow KureCal Dev to add reminders for saved calendar events.';
 const PROD_REMINDERS_DESCRIPTION =
   'Allow KureCal to add reminders for saved calendar events.';
+const DEV_PHOTOS_DESCRIPTION =
+  'Allow KureCal Dev to attach photos to community posts.';
+const PROD_PHOTOS_DESCRIPTION =
+  'Allow KureCal to attach photos to community posts.';
 
 function normalizeVariant(value: string | undefined): MobileAppVariant | null {
   const normalized = value?.trim().toLowerCase();
@@ -64,6 +68,14 @@ export default function getMobileExpoConfig() {
               : DEV_REMINDERS_DESCRIPTION,
           },
         ],
+        [
+          'expo-image-picker',
+          {
+            photosPermission: isProduction
+              ? PROD_PHOTOS_DESCRIPTION
+              : DEV_PHOTOS_DESCRIPTION,
+          },
+        ],
         'expo-notifications',
       ],
       ios: {
@@ -88,6 +100,9 @@ export default function getMobileExpoConfig() {
           NSFaceIDUsageDescription: isProduction
             ? PROD_FACE_ID_DESCRIPTION
             : DEV_FACE_ID_DESCRIPTION,
+          NSPhotoLibraryUsageDescription: isProduction
+            ? PROD_PHOTOS_DESCRIPTION
+            : DEV_PHOTOS_DESCRIPTION,
           UIBackgroundModes: Array.from(
             new Set([
               ...((baseConfig.expo.ios.infoPlist as { UIBackgroundModes?: string[] })
