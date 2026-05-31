@@ -11,6 +11,7 @@ import {
   mobilePublicProfileSchema,
   mobileSpeakerDetailSchema,
 } from "./community";
+import { tokenizeCommunityContent } from "./communityContent";
 
 describe("community domain contracts", () => {
   it("parses community drafts used by the shared mutation routes", () => {
@@ -21,6 +22,57 @@ describe("community domain contracts", () => {
     });
 
     expect(parsed.circleSlug).toBe("ai-builders");
+  });
+
+  it("allows structured-only community drafts", () => {
+    const parsed = communityPostDraftSchema.parse({
+      circleId: "11111111-1111-4111-8111-111111111111",
+      circleSlug: "ai-builders",
+      content: "",
+      eventId: "22222222-2222-4222-8222-222222222222",
+    });
+
+    expect(parsed.content).toBe("");
+    expect(parsed.eventId).toBe("22222222-2222-4222-8222-222222222222");
+  });
+
+  it("caps structured community post mentions", () => {
+    const result = communityPostDraftSchema.safeParse({
+      circleId: "11111111-1111-4111-8111-111111111111",
+      circleSlug: "ai-builders",
+      content: "Mentioning everyone",
+      mentions: Array.from({ length: 21 }, (_, index) => ({
+        userId: `22222222-2222-4222-8222-${String(index).padStart(12, "0")}`,
+      })),
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("tokenizes community post urls and known mentions", () => {
+    const segments = tokenizeCommunityContent(
+      "Meet @ada at https://example.com.",
+      [
+        {
+          userId: "22222222-2222-4222-8222-222222222222",
+          username: "ada",
+          fullName: "Ada Lovelace",
+          avatarUrl: null,
+        },
+      ],
+    );
+
+    expect(segments).toContainEqual({
+      type: "mention",
+      text: "@ada",
+      userId: "22222222-2222-4222-8222-222222222222",
+      username: "ada",
+    });
+    expect(segments).toContainEqual({
+      type: "url",
+      text: "https://example.com",
+      url: "https://example.com",
+    });
   });
 
   it("parses the mobile community home feed contract", () => {

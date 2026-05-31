@@ -11,7 +11,9 @@ import {
   mobileCareerOnboardingBootstrapSchema,
   mobileCareerOnboardingDataSchema,
   mobileCommunityCirclePageSchema,
+  mobileCommunityEventsSchema,
   mobileCommunityHomeSchema,
+  mobileCommunityMentionCandidateSchema,
   mobileCommunityPostPageSchema,
   mobileDashboardSummarySchema,
   mobileDiscoverFeedRequestSchema,
@@ -47,7 +49,9 @@ import {
   type MobileCareerOnboardingBootstrap,
   type MobileCareerOnboardingData,
   type MobileCommunityCirclePage,
+  type MobileCommunityEvents,
   type MobileCommunityHome,
+  type MobileCommunityMentionCandidate,
   type MobileCommunityPostPage,
   type MobileDashboardSummary,
   type MobileDiscoverFeed,
@@ -115,6 +119,23 @@ interface MobileApiEnvelope<T> {
 
 const PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY =
   'mobile_pending_networking_follow_up_event_id';
+const COMMUNITY_MEDIA_BUCKET = 'community-media';
+const MAX_COMMUNITY_IMAGE_BYTES = 8 * 1024 * 1024;
+
+export interface CommunityPostImageUploadInput {
+  fileName?: string | null;
+  height: number;
+  mimeType?: string | null;
+  uri: string;
+  width: number;
+}
+
+export interface CommunityPostImageUploadResult {
+  height: number;
+  path: string;
+  url: string;
+  width: number;
+}
 
 function getDeviceTimezone(): string | null {
   try {
@@ -202,6 +223,93 @@ async function syncPendingNetworkingFollowUpEventId(
       '[mobileApi] Unable to persist pending networking follow-up event id',
       error
     );
+  }
+}
+
+function extensionForMimeType(mimeType?: string | null): string {
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  if (mimeType === 'image/heic') return 'heic';
+  if (mimeType === 'image/heif') return 'heif';
+  return 'jpg';
+}
+
+function contentTypeForUpload(mimeType?: string | null): string {
+  return mimeType?.startsWith('image/') ? mimeType : 'image/jpeg';
+}
+
+function randomUploadId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export async function uploadCommunityPostImage(
+  input: CommunityPostImageUploadInput
+): Promise<CommunityPostImageUploadResult> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('Sign in required');
+  }
+
+  const contentType = contentTypeForUpload(input.mimeType);
+  const extension = extensionForMimeType(contentType);
+  const safeFileStem =
+    input.fileName
+      ?.replace(/\.[^.]+$/, '')
+      .replace(/[^A-Za-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'community-image';
+  const path = `${user.id}/${randomUploadId()}-${safeFileStem}.${extension}`;
+  const response = await fetch(input.uri);
+
+  if (!response.ok) {
+    throw new Error('Unable to read selected image.');
+  }
+
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > MAX_COMMUNITY_IMAGE_BYTES) {
+    throw new Error('Choose an image smaller than 8 MB.');
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(COMMUNITY_MEDIA_BUCKET)
+    .upload(path, bytes, {
+      cacheControl: '31536000',
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || 'Unable to upload selected image.');
+  }
+
+  const { data: urlData } = supabase.storage
+    .from(COMMUNITY_MEDIA_BUCKET)
+    .getPublicUrl(path);
+
+  return {
+    height: input.height,
+    path,
+    url: urlData.publicUrl,
+    width: input.width,
+  };
+}
+
+export async function deleteCommunityPostImage(path: string): Promise<void> {
+  const trimmedPath = path.trim();
+  if (!trimmedPath) {
+    return;
+  }
+
+  const { error } = await supabase.storage
+    .from(COMMUNITY_MEDIA_BUCKET)
+    .remove([trimmedPath]);
+
+  if (error) {
+    throw new Error(error.message || 'Unable to remove selected image.');
   }
 }
 
@@ -351,6 +459,33 @@ export async function loadMobileCommunityCircle(
   return fetchMobileContract(
     `/api/mobile/community/circles/${encodeURIComponent(slug.trim())}`,
     mobileCommunityCirclePageSchema
+  );
+}
+
+export async function loadMobileCommunityEvents(
+  slug: string
+): Promise<MobileCommunityEvents> {
+  if (!slug.trim()) {
+    throw new Error('Circle slug is required');
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/community/circles/${encodeURIComponent(slug.trim())}/events`,
+    mobileCommunityEventsSchema
+  );
+}
+
+export async function loadMobileCommunityMentionSuggestions(
+  query: string
+): Promise<MobileCommunityMentionCandidate[]> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  return fetchMobileContract(
+    `/api/mobile/community/mentions?q=${encodeURIComponent(trimmed)}`,
+    mobileCommunityMentionCandidateSchema.array()
   );
 }
 

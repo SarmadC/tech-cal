@@ -1,5 +1,6 @@
 import type { SupabaseClientType } from '@/types';
 import { sendPushToUser } from '@/services/pushNotificationService';
+import { createServiceClient } from '@/utils/supabase/service';
 
 type NotificationType = 'post_reply' | 'comment_reply' | 'mention';
 
@@ -35,6 +36,50 @@ function bodyFor(row: NotificationRow): string {
 }
 
 export class NotificationService {
+  private static async loadNotification(
+    notificationId: string,
+    supabase: SupabaseClientType
+  ): Promise<NotificationRow | null> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select(
+        'id, recipient_id, type, post_id, comment_id, circle_id, circle_slug, actor_display_name, entity_preview'
+      )
+      .eq('id', notificationId)
+      .maybeSingle();
+
+    if (data) {
+      return data;
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) {
+      if (error) {
+        console.warn('[notifications] failed to load row for push', error);
+      }
+      return null;
+    }
+
+    const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
+    const serviceResult = await serviceClient
+      .from('notifications')
+      .select(
+        'id, recipient_id, type, post_id, comment_id, circle_id, circle_slug, actor_display_name, entity_preview'
+      )
+      .eq('id', notificationId)
+      .maybeSingle();
+
+    if (serviceResult.error || !serviceResult.data) {
+      if (serviceResult.error) {
+        console.warn('[notifications] failed to load row for push', serviceResult.error);
+      }
+      return null;
+    }
+
+    return serviceResult.data;
+  }
+
   /**
    * Best-effort push dispatch after a notifications row has been written by
    * the RPC. Callers should invoke this with `void` so a push failure does
@@ -44,22 +89,12 @@ export class NotificationService {
     notificationId: string,
     supabase: SupabaseClientType
   ): Promise<void> {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select(
-        'id, recipient_id, type, post_id, comment_id, circle_id, circle_slug, actor_display_name, entity_preview'
-      )
-      .eq('id', notificationId)
-      .maybeSingle();
+    const row = await this.loadNotification(notificationId, supabase);
 
-    if (error || !data) {
-      if (error) {
-        console.warn('[notifications] failed to load row for push', error);
-      }
+    if (!row) {
       return;
     }
 
-    const row = data;
     await sendPushToUser(row.recipient_id, {
       title: titleFor(row.type),
       body: bodyFor(row),

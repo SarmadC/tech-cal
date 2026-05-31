@@ -12,6 +12,7 @@ export const communityPostTypeSchema = z.enum([
   'update',
   'question',
   'intro',
+  'showcase',
   'event_note',
   'announcement',
 ]);
@@ -21,9 +22,27 @@ export const membershipStateSchema = z.enum(['none', 'following', 'joined']);
 export const communityPostDraftSchema = z.object({
   circleId: z.string().uuid(),
   circleSlug: z.string().min(1),
-  content: z.string().trim().min(1).max(10_000),
+  content: z.string().trim().max(10_000),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().uuid().optional(),
+  mentions: z.array(z.object({ userId: z.string().uuid() })).max(20).optional(),
+  media: z.array(z.object({
+    path: z.string().min(1),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  })).max(4).optional(),
+}).superRefine((draft, ctx) => {
+  if (
+    !draft.content.trim() &&
+    !draft.eventId &&
+    (!draft.media || draft.media.length === 0)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Post content, media, or an event attachment is required.",
+      path: ["content"],
+    });
+  }
 });
 
 export const communityCommentDraftSchema = z.object({
@@ -141,6 +160,7 @@ export const mobileCommunityUpcomingEventSchema = z.object({
   startTime: z.string(),
   location: z.string().nullable(),
   format: z.string().nullable(),
+  organizerLogoUrl: z.string().nullable().optional(),
 });
 
 export const mobileCommunityCommentPreviewSchema = z.object({
@@ -148,6 +168,54 @@ export const mobileCommunityCommentPreviewSchema = z.object({
   content: z.string(),
   createdAt: z.string(),
   author: mobileCommunityAuthorSchema,
+});
+
+export const mobileCommunityPostMentionSchema = z.object({
+  userId: z.string(),
+  username: z.string().nullable(),
+  fullName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+
+export const mobileCommunityMentionCandidateSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  fullName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+});
+
+export const mobileCommunityPostMediaSchema = z.object({
+  id: z.string().optional(),
+  path: z.string(),
+  url: z.string(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  position: z.number().int().nonnegative(),
+});
+
+export const mobileCommunityPostLinkPreviewSchema = z.object({
+  id: z.string().optional(),
+  url: z.string().url(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  siteName: z.string().nullable(),
+});
+
+export const mobileCommunityEmbeddedEventSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  slug: z.string().optional(),
+  description: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  startTime: z.string(),
+  endTime: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  organizerName: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  timeLabel: z.string().nullable().optional(),
+  formatLabel: z.string().nullable().optional(),
+  priceLabel: z.string().nullable().optional(),
 });
 
 export const mobileCommunityFeedPostSchema = z.object({
@@ -164,6 +232,10 @@ export const mobileCommunityFeedPostSchema = z.object({
   recentComments: z.array(mobileCommunityCommentPreviewSchema).optional(),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().nullable().optional(),
+  event: mobileCommunityEmbeddedEventSchema.nullable().optional(),
+  mentions: z.array(mobileCommunityPostMentionSchema).optional(),
+  media: z.array(mobileCommunityPostMediaSchema).optional(),
+  linkPreviews: z.array(mobileCommunityPostLinkPreviewSchema).optional(),
   isPinned: z.boolean().optional(),
 });
 
@@ -517,6 +589,10 @@ export const mobileCommunityPostSchema = z.object({
   userVote: voteValueSchema.optional(),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().nullable().optional(),
+  event: mobileCommunityEmbeddedEventSchema.nullable().optional(),
+  mentions: z.array(mobileCommunityPostMentionSchema).optional(),
+  media: z.array(mobileCommunityPostMediaSchema).optional(),
+  linkPreviews: z.array(mobileCommunityPostLinkPreviewSchema).optional(),
   isPinned: z.boolean().optional(),
 });
 
@@ -614,6 +690,21 @@ export type MobileCommunityUpcomingEvent = z.infer<
 >;
 export type MobileCommunityCommentPreview = z.infer<
   typeof mobileCommunityCommentPreviewSchema
+>;
+export type MobileCommunityPostMention = z.infer<
+  typeof mobileCommunityPostMentionSchema
+>;
+export type MobileCommunityMentionCandidate = z.infer<
+  typeof mobileCommunityMentionCandidateSchema
+>;
+export type MobileCommunityPostMedia = z.infer<
+  typeof mobileCommunityPostMediaSchema
+>;
+export type MobileCommunityPostLinkPreview = z.infer<
+  typeof mobileCommunityPostLinkPreviewSchema
+>;
+export type MobileCommunityEmbeddedEvent = z.infer<
+  typeof mobileCommunityEmbeddedEventSchema
 >;
 export type MobileCommunityFeedPost = z.infer<
   typeof mobileCommunityFeedPostSchema

@@ -10,6 +10,10 @@ import type { SupabaseClientType } from '@/types/database';
 import type {
   CircleDiscussionAuthor,
   CircleDiscussionComment,
+  CircleDiscussionEmbeddedEvent,
+  CircleDiscussionLinkPreview,
+  CircleDiscussionMedia,
+  CircleDiscussionMention,
   CircleDiscussionCurrentUser,
   CircleDiscussionMember,
   CircleDiscussionPost,
@@ -51,10 +55,20 @@ interface RawPostRow {
   id: string;
   content: string;
   created_at: string;
+  post_type:
+    | 'update'
+    | 'question'
+    | 'intro'
+    | 'showcase'
+    | 'event_note'
+    | 'announcement'
+    | null;
+  event_id: string | null;
   moderation_status: 'active' | 'removed';
   author: CircleDiscussionAuthor | CircleDiscussionAuthor[] | null;
   comments: RawCommentRow[] | null;
   votes: VoteRow[] | null;
+  event: RawPostEventRow | RawPostEventRow[] | null;
 }
 
 interface MemberRow {
@@ -69,6 +83,24 @@ interface MatchingEventRow {
   organizer_logo_url: string | null;
   description: string | null;
   tags: string[] | null;
+}
+
+interface RawPostEventRow {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  description: string | null;
+  location: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  event_image_url: string | null;
+  tags: string[] | null;
+}
+
+interface PostAttachmentBundle {
+  mentions: Map<string, CircleDiscussionMention[]>;
+  media: Map<string, CircleDiscussionMedia[]>;
+  linkPreviews: Map<string, CircleDiscussionLinkPreview[]>;
 }
 
 export interface CircleSummary {
@@ -652,8 +684,20 @@ export class CircleDiscussionService {
         id,
         content,
         created_at,
+        post_type,
+        event_id,
         moderation_status,
         author:profiles!circle_posts_author_id_fkey(id, full_name, avatar_url),
+        event:events!circle_posts_event_id_fkey(
+          id,
+          slug,
+          title,
+          description,
+          location,
+          start_time,
+          end_time,
+          event_image_url
+        ),
         comments: circle_comments(
           id,
           parent_id,
@@ -683,6 +727,10 @@ export class CircleDiscussionService {
     }
 
     const rawPosts = data as RawPostRow[];
+    const attachments = await this.getPostAttachments({
+      postIds: rawPosts.map((post) => post.id),
+      readClient,
+    });
     const blockedUserIds =
       viewerId
         ? await BlockService.getBlockedUserIdsForViewer(
@@ -722,13 +770,134 @@ export class CircleDiscussionService {
         const resolvedAuthor = Array.isArray(post.author) ? post.author[0] : post.author;
         return !resolvedAuthor?.id || !blockedUserIds.has(resolvedAuthor.id);
       })
-      .map((post) => this.formatPost(post, viewerId, blockedUserIds));
+      .map((post) => this.formatPost(post, viewerId, blockedUserIds, attachments));
+  }
+
+  private static async getPostAttachments({
+    postIds,
+    readClient,
+  }: {
+    postIds: string[];
+    readClient: SupabaseClientType;
+  }): Promise<PostAttachmentBundle> {
+    if (postIds.length === 0) {
+      return {
+        mentions: new Map(),
+        media: new Map(),
+        linkPreviews: new Map(),
+      };
+    }
+
+    const attachmentClient = readClient as any;
+    const [mentionsResult, mediaResult, linksResult] = await Promise.all([
+      attachmentClient
+        .from('circle_post_mentions')
+        .select('post_id, mentioned_profile_id, profile:profiles!circle_post_mentions_mentioned_profile_id_fkey(id, username, full_name, avatar_url)')
+        .in('post_id', postIds),
+      attachmentClient
+        .from('circle_post_media')
+        .select('id, post_id, storage_path, width, height, position')
+        .in('post_id', postIds)
+        .order('position', { ascending: true }),
+      attachmentClient
+        .from('circle_post_links')
+        .select('id, post_id, url, title, description, image_url, site_name')
+        .in('post_id', postIds)
+        .order('created_at', { ascending: true }),
+    ]);
+
+    const attachmentError =
+      mentionsResult.error ?? mediaResult.error ?? linksResult.error;
+    if (attachmentError) {
+      throw new Error(
+        attachmentError.message ?? 'Failed to load post attachments.'
+      );
+    }
+
+    const mentions = new Map<string, CircleDiscussionMention[]>();
+    ((mentionsResult.data ?? []) as Array<{
+      post_id: string;
+      mentioned_profile_id: string;
+      profile:
+        | {
+            id: string;
+            username: string | null;
+            full_name: string | null;
+            avatar_url: string | null;
+          }
+        | Array<{
+            id: string;
+            username: string | null;
+            full_name: string | null;
+            avatar_url: string | null;
+          }>
+        | null;
+    }>).forEach((row) => {
+      const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+      const postMentions = mentions.get(row.post_id) ?? [];
+      postMentions.push({
+        userId: row.mentioned_profile_id,
+        username: profile?.username ?? null,
+        fullName: profile?.full_name ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
+      });
+      mentions.set(row.post_id, postMentions);
+    });
+
+    const media = new Map<string, CircleDiscussionMedia[]>();
+    ((mediaResult.data ?? []) as Array<{
+      id: string;
+      post_id: string;
+      storage_path: string;
+      width: number;
+      height: number;
+      position: number;
+    }>).forEach((row) => {
+      const publicUrl = readClient.storage
+        .from('community-media')
+        .getPublicUrl(row.storage_path).data.publicUrl;
+      const postMedia = media.get(row.post_id) ?? [];
+      postMedia.push({
+        id: row.id,
+        path: row.storage_path,
+        url: publicUrl,
+        width: row.width,
+        height: row.height,
+        position: row.position,
+      });
+      media.set(row.post_id, postMedia);
+    });
+
+    const linkPreviews = new Map<string, CircleDiscussionLinkPreview[]>();
+    ((linksResult.data ?? []) as Array<{
+      id: string;
+      post_id: string;
+      url: string;
+      title: string | null;
+      description: string | null;
+      image_url: string | null;
+      site_name: string | null;
+    }>).forEach((row) => {
+      const postLinks = linkPreviews.get(row.post_id) ?? [];
+      postLinks.push({
+        id: row.id,
+        url: row.url,
+        title: row.title,
+        description: row.description,
+        imageUrl: row.image_url,
+        siteName: row.site_name,
+      });
+      linkPreviews.set(row.post_id, postLinks);
+    });
+
+    return { mentions, media, linkPreviews };
   }
 
   private static formatPost(
     post: RawPostRow,
     viewerId: string | null,
-    blockedUserIds: Set<string>
+    blockedUserIds: Set<string>,
+    attachments: PostAttachmentBundle
   ): CircleDiscussionPost {
     const postVotes = post.votes || [];
     const score = postVotes.reduce((sum, vote) => sum + vote.vote_type, 0);
@@ -743,6 +912,7 @@ export class CircleDiscussionService {
       avatar_url: null,
     };
     const isRemoved = post.moderation_status === 'removed';
+    const event = Array.isArray(post.event) ? post.event[0] : post.event;
 
     return {
       id: post.id,
@@ -761,6 +931,36 @@ export class CircleDiscussionService {
       isRemoved,
       score: isRemoved ? 0 : score,
       userVote: isRemoved ? 0 : userVote,
+      postType: post.post_type ?? 'update',
+      eventId: post.event_id,
+      event: isRemoved ? null : this.formatEmbeddedEvent(event),
+      mentions: isRemoved ? [] : attachments.mentions.get(post.id) ?? [],
+      media: isRemoved ? [] : attachments.media.get(post.id) ?? [],
+      linkPreviews: isRemoved ? [] : attachments.linkPreviews.get(post.id) ?? [],
+    };
+  }
+
+  private static formatEmbeddedEvent(
+    event: RawPostEventRow | null | undefined
+  ): CircleDiscussionEmbeddedEvent | null {
+    if (!event?.id || !event.start_time) {
+      return null;
+    }
+
+    return {
+      id: event.id,
+      title: event.title ?? 'Untitled Event',
+      slug: event.slug ?? generateEventSlug(event.title ?? '', event.id),
+      description: event.description,
+      location: event.location,
+      startTime: event.start_time,
+      endTime: event.end_time,
+      imageUrl: event.event_image_url,
+      organizerName: null,
+      tags: event.tags ?? [],
+      timeLabel: null,
+      formatLabel: null,
+      priceLabel: null,
     };
   }
 

@@ -63,6 +63,16 @@ const PEOPLE_LENSES: Array<{ id: PeopleLens; label: string }> = [
   { id: "recent", label: "Recent" },
 ];
 
+const circleDesign = {
+  accent: "#bdc2ff",
+  border: "#454652",
+  muted: "#908f9e",
+  surface: "#1b1c1d",
+  surfaceLowest: "#0d0e0f",
+  text: "#e3e2e3",
+  textVariant: "#c6c5d5",
+};
+
 function getCommunityLoadErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
@@ -1037,74 +1047,35 @@ function ActivityRow({
 }
 
 function CircleCard({ circle }: { circle: MobileCommunityCircle }) {
-  const { tokens } = useAppTheme();
-
   return (
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push(`/community/${getCircleSlug(circle)}`)}
       style={({ pressed }) => [
         styles.circleCard,
-        {
-          backgroundColor: tokens.colors.surface,
-          borderColor: tokens.colors.border,
-          borderRadius: tokens.radius.md,
-        },
         pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.circleIcon,
-          {
-            backgroundColor: tokens.colors.surfaceMuted,
-            borderRadius: tokens.radius.xs,
-            borderWidth: 1,
-            borderColor: tokens.colors.border,
-          },
-        ]}
-      >
+      <View style={styles.circleIcon}>
         <FontAwesome
           name={getCircleIcon(circle.name)}
-          size={16}
-          color={tokens.colors.textTertiary}
+          size={13}
+          color={circleDesign.textVariant}
         />
       </View>
-      <Text
-        style={[
-          styles.circleName,
-          {
-            color: tokens.colors.textPrimary,
-            fontFamily: tokens.typography.sans,
-          },
-        ]}
-      >
-        {circle.name}
-      </Text>
-      <Text
-        style={[
-          styles.cardMeta,
-          {
-            color: tokens.colors.textTertiary,
-            fontFamily: tokens.typography.sans,
-          },
-        ]}
-      >
-        {formatCommunityTabCount(circle.memberCount)} members
-      </Text>
-      <Text
-        style={[
-          styles.circleSignal,
-          {
-            color: circle.isJoined
-              ? tokens.colors.accent
-              : tokens.colors.textTertiary,
-            fontFamily: tokens.typography.sans,
-          },
-        ]}
-      >
-        {circle.isJoined ? "Joined" : "Discover"}
-      </Text>
+      <View style={styles.circleCopy}>
+        <Text numberOfLines={1} style={styles.circleName}>
+          {circle.name}
+        </Text>
+        <Text numberOfLines={1} style={styles.cardMeta}>
+          {formatCommunityTabCount(circle.memberCount)} members
+        </Text>
+      </View>
+      <View style={styles.circleSignal}>
+        <Text style={styles.circleSignalText}>
+          {circle.isJoined ? "Joined" : "Discover"}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -1517,9 +1488,10 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   cardMeta: {
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 18,
+    color: circleDesign.muted,
+    fontSize: 11,
+    fontWeight: "500",
+    lineHeight: 14,
   },
   cardTitle: {
     fontSize: 16,
@@ -1528,22 +1500,36 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   circleCard: {
-    width: 156,
-    minHeight: 138,
+    alignItems: "center",
+    backgroundColor: circleDesign.surfaceLowest,
+    borderColor: circleDesign.border,
+    borderRadius: 4,
     borderWidth: 1,
-    padding: 12,
+    flexDirection: "row",
     gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    width: 228,
+  },
+  circleCopy: {
+    flex: 1,
+    gap: 1,
   },
   circleIcon: {
-    width: 36,
-    height: 36,
     alignItems: "center",
+    backgroundColor: circleDesign.surface,
+    borderColor: circleDesign.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 28,
     justifyContent: "center",
-    marginBottom: 4,
+    width: 28,
   },
   circleName: {
-    fontSize: 15,
-    fontWeight: "700",
+    color: circleDesign.text,
+    fontSize: 13,
+    fontWeight: "600",
     lineHeight: 18,
   },
   circleRail: {
@@ -1551,9 +1537,17 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   circleSignal: {
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
+    borderColor: circleDesign.border,
+    borderRadius: 2,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  circleSignalText: {
+    color: circleDesign.accent,
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 14,
   },
   contentWrap: {
     width: "100%",

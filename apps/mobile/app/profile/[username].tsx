@@ -708,6 +708,7 @@ function IconHeaderButton({
   onPress?: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const isNavigationBack = iconName === 'chevron-left';
   return (
     <Pressable
       accessibilityRole="button"
@@ -716,7 +717,7 @@ function IconHeaderButton({
       hitSlop={8}
       style={({ pressed }) => [
         styles.iconButton,
-        { borderColor: tokens.colors.borderStrong },
+        isNavigationBack ? styles.iconButtonPlain : { borderColor: tokens.colors.borderStrong },
         pressed && styles.iconButtonPressed,
       ]}
     >
@@ -1149,6 +1150,9 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     width: 38,
+  },
+  iconButtonPlain: {
+    borderWidth: 0,
   },
   iconButtonPressed: {
     opacity: 0.62,

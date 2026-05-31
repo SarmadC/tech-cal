@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { ChatCircle, CaretUp, CaretDown, DotsThree, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react';
+import { CalendarBlank, ChatCircle, CaretUp, CaretDown, DotsThree, Trash, PencilSimple, ShareNetwork } from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +33,7 @@ import VoteControls from './VoteControls';
 import CommentItem from './CommentItem';
 import type { CircleDiscussionComment, CircleDiscussionPost } from '@/types/circleDiscussions';
 import { buildCirclePostPath, parseCirclePostContent } from '@/utils/circlePosts';
+import { tokenizeCommunityContent } from '@kurecal/domain';
 
 interface PostFeedItemProps {
     post: CircleDiscussionPost;
@@ -52,6 +53,158 @@ interface PostFeedItemProps {
 const MAX_VISIBLE_ROOT_COMMENTS = 2;
 const actionLinkClasses = 'inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100';
 const THREAD_PREVIEW_INTERACTIVE_SELECTOR = 'a,button,input,textarea,select,summary,[role="button"],[role="link"],[data-prevent-thread-open="true"]';
+
+function formatEmbeddedEventTime(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return 'Date TBD';
+    }
+
+    return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+}
+
+function EmbeddedEventCard({ event }: { event: NonNullable<CircleDiscussionPost['event']> }) {
+    const href = `/events/${event.slug || event.id}`;
+
+    return (
+        <a
+            href={href}
+            data-prevent-thread-open="true"
+            className="mt-4 flex max-w-[34rem] items-start gap-3 border border-zinc-200/80 bg-zinc-50 px-3.5 py-3 transition-colors hover:border-zinc-300 hover:bg-white dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:border-zinc-700 dark:hover:bg-zinc-950"
+        >
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center border border-zinc-200 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+                <CalendarBlank size={18} weight="bold" />
+            </span>
+            <span className="min-w-0">
+                <span className="block text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                    {event.timeLabel || formatEmbeddedEventTime(event.startTime)}
+                </span>
+                <span className="mt-1 block text-[15px] font-semibold leading-5 text-zinc-950 dark:text-zinc-50">
+                    {event.title}
+                </span>
+                {event.location ? (
+                    <span className="mt-1 block truncate text-[13px] text-zinc-500 dark:text-zinc-400">
+                        {event.location}
+                    </span>
+                ) : null}
+            </span>
+        </a>
+    );
+}
+
+function getHost(url: string): string {
+    try {
+        return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+        return url;
+    }
+}
+
+function RichPostBody({
+    body,
+    isCollapsed,
+    post,
+}: {
+    body: string;
+    isCollapsed: boolean;
+    post: CircleDiscussionPost;
+}) {
+    const segments = tokenizeCommunityContent(body, post.mentions ?? []);
+    const paragraphClassName = isCollapsed
+        ? 'mt-2 whitespace-pre-wrap text-[15px] leading-7 text-zinc-600 transition-colors line-clamp-4 group-hover/content:text-zinc-700 dark:text-zinc-300 dark:group-hover/content:text-zinc-200'
+        : 'mt-2 whitespace-pre-wrap text-[15px] leading-7 text-zinc-600 dark:text-zinc-300';
+
+    return (
+        <>
+            {body ? (
+                <p className={paragraphClassName}>
+                    {segments.map((segment, index) => {
+                        if (segment.type === 'url') {
+                            return (
+                                <a
+                                    key={`${segment.type}-${index}`}
+                                    href={segment.url}
+                                    data-prevent-thread-open="true"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="font-semibold text-sky-600 hover:text-sky-500 dark:text-sky-300"
+                                >
+                                    {segment.text}
+                                </a>
+                            );
+                        }
+
+                        if (segment.type === 'mention') {
+                            return (
+                                <a
+                                    key={`${segment.type}-${index}`}
+                                    href={`/u/${encodeURIComponent(segment.username)}`}
+                                    data-prevent-thread-open="true"
+                                    className="font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
+                                >
+                                    {segment.text}
+                                </a>
+                            );
+                        }
+
+                        return <span key={`${segment.type}-${index}`}>{segment.text}</span>;
+                    })}
+                </p>
+            ) : null}
+
+            {post.media?.length ? (
+                <div className="mt-4 grid max-w-[34rem] grid-cols-2 gap-1 overflow-hidden border border-zinc-200/80 dark:border-zinc-800">
+                    {post.media.slice(0, 4).map((item) => (
+                        <img
+                            key={item.id ?? item.path}
+                            src={item.url}
+                            alt=""
+                            className={cn(
+                                'h-full min-h-40 w-full object-cover',
+                                post.media?.length === 1 ? 'col-span-2 aspect-[1.7]' : 'aspect-square',
+                            )}
+                        />
+                    ))}
+                </div>
+            ) : null}
+
+            {post.linkPreviews?.slice(0, 1).map((preview) => (
+                <a
+                    key={preview.id ?? preview.url}
+                    href={preview.url}
+                    data-prevent-thread-open="true"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 block max-w-[34rem] overflow-hidden border border-zinc-200/80 bg-zinc-50 transition-colors hover:border-zinc-300 hover:bg-white dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:border-zinc-700 dark:hover:bg-zinc-950"
+                >
+                    {preview.imageUrl ? (
+                        <img src={preview.imageUrl} alt="" className="aspect-[1.9] w-full object-cover" />
+                    ) : null}
+                    <span className="block px-3.5 py-3">
+                        <span className="block text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                            {preview.siteName || getHost(preview.url)}
+                        </span>
+                        {preview.title ? (
+                            <span className="mt-1 block text-[15px] font-semibold leading-5 text-zinc-950 dark:text-zinc-50">
+                                {preview.title}
+                            </span>
+                        ) : null}
+                        {preview.description ? (
+                            <span className="mt-1 line-clamp-2 block text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+                                {preview.description}
+                            </span>
+                        ) : null}
+                    </span>
+                </a>
+            ))}
+        </>
+    );
+}
 
 function countComments(comments: CircleDiscussionComment[]): number {
     return comments.reduce((total, comment) => {
@@ -105,6 +258,9 @@ export default function PostFeedItem({
         ? 'Removed by moderators'
         : `${totalComments} ${totalComments === 1 ? 'reply' : 'replies'}`;
     const hasSeparateBody = Boolean(parsedPostContent.title && parsedPostContent.body.trim());
+    const hasRichAttachments = Boolean(
+        post.media?.length || post.linkPreviews?.length
+    );
     const isCollapsedPreview = !isPostExpanded && !disableCollapse;
     const previewNavigationLabel = parsedPostContent.title || parsedPostContent.body || 'Open thread';
     const isThreadNavigationEnabled = Boolean(showPermalink && !disableCollapse && !isPostExpanded && !isEditing);
@@ -425,16 +581,20 @@ export default function PostFeedItem({
                                                 <h3 className="text-[clamp(1.18rem,1.95vw,1.58rem)] font-semibold leading-[1.2] tracking-[-0.02em] text-zinc-950 transition-colors group-hover/content:text-zinc-700 dark:text-zinc-50 dark:group-hover/content:text-zinc-200">
                                                     {parsedPostContent.title}
                                                 </h3>
-                                                {hasSeparateBody && (
-                                                    <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-zinc-600 transition-colors line-clamp-4 group-hover/content:text-zinc-700 dark:text-zinc-300 dark:group-hover/content:text-zinc-200">
-                                                        {parsedPostContent.body}
-                                                    </p>
+                                                {(hasSeparateBody || hasRichAttachments) && (
+                                                    <RichPostBody
+                                                        body={parsedPostContent.body}
+                                                        isCollapsed
+                                                        post={post}
+                                                    />
                                                 )}
                                             </>
                                         ) : (
-                                            <p className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-800 transition-colors line-clamp-4 group-hover/content:text-zinc-900 dark:text-zinc-200 dark:group-hover/content:text-zinc-100">
-                                                {parsedPostContent.body}
-                                            </p>
+                                            <RichPostBody
+                                                body={parsedPostContent.body}
+                                                isCollapsed
+                                                post={post}
+                                            />
                                         )}
                                     </div>
                                 ) : (
@@ -444,20 +604,28 @@ export default function PostFeedItem({
                                                 <h3 className="text-[clamp(1.18rem,1.95vw,1.58rem)] font-semibold leading-[1.2] tracking-[-0.02em] text-zinc-950 dark:text-zinc-50">
                                                     {parsedPostContent.title}
                                                 </h3>
-                                                {hasSeparateBody && (
-                                                    <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-zinc-600 dark:text-zinc-300">
-                                                        {parsedPostContent.body}
-                                                    </p>
+                                                {(hasSeparateBody || hasRichAttachments) && (
+                                                    <RichPostBody
+                                                        body={parsedPostContent.body}
+                                                        isCollapsed={false}
+                                                        post={post}
+                                                    />
                                                 )}
                                             </>
                                         ) : (
-                                            <p className="whitespace-pre-wrap text-[16px] leading-7 text-zinc-800 dark:text-zinc-200">
-                                                {parsedPostContent.body}
-                                            </p>
+                                            <RichPostBody
+                                                body={parsedPostContent.body}
+                                                isCollapsed={false}
+                                                post={post}
+                                            />
                                         )}
                                     </div>
                                 )
                             )}
+
+                            {!isEditing && post.event ? (
+                                <EmbeddedEventCard event={post.event} />
+                            ) : null}
 
                             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 pt-3">
                                 {!isRemoved ? (

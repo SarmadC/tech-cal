@@ -15,37 +15,56 @@ export class CommunityMutationsService {
   ): Promise<{ id: string }> {
     await CommunityModerationService.assertUserCanParticipate(userId, supabase);
 
-    const insertPayload: Record<string, unknown> = {
-      circle_id: payload.circleId,
-      author_id: userId,
-      content: payload.content.trim(),
-    };
-    if (payload.postType) {
-      insertPayload.post_type = payload.postType;
-    }
-    if (payload.eventId) {
-      insertPayload.event_id = payload.eventId;
-    }
-
-    const { data, error } = await (supabase.from('circle_posts') as unknown as {
-      insert: (row: Record<string, unknown>) => {
-        select: (cols: string) => {
+    const { data, error } = await (
+      supabase as unknown as {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>
+        ) => {
           single: () => Promise<{
-            data: { id: string };
+            data: { id: string; notification_ids?: string[] | null } | null;
             error: { code?: string; message?: string } | null;
           }>;
         };
-      };
-    })
-      .insert(insertPayload)
-      .select('id')
+      }
+    )
+      .rpc('create_circle_post_with_rich_content', {
+        p_circle_id: payload.circleId,
+        p_content: payload.content.trim(),
+        p_post_type: payload.postType ?? null,
+        p_event_id: payload.eventId ?? null,
+        p_mentions: Array.from(
+          new Set((payload.mentions ?? []).map((mention) => mention.userId))
+        ),
+        p_media: (payload.media ?? []).map((item) => ({
+          storage_path: item.path,
+          width: item.width,
+          height: item.height,
+        })),
+      })
       .single();
 
-    if (error) {
-      if (error.code === '42501') {
+    if (error || !data) {
+      if (error?.code === '42501') {
         throw new Error('You must join this circle to post.');
       }
-      throw new Error(error.message ?? 'Failed to create post.');
+      const message = error?.message ?? '';
+      if (/event_not_linked_to_circle/.test(message)) {
+        throw new Error('Attach an event that belongs to this circle.');
+      }
+      if (/post_content_required/.test(message)) {
+        throw new Error('Add text, media, or an event before publishing.');
+      }
+      throw new Error(error?.message ?? 'Failed to create post.');
+    }
+
+    for (const notificationId of data.notification_ids ?? []) {
+      void NotificationService.dispatchPushForNotification(
+        notificationId,
+        supabase
+      ).catch((err) => {
+        console.warn('[notifications] push dispatch failed', err);
+      });
     }
 
     return { id: data.id };

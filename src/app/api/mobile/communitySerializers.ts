@@ -90,6 +90,7 @@ function toUpcomingEvent(
     startTime: event.startTime ?? new Date(0).toISOString(),
     location: event.organizerName,
     format: null,
+    organizerLogoUrl: event.organizerLogoUrl,
   };
 }
 
@@ -127,6 +128,12 @@ function toPost(post: CircleDiscussionPost): MobileCommunityPost {
     isRemoved: post.isRemoved ?? false,
     score: post.score ?? undefined,
     userVote: normalizeVoteValue(post.userVote) ?? undefined,
+    postType: post.postType,
+    eventId: post.eventId,
+    event: post.event ?? null,
+    mentions: post.mentions ?? [],
+    media: post.media ?? [],
+    linkPreviews: post.linkPreviews ?? [],
     isPinned: post.isPinned ?? false,
   };
 }
