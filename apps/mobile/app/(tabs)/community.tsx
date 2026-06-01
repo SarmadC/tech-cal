@@ -23,8 +23,6 @@ import {
 
 import {
   AnimatedMount,
-  DURATIONS,
-  SPRING_CONFIG,
   useScalePress,
 } from "../../src/hooks/useAnimation";
 
@@ -185,43 +183,6 @@ function formatShortRelativeTime(value: string | null): string {
   return diffMs >= 0 ? `Starts in ${days}d` : `${days}d${suffix}`;
 }
 
-function getRoomReason(event: MobileCommunityNetworkingEvent): string {
-  if (event.viewerContext === "attending") {
-    return "Because you're going";
-  }
-
-  if (event.viewerContext === "saved") {
-    return "Because you saved it";
-  }
-
-  if (event.relationshipAttendeeCount > 0) {
-    return `${event.relationshipAttendeeCount} people you know are here`;
-  }
-
-  if (event.networkAttendingCount > 0) {
-    return `${event.networkAttendingCount} from your network are here`;
-  }
-
-  return event.contextLabel || "Recommended";
-}
-
-function getRoomStatus(event: MobileCommunityNetworkingEvent): string {
-  const peopleCount =
-    event.visibleAttendeeCount ||
-    event.totalAttendeeCount ||
-    event.networkAttendingCount;
-  const activityLabel =
-    peopleCount > 0
-      ? `${formatCommunityTabCount(peopleCount)} ${peopleCount === 1 ? "person" : "people"} here`
-      : "Signal building";
-
-  if ((event.recentTrackerCount ?? 0) > 0 || event.visibleAttendeeCount > 0) {
-    return `Active now · ${activityLabel}`;
-  }
-
-  return `${formatShortRelativeTime(event.startTime)} · ${activityLabel}`;
-}
-
 function getCompactTime(startTime: string | null): string {
   if (!startTime) return "Soon";
   const diffMs = new Date(startTime).getTime() - Date.now();
@@ -311,7 +272,6 @@ function filterPeople(
 }
 
 export default function CommunityScreen() {
-  const { tokens } = useAppTheme();
   const requestSequenceRef = useRef(0);
   const hasLoadedRef = useRef(false);
   const homeRef = useRef<MobileCommunityHome | null>(null);
@@ -546,11 +506,11 @@ function SegmentTab({
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      style={styles.segmentedItem}
+      style={styles.segmentedItemPressable}
     >
       <Animated.View
         style={[
-          styles.segmentedItem,
+          styles.segmentedItemInner,
           isActive && {
             backgroundColor: tokens.colors.pillActive,
             borderRadius: tokens.radius.xs,
@@ -1083,7 +1043,7 @@ function ActivityRow({
             },
           ]}
         >
-          "{summarizeCommunityPost(post.title || post.content)}"
+          {summarizeCommunityPost(post.title || post.content)}
         </Text>
         <Text
           style={[
@@ -1792,8 +1752,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 4,
   },
-  segmentedItem: {
+  segmentedItemPressable: {
+    flex: 1,
+  },
+  segmentedItemInner: {
     alignItems: "center",
+    alignSelf: "stretch",
     flex: 1,
     justifyContent: "center",
     minHeight: 32,
