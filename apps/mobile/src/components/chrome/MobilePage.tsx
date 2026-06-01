@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   type LayoutChangeEvent,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+
+import { useScalePress } from "../../hooks/useAnimation";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -187,30 +190,34 @@ export function HeaderActionButton({
   onPress?: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
         styles.actionButton,
         {
           backgroundColor: tokens.colors.surface,
           borderColor: tokens.colors.border,
           borderRadius: tokens.radius.md,
         },
-        pressed && styles.actionPressed,
       ]}
     >
-      <Text
-        style={{
-          color: tokens.colors.textPrimary,
-          fontFamily: tokens.typography.sans,
-          fontSize: 13,
-          fontWeight: "700",
-        }}
-      >
-        {label}
-      </Text>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Text
+          style={{
+            color: tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 13,
+            fontWeight: "700",
+          }}
+        >
+          {label}
+        </Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -273,8 +280,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-  },
-  actionPressed: {
-    opacity: 0.82,
   },
 });

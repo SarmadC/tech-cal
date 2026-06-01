@@ -1,6 +1,7 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { useState, type ReactNode } from "react";
 import {
+  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -20,6 +21,7 @@ import {
 } from "../../lib/discoverState";
 import { resolveCurrentLocationLabel } from "../../lib/discoverLocationUtils";
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScalePress } from "../../hooks/useAnimation";
 import { DiscoverQuickDatePicker } from "./DiscoverQuickDatePicker";
 
 export type DiscoverDraftFilters = DiscoverDraftFiltersValue;
@@ -78,17 +80,16 @@ function FilterChoice({
   onPress: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.choiceRow,
-        {
-          opacity: pressed ? 0.82 : 1,
-        },
-      ]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.choiceRow}
     >
+      <Animated.View style={[styles.choiceInner, { transform: [{ scale }] }]}>
       <View style={styles.choiceCopy}>
         <View
           style={[
@@ -140,6 +141,7 @@ function FilterChoice({
           {count}
         </Text>
       ) : null}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -554,13 +556,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  choiceRow: {
+  choiceInner: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+    flex: 1,
+  },
+  choiceRow: {
     minHeight: 36,
     paddingHorizontal: 10,
     paddingVertical: 6,
+    justifyContent: "center",
   },
   dateField: {
     alignItems: "center",

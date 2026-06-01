@@ -1,5 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useScalePress } from '../hooks/useAnimation';
 
 import type { MobileCommunityFeedPost } from '@kurecal/domain';
 
@@ -27,6 +29,33 @@ interface CommunityFeedCardProps {
   onPress?: () => void;
   post: MobileCommunityFeedPost;
   variant?: 'card' | 'row';
+}
+
+function VoteButton({
+  accessibilityLabel,
+  color,
+  icon,
+  onPress,
+}: {
+  accessibilityLabel: string;
+  color: string;
+  icon: 'arrow-up' | 'arrow-down';
+  onPress?: () => void;
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.voteButton}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Feather name={icon} size={20} color={color} />
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 function Content({
@@ -94,35 +123,19 @@ function Content({
       {variant === 'row' ? (
         <View style={styles.threadRow}>
           <View style={styles.voteRail}>
-            <Pressable
-              onPress={() => onVote?.(post, 1)}
-              style={({ pressed }) => [
-                styles.voteButton,
-                pressed ? styles.pressablePressed : null,
-              ]}
+            <VoteButton
               accessibilityLabel="Upvote thread"
-            >
-              <Feather
-                name="arrow-up"
-                size={20}
-                color={userVote === 1 ? colors.accent : colors.textSubtle}
-              />
-            </Pressable>
+              color={userVote === 1 ? colors.accent : colors.textSubtle}
+              icon="arrow-up"
+              onPress={() => onVote?.(post, 1)}
+            />
             <Text style={styles.scoreLabel}>{score}</Text>
-            <Pressable
-              onPress={() => onVote?.(post, -1)}
-              style={({ pressed }) => [
-                styles.voteButton,
-                pressed ? styles.pressablePressed : null,
-              ]}
+            <VoteButton
               accessibilityLabel="Downvote thread"
-            >
-              <Feather
-                name="arrow-down"
-                size={20}
-                color={userVote === -1 ? colors.danger : colors.textSubtle}
-              />
-            </Pressable>
+              color={userVote === -1 ? colors.danger : colors.textSubtle}
+              icon="arrow-down"
+              onPress={() => onVote?.(post, -1)}
+            />
           </View>
           <Pressable
             onPress={onPress}
@@ -147,6 +160,8 @@ export function CommunityFeedCard({
   post,
   variant = 'card',
 }: CommunityFeedCardProps) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
   if (!onPress || variant === 'row') {
     return (
       <Content
@@ -161,17 +176,18 @@ export function CommunityFeedCard({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.pressable,
-        pressed ? styles.pressablePressed : null,
-      ]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.pressable}
     >
-      <Content
-        onPress={onPress}
-        onVote={onVote}
-        post={post}
-        variant={variant}
-      />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Content
+          onPress={onPress}
+          onVote={onVote}
+          post={post}
+          variant={variant}
+        />
+      </Animated.View>
     </Pressable>
   );
 }

@@ -9,10 +9,8 @@ import type {
   MobileCommunityNetworkingSharedEvent,
 } from "@kurecal/domain";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  AccessibilityInfo,
   Alert,
   Animated,
   Image,
@@ -22,6 +20,13 @@ import {
   Text,
   View,
 } from "react-native";
+
+import {
+  AnimatedMount,
+  DURATIONS,
+  SPRING_CONFIG,
+  useScalePress,
+} from "../../src/hooks/useAnimation";
 
 import { KureButton } from "../../src/components/chrome/KureButton";
 import { MobilePage } from "../../src/components/chrome/MobilePage";
@@ -148,79 +153,6 @@ function getInitials(name: string): string {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 }
-
-// — Animation primitives (DESIGN.md §Animations) —
-
-const DURATIONS = { instant: 80, fast: 150, standard: 220 } as const;
-const SPRING_CONFIG = { damping: 26, stiffness: 200, useNativeDriver: true } as const;
-
-function useReduceMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduced).catch(() => {});
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduced);
-    return () => sub.remove();
-  }, []);
-  return reduced;
-}
-
-/** Fades + slides up 4px on mount. Used for tab content crossfades. */
-function AnimatedMount({
-  children,
-  delay = 0,
-}: {
-  children: ReactNode;
-  delay?: number;
-}) {
-  const reduced = useReduceMotion();
-  const opacity = useRef(new Animated.Value(reduced ? 1 : 0)).current;
-  const translateY = useRef(new Animated.Value(reduced ? 0 : 4)).current;
-
-  useEffect(() => {
-    if (reduced) return;
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: DURATIONS.fast,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: DURATIONS.fast,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      {children}
-    </Animated.View>
-  );
-}
-
-/** Returns scale + press handlers for a 0.97 spring press animation. */
-function useScalePress() {
-  const reduced = useReduceMotion();
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const onPressIn = useCallback(() => {
-    if (reduced) return;
-    Animated.spring(scale, { toValue: 0.97, ...SPRING_CONFIG }).start();
-  }, [reduced, scale]);
-
-  const onPressOut = useCallback(() => {
-    if (reduced) return;
-    Animated.spring(scale, { toValue: 1, ...SPRING_CONFIG }).start();
-  }, [reduced, scale]);
-
-  return { scale, onPressIn, onPressOut };
-}
-
-// — End animation primitives —
 
 function formatShortRelativeTime(value: string | null): string {
   if (!value) {

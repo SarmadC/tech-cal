@@ -1,6 +1,7 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { useMemo } from "react";
 import {
+  Animated,
   StyleSheet,
   Text,
   View,
@@ -11,6 +12,7 @@ import {
 import type { MobileEventCard } from "@kurecal/domain";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScalePress } from "../../hooks/useAnimation";
 import { EventImageSurface } from "../shared/EventImageSurface";
 
 interface DiscoverHeroCardProps {
@@ -40,14 +42,18 @@ export function DiscoverHeroCard({
   style,
 }: DiscoverHeroCardProps) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
   const isSaved =
     event.engagement?.isBookmarked || event.badges?.includes("Saved");
   const eyebrow = useMemo(() => buildEyebrow(event), [event]);
 
   return (
+    <Animated.View style={{ transform: [{ scale }] }}>
     <EventImageSurface
       event={event}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       style={[
         styles.card,
         style,
@@ -106,6 +112,7 @@ export function DiscoverHeroCard({
         </Text>
       </View>
     </EventImageSurface>
+    </Animated.View>
   );
 }
 

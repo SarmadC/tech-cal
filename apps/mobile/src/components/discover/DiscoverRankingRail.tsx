@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type {
   MobileDiscoverFeed,
@@ -6,6 +6,7 @@ import type {
 } from "@kurecal/domain";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScalePress } from "../../hooks/useAnimation";
 
 interface DiscoverRankingRailProps {
   onChange: (value: MobileDiscoverRankingMode) => void;
@@ -42,51 +43,77 @@ export function DiscoverRankingRail({
         },
       ]}
     >
-      {options.map((option) => {
-        const active = option.id === value;
-
-        return (
-          <Pressable
-            key={option.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            onPress={() => onChange(option.id)}
-            style={({ pressed }) => [
-              styles.segment,
-              active && [
-                styles.segmentActive,
-                {
-                  backgroundColor: activeBackground,
-                  borderColor:
-                    tokens.mode === "light"
-                      ? "rgba(15, 23, 42, 0.04)"
-                      : "rgba(255, 255, 255, 0.08)",
-                  shadowOpacity: 0,
-                },
-              ],
-              {
-                opacity: pressed && !active ? 0.68 : 1,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: active
-                  ? tokens.colors.textPrimary
-                  : tokens.colors.textTertiary,
-                fontFamily: tokens.typography.sans,
-                fontSize: 12.5,
-                letterSpacing: -0.1,
-                fontWeight: active ? "600" : "500",
-                opacity: active ? 1 : 0.84,
-              }}
-            >
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {options.map((option) => (
+        <RankingSegment
+          key={option.id}
+          activeBackground={activeBackground}
+          isActive={option.id === value}
+          label={option.label}
+          tokens={tokens}
+          onPress={() => onChange(option.id)}
+        />
+      ))}
     </View>
+  );
+}
+
+function RankingSegment({
+  activeBackground,
+  isActive,
+  label,
+  onPress,
+  tokens,
+}: {
+  activeBackground: string;
+  isActive: boolean;
+  label: string;
+  onPress: () => void;
+  tokens: ReturnType<typeof useAppTheme>["tokens"];
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.segment}
+    >
+      <Animated.View
+        style={[
+          styles.segmentInner,
+          isActive && [
+            styles.segmentActive,
+            {
+              backgroundColor: activeBackground,
+              borderColor:
+                tokens.mode === "light"
+                  ? "rgba(15, 23, 42, 0.04)"
+                  : "rgba(255, 255, 255, 0.08)",
+              shadowOpacity: 0,
+            },
+          ],
+          { transform: [{ scale }] },
+        ]}
+      >
+        <Text
+          style={{
+            color: isActive
+              ? tokens.colors.textPrimary
+              : tokens.colors.textTertiary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 12.5,
+            letterSpacing: -0.1,
+            fontWeight: isActive ? "600" : "500",
+            opacity: isActive ? 1 : 0.84,
+          }}
+        >
+          {label}
+        </Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -101,6 +128,10 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   segment: {
+    flex: 1,
+    minHeight: 30,
+  },
+  segmentInner: {
     alignItems: "center",
     borderRadius: 4,
     flex: 1,

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { MobileEventCard } from "@kurecal/domain";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScalePress } from "../../hooks/useAnimation";
 
 interface DiscoverEventCardProps {
   event: MobileEventCard;
@@ -86,6 +87,7 @@ export function DiscoverEventCard({
   showDivider = true,
 }: DiscoverEventCardProps) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
@@ -97,12 +99,11 @@ export function DiscoverEventCard({
       accessibilityLabel={`Open recommended event ${event.title}`}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.pressable,
-        pressed && { backgroundColor: "rgba(255, 255, 255, 0.04)" },
-      ]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.pressable}
     >
-      <View style={styles.row}>
+      <Animated.View style={[styles.row, { transform: [{ scale }] }]}>
         {/* Logo frame — fixed container normalizes all mark sizes */}
         <View style={styles.logoWrap}>
           <View style={styles.logoFrame}>
@@ -169,7 +170,7 @@ export function DiscoverEventCard({
             {metadataLine}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {showDivider ? (
         <View

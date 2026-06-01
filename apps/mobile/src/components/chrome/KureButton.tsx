@@ -1,7 +1,8 @@
 import type { PropsWithChildren } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text } from "react-native";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScalePress } from "../../hooks/useAnimation";
 
 export function KureButton({
   children,
@@ -16,6 +17,7 @@ export function KureButton({
   testID?: string;
 }>) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
 
   return (
     <Pressable
@@ -23,8 +25,10 @@ export function KureButton({
       onPress={() => {
         void onPress?.();
       }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         {
           borderRadius: tokens.radius.md,
@@ -47,11 +51,10 @@ export function KureButton({
           backgroundColor: tokens.colors.danger,
           borderColor: tokens.colors.danger,
         },
-        pressed && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
         <Text
           style={[
             styles.label,
@@ -68,7 +71,7 @@ export function KureButton({
         >
           {children}
         </Text>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -87,10 +90,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "600",
-  },
-  pressed: {
-    opacity: 0.86,
-    transform: [{ scale: 0.99 }],
   },
   disabled: {
     opacity: 0.45,
