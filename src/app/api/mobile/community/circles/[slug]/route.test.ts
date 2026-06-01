@@ -50,6 +50,7 @@ describe('/api/mobile/community/circles/[slug]', () => {
       posts: [
         {
           id: 'post-1',
+          title: 'What are you building?',
           content: 'What are you building?',
           created_at: '2026-04-03T00:00:00.000Z',
           author: {

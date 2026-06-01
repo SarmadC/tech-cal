@@ -251,7 +251,18 @@ export default function PostFeedItem({
     const hiddenRootCommentCount = Math.max(0, comments.length - visibleRootComments.length);
     const shouldShowExpandedCommentComposer = isCommentComposerExpanded || Boolean(commentContent.trim());
 
-    const parsedPostContent = useMemo(() => parseCirclePostContent(post.content ?? ''), [post.content]);
+    const parsedPostContent = useMemo(() => {
+        const parsed = parseCirclePostContent(post.content ?? '');
+        if (!post.title) {
+            return parsed;
+        }
+
+        return {
+            title: post.title,
+            body: post.content ?? '',
+            excerpt: post.content ?? '',
+        };
+    }, [post.content, post.title]);
     const authorName = getDisplayName(post.author?.full_name);
     const isRemoved = Boolean(post.isRemoved);
     const replyLabel = isRemoved

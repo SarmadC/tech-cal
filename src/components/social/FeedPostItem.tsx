@@ -35,8 +35,8 @@ export default function FeedPostItem({
 }: FeedPostItemProps) {
     const initials = (post.author.fullName || 'U').slice(0, 2).toUpperCase();
     const parsedContent = parseCirclePostContent(post.content ?? '');
-    const title = parsedContent.title || parsedContent.body;
-    const excerpt = parsedContent.excerpt;
+    const title = post.title || parsedContent.title || parsedContent.body;
+    const excerpt = post.title ? post.content : parsedContent.excerpt;
     const postHref = buildCirclePostPath(post.circle.slug, post.id, post.content);
     const replyLabel = post.commentCount > 0
         ? `${post.commentCount} ${post.commentCount === 1 ? 'reply' : 'replies'}`

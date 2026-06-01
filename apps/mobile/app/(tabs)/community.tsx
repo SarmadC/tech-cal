@@ -12,6 +12,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -19,6 +20,13 @@ import {
   Text,
   View,
 } from "react-native";
+
+import {
+  AnimatedMount,
+  DURATIONS,
+  SPRING_CONFIG,
+  useScalePress,
+} from "../../src/hooks/useAnimation";
 
 import { KureButton } from "../../src/components/chrome/KureButton";
 import { MobilePage } from "../../src/components/chrome/MobilePage";
@@ -440,34 +448,40 @@ export default function CommunityScreen() {
             {inlineError ? <InlineAlert message={inlineError} /> : null}
 
             {activeTab === "pulse" ? (
-              <PulseTab
-                home={home}
-                onOpenPeople={() => setActiveTab("people")}
-                onOpenRooms={() => setActiveTab("rooms")}
-                onOpenRoom={handleOpenRoom}
-              />
+              <AnimatedMount key="pulse">
+                <PulseTab
+                  home={home}
+                  onOpenPeople={() => setActiveTab("people")}
+                  onOpenRooms={() => setActiveTab("rooms")}
+                  onOpenRoom={handleOpenRoom}
+                />
+              </AnimatedMount>
             ) : null}
 
             {activeTab === "rooms" ? (
-              <RoomsTab
-                activeRooms={activeRooms}
-                followUps={home.followUpNow}
-                lens={roomLens}
-                onChangeLens={setRoomLens}
-                onOpenRoom={handleOpenRoom}
-              />
+              <AnimatedMount key="rooms">
+                <RoomsTab
+                  activeRooms={activeRooms}
+                  followUps={home.followUpNow}
+                  lens={roomLens}
+                  onChangeLens={setRoomLens}
+                  onOpenRoom={handleOpenRoom}
+                />
+              </AnimatedMount>
             ) : null}
 
             {activeTab === "people" ? (
-              <PeopleTab
-                home={home}
-                lens={peopleLens}
-                peopleToMeet={peopleSections.peopleToMeet}
-                followUps={peopleSections.followUps}
-                pendingUserId={pendingUserId}
-                onChangeLens={setPeopleLens}
-                onToggleFollow={handleToggleFollow}
-              />
+              <AnimatedMount key="people">
+                <PeopleTab
+                  home={home}
+                  lens={peopleLens}
+                  peopleToMeet={peopleSections.peopleToMeet}
+                  followUps={peopleSections.followUps}
+                  pendingUserId={pendingUserId}
+                  onChangeLens={setPeopleLens}
+                  onToggleFollow={handleToggleFollow}
+                />
+              </AnimatedMount>
             ) : null}
           </>
         ) : null}
@@ -500,37 +514,66 @@ function SegmentedTabs({
       ]}
     >
       {COMMUNITY_TABS.map((tab) => (
-        <Pressable
+        <SegmentTab
           key={tab.id}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === tab.id }}
+          isActive={activeTab === tab.id}
+          tab={tab}
+          tokens={tokens}
           onPress={() => onChange(tab.id)}
-          style={[
-            styles.segmentedItem,
-            activeTab === tab.id && {
-              backgroundColor: tokens.colors.pillActive,
-              borderRadius: tokens.radius.xs,
-            },
-          ]}
-        >
-          <Text
-            style={{
-              color:
-                activeTab === tab.id
-                  ? tokens.colors.pillActiveText
-                  : tokens.colors.textTertiary,
-              fontFamily: tokens.typography.sans,
-              fontSize: 13,
-              lineHeight: 18,
-              fontWeight: "700",
-              letterSpacing: 0.1,
-            }}
-          >
-            {tab.label}
-          </Text>
-        </Pressable>
+        />
       ))}
     </View>
+  );
+}
+
+function SegmentTab({
+  isActive,
+  onPress,
+  tab,
+  tokens,
+}: {
+  isActive: boolean;
+  onPress: () => void;
+  tab: { id: CommunityTab; label: string };
+  tokens: ReturnType<typeof useAppTheme>["tokens"];
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.segmentedItem}
+    >
+      <Animated.View
+        style={[
+          styles.segmentedItem,
+          isActive && {
+            backgroundColor: tokens.colors.pillActive,
+            borderRadius: tokens.radius.xs,
+          },
+          { transform: [{ scale }] },
+        ]}
+      >
+        <Text
+          style={{
+            color: isActive
+              ? tokens.colors.pillActiveText
+              : tokens.colors.textTertiary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 13,
+            lineHeight: 18,
+            fontWeight: "700",
+            letterSpacing: 0.1,
+          }}
+        >
+          {tab.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -612,8 +655,8 @@ function PulseTab({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.circleRail}
           >
-            {circles.slice(0, 6).map((circle) => (
-              <CircleCard key={circle.id} circle={circle} />
+            {circles.slice(0, 6).map((circle, index) => (
+              <CircleCard key={circle.id} circle={circle} index={index} />
             ))}
           </ScrollView>
         </>
@@ -700,37 +743,43 @@ function SummaryRow({
   onPress: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
         styles.summaryRow,
         !isLast && {
           borderBottomColor: tokens.colors.divider,
           borderBottomWidth: 1,
         },
-        pressed && styles.pressed,
       ]}
     >
-      <FontAwesome name={icon} size={19} color={tokens.colors.accent} />
-      <Text
-        style={[
-          styles.summaryText,
-          {
-            color: tokens.colors.textPrimary,
-            fontFamily: tokens.typography.sans,
-          },
-        ]}
+      <Animated.View
+        style={[styles.summaryRowInner, { transform: [{ scale }] }]}
       >
-        {label}
-      </Text>
-      <FontAwesome
-        name="chevron-right"
-        size={14}
-        color={tokens.colors.textSecondary}
-      />
+        <FontAwesome name={icon} size={19} color={tokens.colors.accent} />
+        <Text
+          style={[
+            styles.summaryText,
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+        <FontAwesome
+          name="chevron-right"
+          size={14}
+          color={tokens.colors.textSecondary}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -819,6 +868,7 @@ function RoomRow({
   onOpenRoom: (eventId: string) => void;
 }) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
   const isWarm =
     event.viewerContext === "attending" || event.visibleAttendeeCount > 0;
   const meta = getRoomCompactMeta(event);
@@ -828,50 +878,54 @@ function RoomRow({
       accessibilityLabel={`Open room for ${event.title}`}
       accessibilityRole="button"
       onPress={() => onOpenRoom(event.id)}
-      style={({ pressed }) => [
-        styles.roomRow,
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
         !isLast && {
           borderBottomWidth: 1,
           borderBottomColor: tokens.colors.divider,
         },
-        pressed && { backgroundColor: tokens.colors.surfaceMuted },
       ]}
     >
-      <Text
-        numberOfLines={1}
-        style={[
-          styles.roomRowTitle,
-          {
-            color: tokens.colors.textPrimary,
-            fontFamily: tokens.typography.sans,
-          },
-        ]}
+      <Animated.View
+        style={[styles.roomRow, { transform: [{ scale }] }]}
       >
-        {event.title}
-      </Text>
-      <View style={styles.roomRowMeta}>
-        <View
-          style={[
-            styles.roomStatusDot,
-            {
-              backgroundColor: isWarm
-                ? tokens.colors.accent
-                : tokens.colors.textTertiary,
-            },
-          ]}
-        />
         <Text
+          numberOfLines={1}
           style={[
-            styles.roomRowMetaText,
+            styles.roomRowTitle,
             {
-              color: tokens.colors.textTertiary,
+              color: tokens.colors.textPrimary,
               fontFamily: tokens.typography.sans,
             },
           ]}
         >
-          {meta}
+          {event.title}
         </Text>
-      </View>
+        <View style={styles.roomRowMeta}>
+          <View
+            style={[
+              styles.roomStatusDot,
+              {
+                backgroundColor: isWarm
+                  ? tokens.colors.accent
+                  : tokens.colors.textTertiary,
+              },
+            ]}
+          />
+          <Text
+            style={[
+              styles.roomRowMetaText,
+              {
+                color: tokens.colors.textTertiary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {meta}
+          </Text>
+        </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -980,6 +1034,7 @@ function ActivityRow({
   post: MobileCommunityFeedPost;
 }) {
   const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
   const authorName = post.author.fullName || "Someone";
   const title = `${authorName} posted in ${post.circle.name}`;
 
@@ -992,15 +1047,16 @@ function ActivityRow({
           params: { slug: post.circle.slug, postId: post.id },
         })
       }
-      style={({ pressed }) => [
-        styles.activityRow,
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
         !isLast && {
           borderBottomColor: tokens.colors.divider,
           borderBottomWidth: 1,
         },
-        pressed && styles.pressed,
       ]}
     >
+      <Animated.View style={[styles.activityRow, { transform: [{ scale }] }]}>
       <AvatarImage
         avatarUrl={post.author.avatarUrl}
         name={authorName}
@@ -1027,7 +1083,7 @@ function ActivityRow({
             },
           ]}
         >
-          "{summarizeCommunityPost(post.content)}"
+          "{summarizeCommunityPost(post.title || post.content)}"
         </Text>
         <Text
           style={[
@@ -1042,41 +1098,54 @@ function ActivityRow({
           {post.isTrending ? " · Trending" : ""}
         </Text>
       </View>
+      </Animated.View>
     </Pressable>
   );
 }
 
-function CircleCard({ circle }: { circle: MobileCommunityCircle }) {
+function CircleCard({
+  circle,
+  index,
+}: {
+  circle: MobileCommunityCircle;
+  index: number;
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push(`/community/${getCircleSlug(circle)}`)}
-      style={({ pressed }) => [
-        styles.circleCard,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View style={styles.circleIcon}>
-        <FontAwesome
-          name={getCircleIcon(circle.name)}
-          size={13}
-          color={circleDesign.textVariant}
-        />
-      </View>
-      <View style={styles.circleCopy}>
-        <Text numberOfLines={1} style={styles.circleName}>
-          {circle.name}
-        </Text>
-        <Text numberOfLines={1} style={styles.cardMeta}>
-          {formatCommunityTabCount(circle.memberCount)} members
-        </Text>
-      </View>
-      <View style={styles.circleSignal}>
-        <Text style={styles.circleSignalText}>
-          {circle.isJoined ? "Joined" : "Discover"}
-        </Text>
-      </View>
-    </Pressable>
+    <AnimatedMount delay={Math.min(index, 5) * 20}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push(`/community/${getCircleSlug(circle)}`)}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+      >
+        <Animated.View
+          style={[styles.circleCard, { transform: [{ scale }] }]}
+        >
+          <View style={styles.circleIcon}>
+            <FontAwesome
+              name={getCircleIcon(circle.name)}
+              size={13}
+              color={circleDesign.textVariant}
+            />
+          </View>
+          <View style={styles.circleCopy}>
+            <Text numberOfLines={1} style={styles.circleName}>
+              {circle.name}
+            </Text>
+            <Text numberOfLines={1} style={styles.cardMeta}>
+              {formatCommunityTabCount(circle.memberCount)} members
+            </Text>
+          </View>
+          <View style={styles.circleSignal}>
+            <Text style={styles.circleSignalText}>
+              {circle.isJoined ? "Joined" : "Discover"}
+            </Text>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </AnimatedMount>
   );
 }
 
@@ -1305,39 +1374,65 @@ function LensRail({
       contentContainerStyle={styles.lensRow}
     >
       {items.map((item) => (
-        <Pressable
+        <LensChip
           key={item.id}
-          accessibilityRole="button"
-          accessibilityState={{ selected: activeId === item.id }}
+          isActive={activeId === item.id}
+          item={item}
+          tokens={tokens}
           onPress={() => onSelect(item.id)}
-          style={({ pressed }) => [
-            styles.lensChip,
-            {
-              backgroundColor:
-                activeId === item.id
-                  ? tokens.colors.pillActive
-                  : tokens.colors.surfaceMuted,
-              borderRadius: tokens.radius.xs,
-            },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text
-            style={{
-              color:
-                activeId === item.id
-                  ? tokens.colors.pillActiveText
-                  : tokens.colors.textPrimary,
-              fontFamily: tokens.typography.sans,
-              fontSize: 14,
-              fontWeight: "700",
-            }}
-          >
-            {item.label}
-          </Text>
-        </Pressable>
+        />
       ))}
     </ScrollView>
+  );
+}
+
+function LensChip({
+  isActive,
+  item,
+  onPress,
+  tokens,
+}: {
+  isActive: boolean;
+  item: { id: string; label: string };
+  onPress: () => void;
+  tokens: ReturnType<typeof useAppTheme>["tokens"];
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+    >
+      <Animated.View
+        style={[
+          styles.lensChip,
+          {
+            backgroundColor: isActive
+              ? tokens.colors.pillActive
+              : tokens.colors.surfaceMuted,
+            borderRadius: tokens.radius.xs,
+          },
+          { transform: [{ scale }] },
+        ]}
+      >
+        <Text
+          style={{
+            color: isActive
+              ? tokens.colors.pillActiveText
+              : tokens.colors.textPrimary,
+            fontFamily: tokens.typography.sans,
+            fontSize: 14,
+            fontWeight: "700",
+          }}
+        >
+          {item.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -1716,11 +1811,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   summaryRow: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+  },
+  summaryRowInner: {
     alignItems: "center",
     flexDirection: "row",
     gap: 10,
-    minHeight: 44,
-    paddingHorizontal: 12,
+    flex: 1,
   },
   summaryText: {
     flex: 1,

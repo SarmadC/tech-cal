@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FontAwesome } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
@@ -35,11 +35,10 @@ import {
 import {
   createMobileCommunityPost,
   deleteCommunityPostImage,
-  joinMobileCommunityCircle,
-  leaveMobileCommunityCircle,
   loadMobileCommunityCircle,
   loadMobileCommunityEvents,
   loadMobileCommunityMentionSuggestions,
+  submitMobileCommunityVote,
   uploadCommunityPostImage,
   type CommunityPostImageUploadResult,
 } from '../../src/lib/mobileApi';
@@ -108,17 +107,26 @@ function mentionUserIdsInDraft(
   return Array.from(userIds);
 }
 
+function createEmptyPublishedMediaSet(): Set<string> {
+  return new Set();
+}
+
 export default function CommunityCircleScreen() {
   const { slug } = useLocalSearchParams<{ slug: string | string[] }>();
   const circleSlug = Array.isArray(slug) ? slug[0] : slug;
   const [data, setData] = useState<MobileCommunityCirclePage | null>(null);
+  const [postTitle, setPostTitle] = useState('');
   const [draft, setDraft] = useState('');
   const [postType, setPostType] = useState<CommunityPostType>('update');
   const [attachedEvent, setAttachedEvent] =
     useState<MobileCommunityEventCard | null>(null);
   const [eventPickerEvents, setEventPickerEvents] = useState<MobileCommunityEventCard[]>([]);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isEventPickerOpen, setIsEventPickerOpen] = useState(false);
   const [eventPickerLoading, setEventPickerLoading] = useState(false);
+  const [eventPickerQuery, setEventPickerQuery] = useState('');
+  const [isPostTypeOpen, setIsPostTypeOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const [mentionSuggestions, setMentionSuggestions] = useState<
     MobileCommunityMentionCandidate[]
   >([]);
@@ -153,6 +161,46 @@ export default function CommunityCircleScreen() {
     },
     []
   );
+
+  function resetComposerState() {
+    setPostTitle('');
+    setDraft('');
+    setPostType('update');
+    setAttachedEvent(null);
+    setSelectedMedia([]);
+    setSelectedMentions([]);
+    setMentionSuggestions([]);
+    setMentionLoading(false);
+    setIsEventPickerOpen(false);
+    setIsPostTypeOpen(false);
+  }
+
+  function handleOpenComposer() {
+    if (!data?.isJoined) {
+      return;
+    }
+
+    setIsComposerOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 80);
+  }
+
+  function handleCancelComposer() {
+    const unpublishedPaths = selectedMedia
+      .map((item) => item.path)
+      .filter((path) => !publishedMediaPathsRef.current.has(path));
+
+    if (unpublishedPaths.length) {
+      void Promise.allSettled(
+        unpublishedPaths.map((path) => deleteCommunityPostImage(path))
+      );
+    }
+
+    publishedMediaPathsRef.current = createEmptyPublishedMediaSet();
+    resetComposerState();
+    setIsComposerOpen(false);
+  }
 
   const loadCircle = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial') => {
@@ -192,37 +240,10 @@ export default function CommunityCircleScreen() {
     }, [loadCircle])
   );
 
-  async function handleToggleMembership() {
-    if (!data || working) {
-      return;
-    }
-
-    setWorking(true);
-
-    try {
-      if (data.isJoined) {
-        await leaveMobileCommunityCircle(data.circle.id);
-      } else {
-        await joinMobileCommunityCircle(data.circle.id);
-      }
-
-      await loadCircle('refresh');
-    } catch (nextError) {
-      Alert.alert(
-        data.isJoined ? 'Leave failed' : 'Join failed',
-        nextError instanceof Error
-          ? nextError.message
-          : 'Unable to update membership.'
-      );
-    } finally {
-      setWorking(false);
-    }
-  }
-
   async function handleCreatePost() {
     if (
       !data ||
-      (!draft.trim() && !attachedEvent && selectedMedia.length === 0) ||
+      !postTitle.trim() ||
       working ||
       uploadingMedia
     ) {
@@ -241,6 +262,7 @@ export default function CommunityCircleScreen() {
       await createMobileCommunityPost({
         circleId: data.circle.id,
         circleSlug: data.circle.slug,
+        title: postTitle,
         content: draft,
         postType,
         eventId: attachedEvent?.id,
@@ -252,19 +274,46 @@ export default function CommunityCircleScreen() {
       media.forEach((item) => {
         publishedMediaPathsRef.current.add(item.path);
       });
-      setDraft('');
-      setPostType('update');
-      setAttachedEvent(null);
-      setSelectedMedia([]);
-      setSelectedMentions([]);
-      setMentionSuggestions([]);
-      void loadCircle('refresh');
+      resetComposerState();
+      publishedMediaPathsRef.current = createEmptyPublishedMediaSet();
+      setIsComposerOpen(false);
+      await loadCircle('refresh');
     } catch (nextError) {
       Alert.alert(
         'Post failed',
         nextError instanceof Error
           ? nextError.message
-          : 'Unable to publish post.'
+          : 'Unable to post.'
+      );
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function handlePostVote(
+    post: NonNullable<MobileCommunityCirclePage['posts']>[number],
+    voteType: -1 | 1
+  ) {
+    if (!data || working) {
+      return;
+    }
+
+    setWorking(true);
+
+    try {
+      await submitMobileCommunityVote({
+        entityType: 'post',
+        entityId: post.id,
+        circleSlug: data.circle.slug,
+        voteType: post.userVote === voteType ? 0 : voteType,
+      });
+      await loadCircle('refresh');
+    } catch (nextError) {
+      Alert.alert(
+        'Vote failed',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to vote on this thread.'
       );
     } finally {
       setWorking(false);
@@ -348,20 +397,27 @@ export default function CommunityCircleScreen() {
       return;
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photos unavailable', 'Allow photo access to attach images.');
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        mediaTypes: ['images'],
+        orderedSelection: true,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.86,
+        selectionLimit: remainingSlots,
+      });
+    } catch (nextError) {
+      Alert.alert(
+        'Photos unavailable',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to open your photo library.'
+      );
       return;
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: false,
-      allowsMultipleSelection: true,
-      mediaTypes: ['images'],
-      orderedSelection: true,
-      quality: 0.86,
-      selectionLimit: remainingSlots,
-    });
 
     if (result.canceled) {
       return;
@@ -418,6 +474,7 @@ export default function CommunityCircleScreen() {
       return;
     }
 
+    setEventPickerQuery('');
     setIsEventPickerOpen(true);
     setEventPickerLoading(true);
 
@@ -481,12 +538,15 @@ export default function CommunityCircleScreen() {
     );
   }
 
-  const header = data?.header ?? {
-    eyebrow: 'Circle',
-    title: 'Community circle',
-    subtitle: 'Discussion room',
-  };
-  const canPublish = Boolean(draft.trim() || attachedEvent || selectedMedia.length);
+  const canPublish = Boolean(postTitle.trim());
+  const eventPickerQueryTrimmed = eventPickerQuery.trim().toLowerCase();
+  const filteredEventPickerEvents = eventPickerQueryTrimmed
+    ? eventPickerEvents.filter((event) =>
+        [event.title, event.location, event.format]
+          .filter((field): field is string => Boolean(field))
+          .some((field) => field.toLowerCase().includes(eventPickerQueryTrimmed))
+      )
+    : eventPickerEvents;
 
   return (
     <View style={styles.screen}>
@@ -506,248 +566,269 @@ export default function CommunityCircleScreen() {
           <View style={styles.topBar}>
             <Pressable
               onPress={() => router.back()}
+              hitSlop={8}
               style={({ pressed }) => [
                 styles.backButton,
                 pressed ? styles.cardPressed : null,
               ]}
+              accessibilityLabel="Back"
             >
-              <Text style={styles.backLabel}>Back</Text>
+              <Feather name="chevron-left" size={24} color={design.text} />
             </Pressable>
           </View>
 
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-          <View style={styles.heroCard}>
-            <View style={styles.hero}>
-              <View style={styles.heroTitleRow}>
-                <View style={styles.heroCopy}>
-                  <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-                  <Text style={styles.title}>{header.title}</Text>
-                </View>
-                <Text style={styles.membershipChip}>
-                  {data?.isJoined ? 'Joined' : 'Discover'}
-                </Text>
-              </View>
-              {header.subtitle ? (
-                <Text style={styles.subtitle}>{header.subtitle}</Text>
+          <View style={styles.section}>
+            <View style={styles.threadHeader}>
+              <Text style={styles.sectionEyebrow}>Latest threads</Text>
+              {data?.isJoined ? (
+                <Pressable
+                  onPress={handleOpenComposer}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.createThreadButton,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                  accessibilityLabel="Create thread"
+                >
+                  <Feather name="plus" size={18} color={design.accent} />
+                </Pressable>
               ) : null}
             </View>
-            <Pressable
-              onPress={() => {
-                void handleToggleMembership();
-              }}
-              style={({ pressed }) => [
-                styles.primaryAction,
-                pressed ? styles.cardPressed : null,
-              ]}
-            >
-              <Text style={styles.primaryActionLabel}>
-                {working
-                  ? 'Working...'
-                  : data?.isJoined
-                    ? 'Leave circle'
-                    : 'Join circle'}
-              </Text>
-            </Pressable>
-          </View>
 
-          {data?.isJoined ? (
-            <View style={styles.composerCard}>
-              <View style={styles.postTypeRail}>
-                {POST_TYPE_OPTIONS.map((option) => {
-                  const isSelected = option.value === postType;
-
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setPostType(option.value)}
-                      style={({ pressed }) => [
-                        styles.postTypeChip,
-                        isSelected ? styles.postTypeChipSelected : null,
-                        pressed ? styles.cardPressed : null,
-                      ]}
-                      accessibilityLabel={`Set thread type to ${option.label}`}
-                    >
-                      <Text
-                        style={[
-                          styles.postTypeChipLabel,
-                          isSelected ? styles.postTypeChipLabelSelected : null,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={styles.editorShell}>
-                <View style={styles.editorToolbar}>
+            {data?.isJoined && isComposerOpen ? (
+              <View style={styles.composerCard}>
+                <View style={styles.postTypeSelectWrap}>
                   <Pressable
-                    onPress={() => {
-                      void handlePickImages();
-                    }}
+                    onPress={() => setIsPostTypeOpen((current) => !current)}
                     style={({ pressed }) => [
-                      styles.editorToolButton,
+                      styles.postTypeSelect,
                       pressed ? styles.cardPressed : null,
                     ]}
-                    disabled={
-                      working ||
-                      uploadingMedia ||
-                      selectedMedia.length >= MAX_POST_IMAGES
-                    }
-                    accessibilityLabel={uploadingMedia ? 'Uploading image' : 'Add image'}
+                    accessibilityLabel="Select thread type"
                   >
-                    <FontAwesome name="image" size={18} color={design.textVariant} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      void handleOpenEventPicker();
-                    }}
-                    style={({ pressed }) => [
-                      styles.editorToolButton,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                    disabled={working || uploadingMedia}
-                    accessibilityLabel={
-                      attachedEvent ? 'Change attached event' : 'Attach event'
-                    }
-                  >
+                    <Text style={styles.postTypeSelectLabel}>
+                      {POST_TYPE_OPTIONS.find((option) => option.value === postType)?.label ??
+                        'Update'}
+                    </Text>
                     <FontAwesome
-                      name="calendar-plus-o"
-                      size={18}
+                      name={isPostTypeOpen ? 'chevron-up' : 'chevron-down'}
+                      size={11}
                       color={design.textVariant}
                     />
                   </Pressable>
-                  <View style={styles.editorDivider} />
-                  <View style={styles.editorToolButton}>
-                    <Text style={styles.editorToolGlyph}>@</Text>
-                  </View>
-                  <View style={styles.editorToolButton}>
-                    <FontAwesome name="link" size={17} color={design.textVariant} />
-                  </View>
-                </View>
-                <TextInput
-                  multiline
-                  value={draft}
-                  onChangeText={handleDraftChange}
-                  placeholder="Body text (optional)"
-                  placeholderTextColor={design.textVariant}
-                  style={styles.input}
-                />
-              </View>
-              {mentionSuggestions.length || mentionLoading ? (
-                <View style={styles.mentionMenu}>
-                  {mentionLoading ? (
-                    <Text style={styles.mentionState}>Searching...</Text>
+                  {isPostTypeOpen ? (
+                    <View style={styles.postTypeMenu}>
+                      {POST_TYPE_OPTIONS.map((option) => {
+                        const isSelected = option.value === postType;
+
+                        return (
+                          <Pressable
+                            key={option.value}
+                            onPress={() => {
+                              setPostType(option.value);
+                              setIsPostTypeOpen(false);
+                            }}
+                            style={({ pressed }) => [
+                              styles.postTypeOption,
+                              isSelected ? styles.postTypeOptionSelected : null,
+                              pressed ? styles.cardPressed : null,
+                            ]}
+                            accessibilityLabel={`Set thread type to ${option.label}`}
+                          >
+                            <Text
+                              style={[
+                                styles.postTypeOptionLabel,
+                                isSelected ? styles.postTypeOptionLabelSelected : null,
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                            {isSelected ? (
+                              <FontAwesome name="check" size={11} color={design.accent} />
+                            ) : null}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                   ) : null}
-                  {mentionSuggestions.map((mention) => (
+                </View>
+                <View style={styles.composerFields}>
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>Title</Text>
+                    <TextInput
+                      ref={inputRef}
+                      value={postTitle}
+                      onChangeText={setPostTitle}
+                      placeholder="Thread title"
+                      placeholderTextColor={design.textVariant}
+                      style={styles.titleInput}
+                      returnKeyType="next"
+                      maxLength={200}
+                    />
+                  </View>
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>Body</Text>
+                    <TextInput
+                      multiline
+                      value={draft}
+                      onChangeText={handleDraftChange}
+                      placeholder="Optional details"
+                      placeholderTextColor={design.textVariant}
+                      style={styles.input}
+                    />
+                  </View>
+                  <View style={styles.editorToolbar}>
                     <Pressable
-                      key={mention.id}
-                      onPress={() => handleSelectMention(mention)}
+                      onPress={() => {
+                        void handlePickImages();
+                      }}
                       style={({ pressed }) => [
-                        styles.mentionRow,
+                        styles.editorToolButton,
                         pressed ? styles.cardPressed : null,
                       ]}
+                      disabled={
+                        working ||
+                        uploadingMedia ||
+                        selectedMedia.length >= MAX_POST_IMAGES
+                      }
+                      accessibilityLabel={uploadingMedia ? 'Uploading image' : 'Add image'}
                     >
-                      <View style={styles.mentionAvatar}>
-                        <Text style={styles.mentionAvatarLabel}>
-                          {(mention.fullName || mention.username).slice(0, 1).toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.mentionTextWrap}>
-                        <Text style={styles.mentionName}>
-                          {mention.fullName || `@${mention.username}`}
-                        </Text>
-                        <Text style={styles.mentionUsername}>@{mention.username}</Text>
-                      </View>
+                      <FontAwesome name="image" size={16} color={design.textVariant} />
                     </Pressable>
-                  ))}
+                    <Pressable
+                      onPress={() => {
+                        void handleOpenEventPicker();
+                      }}
+                      style={({ pressed }) => [
+                        styles.editorToolButton,
+                        pressed ? styles.cardPressed : null,
+                      ]}
+                      disabled={working || uploadingMedia}
+                      accessibilityLabel={
+                        attachedEvent ? 'Change attached event' : 'Attach event'
+                      }
+                    >
+                      <FontAwesome
+                        name="calendar-plus-o"
+                        size={16}
+                        color={design.textVariant}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
-              ) : null}
-              {attachedEvent ? (
-                <View style={styles.attachmentPreview}>
-                  <EventSummaryCard
-                    event={{
-                      id: attachedEvent.id,
-                      slug: attachedEvent.slug,
-                      title: attachedEvent.title,
-                      startTime: attachedEvent.startTime,
-                      location: attachedEvent.location,
-                      formatLabel: attachedEvent.format,
-                    }}
-                    tone="highlight"
-                  />
-                  <Pressable
-                    onPress={() => setAttachedEvent(null)}
-                    style={({ pressed }) => [
-                      styles.attachmentRemoveAction,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
-                    <Text style={styles.secondaryActionLabel}>Remove event</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-              {selectedMedia.length ? (
-                <View style={styles.mediaPreviewRow}>
-                  {selectedMedia.map((item) => (
-                    <View key={item.path} style={styles.mediaPreviewItem}>
-                      <Image source={{ uri: item.localUri }} style={styles.mediaPreviewImage} />
+                {mentionSuggestions.length || mentionLoading ? (
+                  <View style={styles.mentionMenu}>
+                    {mentionLoading ? (
+                      <Text style={styles.mentionState}>Searching...</Text>
+                    ) : null}
+                    {mentionSuggestions.map((mention) => (
                       <Pressable
-                        onPress={() => {
-                          void handleRemoveImage(item.path);
-                        }}
+                        key={mention.id}
+                        onPress={() => handleSelectMention(mention)}
                         style={({ pressed }) => [
-                          styles.mediaRemoveButton,
+                          styles.mentionRow,
                           pressed ? styles.cardPressed : null,
                         ]}
                       >
-                        <Text style={styles.mediaRemoveLabel}>Remove</Text>
+                        <View style={styles.mentionAvatar}>
+                          <Text style={styles.mentionAvatarLabel}>
+                            {(mention.fullName || mention.username).slice(0, 1).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={styles.mentionTextWrap}>
+                          <Text style={styles.mentionName}>
+                            {mention.fullName || `@${mention.username}`}
+                          </Text>
+                          <Text style={styles.mentionUsername}>@{mention.username}</Text>
+                        </View>
                       </Pressable>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
+                ) : null}
+                {attachedEvent ? (
+                  <View style={styles.attachmentPreview}>
+                    <EventSummaryCard
+                      event={{
+                        id: attachedEvent.id,
+                        slug: attachedEvent.slug,
+                        title: attachedEvent.title,
+                        startTime: attachedEvent.startTime,
+                        location: attachedEvent.location,
+                        formatLabel: attachedEvent.format,
+                      }}
+                      tone="highlight"
+                    />
+                    <Pressable
+                      onPress={() => setAttachedEvent(null)}
+                      style={({ pressed }) => [
+                        styles.attachmentRemoveAction,
+                        pressed ? styles.cardPressed : null,
+                      ]}
+                    >
+                      <Text style={styles.secondaryActionLabel}>Remove event</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {selectedMedia.length ? (
+                  <View style={styles.mediaPreviewRow}>
+                    {selectedMedia.map((item) => (
+                      <View key={item.path} style={styles.mediaPreviewItem}>
+                        <Image source={{ uri: item.localUri }} style={styles.mediaPreviewImage} />
+                        <Pressable
+                          onPress={() => {
+                            void handleRemoveImage(item.path);
+                          }}
+                          style={({ pressed }) => [
+                            styles.mediaRemoveButton,
+                            pressed ? styles.cardPressed : null,
+                          ]}
+                        >
+                          <Text style={styles.mediaRemoveLabel}>Remove</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                <View style={styles.composerFooter}>
+                  <Pressable
+                    onPress={handleCancelComposer}
+                    style={({ pressed }) => [
+                      styles.secondaryAction,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                  >
+                    <Text style={styles.secondaryActionLabel}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      void handleCreatePost();
+                    }}
+                    style={({ pressed }) => [
+                      styles.primaryAction,
+                      styles.publishAction,
+                      (!canPublish || working || uploadingMedia) ? styles.disabledAction : null,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                    disabled={!canPublish || working || uploadingMedia}
+                  >
+                    <Text style={[styles.primaryActionLabel, styles.publishActionLabel]}>
+                      {working ? 'Posting...' : uploadingMedia ? 'Uploading...' : 'Post'}
+                    </Text>
+                  </Pressable>
                 </View>
-              ) : null}
-              <View style={styles.composerFooter}>
-                <Pressable
-                  onPress={() => {
-                    void handleCreatePost();
-                  }}
-                  style={({ pressed }) => [
-                    styles.primaryAction,
-                    styles.publishAction,
-                    (!canPublish || working || uploadingMedia) ? styles.disabledAction : null,
-                    pressed ? styles.cardPressed : null,
-                  ]}
-                  disabled={!canPublish || working || uploadingMedia}
-                >
-                  <Text style={[styles.primaryActionLabel, styles.publishActionLabel]}>
-                    {working ? 'Publishing...' : uploadingMedia ? 'Uploading...' : 'Publish'}
-                  </Text>
-                </Pressable>
               </View>
-            </View>
-          ) : (
-            <ScreenStateView
-              mode="empty"
-              title="Join to post"
-              description="You can browse the circle now. Join it to start threads and reply."
-            />
-          )}
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>Latest Threads</Text>
-            </View>
+            ) : null}
 
             {data?.posts.length ? (
               <View style={styles.listSurface}>
                 {data.posts.map((post) => (
                   <CommunityFeedCard
                     key={post.id}
-                    showCircle={false}
                     post={{
                       id: post.id,
+                      title: post.title,
                       content: post.content,
                       createdAt: post.createdAt,
                       author: post.author,
@@ -757,6 +838,8 @@ export default function CommunityCircleScreen() {
                       },
                       commentCount: countCommunityComments(post.comments),
                       isTrending: countCommunityComments(post.comments) >= 8,
+                      score: post.score,
+                      userVote: post.userVote,
                       postType: post.postType,
                       eventId: post.eventId,
                       event: post.event,
@@ -770,6 +853,9 @@ export default function CommunityCircleScreen() {
                         params: { slug: data.circle.slug, postId: post.id },
                       })
                     }
+                    onVote={(_feedPost, voteType) => {
+                      void handlePostVote(post, voteType);
+                    }}
                     variant="row"
                   />
                 ))}
@@ -823,9 +909,17 @@ export default function CommunityCircleScreen() {
               <View style={styles.modalSheet}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionEyebrow}>Attach event</Text>
-                  <Text style={styles.sectionTitle}>Related events</Text>
                 </View>
-                <ScrollView style={styles.eventPickerList}>
+                <TextInput
+                  value={eventPickerQuery}
+                  onChangeText={setEventPickerQuery}
+                  placeholder="Search events"
+                  placeholderTextColor={design.textVariant}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.eventPickerSearch}
+                />
+                <ScrollView style={styles.eventPickerList} keyboardShouldPersistTaps="handled">
                   {eventPickerLoading ? (
                     <Text style={styles.eventPickerState}>Loading events...</Text>
                   ) : null}
@@ -834,43 +928,38 @@ export default function CommunityCircleScreen() {
                       No linked events are available for this circle.
                     </Text>
                   ) : null}
-                  {eventPickerEvents.map((event) => (
-                    <Pressable
+                  {!eventPickerLoading &&
+                  eventPickerEvents.length &&
+                  !filteredEventPickerEvents.length ? (
+                    <Text style={styles.eventPickerState}>
+                      No events match “{eventPickerQuery.trim()}”.
+                    </Text>
+                  ) : null}
+                  {filteredEventPickerEvents.map((event, index) => (
+                    <DiscoverEventCard
                       key={event.id}
+                      event={toDiscoverEventCard(event)}
+                      showDivider={index < filteredEventPickerEvents.length - 1}
                       onPress={() => {
                         setAttachedEvent(event);
                         setIsEventPickerOpen(false);
                       }}
-                      style={({ pressed }) => [
-                        styles.eventPickerItem,
-                        pressed ? styles.cardPressed : null,
-                      ]}
-                    >
-                      <EventSummaryCard
-                        event={{
-                          id: event.id,
-                          slug: event.slug,
-                          title: event.title,
-                          startTime: event.startTime,
-                          location: event.location,
-                          formatLabel: event.format,
-                        }}
-                      />
-                    </Pressable>
+                    />
                   ))}
                 </ScrollView>
                 <Pressable
                   onPress={() => setIsEventPickerOpen(false)}
                   style={({ pressed }) => [
-                    styles.primaryAction,
+                    styles.modalDoneAction,
                     pressed ? styles.cardPressed : null,
                   ]}
                 >
-                  <Text style={styles.primaryActionLabel}>Done</Text>
+                  <Text style={styles.secondaryActionLabel}>Done</Text>
                 </Pressable>
               </View>
             </View>
           </Modal>
+
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -880,13 +969,10 @@ export default function CommunityCircleScreen() {
 const styles = StyleSheet.create({
   backButton: {
     alignItems: 'center',
-    borderColor: design.border,
     borderRadius: 4,
-    borderWidth: 1,
+    height: 32,
     justifyContent: 'center',
-    minHeight: 42,
-    minWidth: 72,
-    paddingHorizontal: 14,
+    width: 32,
   },
   attachmentPreview: {
     gap: 8,
@@ -901,27 +987,23 @@ const styles = StyleSheet.create({
     minHeight: 28,
     paddingHorizontal: 10,
   },
-  backLabel: {
-    color: design.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   cardPressed: {
     opacity: 0.84,
   },
   composerCard: {
     backgroundColor: design.background,
-    borderBottomColor: design.border,
-    borderBottomWidth: 1,
-    borderTopColor: design.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderTopWidth: 1,
     gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 12,
+  },
+  composerFields: {
+    gap: 8,
   },
   composerFooter: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 8,
     justifyContent: 'flex-end',
   },
   content: {
@@ -930,68 +1012,33 @@ const styles = StyleSheet.create({
   disabledAction: {
     opacity: 0.5,
   },
-  editorDivider: {
-    backgroundColor: design.border,
-    height: 20,
-    width: 1,
-  },
-  editorShell: {
-    backgroundColor: design.surfaceLowest,
-    borderColor: design.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    minHeight: 152,
-    overflow: 'hidden',
-  },
   editorToolButton: {
     alignItems: 'center',
+    borderColor: design.border,
     borderRadius: 4,
+    borderWidth: 1,
     height: 28,
     justifyContent: 'center',
     width: 28,
-  },
-  editorToolGlyph: {
-    color: design.textVariant,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
   },
   editorToolbar: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 10,
-    paddingTop: 10,
+    paddingTop: 2,
   },
-  eyebrow: {
+  fieldBlock: {
+    gap: 4,
+  },
+  fieldLabel: {
     color: design.muted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 0,
+    lineHeight: 16,
   },
   screen: {
     backgroundColor: design.background,
     flex: 1,
-  },
-  hero: {
-    gap: 14,
-  },
-  heroCard: {
-    backgroundColor: design.background,
-    borderBottomColor: design.border,
-    borderBottomWidth: 1,
-    gap: 30,
-    paddingHorizontal: 20,
-    paddingVertical: 32,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: 20,
-  },
-  heroTitleRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 8,
   },
   inlineError: {
     color: design.danger,
@@ -999,14 +1046,16 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   input: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
+    backgroundColor: design.surfaceLowest,
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
     color: design.text,
     fontSize: 14,
     lineHeight: 20,
-    minHeight: 104,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: 96,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     textAlignVertical: 'top',
   },
   listSurface: {
@@ -1028,17 +1077,6 @@ const styles = StyleSheet.create({
     gap: 2,
     minHeight: 42,
     paddingVertical: 10,
-  },
-  membershipChip: {
-    borderColor: design.border,
-    borderRadius: 2,
-    borderWidth: 1,
-    color: design.accent,
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 16,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
   },
   mentionAvatar: {
     alignItems: 'center',
@@ -1102,7 +1140,7 @@ const styles = StyleSheet.create({
   mediaPreviewRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   mediaRemoveButton: {
     alignItems: 'center',
@@ -1118,6 +1156,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  modalDoneAction: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 32,
+    minWidth: 56,
+    paddingHorizontal: 12,
+  },
   modalBackdrop: {
     backgroundColor: 'rgba(0, 0, 0, 0.56)',
     flex: 1,
@@ -1129,56 +1178,93 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
     borderWidth: 1,
-    gap: 10,
+    gap: 12,
     maxHeight: '82%',
     padding: 12,
   },
-  postTypeChip: {
-    alignItems: 'center',
+  postTypeMenu: {
+    backgroundColor: design.surfaceLowest,
     borderColor: design.border,
     borderRadius: 4,
     borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 28,
-    paddingHorizontal: 9,
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    right: 0,
+    top: 36,
+    zIndex: 20,
   },
-  postTypeChipLabel: {
-    color: design.muted,
-    fontSize: 12,
+  postTypeOption: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+  postTypeOptionLabel: {
+    color: design.textVariant,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  postTypeOptionLabelSelected: {
+    color: design.text,
     fontWeight: '600',
   },
-  postTypeChipLabelSelected: {
-    color: design.accentText,
+  postTypeOptionSelected: {
+    backgroundColor: 'rgba(189, 194, 255, 0.08)',
   },
-  postTypeChipSelected: {
-    backgroundColor: design.accent,
-    borderColor: design.accent,
-  },
-  postTypeRail: {
+  postTypeSelect: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    minHeight: 32,
+    minWidth: 132,
+    paddingHorizontal: 10,
+  },
+  postTypeSelectLabel: {
+    color: design.text,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  postTypeSelectWrap: {
+    alignSelf: 'flex-start',
+    minWidth: 160,
+    position: 'relative',
+    zIndex: 20,
   },
   primaryAction: {
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: design.accent,
     borderColor: design.accent,
     borderRadius: 4,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 10,
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
   primaryActionLabel: {
-    color: design.accent,
+    color: design.accentText,
     fontSize: 13,
     fontWeight: '600',
   },
-  eventPickerItem: {
-    marginBottom: 10,
-  },
   eventPickerList: {
     maxHeight: 420,
+  },
+  eventPickerSearch: {
+    backgroundColor: design.surfaceLowest,
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    color: design.text,
+    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   eventPickerState: {
     color: design.muted,
@@ -1207,7 +1293,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 0,
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: 32,
     minWidth: 52,
     paddingHorizontal: 12,
   },
@@ -1218,9 +1304,9 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: design.background,
-    gap: 28,
+    gap: 16,
     paddingHorizontal: 20,
-    paddingVertical: 38,
+    paddingVertical: 24,
   },
   sectionEyebrow: {
     color: design.muted,
@@ -1244,23 +1330,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
   },
-  subtitle: {
-    color: design.textVariant,
-    fontSize: 18,
-    lineHeight: 26,
-  },
-  title: {
+  titleInput: {
+    backgroundColor: design.surfaceLowest,
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
     color: design.text,
-    fontSize: 30,
-    fontWeight: '700',
-    lineHeight: 36,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    minHeight: 38,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   topBar: {
     borderBottomColor: design.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  createThreadButton: {
+    alignItems: 'center',
+    borderColor: design.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  threadHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

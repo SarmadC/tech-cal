@@ -269,6 +269,7 @@ describe("community domain contracts", () => {
       feed: [
         {
           id: "post-1",
+          title: "Hub-only post.",
           content: "Hub-only post.",
           createdAt: "2026-04-01T18:00:00.000Z",
           author: { id: "author-1", fullName: null, avatarUrl: null },
@@ -296,6 +297,7 @@ describe("community domain contracts", () => {
       feed: [
         {
           id: "post-1",
+          title: "Local AI evals",
           content: "What are people using for local AI evals?",
           createdAt: "2026-04-01T18:00:00.000Z",
           author: { id: "author-1", fullName: "Maya Patel", avatarUrl: null },
@@ -411,6 +413,7 @@ describe("community domain contracts", () => {
       posts: [
         {
           id: "post-1",
+          title: "What are you building?",
           content: "What are you building?",
           createdAt: "2026-04-03T00:00:00.000Z",
           author: {

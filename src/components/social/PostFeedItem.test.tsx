@@ -78,6 +78,7 @@ vi.mock('@/components/social/CommentItem', () => ({
 function createPost(): CircleDiscussionPost {
   return {
     id: 'post-1',
+    title: 'Thread title',
     content: 'Thread title\nThe supporting post body explains the problem and asks for feedback.',
     created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
     author: {

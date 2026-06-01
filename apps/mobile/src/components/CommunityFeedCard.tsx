@@ -1,4 +1,7 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useScalePress } from '../hooks/useAnimation';
 
 import type { MobileCommunityFeedPost } from '@kurecal/domain';
 
@@ -12,6 +15,7 @@ const colors = {
   accent: '#BDC2FF',
   border: 'rgba(255, 255, 255, 0.08)',
   borderStrong: 'rgba(189, 194, 255, 0.36)',
+  danger: '#FFB4AB',
   surface: '#121314',
   surfaceHigh: '#1B1C1D',
   text: '#E3E2E3',
@@ -21,40 +25,62 @@ const colors = {
 };
 
 interface CommunityFeedCardProps {
+  onVote?: (post: MobileCommunityFeedPost, voteType: -1 | 1) => void;
   onPress?: () => void;
   post: MobileCommunityFeedPost;
-  showCircle?: boolean;
   variant?: 'card' | 'row';
 }
 
-function getAuthorInitial(post: MobileCommunityFeedPost): string {
-  return (post.author.fullName || post.author.id || 'M').slice(0, 1).toUpperCase();
+function VoteButton({
+  accessibilityLabel,
+  color,
+  icon,
+  onPress,
+}: {
+  accessibilityLabel: string;
+  color: string;
+  icon: 'arrow-up' | 'arrow-down';
+  onPress?: () => void;
+}) {
+  const { scale, onPressIn, onPressOut } = useScalePress();
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.voteButton}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Feather name={icon} size={20} color={color} />
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 function Content({
+  onPress,
+  onVote,
   post,
-  showCircle,
   variant,
 }: {
+  onPress?: () => void;
+  onVote?: (post: MobileCommunityFeedPost, voteType: -1 | 1) => void;
   post: MobileCommunityFeedPost;
-  showCircle: boolean;
   variant: 'card' | 'row';
 }) {
+  const score = post.score ?? 0;
+  const userVote = post.userVote ?? 0;
   const body = (
     <>
-      <View style={styles.metaRow}>
-        <Text style={styles.circleLabel}>
-          {showCircle ? post.circle.name : post.author.fullName || 'Community member'}
-        </Text>
-        <Text style={styles.metaText}>{formatCommunityRelativeTime(post.createdAt)}</Text>
-      </View>
-
       <CommunityRichPostContent
         content={post.content}
         linkPreviews={post.linkPreviews}
         media={post.media}
         mentions={post.mentions}
         numberOfLines={4}
+        textVariant="post"
+        title={post.title}
       />
 
       {post.event ? (
@@ -62,9 +88,12 @@ function Content({
       ) : null}
 
       <View style={styles.footerRow}>
-        <Text style={styles.footerText}>
-          {post.commentCount} repl{post.commentCount === 1 ? 'y' : 'ies'}
-        </Text>
+        <View style={styles.footerActions}>
+          <Text style={styles.footerText}>
+            {post.commentCount} repl{post.commentCount === 1 ? 'y' : 'ies'}
+          </Text>
+        </View>
+        <Text style={styles.metaText}>{formatCommunityRelativeTime(post.createdAt)}</Text>
         {post.isTrending ? (
           <View style={styles.trendingPill}>
             <Text style={styles.trendingLabel}>Trending</Text>
@@ -93,14 +122,30 @@ function Content({
     <View style={[styles.card, variant === 'row' ? styles.rowCard : null]}>
       {variant === 'row' ? (
         <View style={styles.threadRow}>
-          <View style={styles.avatarFrame}>
-            {post.author.avatarUrl ? (
-              <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarInitial}>{getAuthorInitial(post)}</Text>
-            )}
+          <View style={styles.voteRail}>
+            <VoteButton
+              accessibilityLabel="Upvote thread"
+              color={userVote === 1 ? colors.accent : colors.textSubtle}
+              icon="arrow-up"
+              onPress={() => onVote?.(post, 1)}
+            />
+            <Text style={styles.scoreLabel}>{score}</Text>
+            <VoteButton
+              accessibilityLabel="Downvote thread"
+              color={userVote === -1 ? colors.danger : colors.textSubtle}
+              icon="arrow-down"
+              onPress={() => onVote?.(post, -1)}
+            />
           </View>
-          <View style={styles.threadCopy}>{body}</View>
+          <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+              styles.threadCopy,
+              pressed ? styles.pressablePressed : null,
+            ]}
+          >
+            {body}
+          </Pressable>
         </View>
       ) : (
         body
@@ -110,24 +155,39 @@ function Content({
 }
 
 export function CommunityFeedCard({
+  onVote,
   onPress,
   post,
-  showCircle = true,
   variant = 'card',
 }: CommunityFeedCardProps) {
-  if (!onPress) {
-    return <Content post={post} showCircle={showCircle} variant={variant} />;
+  const { scale, onPressIn, onPressOut } = useScalePress();
+
+  if (!onPress || variant === 'row') {
+    return (
+      <Content
+        onPress={onPress}
+        onVote={onVote}
+        post={post}
+        variant={variant}
+      />
+    );
   }
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.pressable,
-        pressed ? styles.pressablePressed : null,
-      ]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={styles.pressable}
     >
-      <Content post={post} showCircle={showCircle} variant={variant} />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Content
+          onPress={onPress}
+          onVote={onVote}
+          post={post}
+          variant={variant}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -142,27 +202,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  avatarFrame: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceHigh,
-    borderColor: colors.border,
-    borderRadius: 4,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: 'center',
-    overflow: 'hidden',
-    width: 34,
-  },
-  avatarImage: {
-    height: '100%',
-    width: '100%',
-  },
-  avatarInitial: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 16,
-  },
   rowCard: {
     backgroundColor: 'transparent',
     borderRadius: 0,
@@ -172,42 +211,41 @@ const styles = StyleSheet.create({
   },
   threadCopy: {
     flex: 1,
-    gap: 8,
+    gap: 10,
   },
   threadRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 10,
-    paddingVertical: 2,
+    gap: 14,
+    paddingVertical: 12,
   },
-  circleLabel: {
-    color: colors.accent,
-    flex: 1,
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 16,
+  footerAction: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  footerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 28,
   },
   footerRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingTop: 2,
   },
   footerText: {
     color: colors.textSubtle,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '500',
-    lineHeight: 16,
-  },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
+    lineHeight: 20,
   },
   metaText: {
     color: colors.textSubtle,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: 19,
   },
   previewAuthor: {
     color: colors.textMuted,
@@ -239,6 +277,13 @@ const styles = StyleSheet.create({
   pressablePressed: {
     opacity: 0.84,
   },
+  scoreLabel: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   trendingLabel: {
     color: colors.warning,
     fontSize: 11,
@@ -252,5 +297,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  voteButton: {
+    alignItems: 'center',
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  voteRail: {
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 1,
+    width: 36,
   },
 });

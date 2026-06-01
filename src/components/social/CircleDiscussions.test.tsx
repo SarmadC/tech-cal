@@ -18,6 +18,7 @@ function createPosts(): CircleDiscussionPost[] {
   return [
     {
       id: 'post-1',
+      title: 'Alpha thread',
       content: 'Alpha thread',
       created_at: '2026-03-19T12:00:00.000Z',
       author: {
@@ -31,6 +32,7 @@ function createPosts(): CircleDiscussionPost[] {
     },
     {
       id: 'post-2',
+      title: 'Beta update',
       content: 'Beta update',
       created_at: '2026-03-18T12:00:00.000Z',
       author: {

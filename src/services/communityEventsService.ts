@@ -1,4 +1,5 @@
 import type { SupabaseClientType } from '@/types/database';
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 export interface CommunityEventCard {
   id: string;
@@ -7,6 +8,7 @@ export interface CommunityEventCard {
   startTime: string;
   location: string | null;
   format: string | null;
+  organizerLogoUrl: string | null;
   attendingFromCircleCount: number;
   rsvpState: 'none' | 'saved' | 'going';
   discussionCount: number;
@@ -42,6 +44,8 @@ interface EventRow {
   start_time: string;
   location: string | null;
   status: string | null;
+  organizer_name: string | null;
+  organizer_logo_url: string | null;
 }
 
 export class CommunityEventsService {
@@ -107,8 +111,10 @@ export class CommunityEventsService {
     }
 
     const eventsResult = await readClient
-      .from('events')
-      .select('id, slug, title, start_time, location, status')
+      .from('events_detailed')
+      .select(
+        'id, slug, title, start_time, location, status, organizer_name, organizer_logo_url'
+      )
       .in('id', eventIds);
     const events = (eventsResult.data ?? []) as EventRow[];
 
@@ -189,6 +195,11 @@ export class CommunityEventsService {
       startTime: e.start_time,
       location: e.location,
       format: null,
+      organizerLogoUrl:
+        getLogoUrlFromInput(
+          e.organizer_logo_url,
+          e.organizer_name ?? undefined
+        ) ?? null,
       attendingFromCircleCount: attendingByEvent.get(e.id) ?? 0,
       rsvpState: viewerRsvpByEvent.get(e.id) ?? 'none',
       discussionCount: discussionByEvent.get(e.id) ?? 0,

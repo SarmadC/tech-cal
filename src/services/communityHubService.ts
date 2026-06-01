@@ -84,6 +84,20 @@ const FEED_COMMENT_PREVIEW_LIMIT = 2;
 const TRENDING_THRESHOLD = 8; // ≥8 comments = trending
 const UPCOMING_EVENTS_LIMIT = 5;
 
+function getPostDisplayTitle(post: { title?: string | null; content?: string | null }): string {
+  const explicitTitle = post.title?.trim();
+  if (explicitTitle) {
+    return explicitTitle;
+  }
+
+  const segments = (post.content ?? "")
+    .split("\n")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments[0] || "Untitled thread";
+}
+
 interface ExtendedCircleRow extends CircleRow {
   tagline: string | null;
   cover_image_url: string | null;
@@ -539,6 +553,7 @@ export class CommunityHubService {
 
       return posts.map((p) => ({
         id: p.id,
+        title: getPostDisplayTitle(p),
         content: p.content,
         createdAt: p.created_at,
         author: profileMap.get(p.author_id) || {

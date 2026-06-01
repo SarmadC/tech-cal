@@ -788,6 +788,36 @@ export async function createMobileCommunityComment(
   });
 }
 
+export async function deleteMobileCommunityPost(postId: string): Promise<void> {
+  const trimmedPostId = postId.trim();
+  if (!trimmedPostId) {
+    throw new Error('Thread id is required');
+  }
+
+  await fetchMobileEnvelope(
+    `/api/community/posts/${encodeURIComponent(trimmedPostId)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function deleteMobileCommunityComment(
+  commentId: string
+): Promise<void> {
+  const trimmedCommentId = commentId.trim();
+  if (!trimmedCommentId) {
+    throw new Error('Reply id is required');
+  }
+
+  await fetchMobileEnvelope(
+    `/api/community/comments/${encodeURIComponent(trimmedCommentId)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
 export async function submitMobileCommunityVote(
   input: CommunityVoteInput
 ): Promise<void> {

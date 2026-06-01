@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PropsWithChildren, type ReactElement, type ReactNode } from 'react';
+import { useReduceMotion } from '../../hooks/useAnimation';
 import {
   LayoutChangeEvent,
   LayoutAnimation,
@@ -31,6 +32,7 @@ export function DiscoverShell({
   const { tokens } = useAppTheme();
   const { handleScroll, isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReduceMotion();
   const [compact, setCompact] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
@@ -98,13 +100,13 @@ export function DiscoverShell({
           }
 
           if (offsetY <= 8 && !controlsVisible) {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(true);
           } else if (delta > 12 && offsetY > 40 && controlsVisible) {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(false);
           } else if (delta < -8 && !controlsVisible) {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(true);
           }
 

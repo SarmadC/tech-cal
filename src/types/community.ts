@@ -85,6 +85,7 @@ export interface CommunityLaunchpadData {
 
 export interface CommunityFeedPost {
   id: string;
+  title?: string;
   content: string;
   createdAt: string;
   author: { id: string; fullName: string | null; avatarUrl: string | null };

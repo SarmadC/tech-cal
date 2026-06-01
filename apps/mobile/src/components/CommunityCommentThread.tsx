@@ -9,6 +9,8 @@ import { useAppTheme } from "../providers/ThemeProvider";
 interface CommunityCommentThreadProps {
   comment: MobileCommunityComment;
   depth?: number;
+  currentUserId?: string | null;
+  onDelete?: (comment: MobileCommunityComment) => void;
   onReply?: (comment: MobileCommunityComment) => void;
   onReport?: (comment: MobileCommunityComment) => void;
   onShare?: (comment: MobileCommunityComment) => void;
@@ -28,6 +30,8 @@ function getAuthorDisplayName(comment: MobileCommunityComment) {
 export function CommunityCommentThread({
   comment,
   depth = 0,
+  currentUserId,
+  onDelete,
   onReply,
   onReport,
   onShare,
@@ -38,6 +42,12 @@ export function CommunityCommentThread({
   const { tokens } = useAppTheme();
   const currentVote = comment.userVote ?? 0;
   const isOriginalPoster = Boolean(originalPosterId && comment.author.id === originalPosterId);
+  const canDelete = Boolean(
+    currentUserId &&
+      currentUserId === comment.author.id &&
+      !comment.isRemoved &&
+      onDelete
+  );
 
   return (
     <View
@@ -231,6 +241,21 @@ export function CommunityCommentThread({
                 Report
               </Text>
             </Pressable>
+            {canDelete ? (
+              <Pressable
+                onPress={() => onDelete?.(comment)}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.inlineActionButton,
+                  pressed ? styles.pressed : null,
+                ]}
+                accessibilityLabel="Delete reply"
+              >
+                <Text style={[styles.inlineAction, { color: tokens.colors.danger }]}>
+                  Delete
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </View>
@@ -243,7 +268,9 @@ export function CommunityCommentThread({
             <CommunityCommentThread
               key={reply.id}
               comment={reply}
+              currentUserId={currentUserId}
               depth={depth + 1}
+              onDelete={onDelete}
               onReply={onReply}
               onReport={onReport}
               onShare={onShare}

@@ -141,6 +141,77 @@ The shape language is industrial and sharp.
 - **Radius:** A consistent **4px to 6px** radius is applied to buttons, input fields, and containers. This is just enough to soften the edge while maintaining a disciplined, rectangular structure.
 - **Consistency:** Avoid pill-shaped or fully rounded buttons unless the platform component requires it. Active elements should share the same geometric signature to reinforce predictability.
 
+## Animations
+
+Motion in this system is **fast, purposeful, and non-decorative**. Every animation must earn its existence by aiding orientation, confirming an action, or reducing cognitive load. Animations that merely add polish are not used.
+
+### Principles
+
+- **Speed over spectacle.** Transitions are short. Users should never wait for an animation to finish before interacting.
+- **Physics, not timers.** Prefer spring-based motion over linear or cubic-bezier easing for anything the user initiates with a gesture. Springs make the UI feel responsive to intent.
+- **No animation on data.** Lists that update due to a background fetch do not animate individual cells. Only user-initiated changes animate.
+- **Reduce, then commit.** Respect the system `reduceMotion` accessibility flag. All animations must have a zero-duration fallback path.
+
+### Timing Scale
+
+| Name       | Duration | Use case                                      |
+|------------|----------|-----------------------------------------------|
+| `instant`  | 80ms     | Toggle states, checkbox fills, chip selection |
+| `fast`     | 150ms    | Icon swaps, label transitions, badge updates  |
+| `standard` | 220ms    | Sheet open/close, modal entry, drawer slide   |
+| `deliberate` | 320ms  | Full-screen push navigation, onboarding steps |
+
+Never exceed `320ms` for any transition triggered by a tap. Gestures use spring physics instead of a fixed duration.
+
+### Easing Curves
+
+| Token         | Curve                        | Use case                                  |
+|---------------|------------------------------|-------------------------------------------|
+| `ease-out`    | `cubic-bezier(0.0, 0, 0.2, 1)` | Elements entering the screen             |
+| `ease-in`     | `cubic-bezier(0.4, 0, 1, 1)` | Elements leaving the screen               |
+| `ease-in-out` | `cubic-bezier(0.4, 0, 0.2, 1)` | Crossfades, in-place transforms           |
+| `spring`      | `{ damping: 26, stiffness: 200 }` | Gesture-driven surfaces (sheets, swipe) |
+
+### Navigation Transitions
+
+- **Push:** Incoming screen slides in from the right at `100%` → `0%` translateX, with the outgoing screen simultaneously translating to `-30%` and fading to `0.6` opacity. Duration: `deliberate` with `ease-out`.
+- **Pop:** Reverse of push. The returning screen snaps back from `-30%` with a spring (`damping: 30, stiffness: 250`) so it tracks the swipe gesture velocity on release.
+- **Modal / Bottom Sheet:** Sheet enters from `100%` translateY → `0%` with `standard` duration and `ease-out`. Dismissal uses spring physics to honor swipe velocity.
+- **Tab switch:** Crossfade only — `fast` duration, `ease-in-out`. No translate; lateral motion implies hierarchy, which tabs do not have.
+
+### List & Item Animations
+
+- **Staggered list entry:** Used only on the first render of a list (e.g., search results appearing). Items animate in with a `4px` upward translate and opacity `0 → 1`, staggered `20ms` per item, capped at 6 items. Items beyond the 6th appear instantly. Duration per item: `fast`.
+- **Row insertion:** A single new row expands its height from `0` to natural size in `standard` duration with `ease-out`. Do not animate surrounding rows.
+- **Row deletion (swipe-to-delete):** Row slides out to trailing edge at gesture velocity using spring, then collapses height to `0` in `fast`. This is the only case where two sequential animations are chained.
+- **Reorder:** Rows lift with a `1px` border highlight (primary indigo) and follow the drag with `0ms` latency. On drop, spring settles to final position (`damping: 22, stiffness: 180`).
+
+### Micro-interactions
+
+- **Button press:** Scale `1.0 → 0.97` on `touchStart`, back to `1.0` on `touchEnd`. Duration: `instant`. Use `spring` for the return.
+- **Checkbox / Toggle:** Fill and border color transition in `instant`. The checkmark draws with a path stroke animation over `fast`.
+- **Chip / Tag select:** Background and text color crossfade in `instant`. No scale or translate.
+- **Loading skeleton:** Shimmer travels left-to-right over `1200ms` with a linear loop. Use a `20%` wide gradient highlight. Never use opacity pulsing as it causes layout reflow on some platforms.
+- **Error shake:** Horizontal translate `0 → 4px → -4px → 2px → 0` over `300ms` linear. Triggered once; not looped.
+- **Pull-to-refresh indicator:** Appears with opacity `0 → 1` over the first `40px` of overscroll. Spinner rotation is continuous at `1s` per revolution. The list snaps back to rest position using spring on release.
+
+### Gesture-Driven Surfaces
+
+All gesture-driven surfaces (sheets, swipeable rows, draggable cards) must:
+
+1. **Track 1:1 with touch** — zero artificial lag on the initial movement.
+2. **Clamp with resistance** — beyond the natural travel range, movement damps to `30%` of the finger delta.
+3. **Commit by velocity, not position** — a fast flick always completes the gesture; a slow drag past the threshold also completes it. Combine both signals.
+4. **Snap via spring** — on release, always animate to the final resting state using `{ damping: 26, stiffness: 200 }` seeded with the gesture's exit velocity.
+
+### Platform Notes (React Native / Expo)
+
+- Prefer `react-native-reanimated` (v3+) shared values and `withSpring` / `withTiming` for all animations. Keep animation logic on the UI thread.
+- Use `Gesture.Pan()` from `react-native-gesture-handler` for all swipe and drag gestures. Compose gestures rather than nesting `PanResponder`.
+- `LayoutAnimation` is acceptable only for height-collapse transitions on simple list rows where shared-element tracking is not needed.
+- Set `useNativeDriver: true` on all `Animated.timing` and `Animated.spring` calls. If a property cannot use the native driver, redesign the animation.
+- Honor `AccessibilityInfo.isReduceMotionEnabled()` — wrap all animation helpers in a check and return the final state immediately when `true`.
+
 ## Components
 
 - **Buttons:** Compact height, usually 28px or 32px. Solid indigo for primary, ghost borders for secondary. Text is 13px medium.

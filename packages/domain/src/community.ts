@@ -22,6 +22,7 @@ export const membershipStateSchema = z.enum(['none', 'following', 'joined']);
 export const communityPostDraftSchema = z.object({
   circleId: z.string().uuid(),
   circleSlug: z.string().min(1),
+  title: z.string().trim().max(200).optional(),
   content: z.string().trim().max(10_000),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().uuid().optional(),
@@ -33,6 +34,7 @@ export const communityPostDraftSchema = z.object({
   })).max(4).optional(),
 }).superRefine((draft, ctx) => {
   if (
+    !draft.title?.trim() &&
     !draft.content.trim() &&
     !draft.eventId &&
     (!draft.media || draft.media.length === 0)
@@ -220,6 +222,7 @@ export const mobileCommunityEmbeddedEventSchema = z.object({
 
 export const mobileCommunityFeedPostSchema = z.object({
   id: z.string(),
+  title: z.string(),
   content: z.string(),
   createdAt: z.string(),
   author: mobileCommunityAuthorSchema,
@@ -230,6 +233,8 @@ export const mobileCommunityFeedPostSchema = z.object({
   commentCount: z.number().int().nonnegative(),
   isTrending: z.boolean(),
   recentComments: z.array(mobileCommunityCommentPreviewSchema).optional(),
+  score: z.number().int().optional(),
+  userVote: voteValueSchema.optional(),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().nullable().optional(),
   event: mobileCommunityEmbeddedEventSchema.nullable().optional(),
@@ -580,6 +585,7 @@ export const mobileCommunityCommentSchema: z.ZodType<MobileCommunityComment> =
 
 export const mobileCommunityPostSchema = z.object({
   id: z.string(),
+  title: z.string(),
   content: z.string(),
   createdAt: z.string(),
   author: mobileCommunityAuthorSchema,
