@@ -9,6 +9,7 @@ import type { SupabaseClientType } from "@/types/database";
 
 interface FeedPostRow {
   id: string;
+  title: string | null;
   content: string;
   created_at: string;
   author_id: string;
@@ -53,6 +54,20 @@ const MOBILE_COMMENT_PREVIEW_LIMIT = 2;
 const MOBILE_CIRCLE_LIMIT = 6;
 const MOBILE_UPCOMING_EVENT_LIMIT = 5;
 const TRENDING_THRESHOLD = 8;
+
+function getPostDisplayTitle(post: { title?: string | null; content?: string | null }): string {
+  const explicitTitle = post.title?.trim();
+  if (explicitTitle) {
+    return explicitTitle;
+  }
+
+  const segments = (post.content ?? "")
+    .split("\n")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments[0] || "Untitled thread";
+}
 
 export class MobileCommunityPulseService {
   static async getPulsePreview({
@@ -238,6 +253,7 @@ export class MobileCommunityPulseService {
 
       return visiblePosts.map((post) => ({
         id: post.id,
+        title: getPostDisplayTitle(post),
         content: post.content,
         createdAt: post.created_at,
         author: profileMap.get(post.author_id) ?? {

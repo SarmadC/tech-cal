@@ -1,7 +1,6 @@
 import { CIRCLE_TAG_MAPPINGS } from '@/config/circleTagMappings';
 import { BlockService } from '@/services/blockService';
 import {
-  REMOVED_COMMENT_PLACEHOLDER,
   REMOVED_MEMBER_NAME,
   REMOVED_POST_PLACEHOLDER,
 } from '@/services/communityModerationService';
@@ -137,6 +136,38 @@ export interface CirclePostMetadataData {
   circleName: string;
   circleSlug: string;
   postContent: string;
+}
+
+function normalizePostTitleAndBody(input: {
+  title?: string | null;
+  content?: string | null;
+}): { title: string; content: string } {
+  const explicitTitle = input.title?.trim();
+  const content = input.content?.trim() ?? '';
+
+  if (explicitTitle) {
+    return {
+      title: explicitTitle,
+      content,
+    };
+  }
+
+  const segments = content
+    .split('\n')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length > 1) {
+    return {
+      title: segments[0],
+      content: segments.slice(1).join('\n'),
+    };
+  }
+
+  return {
+    title: content || 'Untitled thread',
+    content: '',
+  };
 }
 
 function normalizeCircleEventTerm(term: string): string {
@@ -557,7 +588,7 @@ export class CircleDiscussionService {
       postContent:
         post.moderation_status === 'removed'
           ? REMOVED_POST_PLACEHOLDER
-          : post.content ?? '',
+          : normalizePostTitleAndBody(post).title,
     };
   }
 
@@ -913,10 +944,12 @@ export class CircleDiscussionService {
     };
     const isRemoved = post.moderation_status === 'removed';
     const event = Array.isArray(post.event) ? post.event[0] : post.event;
+    const normalizedPost = normalizePostTitleAndBody(post);
 
     return {
       id: post.id,
-      content: isRemoved ? REMOVED_POST_PLACEHOLDER : post.content,
+      title: isRemoved ? REMOVED_POST_PLACEHOLDER : normalizedPost.title,
+      content: isRemoved ? '' : normalizedPost.content,
       created_at: post.created_at,
       author: isRemoved
         ? {
@@ -972,7 +1005,10 @@ export class CircleDiscussionService {
     const normalizedComments = comments
       .filter((comment) => {
         const resolvedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author;
-        return !resolvedAuthor?.id || !blockedUserIds.has(resolvedAuthor.id);
+        return (
+          comment.moderation_status !== 'removed' &&
+          (!resolvedAuthor?.id || !blockedUserIds.has(resolvedAuthor.id))
+        );
       })
       .map((comment) => {
         const commentVotes = comment.votes || [];
@@ -981,27 +1017,21 @@ export class CircleDiscussionService {
           ? commentVotes.find((vote) => vote.user_id === viewerId)?.vote_type || 0
           : 0;
         const resolvedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author;
-        const isRemoved = comment.moderation_status === 'removed';
 
         return {
           id: comment.id,
           parent_id: comment.parent_id,
-          content: isRemoved ? REMOVED_COMMENT_PLACEHOLDER : comment.content,
+          content: comment.content,
           created_at: comment.created_at,
-          author: isRemoved
-            ? {
-                id: resolvedAuthor?.id ?? '',
-                full_name: REMOVED_MEMBER_NAME,
-                avatar_url: null,
-              }
-            : resolvedAuthor ?? {
+          author:
+            resolvedAuthor ?? {
                 id: '',
                 full_name: null,
                 avatar_url: null,
               },
-          isRemoved,
-          score: isRemoved ? 0 : score,
-          userVote: isRemoved ? 0 : userVote,
+          isRemoved: false,
+          score,
+          userVote,
           replies: [],
         };
       })
@@ -1026,6 +1056,9 @@ export class CircleDiscussionService {
           return;
         }
 
+        // Parent was filtered out (e.g. removed by its author). Preserve this
+        // reply by promoting it to a root comment instead of dropping it.
+        rootComments.push(comment);
         return;
       }
 

@@ -59,6 +59,7 @@ export interface CircleDiscussionComment {
 
 export interface CircleDiscussionPost {
   id: string;
+  title: string;
   content: string;
   created_at: string;
   author: CircleDiscussionAuthor;

@@ -1067,6 +1067,7 @@ export type Database = {
           moderation_reason: string | null
           moderation_status: string
           post_type: string
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -1082,6 +1083,7 @@ export type Database = {
           moderation_reason?: string | null
           moderation_status?: string
           post_type?: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -1097,6 +1099,7 @@ export type Database = {
           moderation_reason?: string | null
           moderation_status?: string
           post_type?: string
+          title?: string | null
           updated_at?: string
         }
         Relationships: [

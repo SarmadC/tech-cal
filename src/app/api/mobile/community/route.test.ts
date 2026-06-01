@@ -184,6 +184,7 @@ describe("/api/mobile/community", () => {
       feed: [
         {
           id: "post-1",
+          title: "Local AI evals",
           content: "What are people using for local AI evals?",
           createdAt: "2026-04-01T18:00:00.000Z",
           author: {

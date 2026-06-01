@@ -34,6 +34,8 @@ import {
 } from '../../../../src/lib/communityPresentation';
 import {
   createMobileCommunityComment,
+  deleteMobileCommunityComment,
+  deleteMobileCommunityPost,
   loadMobileCommunityPost,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
@@ -321,6 +323,27 @@ export default function CommunityPostScreen() {
     ]);
   }
 
+  function handleDeletePost() {
+    if (!data || working || data.currentUser?.id !== data.post.author.id) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete thread',
+      'Delete this thread? Replies will no longer be shown in the circle feed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deletePost();
+          },
+        },
+      ]
+    );
+  }
+
   function handleCommentReply(comment: MobileCommunityComment) {
     setReplyParent(comment);
     setIsReplyOpen(true);
@@ -354,6 +377,23 @@ export default function CommunityPostScreen() {
     ]);
   }
 
+  function handleCommentDelete(comment: MobileCommunityComment) {
+    if (!data || working || data.currentUser?.id !== comment.author.id) {
+      return;
+    }
+
+    Alert.alert('Delete reply', 'Delete this reply?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void deleteComment(comment);
+        },
+      },
+    ]);
+  }
+
   async function handleShare(comment?: MobileCommunityComment) {
     if (!data) {
       return;
@@ -368,6 +408,56 @@ export default function CommunityPostScreen() {
         'Share failed',
         nextError instanceof Error ? nextError.message : 'Please try again.'
       );
+    }
+  }
+
+  async function deletePost() {
+    if (!data || working || data.currentUser?.id !== data.post.author.id) {
+      return;
+    }
+
+    setWorking(true);
+
+    try {
+      await deleteMobileCommunityPost(data.post.id);
+      router.replace({
+        pathname: '/community/[slug]',
+        params: { slug: data.circle.slug },
+      });
+    } catch (nextError) {
+      Alert.alert(
+        'Delete failed',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to delete this thread.'
+      );
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function deleteComment(comment: MobileCommunityComment) {
+    if (!data || working || data.currentUser?.id !== comment.author.id) {
+      return;
+    }
+
+    setWorking(true);
+
+    try {
+      await deleteMobileCommunityComment(comment.id);
+      if (replyParent?.id === comment.id) {
+        setReplyParent(null);
+      }
+      await loadPost('refresh');
+    } catch (nextError) {
+      Alert.alert(
+        'Delete failed',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to delete this reply.'
+      );
+    } finally {
+      setWorking(false);
     }
   }
 
@@ -458,6 +548,7 @@ export default function CommunityPostScreen() {
   const currentScore = data.post.score ?? 0;
   const postTypeLabel = formatPostTypeLabel(data.post.postType);
   const currentUserName = getCurrentUserDisplayName(data.currentUser);
+  const canDeletePost = data.currentUser?.id === data.post.author.id && !data.post.isRemoved;
 
   return (
     <View style={styles.screen}>
@@ -509,6 +600,7 @@ export default function CommunityPostScreen() {
               media={data.post.media}
               mentions={data.post.mentions}
               textVariant="post"
+              title={data.post.title}
             />
             {data.post.event ? (
               <EventSummaryCard event={data.post.event} tone="highlight" />
@@ -580,6 +672,21 @@ export default function CommunityPostScreen() {
                 <FontAwesome name="flag-o" size={15} color={design.textVariant} />
                 <Text style={styles.metaActionLabel}>Report</Text>
               </Pressable>
+              {canDeletePost ? (
+                <Pressable
+                  onPress={handleDeletePost}
+                  style={({ pressed }) => [
+                    styles.metaAction,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                  accessibilityLabel="Delete thread"
+                >
+                  <FontAwesome name="trash-o" size={15} color={design.danger} />
+                  <Text style={[styles.metaActionLabel, styles.dangerActionLabel]}>
+                    Delete
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -651,6 +758,8 @@ export default function CommunityPostScreen() {
                   <CommunityCommentThread
                     key={comment.id}
                     comment={comment}
+                    currentUserId={data.currentUser?.id ?? null}
+                    onDelete={handleCommentDelete}
                     onReply={handleCommentReply}
                     onReport={handleCommentReport}
                     onShare={(targetComment) => {
@@ -838,6 +947,9 @@ const styles = StyleSheet.create({
     color: design.muted,
     fontSize: 11,
     fontWeight: '500',
+  },
+  dangerActionLabel: {
+    color: design.danger,
   },
   postMetaRow: {
     alignItems: 'center',

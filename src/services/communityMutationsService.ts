@@ -30,6 +30,7 @@ export class CommunityMutationsService {
     )
       .rpc('create_circle_post_with_rich_content', {
         p_circle_id: payload.circleId,
+        p_title: payload.title?.trim() || null,
         p_content: payload.content.trim(),
         p_post_type: payload.postType ?? null,
         p_event_id: payload.eventId ?? null,
@@ -53,7 +54,7 @@ export class CommunityMutationsService {
         throw new Error('Attach an event that belongs to this circle.');
       }
       if (/post_content_required/.test(message)) {
-        throw new Error('Add text, media, or an event before publishing.');
+        throw new Error('Add a title, text, media, or an event before posting.');
       }
       throw new Error(error?.message ?? 'Failed to create post.');
     }
@@ -125,6 +126,52 @@ export class CommunityMutationsService {
     }
 
     return { id: data.comment_id };
+  }
+
+  static async deletePost(
+    userId: string,
+    postId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const { data, error } = await (supabase as any)
+      .from('circle_posts')
+      .update({ moderation_status: 'removed' })
+      .eq('id', postId)
+      .eq('author_id', userId)
+      .eq('moderation_status', 'active')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? 'Failed to delete thread.');
+    }
+
+    if (!data) {
+      throw new Error('Thread not found or you do not have permission to delete it.');
+    }
+  }
+
+  static async deleteComment(
+    userId: string,
+    commentId: string,
+    supabase: SupabaseClientType
+  ): Promise<void> {
+    const { data, error } = await (supabase as any)
+      .from('circle_comments')
+      .update({ moderation_status: 'removed' })
+      .eq('id', commentId)
+      .eq('author_id', userId)
+      .eq('moderation_status', 'active')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message ?? 'Failed to delete reply.');
+    }
+
+    if (!data) {
+      throw new Error('Reply not found or you do not have permission to delete it.');
+    }
   }
 
   static async submitVote(

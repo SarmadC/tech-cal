@@ -17,6 +17,7 @@ interface CommunityRichPostContentProps {
   mentions?: MobileCommunityPostMention[];
   numberOfLines?: number;
   textVariant?: 'body' | 'post';
+  title?: string;
 }
 
 function openUrl(url: string) {
@@ -38,12 +39,21 @@ export function CommunityRichPostContent({
   mentions = [],
   numberOfLines,
   textVariant = 'body',
+  title,
 }: CommunityRichPostContentProps) {
   const displayContent = numberOfLines ? summarizeCommunityPost(content) : content;
   const segments = tokenizeCommunityContent(displayContent, mentions);
 
   return (
     <View style={styles.wrap}>
+      {title ? (
+        <Text
+          numberOfLines={numberOfLines ? 2 : undefined}
+          style={[styles.title, textVariant === 'post' ? styles.postTitle : null]}
+        >
+          {title}
+        </Text>
+      ) : null}
       {displayContent ? (
         <Text
           numberOfLines={numberOfLines}
@@ -140,10 +150,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  postBody: {
+  postTitle: {
     fontSize: 17,
-    fontWeight: '600',
     lineHeight: 24,
+  },
+  postBody: {
+    color: '#C6C5D5',
+  },
+  title: {
+    color: '#E3E2E3',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 21,
   },
   link: {
     color: '#7dd3fc',

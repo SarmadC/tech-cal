@@ -1027,7 +1027,7 @@ function ActivityRow({
             },
           ]}
         >
-          "{summarizeCommunityPost(post.content)}"
+          "{summarizeCommunityPost(post.title || post.content)}"
         </Text>
         <Text
           style={[

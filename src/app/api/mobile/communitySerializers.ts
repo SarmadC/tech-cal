@@ -121,6 +121,7 @@ function toComment(comment: CircleDiscussionComment): MobileCommunityComment {
 function toPost(post: CircleDiscussionPost): MobileCommunityPost {
   return {
     id: post.id,
+    title: post.title,
     content: post.content,
     createdAt: post.created_at,
     author: toAuthor(post.author),
