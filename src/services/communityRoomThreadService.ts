@@ -1022,6 +1022,22 @@ export class CommunityRoomThreadService {
     };
   }
 
+  static async getThreadCount(
+    eventId: string,
+    client: SupabaseClientType,
+  ): Promise<number> {
+    const result = (await untypedClient(client)
+      .from("event_room_threads")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .is("deleted_at", null)) as {
+      count: number | null;
+      error: { message?: string } | null;
+    };
+    if (result.error) fail("getThreadCount", result.error);
+    return result.count ?? 0;
+  }
+
   static async deleteComment({
     eventId,
     threadId,

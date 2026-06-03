@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { EventDiscussionSection } from './EventDiscussionSection';
 import {
   Image,
   Pressable,
@@ -773,6 +774,9 @@ export function MobileEventDetailScreen({
               </View>
             </View>
           ) : null}
+
+          {/* ── Discussions / Event Room ── */}
+          <EventDiscussionSection eventId={event.id} />
         </ScrollView>
 
         {/* ── Sticky CTA bar ── */}

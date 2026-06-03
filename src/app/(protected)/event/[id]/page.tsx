@@ -14,6 +14,7 @@ import { extractIdFromSlug } from '@/utils/slugUtils';
 
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
+import EventDiscussionSection from '@/components/events/EventDiscussionSection';
 
 type EventDetailPageProps = {
     params: Promise<{ id: string }>;
@@ -94,6 +95,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                             <EventTracking event={event} />
                             <EventActions event={event} />
                         </div>
+
+                        <EventDiscussionSection eventId={event.id} />
                     </div>
                 </div>
             </div>
