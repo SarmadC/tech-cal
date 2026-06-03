@@ -1,6 +1,8 @@
 import { FontAwesome } from "@expo/vector-icons";
 import type {
+  CommunityPostType,
   MobileCommunityCircle,
+  MobileCommunityEventCard,
   MobileCommunityFeedPost,
   MobileCommunityHome,
   MobileCommunityNetworkingEvent,
@@ -9,20 +11,27 @@ import type {
   MobileCommunityNetworkingSharedEvent,
 } from "@kurecal/domain";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Easing,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import {
-  AnimatedMount,
+  DURATIONS,
+  SPRING_CONFIG,
+  useReduceMotion,
   useScalePress,
 } from "../../src/hooks/useAnimation";
 
@@ -30,26 +39,34 @@ import { KureButton } from "../../src/components/chrome/KureButton";
 import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
 import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
+import { CommunityAttachedEventRow } from "../../src/components/community/CommunityAttachedEventRow";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
 import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
+import { CommunityFeedCard } from "../../src/components/CommunityFeedCard";
 import { formatCommunityTabCount } from "../../src/components/community/presentation";
-import { summarizeCommunityPost } from "../../src/lib/communityPresentation";
 import {
+  createMobileCommunityPost,
+  deleteCommunityPostImage,
   followMobileUser,
+  joinMobileCommunityCircle,
+  leaveMobileCommunityCircle,
+  loadMobileCommunityEvents,
   loadMobileCommunityHome,
   unfollowMobileUser,
+  uploadCommunityPostImage,
+  type CommunityPostImageUploadResult,
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 type LoadMode = "initial" | "refresh";
-type CommunityTab = "pulse" | "rooms" | "people";
+type CommunityTab = "rooms" | "circles" | "people";
 type RoomLens = "for_you" | "going" | "saved" | "nearby" | "past";
 type PeopleLens = "for_you" | "going" | "follows_you" | "mutuals" | "recent";
 
 const COMMUNITY_TABS: Array<{ id: CommunityTab; label: string }> = [
-  { id: "pulse", label: "Pulse" },
   { id: "rooms", label: "Rooms" },
+  { id: "circles", label: "Circles" },
   { id: "people", label: "People" },
 ];
 
@@ -69,15 +86,25 @@ const PEOPLE_LENSES: Array<{ id: PeopleLens; label: string }> = [
   { id: "recent", label: "Recent" },
 ];
 
-const circleDesign = {
-  accent: "#bdc2ff",
-  border: "#454652",
-  muted: "#908f9e",
-  surface: "#1b1c1d",
-  surfaceLowest: "#0d0e0f",
-  text: "#e3e2e3",
-  textVariant: "#c6c5d5",
-};
+const POST_TYPE_OPTIONS: Array<{ label: string; value: CommunityPostType }> = [
+  { label: "Update", value: "update" },
+  { label: "Question", value: "question" },
+  { label: "Intro", value: "intro" },
+  { label: "Showcase", value: "showcase" },
+  { label: "Event note", value: "event_note" },
+  { label: "Announcement", value: "announcement" },
+];
+
+const MAX_POST_IMAGES = 4;
+const MAX_POST_IMAGE_EDGE = 8_000;
+
+interface CommunityPostImageAttachment extends CommunityPostImageUploadResult {
+  localUri: string;
+}
+
+interface ComposerEventOption extends MobileCommunityEventCard {
+  circle: Pick<MobileCommunityCircle, "id" | "name" | "slug">;
+}
 
 function getCommunityLoadErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
@@ -103,44 +130,6 @@ function getDisplayName(value: {
     value.fullName ||
     (value.username ? `@${value.username}` : "Community member")
   );
-}
-
-function getCircleSlug(circle: MobileCommunityCircle): string {
-  return circle.slug || circle.id;
-}
-
-const CIRCLE_ICON_MAP: Array<{
-  keywords: string[];
-  icon: keyof typeof FontAwesome.glyphMap;
-}> = [
-  { keywords: ["ai", "artificial", "machine", "ml", "llm", "gpt"], icon: "magic" },
-  { keywords: ["product", "pm", "roadmap"], icon: "th-large" },
-  { keywords: ["founder", "startup", "venture", "vc"], icon: "rocket" },
-  { keywords: ["engineer", "dev", "code", "software", "backend", "frontend", "fullstack"], icon: "code" },
-  { keywords: ["design", "ux", "ui", "figma", "creative"], icon: "paint-brush" },
-  { keywords: ["data", "analytics", "bi", "sql"], icon: "database" },
-  { keywords: ["marketing", "growth", "seo", "content"], icon: "bullhorn" },
-  { keywords: ["sales", "revenue", "crm", "bdr"], icon: "bar-chart" },
-  { keywords: ["mobile", "ios", "android", "react native"], icon: "mobile" },
-  { keywords: ["web", "frontend", "browser"], icon: "globe" },
-  { keywords: ["security", "privacy", "infosec", "cyber"], icon: "lock" },
-  { keywords: ["community", "networking", "social"], icon: "users" },
-  { keywords: ["finance", "fintech", "crypto", "defi", "invest"], icon: "money" },
-  { keywords: ["health", "wellness", "fitness", "bio"], icon: "heartbeat" },
-  { keywords: ["gaming", "game", "esports"], icon: "gamepad" },
-  { keywords: ["science", "research", "lab"], icon: "flask" },
-  { keywords: ["legal", "compliance", "policy"], icon: "balance-scale" },
-  { keywords: ["ops", "operations", "infra", "devops", "platform"], icon: "cogs" },
-];
-
-function getCircleIcon(name: string): keyof typeof FontAwesome.glyphMap {
-  const lower = name.toLowerCase();
-  for (const entry of CIRCLE_ICON_MAP) {
-    if (entry.keywords.some((kw) => lower.includes(kw))) {
-      return entry.icon;
-    }
-  }
-  return "users";
 }
 
 function getInitials(name: string): string {
@@ -205,7 +194,7 @@ function getRoomCompactMeta(event: MobileCommunityNetworkingEvent): string {
   return getCompactTime(event.startTime);
 }
 
-function filterRooms(
+function _filterRooms(
   events: MobileCommunityNetworkingEvent[],
   lens: RoomLens,
 ): MobileCommunityNetworkingEvent[] {
@@ -225,7 +214,7 @@ function filterRooms(
   }
 }
 
-function filterPeople(
+function _filterPeople(
   home: MobileCommunityHome,
   lens: PeopleLens,
 ): {
@@ -281,9 +270,30 @@ export default function CommunityScreen() {
   const [error, setError] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<CommunityTab>("pulse");
-  const [roomLens, setRoomLens] = useState<RoomLens>("for_you");
-  const [peopleLens, setPeopleLens] = useState<PeopleLens>("for_you");
+  const [pendingCircleId, setPendingCircleId] = useState<string | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerCircleId, setComposerCircleId] = useState<string | null>(null);
+  const [composerPostType, setComposerPostType] =
+    useState<CommunityPostType | null>(null);
+  const [composerTitle, setComposerTitle] = useState("");
+  const [composerBody, setComposerBody] = useState("");
+  const [composerWorking, setComposerWorking] = useState(false);
+  const [composerAttachedEvent, setComposerAttachedEvent] =
+    useState<ComposerEventOption | null>(null);
+  const [composerEventPickerEvents, setComposerEventPickerEvents] = useState<
+    ComposerEventOption[]
+  >([]);
+  const [composerEventPickerLoading, setComposerEventPickerLoading] =
+    useState(false);
+  const [composerEventPickerOpen, setComposerEventPickerOpen] = useState(false);
+  const [composerEventPickerQuery, setComposerEventPickerQuery] = useState("");
+  const [composerSelectedMedia, setComposerSelectedMedia] = useState<
+    CommunityPostImageAttachment[]
+  >([]);
+  const [composerUploadingMedia, setComposerUploadingMedia] = useState(false);
+  const composerSelectedMediaRef = useRef<CommunityPostImageAttachment[]>([]);
+  const composerPublishedMediaPathsRef = useRef<Set<string>>(new Set());
+  const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
   const [roomSheetEventId, setRoomSheetEventId] = useState<string | null>(null);
 
   function handleOpenRoom(eventId: string) {
@@ -337,18 +347,92 @@ export default function CommunityScreen() {
     }, [loadCommunity]),
   );
 
-  const activeRooms = useMemo(
-    () => (home ? filterRooms(home.upcomingMoments, roomLens) : []),
-    [home, roomLens],
+  const joinedCircles = useMemo(
+    () => home?.circles?.filter((circle) => circle.isJoined) ?? [],
+    [home],
   );
 
-  const peopleSections = useMemo(
+  const composerCircle = useMemo(
     () =>
-      home
-        ? filterPeople(home, peopleLens)
-        : { peopleToMeet: [], followUps: [] },
-    [home, peopleLens],
+      joinedCircles.find((circle) => circle.id === composerCircleId) ?? null,
+    [composerCircleId, joinedCircles],
   );
+  const composerFallbackCircle = joinedCircles[0] ?? null;
+  const composerPublishCircle =
+    composerCircle ?? composerAttachedEvent?.circle ?? composerFallbackCircle;
+
+  useEffect(() => {
+    composerSelectedMediaRef.current = composerSelectedMedia;
+  }, [composerSelectedMedia]);
+
+  useEffect(
+    () => () => {
+      const unpublishedPaths = composerSelectedMediaRef.current
+        .map((item) => item.path)
+        .filter((path) => !composerPublishedMediaPathsRef.current.has(path));
+
+      if (unpublishedPaths.length) {
+        void Promise.allSettled(
+          unpublishedPaths.map((path) => deleteCommunityPostImage(path)),
+        );
+      }
+    },
+    [],
+  );
+
+  function cleanupUnpublishedComposerMedia() {
+    const unpublishedPaths = composerSelectedMedia
+      .map((item) => item.path)
+      .filter((path) => !composerPublishedMediaPathsRef.current.has(path));
+
+    if (unpublishedPaths.length) {
+      void Promise.allSettled(
+        unpublishedPaths.map((path) => deleteCommunityPostImage(path)),
+      );
+    }
+
+    composerPublishedMediaPathsRef.current = new Set();
+  }
+
+  function resetComposer() {
+    setComposerCircleId(null);
+    setComposerPostType(null);
+    setComposerTitle("");
+    setComposerBody("");
+    setComposerWorking(false);
+    setComposerAttachedEvent(null);
+    setComposerEventPickerEvents([]);
+    setComposerEventPickerLoading(false);
+    setComposerEventPickerOpen(false);
+    setComposerEventPickerQuery("");
+    setComposerSelectedMedia([]);
+    setComposerUploadingMedia(false);
+  }
+
+  function handleOpenComposer() {
+    setIsComposerOpen(true);
+  }
+
+  function handleCloseComposer() {
+    if (composerWorking || composerUploadingMedia) {
+      return;
+    }
+
+    cleanupUnpublishedComposerMedia();
+    setIsComposerOpen(false);
+  }
+
+  function handleComposerAfterClose() {
+    resetComposer();
+    composerPublishedMediaPathsRef.current = new Set();
+  }
+
+  function handleChangeComposerCircle(circleId: string) {
+    setComposerCircleId((current) => (current === circleId ? null : circleId));
+    setComposerEventPickerEvents([]);
+    setComposerEventPickerQuery("");
+    setComposerEventPickerOpen(false);
+  }
 
   async function handleToggleFollow(userId: string, isFollowing: boolean) {
     setPendingUserId(userId);
@@ -373,84 +457,1493 @@ export default function CommunityScreen() {
     }
   }
 
+  async function handleToggleCircle(circle: MobileCommunityCircle) {
+    setPendingCircleId(circle.id);
+
+    try {
+      if (circle.isJoined) {
+        await leaveMobileCommunityCircle(circle.id);
+      } else {
+        await joinMobileCommunityCircle(circle.id);
+      }
+
+      await loadCommunity("refresh");
+    } catch (nextError) {
+      Alert.alert(
+        circle.isJoined ? "Leave failed" : "Join failed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to update circle membership.",
+      );
+    } finally {
+      setPendingCircleId((current) => (current === circle.id ? null : current));
+    }
+  }
+
+  async function handlePickComposerImages() {
+    if (composerWorking || composerUploadingMedia) {
+      return;
+    }
+
+    const remainingSlots = MAX_POST_IMAGES - composerSelectedMedia.length;
+    if (remainingSlots <= 0) {
+      Alert.alert("Image limit reached", `You can attach up to ${MAX_POST_IMAGES} images.`);
+      return;
+    }
+
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        mediaTypes: ["images"],
+        orderedSelection: true,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.86,
+        selectionLimit: remainingSlots,
+      });
+    } catch (nextError) {
+      Alert.alert(
+        "Photos unavailable",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to open your photo library.",
+      );
+      return;
+    }
+
+    if (result.canceled) {
+      return;
+    }
+
+    const assets = result.assets
+      .filter((asset) => asset.uri && asset.width > 0 && asset.height > 0)
+      .slice(0, remainingSlots);
+
+    if (!assets.length) {
+      return;
+    }
+
+    if (
+      assets.some(
+        (asset) => asset.width > MAX_POST_IMAGE_EDGE || asset.height > MAX_POST_IMAGE_EDGE,
+      )
+    ) {
+      Alert.alert("Image too large", "Choose images under 8000 pixels wide or tall.");
+      return;
+    }
+
+    const uploads: CommunityPostImageAttachment[] = [];
+    setComposerUploadingMedia(true);
+    try {
+      for (const asset of assets) {
+        const uploaded = await uploadCommunityPostImage({
+          fileName: asset.fileName,
+          height: asset.height,
+          mimeType: asset.mimeType,
+          uri: asset.uri,
+          width: asset.width,
+        });
+        uploads.push({ ...uploaded, localUri: asset.uri });
+      }
+      setComposerSelectedMedia((current) =>
+        [...current, ...uploads].slice(0, MAX_POST_IMAGES),
+      );
+    } catch (nextError) {
+      await Promise.allSettled(
+        uploads.map((item) => deleteCommunityPostImage(item.path)),
+      );
+      Alert.alert(
+        "Upload failed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to upload the selected image.",
+      );
+    } finally {
+      setComposerUploadingMedia(false);
+    }
+  }
+
+  async function handleRemoveComposerImage(path: string) {
+    try {
+      await deleteCommunityPostImage(path);
+      setComposerSelectedMedia((current) =>
+        current.filter((item) => item.path !== path),
+      );
+    } catch (nextError) {
+      Alert.alert(
+        "Remove failed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to remove the selected image.",
+      );
+    }
+  }
+
+  async function handleOpenComposerEventPicker() {
+    if (composerWorking || composerUploadingMedia) {
+      return;
+    }
+
+    const circlesToLoad = composerCircle ? [composerCircle] : joinedCircles;
+    if (!circlesToLoad.length) {
+      Alert.alert("Join a circle", "Join a circle before attaching an event.");
+      return;
+    }
+
+    setComposerEventPickerQuery("");
+    setComposerEventPickerOpen(true);
+    setComposerEventPickerLoading(true);
+
+    try {
+      const eventMap = new Map<string, ComposerEventOption>();
+      const eventDataByCircle = await Promise.all(
+        circlesToLoad.map(async (circle) => ({
+          circle,
+          events: await loadMobileCommunityEvents(circle.slug),
+        })),
+      );
+
+      eventDataByCircle.forEach(({ circle, events }) => {
+        [
+          ...events.nextUp,
+          ...events.thisMonth,
+          ...events.popularWithMembers,
+          ...events.past,
+        ].forEach((event) => {
+          eventMap.set(event.id, {
+            ...event,
+            circle: {
+              id: circle.id,
+              name: circle.name,
+              slug: circle.slug,
+            },
+          });
+        });
+      });
+      setComposerEventPickerEvents(Array.from(eventMap.values()));
+    } catch (nextError) {
+      Alert.alert(
+        "Events unavailable",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to load events for this circle.",
+      );
+      setComposerEventPickerOpen(false);
+    } finally {
+      setComposerEventPickerLoading(false);
+    }
+  }
+
+  async function handleCreatePost() {
+    const body = composerBody.trim();
+    const title = composerTitle.trim();
+
+    if (!composerPublishCircle) {
+      Alert.alert("Join a circle", "Join a circle before creating a post.");
+      return;
+    }
+
+    if (!title) {
+      Alert.alert("Add a title", "Give your post a title before publishing.");
+      return;
+    }
+
+    setComposerWorking(true);
+
+    try {
+      const media = composerSelectedMedia.map((item) => ({
+        path: item.path,
+        width: item.width,
+        height: item.height,
+      }));
+
+      await createMobileCommunityPost({
+        circleId: composerPublishCircle.id,
+        circleSlug: composerPublishCircle.slug,
+        title,
+        content: body,
+        postType: composerPostType ?? undefined,
+        eventId: composerAttachedEvent?.id,
+        media,
+      });
+      media.forEach((item) => {
+        composerPublishedMediaPathsRef.current.add(item.path);
+      });
+      setIsComposerOpen(false);
+      await loadCommunity("refresh");
+    } catch (nextError) {
+      Alert.alert(
+        "Post failed",
+        nextError instanceof Error ? nextError.message : "Unable to post.",
+      );
+    } finally {
+      setComposerWorking(false);
+    }
+  }
+
   return (
-    <MobilePage headerHidden showAccentGlow={false} title="Community">
-      <TabMenuOverlay />
-      <View style={styles.contentWrap}>
-        {loading && !home ? (
-          <ScreenState
-            mode="loading"
-            title="Loading community"
-            description="Pulling rooms, people, and current community activity."
-          />
-        ) : null}
+    <>
+      <MobilePage
+        headerHidden
+        showAccentGlow={false}
+        title="Community"
+        onControlsVisibilityChange={setHeaderControlsVisible}
+      >
+        <View style={styles.contentWrap}>
+          {loading && !home ? (
+            <ScreenState
+              mode="loading"
+              title="Loading community"
+              description="Pulling rooms, people, and current community activity."
+            />
+          ) : null}
 
-        {error && !home ? (
-          <ScreenState
-            mode="error"
-            title="Community unavailable"
-            description={error}
-            action={
-              <KureButton
-                disabled={loading}
-                onPress={() => void loadCommunity("initial")}
-              >
-                {loading ? "Retrying..." : "Try again"}
-              </KureButton>
-            }
-          />
-        ) : null}
+          {error && !home ? (
+            <ScreenState
+              mode="error"
+              title="Community unavailable"
+              description={error}
+              action={
+                <KureButton
+                  disabled={loading}
+                  onPress={() => void loadCommunity("initial")}
+                >
+                  {loading ? "Retrying..." : "Try again"}
+                </KureButton>
+              }
+            />
+          ) : null}
 
-        {home ? (
-          <>
-            <SegmentedTabs activeTab={activeTab} onChange={setActiveTab} />
+          {home ? (
+            <>
+              {inlineError ? <InlineAlert message={inlineError} /> : null}
+              <CommunityHome
+                home={home}
+                joinedCircles={joinedCircles}
+                pendingCircleId={pendingCircleId}
+                pendingUserId={pendingUserId}
+                onCreatePress={handleOpenComposer}
+                onOpenRoom={handleOpenRoom}
+                onToggleCircle={handleToggleCircle}
+                onToggleFollow={handleToggleFollow}
+              />
+            </>
+          ) : null}
+        </View>
+        <CommunityRoomSheet
+          eventId={roomSheetEventId}
+          onClose={() => setRoomSheetEventId(null)}
+        />
+        <HomeComposerModal
+          attachedEvent={composerAttachedEvent}
+          body={composerBody}
+          circle={composerCircle}
+          circles={joinedCircles}
+          fallbackCircle={composerFallbackCircle}
+          eventPickerEvents={composerEventPickerEvents}
+          eventPickerLoading={composerEventPickerLoading}
+          eventPickerOpen={composerEventPickerOpen}
+          eventPickerQuery={composerEventPickerQuery}
+          isWorking={composerWorking}
+          isUploadingMedia={composerUploadingMedia}
+          media={composerSelectedMedia}
+          postType={composerPostType}
+          title={composerTitle}
+          visible={isComposerOpen}
+          onChangeBody={setComposerBody}
+          onChangeCircle={handleChangeComposerCircle}
+          onChangeEventPickerQuery={setComposerEventPickerQuery}
+          onChangePostType={setComposerPostType}
+          onChangeTitle={setComposerTitle}
+          onClose={handleCloseComposer}
+          onAfterClose={handleComposerAfterClose}
+          onOpenEventPicker={() => {
+            void handleOpenComposerEventPicker();
+          }}
+          onPickImages={() => {
+            void handlePickComposerImages();
+          }}
+          onRemoveEvent={() => setComposerAttachedEvent(null)}
+          onRemoveImage={(path) => {
+            void handleRemoveComposerImage(path);
+          }}
+          onSelectEvent={(event) => {
+            setComposerAttachedEvent(event);
+            setComposerEventPickerOpen(false);
+            setComposerEventPickerQuery("");
+          }}
+          onSubmit={() => {
+            void handleCreatePost();
+          }}
+        />
+      </MobilePage>
+      {(!loading || !!home) && headerControlsVisible && (
+        <TabMenuOverlay
+          rightAccessory={<CommunityCreateButton onCreatePress={handleOpenComposer} />}
+        />
+      )}
+    </>
+  );
+}
 
-            {inlineError ? <InlineAlert message={inlineError} /> : null}
+function CommunityHome({
+  home,
+  joinedCircles,
+  onCreatePress,
+  onOpenRoom,
+  onToggleCircle,
+  onToggleFollow,
+  pendingCircleId,
+  pendingUserId,
+}: {
+  home: MobileCommunityHome;
+  joinedCircles: MobileCommunityCircle[];
+  onCreatePress: () => void;
+  onOpenRoom: (eventId: string) => void;
+  onToggleCircle: (circle: MobileCommunityCircle) => void;
+  onToggleFollow: (userId: string, isFollowing: boolean) => void;
+  pendingCircleId: string | null;
+  pendingUserId: string | null;
+}) {
+  const feed = home.feed ?? [];
+  const activeRooms = home.upcomingMoments.slice(0, 3);
+  const peopleToMeet = home.peopleToMeet.slice(0, 3);
+  const followUps = home.followUpNow.slice(0, 2);
 
-            {activeTab === "pulse" ? (
-              <AnimatedMount key="pulse">
-                <PulseTab
-                  home={home}
-                  onOpenPeople={() => setActiveTab("people")}
-                  onOpenRooms={() => setActiveTab("rooms")}
-                  onOpenRoom={handleOpenRoom}
-                />
-              </AnimatedMount>
-            ) : null}
-
-            {activeTab === "rooms" ? (
-              <AnimatedMount key="rooms">
-                <RoomsTab
-                  activeRooms={activeRooms}
-                  followUps={home.followUpNow}
-                  lens={roomLens}
-                  onChangeLens={setRoomLens}
-                  onOpenRoom={handleOpenRoom}
-                />
-              </AnimatedMount>
-            ) : null}
-
-            {activeTab === "people" ? (
-              <AnimatedMount key="people">
-                <PeopleTab
-                  home={home}
-                  lens={peopleLens}
-                  peopleToMeet={peopleSections.peopleToMeet}
-                  followUps={peopleSections.followUps}
-                  pendingUserId={pendingUserId}
-                  onChangeLens={setPeopleLens}
-                  onToggleFollow={handleToggleFollow}
-                />
-              </AnimatedMount>
-            ) : null}
-          </>
-        ) : null}
-      </View>
-      <CommunityRoomSheet
-        eventId={roomSheetEventId}
-        onClose={() => setRoomSheetEventId(null)}
+  return (
+    <>
+      <PostFeedSection
+        feed={feed}
+        hasJoinedCircles={joinedCircles.length > 0}
+        onCreatePress={onCreatePress}
       />
-    </MobilePage>
+
+      <CircleShortcutSection
+        circles={home.circles ?? []}
+        pendingCircleId={pendingCircleId}
+        onToggleCircle={onToggleCircle}
+      />
+
+      {activeRooms.length > 0 ? (
+        <SecondarySectionHeader title="Active rooms" meta={`${activeRooms.length} live`} />
+      ) : null}
+      {activeRooms.length > 0 ? (
+        <RoomList events={activeRooms} onOpenRoom={onOpenRoom} />
+      ) : null}
+
+      {peopleToMeet.length > 0 || followUps.length > 0 ? (
+        <SecondarySectionHeader
+          title="People nearby"
+          meta={`${peopleToMeet.length + followUps.length} suggested`}
+        />
+      ) : null}
+      {peopleToMeet.length > 0 ? (
+        <View style={styles.stack}>
+          {peopleToMeet.map((person) => (
+            <CommunityNetworkingPersonCard
+              key={person.id}
+              isFollowing={person.isInNetwork}
+              isPending={pendingUserId === person.id}
+              mode="meet"
+              person={person}
+              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+              onOpenProfile={() => router.push(`/profile/${person.username}`)}
+              onToggleFollow={() =>
+                onToggleFollow(person.id, person.isInNetwork)
+              }
+            />
+          ))}
+        </View>
+      ) : null}
+      {followUps.length > 0 ? (
+        <View style={styles.stack}>
+          {followUps.map((person) => (
+            <EncounterCard
+              key={person.id}
+              person={person}
+              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+              onOpenProfile={() => router.push(`/profile/${person.username}`)}
+            />
+          ))}
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function CommunityCreateButton({
+  onCreatePress,
+}: {
+  onCreatePress: () => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onCreatePress}
+      style={({ pressed }) => [
+        styles.createButton,
+        {
+          backgroundColor: tokens.colors.pillActive,
+          borderRadius: tokens.radius.xs,
+        },
+        pressed && styles.pressed,
+      ]}
+    >
+      <FontAwesome name="pencil" size={12} color={tokens.colors.pillActiveText} />
+      <Text
+        style={[
+          styles.createButtonText,
+          {
+            color: tokens.colors.pillActiveText,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        Create
+      </Text>
+    </Pressable>
+  );
+}
+
+function PostFeedSection({
+  feed,
+  hasJoinedCircles,
+  onCreatePress,
+}: {
+  feed: MobileCommunityFeedPost[];
+  hasJoinedCircles: boolean;
+  onCreatePress: () => void;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.feedSection}>
+      {feed.length > 0 ? (
+        <View style={styles.feedSurface}>
+          {feed.map((post, index) => (
+            <View
+              key={post.id}
+              style={[
+                styles.feedRow,
+                index < feed.length - 1 && {
+                  borderBottomColor: tokens.colors.divider,
+                  borderBottomWidth: 1,
+                },
+              ]}
+            >
+              <CommunityFeedCard
+                post={post}
+                variant="thread"
+                onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/community/[slug]/post/[postId]",
+                    params: { slug: post.circle.slug, postId: post.id },
+                  })
+                }
+              />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.emptyFeed,
+            {
+              backgroundColor: tokens.colors.surface,
+              borderColor: tokens.colors.border,
+              borderRadius: tokens.radius.sm,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.emptyFeedTitle,
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            No community posts yet
+          </Text>
+          <Text
+            style={[
+              styles.emptyFeedBody,
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {hasJoinedCircles
+              ? "Start a thread in one of your circles."
+              : "Join a circle to start posting, or browse public circles below."}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onCreatePress}
+            style={({ pressed }) => [
+              styles.emptyFeedAction,
+              {
+                borderColor: tokens.colors.border,
+                borderRadius: tokens.radius.xs,
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.emptyFeedActionText,
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+            >
+              Create post
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CircleShortcutSection({
+  circles,
+  onToggleCircle,
+  pendingCircleId,
+}: {
+  circles: MobileCommunityCircle[];
+  onToggleCircle: (circle: MobileCommunityCircle) => void;
+  pendingCircleId: string | null;
+}) {
+  const visibleCircles = circles.slice(0, 5);
+
+  if (visibleCircles.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <SecondarySectionHeader title="Circles" meta={`${visibleCircles.length} shown`} />
+      <View style={styles.stack}>
+        {visibleCircles.map((circle) => (
+          <CircleCard
+            key={circle.id}
+            circle={circle}
+            isPending={pendingCircleId === circle.id}
+            onToggleCircle={onToggleCircle}
+          />
+        ))}
+      </View>
+    </>
+  );
+}
+
+function SecondarySectionHeader({
+  meta,
+  title,
+}: {
+  meta?: string;
+  title: string;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View style={styles.secondaryHeader}>
+      <Text
+        style={[
+          styles.secondaryTitle,
+          {
+            color: tokens.colors.textSecondary,
+            fontFamily: tokens.typography.sans,
+          },
+        ]}
+      >
+        {title}
+      </Text>
+      {meta ? (
+        <Text
+          style={[
+            styles.secondaryMeta,
+            {
+              color: tokens.colors.textTertiary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {meta}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function HomeComposerModal({
+  attachedEvent,
+  body,
+  circle,
+  circles,
+  eventPickerEvents,
+  eventPickerLoading,
+  eventPickerOpen,
+  eventPickerQuery,
+  fallbackCircle,
+  isWorking,
+  isUploadingMedia,
+  media,
+  onChangeBody,
+  onChangeCircle,
+  onChangeEventPickerQuery,
+  onChangePostType,
+  onChangeTitle,
+  onAfterClose,
+  onClose,
+  onOpenEventPicker,
+  onPickImages,
+  onRemoveEvent,
+  onRemoveImage,
+  onSelectEvent,
+  onSubmit,
+  postType,
+  title,
+  visible,
+}: {
+  attachedEvent: ComposerEventOption | null;
+  body: string;
+  circle: MobileCommunityCircle | null;
+  circles: MobileCommunityCircle[];
+  eventPickerEvents: ComposerEventOption[];
+  eventPickerLoading: boolean;
+  eventPickerOpen: boolean;
+  eventPickerQuery: string;
+  fallbackCircle: MobileCommunityCircle | null;
+  isWorking: boolean;
+  isUploadingMedia: boolean;
+  media: CommunityPostImageAttachment[];
+  onChangeBody: (value: string) => void;
+  onChangeCircle: (circleId: string) => void;
+  onChangeEventPickerQuery: (value: string) => void;
+  onChangePostType: (value: CommunityPostType | null) => void;
+  onChangeTitle: (value: string) => void;
+  onAfterClose: () => void;
+  onClose: () => void;
+  onOpenEventPicker: () => void;
+  onPickImages: () => void;
+  onRemoveEvent: () => void;
+  onRemoveImage: (path: string) => void;
+  onSelectEvent: (event: ComposerEventOption) => void;
+  onSubmit: () => void;
+  postType: CommunityPostType | null;
+  title: string;
+  visible: boolean;
+}) {
+  const { tokens } = useAppTheme();
+  const { height: windowHeight } = useWindowDimensions();
+  const reduceMotion = useReduceMotion();
+  const animationProgress = useMemo(() => new Animated.Value(visible ? 1 : 0), []);
+  const [shouldRender, setShouldRender] = useState(visible);
+  const hasOpenedRef = useRef(false);
+  const onAfterCloseRef = useRef(onAfterClose);
+  const [isPostTypeOpen, setIsPostTypeOpen] = useState(false);
+  const effectiveCircle = circle ?? attachedEvent?.circle ?? fallbackCircle;
+  const canSubmit = Boolean(
+    effectiveCircle && title.trim() && !isWorking && !isUploadingMedia,
+  );
+  const eventQuery = eventPickerQuery.trim().toLowerCase();
+  const filteredEvents = eventQuery
+    ? eventPickerEvents.filter((event) =>
+        [event.title, event.location, event.format]
+          .filter((field): field is string => Boolean(field))
+          .some((field) => field.toLowerCase().includes(eventQuery)),
+      )
+    : eventPickerEvents;
+  const scrimOpacity = useMemo(
+    () => animationProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+    [animationProgress],
+  );
+  const sheetTranslateY = useMemo(
+    () => animationProgress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }),
+    [animationProgress, windowHeight],
+  );
+
+  useEffect(() => {
+    onAfterCloseRef.current = onAfterClose;
+  }, [onAfterClose]);
+
+  useEffect(() => {
+    if (visible) {
+      hasOpenedRef.current = true;
+      setShouldRender(true);
+      setIsPostTypeOpen(false);
+      animationProgress.stopAnimation();
+
+      if (reduceMotion) {
+        animationProgress.setValue(1);
+        return;
+      }
+
+      Animated.timing(animationProgress, {
+        toValue: 1,
+        duration: DURATIONS.standard,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    if (!shouldRender) {
+      return;
+    }
+
+    setIsPostTypeOpen(false);
+    animationProgress.stopAnimation();
+
+    if (reduceMotion) {
+      animationProgress.setValue(0);
+      setShouldRender(false);
+      if (hasOpenedRef.current) {
+        onAfterCloseRef.current();
+      }
+      return;
+    }
+
+    Animated.spring(animationProgress, {
+      toValue: 0,
+      ...SPRING_CONFIG,
+    }).start(({ finished }) => {
+      if (!finished) {
+        return;
+      }
+
+      setShouldRender(false);
+      if (hasOpenedRef.current) {
+        onAfterCloseRef.current();
+      }
+    });
+  }, [animationProgress, reduceMotion, shouldRender, visible]);
+
+  if (!shouldRender) {
+    return null;
+  }
+
+  return (
+    <Modal
+      animationType="none"
+      transparent
+      visible={shouldRender}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalScrim}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close composer"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        >
+          <Animated.View
+            style={[styles.modalBackdrop, { opacity: scrimOpacity }]}
+          />
+        </Pressable>
+        <Animated.View
+          style={[
+            styles.composerModal,
+            {
+              backgroundColor: tokens.colors.surfaceStrong,
+              borderColor: tokens.colors.border,
+              borderRadius: tokens.radius.lg,
+              transform: [{ translateY: sheetTranslateY }],
+            },
+          ]}
+        >
+          <View style={styles.composerHeader}>
+            <Text
+              style={[
+                styles.composerTitle,
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+            >
+              Create post
+            </Text>
+            <Pressable accessibilityRole="button" onPress={onClose}>
+              <FontAwesome
+                name="close"
+                size={18}
+                color={tokens.colors.textSecondary}
+              />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={styles.composerScroll}
+            contentContainerStyle={styles.composerScrollContent}
+          >
+            {circles.length === 0 ? (
+              <View
+                style={[
+                  styles.composerNotice,
+                  {
+                    backgroundColor: tokens.colors.surfaceMuted,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.sm,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.composerNoticeText,
+                    {
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
+                >
+                  Join a circle before creating a community post.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.composerLabel}>Circle (optional)</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.composerChipRow}
+                >
+                  {circles.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: circle?.id === item.id }}
+                      onPress={() => onChangeCircle(item.id)}
+                      style={[
+                        styles.composerChip,
+                        {
+                          backgroundColor:
+                            circle?.id === item.id
+                              ? tokens.colors.pillActive
+                              : tokens.colors.surfaceMuted,
+                          borderRadius: tokens.radius.xs,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.composerChipText,
+                          {
+                            color:
+                              circle?.id === item.id
+                                ? tokens.colors.pillActiveText
+                                : tokens.colors.textPrimary,
+                            fontFamily: tokens.typography.sans,
+                          },
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <Text style={styles.composerLabel}>Type</Text>
+                <View style={styles.postTypeSelectWrap}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Select post type"
+                    onPress={() => setIsPostTypeOpen((current) => !current)}
+                    style={({ pressed }) => [
+                      styles.postTypeSelect,
+                      {
+                        backgroundColor: tokens.colors.surfaceMuted,
+                        borderRadius: tokens.radius.xs,
+                      },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.postTypeSelectLabel,
+                        {
+                          color: postType
+                            ? tokens.colors.textPrimary
+                            : tokens.colors.textTertiary,
+                          fontFamily: tokens.typography.sans,
+                        },
+                      ]}
+                    >
+                      {POST_TYPE_OPTIONS.find((option) => option.value === postType)
+                        ?.label ?? "Select type"}
+                    </Text>
+                    <FontAwesome
+                      name={isPostTypeOpen ? "chevron-up" : "chevron-down"}
+                      size={11}
+                      color={tokens.colors.textSecondary}
+                    />
+                  </Pressable>
+                  {isPostTypeOpen ? (
+                    <View
+                      style={[
+                        styles.postTypeMenu,
+                        {
+                          backgroundColor: tokens.colors.surfaceMuted,
+                          borderColor: tokens.colors.border,
+                          borderRadius: tokens.radius.xs,
+                        },
+                      ]}
+                    >
+                      {POST_TYPE_OPTIONS.map((option) => {
+                        const isSelected = option.value === postType;
+
+                        return (
+                          <Pressable
+                            key={option.value}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                            onPress={() => {
+                              onChangePostType(isSelected ? null : option.value);
+                              setIsPostTypeOpen(false);
+                            }}
+                            style={({ pressed }) => [
+                              styles.postTypeOption,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.postTypeOptionLabel,
+                                {
+                                  color: isSelected
+                                    ? tokens.colors.accent
+                                    : tokens.colors.textPrimary,
+                                  fontFamily: tokens.typography.sans,
+                                },
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                            {isSelected ? (
+                              <FontAwesome
+                                name="check"
+                                size={11}
+                                color={tokens.colors.accent}
+                              />
+                            ) : null}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+
+              <TextInput
+                placeholder="Title"
+                placeholderTextColor={tokens.colors.textTertiary}
+                value={title}
+                onChangeText={onChangeTitle}
+                style={[
+                  styles.composerInput,
+                  {
+                    borderColor: tokens.colors.border,
+                    color: tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              />
+              <TextInput
+                multiline
+                placeholder="Optional details"
+                placeholderTextColor={tokens.colors.textTertiary}
+                textAlignVertical="top"
+                value={body}
+                onChangeText={onChangeBody}
+                style={[
+                  styles.composerBodyInput,
+                  {
+                    borderColor: tokens.colors.border,
+                    color: tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              />
+              <View style={styles.composerToolbar}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isUploadingMedia ? "Uploading image" : "Add image"
+                  }
+                  disabled={
+                    isWorking ||
+                    isUploadingMedia ||
+                    media.length >= MAX_POST_IMAGES
+                  }
+                  onPress={onPickImages}
+                  style={({ pressed }) => [
+                    styles.composerToolButton,
+                    {
+                      backgroundColor: tokens.colors.surfaceMuted,
+                      borderRadius: tokens.radius.xs,
+                      opacity:
+                        isWorking ||
+                        isUploadingMedia ||
+                        media.length >= MAX_POST_IMAGES
+                          ? 0.48
+                          : 1,
+                    },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <FontAwesome
+                    name="image"
+                    size={15}
+                    color={tokens.colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.composerToolLabel,
+                      {
+                        color: tokens.colors.textSecondary,
+                        fontFamily: tokens.typography.sans,
+                      },
+                    ]}
+                  >
+                    {isUploadingMedia ? "Uploading" : "Image"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    attachedEvent ? "Change attached event" : "Attach event"
+                  }
+                  disabled={isWorking || isUploadingMedia || !circles.length}
+                  onPress={onOpenEventPicker}
+                  style={({ pressed }) => [
+                    styles.composerToolButton,
+                    {
+                      backgroundColor: tokens.colors.surfaceMuted,
+                      borderRadius: tokens.radius.xs,
+                      opacity:
+                        isWorking || isUploadingMedia || !circles.length
+                          ? 0.48
+                          : 1,
+                    },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <FontAwesome
+                    name="calendar-plus-o"
+                    size={15}
+                    color={tokens.colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.composerToolLabel,
+                      {
+                        color: tokens.colors.textSecondary,
+                        fontFamily: tokens.typography.sans,
+                      },
+                    ]}
+                  >
+                    {attachedEvent ? "Change event" : "Event"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {attachedEvent ? (
+                <View style={styles.attachmentPreview}>
+                  <CommunityAttachedEventRow
+                    event={attachedEvent}
+                    variant="selected"
+                    onPress={onOpenEventPicker}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={onRemoveEvent}
+                    style={({ pressed }) => [
+                      styles.attachmentRemoveAction,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.attachmentRemoveText,
+                        {
+                          color: tokens.colors.textSecondary,
+                          fontFamily: tokens.typography.sans,
+                        },
+                      ]}
+                    >
+                      Remove event
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {media.length ? (
+                <View style={styles.mediaPreviewRow}>
+                  {media.map((item) => (
+                    <View key={item.path} style={styles.mediaPreviewItem}>
+                      <Image
+                        source={{ uri: item.localUri }}
+                        style={styles.mediaPreviewImage}
+                      />
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => onRemoveImage(item.path)}
+                        style={({ pressed }) => [
+                          styles.mediaRemoveButton,
+                          {
+                            backgroundColor: tokens.colors.surfaceStrong,
+                            borderColor: tokens.colors.border,
+                            borderRadius: tokens.radius.xs,
+                          },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.mediaRemoveLabel,
+                            {
+                              color: tokens.colors.textPrimary,
+                              fontFamily: tokens.typography.sans,
+                            },
+                          ]}
+                        >
+                          Remove
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              {eventPickerOpen ? (
+                <View
+                  style={[
+                    styles.eventPickerPanel,
+                    {
+                      backgroundColor: tokens.colors.surfaceMuted,
+                      borderColor: tokens.colors.border,
+                      borderRadius: tokens.radius.sm,
+                    },
+                  ]}
+                >
+                  <TextInput
+                    value={eventPickerQuery}
+                    onChangeText={onChangeEventPickerQuery}
+                    placeholder="Search events"
+                    placeholderTextColor={tokens.colors.textTertiary}
+                    style={[
+                      styles.eventPickerSearch,
+                      {
+                        borderColor: tokens.colors.border,
+                        color: tokens.colors.textPrimary,
+                        fontFamily: tokens.typography.sans,
+                      },
+                    ]}
+                  />
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.eventPickerList}
+                  >
+                    {eventPickerLoading ? (
+                      <Text
+                        style={[
+                          styles.eventPickerState,
+                          {
+                            color: tokens.colors.textSecondary,
+                            fontFamily: tokens.typography.sans,
+                          },
+                        ]}
+                      >
+                        Loading events...
+                      </Text>
+                    ) : null}
+                    {!eventPickerLoading && !eventPickerEvents.length ? (
+                      <Text
+                        style={[
+                          styles.eventPickerState,
+                          {
+                            color: tokens.colors.textSecondary,
+                            fontFamily: tokens.typography.sans,
+                          },
+                        ]}
+                      >
+                        No linked events are available for this circle.
+                      </Text>
+                    ) : null}
+                    {!eventPickerLoading &&
+                    eventPickerEvents.length > 0 &&
+                    filteredEvents.length === 0 ? (
+                      <Text
+                        style={[
+                          styles.eventPickerState,
+                          {
+                            color: tokens.colors.textSecondary,
+                            fontFamily: tokens.typography.sans,
+                          },
+                        ]}
+                      >
+                        {`No events match "${eventPickerQuery.trim()}".`}
+                      </Text>
+                    ) : null}
+                    {filteredEvents.map((event, index) => (
+                      <CommunityAttachedEventRow
+                        key={event.id}
+                        event={event}
+                        variant="picker"
+                        showDivider={index < filteredEvents.length - 1}
+                        onPress={() => onSelectEvent(event)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+              </>
+            )}
+          </ScrollView>
+
+          <View style={styles.composerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              disabled={isWorking || isUploadingMedia}
+              style={({ pressed }) => [
+                styles.secondaryAction,
+                {
+                  borderColor: tokens.colors.border,
+                  borderRadius: tokens.radius.xs,
+                },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.secondaryActionText,
+                  {
+                    color: tokens.colors.textSecondary,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              >
+                Cancel
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canSubmit}
+              onPress={onSubmit}
+              style={({ pressed }) => [
+                styles.primaryAction,
+                {
+                  backgroundColor: tokens.colors.pillActive,
+                  borderRadius: tokens.radius.xs,
+                  opacity: canSubmit ? 1 : 0.48,
+                },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.primaryActionText,
+                  {
+                    color: tokens.colors.pillActiveText,
+                    fontFamily: tokens.typography.sans,
+                  },
+                ]}
+              >
+                {isWorking ? "Posting..." : isUploadingMedia ? "Uploading..." : "Post"}
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function _CirclesTab({
+  circles,
+  onToggleCircle,
+  pendingCircleId,
+}: {
+  circles: MobileCommunityCircle[];
+  onToggleCircle: (circle: MobileCommunityCircle) => void;
+  pendingCircleId: string | null;
+}) {
+  const joinedCircles = circles.filter((circle) => circle.isJoined);
+  const discoverCircles = circles.filter((circle) => !circle.isJoined);
+
+  return (
+    <>
+      <Text style={styles.helperText}>
+        Follow focused groups for event threads, members, and community posts.
+      </Text>
+
+      {joinedCircles.length > 0 ? (
+        <>
+          <SectionTitle title="Your Circles" />
+          <View style={styles.stack}>
+            {joinedCircles.map((circle) => (
+              <CircleCard
+                key={circle.id}
+                circle={circle}
+                isPending={pendingCircleId === circle.id}
+                onToggleCircle={onToggleCircle}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      <SectionTitle
+        title={joinedCircles.length > 0 ? "Discover" : "Discover Circles"}
+      />
+      {discoverCircles.length > 0 ? (
+        <View style={styles.stack}>
+          {discoverCircles.map((circle) => (
+            <CircleCard
+              key={circle.id}
+              circle={circle}
+              isPending={pendingCircleId === circle.id}
+              onToggleCircle={onToggleCircle}
+            />
+          ))}
+        </View>
+      ) : joinedCircles.length > 0 ? (
+        <SectionEmptyNote title="You have joined every circle available right now" />
+      ) : (
+        <SectionEmptyNote title="No circles available yet" />
+      )}
+    </>
+  );
+}
+
+function CircleCard({
+  circle,
+  isPending,
+  onToggleCircle,
+}: {
+  circle: MobileCommunityCircle;
+  isPending: boolean;
+  onToggleCircle: (circle: MobileCommunityCircle) => void;
+}) {
+  const { tokens } = useAppTheme();
+  const { scale, onPressIn, onPressOut } = useScalePress();
+  const actionLabel = isPending
+    ? "Saving..."
+    : circle.isJoined
+      ? "Leave"
+      : "Join";
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <View
+        style={[
+          styles.circleCard,
+          {
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border,
+            borderRadius: tokens.radius.md,
+          },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${circle.name}`}
+          onPress={() => router.push(`/community/${circle.slug}`)}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          style={styles.circleMainPressable}
+        >
+          <View
+            style={[
+              styles.circleIcon,
+              {
+                backgroundColor: tokens.colors.surfaceMuted,
+                borderRadius: tokens.radius.sm,
+              },
+            ]}
+          >
+            <FontAwesome
+              name={circle.isJoined ? "check-circle" : "circle-o"}
+              size={18}
+              color={
+                circle.isJoined
+                  ? tokens.colors.accent
+                  : tokens.colors.textTertiary
+              }
+            />
+          </View>
+          <View style={styles.circleCopy}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.cardTitle,
+                {
+                  color: tokens.colors.textPrimary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+            >
+              {circle.name}
+            </Text>
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.cardMeta,
+                {
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                },
+              ]}
+            >
+              {circle.description || "A community circle"} ·{" "}
+              {formatCommunityTabCount(circle.memberCount)} members
+            </Text>
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isPending}
+          onPress={() => onToggleCircle(circle)}
+          style={({ pressed }) => [
+            styles.circleAction,
+            {
+              backgroundColor: circle.isJoined
+                ? tokens.colors.surfaceMuted
+                : tokens.colors.pillActive,
+              borderRadius: tokens.radius.xs,
+              opacity: isPending ? 0.65 : 1,
+            },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text
+            style={[
+              styles.circleActionText,
+              {
+                color: circle.isJoined
+                  ? tokens.colors.textPrimary
+                  : tokens.colors.pillActiveText,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {actionLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -537,214 +2030,8 @@ function SegmentTab({
   );
 }
 
-function PulseTab({
-  home,
-  onOpenPeople,
-  onOpenRoom,
-  onOpenRooms,
-}: {
-  home: MobileCommunityHome;
-  onOpenPeople: () => void;
-  onOpenRoom: (eventId: string) => void;
-  onOpenRooms: () => void;
-}) {
-  const { tokens } = useAppTheme();
-  const circles = home.circles ?? [];
-  const feed = home.feed ?? [];
-  const roomPreview = home.upcomingMoments.slice(0, 2);
-  const hasPulseSummary =
-    (home.ambientActivity?.publicTrackersToday ??
-      home.summary.visibleOpportunityCount) > 0 ||
-    (home.ambientActivity?.roomsWithFreshTrackingCount ??
-      home.upcomingMoments.length) > 0 ||
-    home.summary.followUpCount > 0;
 
-  return (
-    <>
-      {hasPulseSummary ? (
-        <>
-          <SectionTitle title="Today's Pulse" />
-          <PulseSummaryCard
-            home={home}
-            onOpenPeople={onOpenPeople}
-            onOpenRooms={onOpenRooms}
-          />
-        </>
-      ) : null}
-
-      {feed.length > 0 ? (
-        <>
-          <SectionTitle title="Recent Community Activity" />
-          <View
-            style={[
-              styles.activityCard,
-              {
-                backgroundColor: tokens.colors.surface,
-                borderColor: tokens.colors.border,
-                shadowColor: tokens.shadow.shadowColor,
-              },
-            ]}
-          >
-            {feed.slice(0, 2).map((post, index) => (
-              <ActivityRow
-                key={post.id}
-                isLast={index === Math.min(feed.length, 2) - 1}
-                post={post}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {roomPreview.length > 0 ? (
-        <>
-          <SectionHeaderLink
-            title="Active Rooms"
-            actionLabel="See all"
-            onPress={onOpenRooms}
-          />
-          <RoomList events={roomPreview} onOpenRoom={onOpenRoom} />
-        </>
-      ) : null}
-
-      {circles.length > 0 ? (
-        <>
-          <SectionTitle title="Your Circles" />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.circleRail}
-          >
-            {circles.slice(0, 6).map((circle, index) => (
-              <CircleCard key={circle.id} circle={circle} index={index} />
-            ))}
-          </ScrollView>
-        </>
-      ) : null}
-    </>
-  );
-}
-
-function PulseSummaryCard({
-  home,
-  onOpenPeople,
-  onOpenRooms,
-}: {
-  home: MobileCommunityHome;
-  onOpenPeople: () => void;
-  onOpenRooms: () => void;
-}) {
-  const { tokens } = useAppTheme();
-  const peopleVisibleCount =
-    home.ambientActivity?.publicTrackersToday ??
-    home.summary.visibleOpportunityCount;
-  const activeRoomCount =
-    home.ambientActivity?.roomsWithFreshTrackingCount ??
-    home.upcomingMoments.length;
-  const followUpCount = home.summary.followUpCount;
-  const rows = [
-    {
-      icon: "circle-o-notch" as const,
-      count: peopleVisibleCount,
-      label: `${formatCommunityTabCount(peopleVisibleCount)} ${peopleVisibleCount === 1 ? "person" : "people"} visible today`,
-      onPress: onOpenPeople,
-    },
-    {
-      icon: "building-o" as const,
-      count: activeRoomCount,
-      label: `${formatCommunityTabCount(activeRoomCount)} active ${activeRoomCount === 1 ? "room" : "rooms"} near your events`,
-      onPress: onOpenRooms,
-    },
-    {
-      icon: "envelope-o" as const,
-      count: followUpCount,
-      label: `${formatCommunityTabCount(followUpCount)} ${followUpCount === 1 ? "follow-up" : "follow-ups"} waiting`,
-      onPress: onOpenPeople,
-    },
-  ].filter((row) => row.count > 0);
-
-  if (rows.length === 0) {
-    return null;
-  }
-
-  return (
-    <View
-      style={[
-        styles.summaryCard,
-        {
-          backgroundColor: tokens.colors.surface,
-          borderColor: tokens.colors.border,
-          shadowColor: tokens.shadow.shadowColor,
-        },
-      ]}
-    >
-      {rows.map((row, index) => (
-        <SummaryRow
-          key={row.label}
-          icon={row.icon}
-          isLast={index === rows.length - 1}
-          label={row.label}
-          onPress={row.onPress}
-        />
-      ))}
-    </View>
-  );
-}
-
-function SummaryRow({
-  icon,
-  isLast,
-  label,
-  onPress,
-}: {
-  icon: keyof typeof FontAwesome.glyphMap;
-  isLast: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      style={[
-        styles.summaryRow,
-        !isLast && {
-          borderBottomColor: tokens.colors.divider,
-          borderBottomWidth: 1,
-        },
-      ]}
-    >
-      <Animated.View
-        style={[styles.summaryRowInner, { transform: [{ scale }] }]}
-      >
-        <FontAwesome name={icon} size={19} color={tokens.colors.accent} />
-        <Text
-          style={[
-            styles.summaryText,
-            {
-              color: tokens.colors.textPrimary,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-        <FontAwesome
-          name="chevron-right"
-          size={14}
-          color={tokens.colors.textSecondary}
-        />
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-function RoomsTab({
+function _RoomsTab({
   activeRooms,
   followUps,
   lens,
@@ -890,7 +2177,7 @@ function RoomRow({
   );
 }
 
-function PeopleTab({
+function _PeopleTab({
   followUps,
   home,
   lens,
@@ -983,129 +2270,6 @@ function PeopleTab({
         <SectionEmptyNote title="No recent encounters yet" />
       )}
     </>
-  );
-}
-
-function ActivityRow({
-  isLast,
-  post,
-}: {
-  isLast: boolean;
-  post: MobileCommunityFeedPost;
-}) {
-  const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
-  const authorName = post.author.fullName || "Someone";
-  const title = `${authorName} posted in ${post.circle.name}`;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() =>
-        router.push({
-          pathname: "/community/[slug]/post/[postId]",
-          params: { slug: post.circle.slug, postId: post.id },
-        })
-      }
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      style={[
-        !isLast && {
-          borderBottomColor: tokens.colors.divider,
-          borderBottomWidth: 1,
-        },
-      ]}
-    >
-      <Animated.View style={[styles.activityRow, { transform: [{ scale }] }]}>
-      <AvatarImage
-        avatarUrl={post.author.avatarUrl}
-        name={authorName}
-        size={44}
-      />
-      <View style={styles.activityCopy}>
-        <Text
-          style={[
-            styles.activityTitle,
-            {
-              color: tokens.colors.textPrimary,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            styles.activityBody,
-            {
-              color: tokens.colors.textSecondary,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {summarizeCommunityPost(post.title || post.content)}
-        </Text>
-        <Text
-          style={[
-            styles.activityMeta,
-            {
-              color: tokens.colors.accent,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {formatCommunityTabCount(post.commentCount)} replies
-          {post.isTrending ? " · Trending" : ""}
-        </Text>
-      </View>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-function CircleCard({
-  circle,
-  index,
-}: {
-  circle: MobileCommunityCircle;
-  index: number;
-}) {
-  const { scale, onPressIn, onPressOut } = useScalePress();
-
-  return (
-    <AnimatedMount delay={Math.min(index, 5) * 20}>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push(`/community/${getCircleSlug(circle)}`)}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-      >
-        <Animated.View
-          style={[styles.circleCard, { transform: [{ scale }] }]}
-        >
-          <View style={styles.circleIcon}>
-            <FontAwesome
-              name={getCircleIcon(circle.name)}
-              size={13}
-              color={circleDesign.textVariant}
-            />
-          </View>
-          <View style={styles.circleCopy}>
-            <Text numberOfLines={1} style={styles.circleName}>
-              {circle.name}
-            </Text>
-            <Text numberOfLines={1} style={styles.cardMeta}>
-              {formatCommunityTabCount(circle.memberCount)} members
-            </Text>
-          </View>
-          <View style={styles.circleSignal}>
-            <Text style={styles.circleSignalText}>
-              {circle.isJoined ? "Joined" : "Discover"}
-            </Text>
-          </View>
-        </Animated.View>
-      </Pressable>
-    </AnimatedMount>
   );
 }
 
@@ -1414,37 +2578,6 @@ function SectionTitle({ title }: { title: string }) {
   );
 }
 
-function SectionHeaderLink({
-  actionLabel,
-  onPress,
-  title,
-}: {
-  actionLabel: string;
-  onPress: () => void;
-  title: string;
-}) {
-  const { tokens } = useAppTheme();
-
-  return (
-    <View style={styles.sectionHeaderRow}>
-      <SectionTitle title={title} />
-      <Pressable accessibilityRole="button" onPress={onPress}>
-        <Text
-          style={[
-            styles.headerLink,
-            {
-              color: tokens.colors.accent,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {actionLabel}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
 function SectionEmptyNote({ title }: { title: string }) {
   const { tokens } = useAppTheme();
 
@@ -1508,42 +2641,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  activityBody: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 18,
-  },
-  activityCard: {
-    borderRadius: 4,
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 1,
-  },
-  activityCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  activityMeta: {
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 16,
-  },
-  activityRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
   activityTitle: {
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 17,
   },
   cardMeta: {
-    color: circleDesign.muted,
+    color: "#908f9e",
     fontSize: 11,
     fontWeight: "500",
     lineHeight: 14,
@@ -1554,62 +2658,194 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     lineHeight: 20,
   },
-  circleCard: {
-    alignItems: "center",
-    backgroundColor: circleDesign.surfaceLowest,
-    borderColor: circleDesign.border,
-    borderRadius: 4,
-    borderWidth: 1,
+  composerActions: {
     flexDirection: "row",
     gap: 8,
-    minHeight: 48,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    width: 228,
+    paddingTop: 4,
   },
-  circleCopy: {
-    flex: 1,
-    gap: 1,
-  },
-  circleIcon: {
-    alignItems: "center",
-    backgroundColor: circleDesign.surface,
-    borderColor: circleDesign.border,
-    borderRadius: 4,
+  composerBodyInput: {
     borderWidth: 1,
-    height: 28,
-    justifyContent: "center",
-    width: 28,
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+    minHeight: 112,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  circleName: {
-    color: circleDesign.text,
+  composerChip: {
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  composerChipRow: {
+    gap: 6,
+    paddingRight: 12,
+  },
+  composerChipText: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  composerHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  composerInput: {
+    borderWidth: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  composerLabel: {
+    color: "#908f9e",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+  composerModal: {
+    borderWidth: 1,
+    gap: 10,
+    maxHeight: "88%",
+    padding: 12,
+    width: "100%",
+    maxWidth: 430,
+  },
+  composerNotice: {
+    borderWidth: 1,
+    padding: 10,
+  },
+  composerNoticeText: {
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 18,
   },
-  circleRail: {
-    gap: 8,
-    paddingRight: 12,
+  composerScroll: {
+    flexShrink: 1,
   },
-  circleSignal: {
-    borderColor: circleDesign.border,
-    borderRadius: 2,
-    borderWidth: 1,
-    paddingHorizontal: 6,
+  composerScrollContent: {
+    gap: 10,
+  },
+  composerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 24,
+  },
+  composerToolbar: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  composerToolButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+  composerToolLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+  attachmentPreview: {
+    gap: 8,
+  },
+  attachmentRemoveAction: {
+    alignSelf: "flex-start",
     paddingVertical: 2,
   },
-  circleSignalText: {
-    color: circleDesign.accent,
-    fontSize: 11,
-    fontWeight: "600",
-    lineHeight: 14,
+  attachmentRemoveText: {
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+  circleAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
+    minWidth: 62,
+    paddingHorizontal: 12,
+  },
+  circleActionText: {
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
+  circleCard: {
+    alignItems: "center",
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    padding: 12,
+  },
+  circleCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  circleIcon: {
+    alignItems: "center",
+    height: 38,
+    justifyContent: "center",
+    width: 38,
+  },
+  circleMainPressable: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: 10,
+    minWidth: 0,
   },
   contentWrap: {
     width: "100%",
     maxWidth: 430,
     alignSelf: "center",
     gap: 10,
+    marginTop: 44,
     paddingBottom: 24,
+  },
+  createButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+  createButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
+  emptyFeed: {
+    borderWidth: 1,
+    gap: 8,
+    padding: 12,
+  },
+  emptyFeedAction: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  emptyFeedActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  emptyFeedBody: {
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+  emptyFeedTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
   },
   emptyNote: {
     borderWidth: 1,
@@ -1619,6 +2855,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20,
+  },
+  eventPickerList: {
+    maxHeight: 220,
+  },
+  eventPickerPanel: {
+    borderWidth: 1,
+    gap: 8,
+    padding: 8,
+  },
+  eventPickerSearch: {
+    borderWidth: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+    minHeight: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  eventPickerState: {
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    paddingVertical: 8,
   },
   encounterActions: {
     flexDirection: "row",
@@ -1635,9 +2894,14 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
   },
-  headerLink: {
-    fontSize: 14,
-    fontWeight: "700",
+  feedRow: {
+    paddingVertical: 2,
+  },
+  feedSection: {
+    gap: 8,
+  },
+  feedSurface: {
+    backgroundColor: "transparent",
   },
   helperText: {
     color: "#6B7280",
@@ -1677,6 +2941,75 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82,
+  },
+  modalScrim: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 12,
+  },
+  modalBackdrop: {
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    flex: 1,
+  },
+  mediaPreviewImage: {
+    aspectRatio: 1,
+    width: "100%",
+  },
+  mediaPreviewItem: {
+    borderRadius: 4,
+    flexBasis: "48%",
+    overflow: "hidden",
+    position: "relative",
+  },
+  mediaPreviewRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  mediaRemoveButton: {
+    borderWidth: 1,
+    bottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    position: "absolute",
+    right: 6,
+  },
+  mediaRemoveLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 14,
+  },
+  postTypeMenu: {
+    borderWidth: 1,
+    marginTop: 6,
+    overflow: "hidden",
+  },
+  postTypeOption: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 36,
+    paddingHorizontal: 10,
+  },
+  postTypeOptionLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  postTypeSelect: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 36,
+    paddingHorizontal: 10,
+  },
+  postTypeSelectLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  postTypeSelectWrap: {
+    gap: 0,
   },
   primaryAction: {
     alignItems: "center",
@@ -1736,10 +3069,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  sectionHeaderRow: {
+  secondaryHeader: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingTop: 4,
+  },
+  secondaryMeta: {
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
+  secondaryTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
   },
   sectionTitle: {
     fontSize: 11,
@@ -1764,31 +3108,5 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: 8,
-  },
-  summaryCard: {
-    borderRadius: 4,
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 1,
-  },
-  summaryRow: {
-    minHeight: 44,
-    paddingHorizontal: 12,
-    justifyContent: "center",
-  },
-  summaryRowInner: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-    flex: 1,
-  },
-  summaryText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
   },
 });
