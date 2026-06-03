@@ -1147,8 +1147,11 @@ function HomeComposerModal({
   const { tokens } = useAppTheme();
   const { height: windowHeight } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
-  const animationProgress = useMemo(() => new Animated.Value(visible ? 1 : 0), []);
+  const [initialVisible] = useState(visible);
+  const animationProgress = useMemo(() => new Animated.Value(initialVisible ? 1 : 0), [initialVisible]);
   const [shouldRender, setShouldRender] = useState(visible);
+  // Derived state: mount immediately when visible becomes true (no effect needed)
+  if (visible && !shouldRender) setShouldRender(true);
   const hasOpenedRef = useRef(false);
   const onAfterCloseRef = useRef(onAfterClose);
   const [isPostTypeOpen, setIsPostTypeOpen] = useState(false);
@@ -1180,7 +1183,6 @@ function HomeComposerModal({
   useEffect(() => {
     if (visible) {
       hasOpenedRef.current = true;
-      setShouldRender(true);
       setIsPostTypeOpen(false);
       animationProgress.stopAnimation();
 
@@ -1946,90 +1948,6 @@ function CircleCard({
     </Animated.View>
   );
 }
-
-function SegmentedTabs({
-  activeTab,
-  onChange,
-}: {
-  activeTab: CommunityTab;
-  onChange: (tab: CommunityTab) => void;
-}) {
-  const { tokens } = useAppTheme();
-
-  return (
-    <View
-      style={[
-        styles.segmentedControl,
-        {
-          backgroundColor: tokens.colors.surfaceMuted,
-          borderRadius: tokens.radius.xs,
-        },
-      ]}
-    >
-      {COMMUNITY_TABS.map((tab) => (
-        <SegmentTab
-          key={tab.id}
-          isActive={activeTab === tab.id}
-          tab={tab}
-          tokens={tokens}
-          onPress={() => onChange(tab.id)}
-        />
-      ))}
-    </View>
-  );
-}
-
-function SegmentTab({
-  isActive,
-  onPress,
-  tab,
-  tokens,
-}: {
-  isActive: boolean;
-  onPress: () => void;
-  tab: { id: CommunityTab; label: string };
-  tokens: ReturnType<typeof useAppTheme>["tokens"];
-}) {
-  const { scale, onPressIn, onPressOut } = useScalePress();
-
-  return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: isActive }}
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      style={styles.segmentedItemPressable}
-    >
-      <Animated.View
-        style={[
-          styles.segmentedItemInner,
-          isActive && {
-            backgroundColor: tokens.colors.pillActive,
-            borderRadius: tokens.radius.xs,
-          },
-          { transform: [{ scale }] },
-        ]}
-      >
-        <Text
-          style={{
-            color: isActive
-              ? tokens.colors.pillActiveText
-              : tokens.colors.textTertiary,
-            fontFamily: tokens.typography.sans,
-            fontSize: 13,
-            lineHeight: 18,
-            fontWeight: "700",
-            letterSpacing: 0.1,
-          }}
-        >
-          {tab.label}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 
 function _RoomsTab({
   activeRooms,
@@ -3091,20 +3009,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.9,
     lineHeight: 16,
     paddingTop: 6,
-  },
-  segmentedControl: {
-    flexDirection: "row",
-    padding: 4,
-  },
-  segmentedItemPressable: {
-    flex: 1,
-  },
-  segmentedItemInner: {
-    alignItems: "center",
-    alignSelf: "stretch",
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 32,
   },
   stack: {
     gap: 8,
