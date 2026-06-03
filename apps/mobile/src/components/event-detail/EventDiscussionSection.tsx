@@ -468,7 +468,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 10,
-    paddingHorizontal: 16,
     paddingTop: 20,
   },
   sectionHeader: {
