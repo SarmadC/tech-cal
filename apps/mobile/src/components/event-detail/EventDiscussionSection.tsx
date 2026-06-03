@@ -231,6 +231,9 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
     router.push(`/event/${eventId}/threads/new`);
   }, [eventId]);
 
+  // Must be declared before any early returns (Rules of Hooks)
+  const emptyPress = useScalePress();
+
   // ── loading ──────────────────────────────────────────────────────────────
   if (loadState.status === 'loading') {
     return (
@@ -290,7 +293,6 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
   const preview = threads.slice(0, PREVIEW_LIMIT);
   const isEmpty = threads.length === 0;
   const lastActivityAt = threads[0]?.lastActivityAt ?? null;
-  const emptyPress = useScalePress();
 
   return (
     <View style={styles.section}>
