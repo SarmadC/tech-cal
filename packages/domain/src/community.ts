@@ -195,6 +195,12 @@ export const mobileCommunityPostMediaSchema = z.object({
   position: z.number().int().nonnegative(),
 });
 
+const communityMediaDraftSchema = z.object({
+  path: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
 export const mobileCommunityPostLinkPreviewSchema = z.object({
   id: z.string().optional(),
   url: z.string().url(),
@@ -213,6 +219,7 @@ export const mobileCommunityEmbeddedEventSchema = z.object({
   startTime: z.string(),
   endTime: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
+  organizerLogoUrl: z.string().nullable().optional(),
   organizerName: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   timeLabel: z.string().nullable().optional(),
@@ -904,6 +911,7 @@ export const mobileCommunityRoomThreadSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   body: z.string(),
+  media: z.array(mobileCommunityPostMediaSchema).optional(),
   commentCount: z.number().int().nonnegative(),
   createdAt: z.string(),
   lastActivityAt: z.string(),
@@ -915,6 +923,7 @@ export const mobileCommunityRoomThreadSchema = z.object({
 export const mobileCommunityRoomThreadDraftSchema = z.object({
   title: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(5000),
+  media: z.array(communityMediaDraftSchema).max(4).optional(),
 });
 
 export const mobileCommunityRoomThreadEditDraftSchema = z.object({

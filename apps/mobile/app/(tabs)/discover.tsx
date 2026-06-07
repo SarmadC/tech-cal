@@ -28,7 +28,6 @@ import {
   DiscoverFilterSheet,
   type DiscoverDraftFilters,
 } from '../../src/components/discover/DiscoverFilterSheet';
-import { DiscoverRankingRail } from '../../src/components/discover/DiscoverRankingRail';
 import { DiscoverSearchBar } from '../../src/components/discover/DiscoverSearchBar';
 import { DiscoverShell } from '../../src/components/discover/DiscoverShell';
 import { TabMenuOverlay } from '../../src/components/chrome/TabMenuOverlay';
@@ -127,6 +126,7 @@ export default function DiscoverScreen() {
   const [error, setError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -299,27 +299,17 @@ export default function DiscoverScreen() {
   return (
     <>
       <DiscoverShell
+        onControlsVisibilityChange={setHeaderControlsVisible}
         header={(compact, controlsVisible) => (
           <View style={[styles.headerStack, compact && styles.headerStackCompact]}>
             {controlsVisible ? (
-              <>
-                <DiscoverSearchBar
-                  activeFilterCount={appliedActiveFilterCount}
-                  compact={compact}
-                  onChangeText={setSearchText}
-                  onOpenFilters={openFilters}
-                  value={searchText}
-                />
-                <DiscoverRankingRail
-                  onChange={(nextValue) => {
-                    startTransition(() => {
-                      setRankingMode(nextValue);
-                    });
-                  }}
-                  options={rankingOptions}
-                  value={rankingMode}
-                />
-              </>
+              <DiscoverSearchBar
+                activeFilterCount={appliedActiveFilterCount}
+                compact={compact}
+                onChangeText={setSearchText}
+                onOpenFilters={openFilters}
+                value={searchText}
+              />
             ) : null}
           </View>
         )}
@@ -429,7 +419,7 @@ export default function DiscoverScreen() {
           </Text>
         ) : null}
       </DiscoverShell>
-      <TabMenuOverlay />
+      {!isInitialLoading && headerControlsVisible && <TabMenuOverlay />}
 
       <DiscoverFilterSheet
         activeFilterCount={draftActiveFilterCount}
@@ -470,9 +460,11 @@ const styles = StyleSheet.create({
   },
   headerStack: {
     gap: 4,
+    paddingLeft: 44,
   },
   headerStackCompact: {
     gap: 2,
+    paddingLeft: 44,
   },
   loadMoreButton: {
     alignItems: 'center',

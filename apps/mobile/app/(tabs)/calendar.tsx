@@ -403,6 +403,7 @@ export default function CalendarScreen() {
           ]}
         />
 
+        {!showInitialLoading && <TabMenuOverlay />}
         <View
           onLayout={handleHeaderLayout}
           style={[
@@ -412,10 +413,11 @@ export default function CalendarScreen() {
               borderBottomColor: tokens.colors.discoverToolbarBorderStrong,
               paddingTop: insets.top + 8,
               paddingBottom: 8,
+              paddingLeft: 56,
+              paddingRight: 20,
             },
           ]}
         >
-          <TabMenuOverlay />
           <View style={styles.headerInner}>
             <CalendarToolbar
               monthLabel={formatMonthButtonLabel(

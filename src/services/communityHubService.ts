@@ -47,10 +47,20 @@ export interface CommunityDiscoveryData {
 
 interface FeedPostRow {
   id: string;
+  title: string | null;
   content: string;
   created_at: string;
   author_id: string;
   circle_id: string;
+  event_id: string | null;
+  post_type:
+    | 'update'
+    | 'question'
+    | 'intro'
+    | 'showcase'
+    | 'event_note'
+    | 'announcement'
+    | null;
   moderation_status: "active" | "removed";
 }
 
@@ -76,6 +86,30 @@ interface CircleRow {
   member_count: number;
 }
 
+interface FeedEventRow {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  description?: string | null;
+  location: string | null;
+  start_time: string;
+  end_time?: string | null;
+  event_image_url?: string | null;
+  event_format?: string | null;
+  price_min?: number | null;
+  price_max?: number | null;
+  organizer:
+    | {
+        name: string | null;
+        logo_url: string | null;
+      }
+    | Array<{
+        name: string | null;
+        logo_url: string | null;
+      }>
+    | null;
+}
+
 // ── Constants ────────────────────────────────────────────────────
 
 const FEED_LIMIT = 20;
@@ -98,6 +132,35 @@ function getPostDisplayTitle(post: { title?: string | null; content?: string | n
   return segments[0] || "Untitled thread";
 }
 
+function getPostTitleAndBody(post: {
+  title?: string | null;
+  content?: string | null;
+}): { title: string; content: string } {
+  const explicitTitle = post.title?.trim();
+  const content = post.content?.trim() ?? '';
+
+  if (explicitTitle) {
+    return { title: explicitTitle, content };
+  }
+
+  const segments = content
+    .split('\n')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length > 1) {
+    return {
+      title: segments[0],
+      content: segments.slice(1).join('\n'),
+    };
+  }
+
+  return {
+    title: getPostDisplayTitle(post),
+    content: segments.length === 1 ? '' : content,
+  };
+}
+
 interface ExtendedCircleRow extends CircleRow {
   tagline: string | null;
   cover_image_url: string | null;
@@ -109,6 +172,12 @@ interface ExtendedCircleRow extends CircleRow {
 }
 
 const DISCOVERY_PER_SECTION = 12;
+
+interface FeedAttachmentBundle {
+  mentions: Map<string, NonNullable<CommunityFeedPost['mentions']>>;
+  media: Map<string, NonNullable<CommunityFeedPost['media']>>;
+  linkPreviews: Map<string, NonNullable<CommunityFeedPost['linkPreviews']>>;
+}
 
 // ── Service ──────────────────────────────────────────────────────
 
@@ -377,6 +446,80 @@ export class CommunityHubService {
     return { feed, circles, upcomingEvents };
   }
 
+  static async getEventPosts({
+    eventId,
+    readClient,
+  }: {
+    eventId: string;
+    readClient: SupabaseClientType;
+  }): Promise<CommunityFeedPost[]> {
+    const { data: postRows } = await readClient
+      .from("circle_posts")
+      .select("id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status")
+      .eq("event_id", eventId)
+      .eq("moderation_status", "active")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const posts = ((postRows ?? []) as FeedPostRow[]).filter(
+      (p) => p.moderation_status === "active",
+    );
+
+    if (posts.length === 0) return [];
+
+    const authorIds = [...new Set(posts.map((p) => p.author_id))];
+    const postIds = posts.map((p) => p.id);
+    const circleIds = [...new Set(posts.map((p) => p.circle_id))];
+
+    const [profilesResult, circlesResult, commentCountResult] = await Promise.all([
+      readClient.from("profiles").select("id, full_name, avatar_url").in("id", authorIds),
+      readClient.from("circles").select("id, slug, name").in("id", circleIds),
+      readClient
+        .from("circle_comments")
+        .select("post_id")
+        .in("post_id", postIds)
+        .eq("moderation_status", "active"),
+    ]);
+
+    const profileMap = new Map(
+      ((profilesResult.data ?? []) as ProfileRow[]).map((p) => [
+        p.id,
+        { id: p.id, fullName: p.full_name, avatarUrl: p.avatar_url },
+      ]),
+    );
+    const circleMap = new Map(
+      ((circlesResult.data ?? []) as CircleRow[]).map((c) => [
+        c.id,
+        { slug: c.slug, name: c.name },
+      ]),
+    );
+    const countMap = new Map<string, number>();
+    for (const row of (commentCountResult.data ?? []) as Array<{ post_id: string }>) {
+      countMap.set(row.post_id, (countMap.get(row.post_id) ?? 0) + 1);
+    }
+
+    return posts.map((p) => {
+      const normalized = getPostTitleAndBody(p);
+      return {
+        id: p.id,
+        title: normalized.title,
+        content: normalized.content,
+        createdAt: p.created_at,
+        author: profileMap.get(p.author_id) ?? { id: p.author_id, fullName: null, avatarUrl: null },
+        circle: circleMap.get(p.circle_id) ?? { slug: "unknown", name: "Unknown Circle" },
+        commentCount: countMap.get(p.id) ?? 0,
+        isTrending: false,
+        recentComments: [],
+        postType: p.post_type ?? "event_note",
+        eventId: p.event_id,
+        event: null,
+        mentions: [],
+        media: [],
+        linkPreviews: [],
+      };
+    });
+  }
+
   // ── Feed ──────────────────────────────────────────────────────
 
   private static async getFeed({
@@ -419,7 +562,7 @@ export class CommunityHubService {
         const { data: joinedPosts } = await readClient
           .from("circle_posts")
           .select(
-            "id, content, created_at, author_id, circle_id, moderation_status",
+            "id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status",
           )
           .in("circle_id", normalizedJoinedCircleIds)
           .eq("moderation_status", "active")
@@ -435,7 +578,7 @@ export class CommunityHubService {
         const { data: globalPosts } = await readClient
           .from("circle_posts")
           .select(
-            "id, content, created_at, author_id, circle_id, moderation_status",
+            "id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status",
           )
           .eq("moderation_status", "active")
           .order("created_at", { ascending: false })
@@ -487,6 +630,17 @@ export class CommunityHubService {
       }
 
       const postIds = posts.map((p) => p.id);
+      const eventIds = [
+        ...new Set(posts.map((post) => post.event_id).filter(Boolean)),
+      ] as string[];
+      const attachments = await this.getFeedAttachments({
+        postIds,
+        readClient,
+      });
+      const eventsById = await this.getFeedEventsById({
+        eventIds,
+        readClient,
+      });
       const filteredComments = (
         (commentRows as FeedCommentRow[] | null) ?? []
       ).filter(
@@ -551,28 +705,198 @@ export class CommunityHubService {
         recentCommentsMap.set(row.post_id, existingComments);
       }
 
-      return posts.map((p) => ({
-        id: p.id,
-        title: getPostDisplayTitle(p),
-        content: p.content,
-        createdAt: p.created_at,
-        author: profileMap.get(p.author_id) || {
-          id: p.author_id,
-          fullName: null,
-          avatarUrl: null,
-        },
-        circle: circleMap.get(p.circle_id) || {
-          slug: "unknown",
-          name: "Unknown Circle",
-        },
-        commentCount: countMap.get(p.id) || 0,
-        isTrending: (countMap.get(p.id) || 0) >= TRENDING_THRESHOLD,
-        recentComments: recentCommentsMap.get(p.id) ?? [],
-      }));
+      return posts.map((p) => {
+        const normalizedPost = getPostTitleAndBody(p);
+
+        return {
+          id: p.id,
+          title: normalizedPost.title,
+          content: normalizedPost.content,
+          createdAt: p.created_at,
+          author: profileMap.get(p.author_id) || {
+            id: p.author_id,
+            fullName: null,
+            avatarUrl: null,
+          },
+          circle: circleMap.get(p.circle_id) || {
+            slug: "unknown",
+            name: "Unknown Circle",
+          },
+          commentCount: countMap.get(p.id) || 0,
+          isTrending: (countMap.get(p.id) || 0) >= TRENDING_THRESHOLD,
+          recentComments: recentCommentsMap.get(p.id) ?? [],
+          postType: p.post_type ?? 'update',
+          eventId: p.event_id,
+          event: p.event_id ? eventsById.get(p.event_id) ?? null : null,
+          mentions: attachments.mentions.get(p.id) ?? [],
+          media: attachments.media.get(p.id) ?? [],
+          linkPreviews: attachments.linkPreviews.get(p.id) ?? [],
+        };
+      });
     } catch (error) {
       console.error("Failed to load community feed:", error);
       return [];
     }
+  }
+
+  private static async getFeedEventsById({
+    eventIds,
+    readClient,
+  }: {
+    eventIds: string[];
+    readClient: SupabaseClientType;
+  }): Promise<Map<string, NonNullable<CommunityFeedPost['event']>>> {
+    if (eventIds.length === 0) {
+      return new Map();
+    }
+
+    const { data, error } = await readClient
+      .from("events")
+      .select(
+        "id, slug, title, description, start_time, end_time, location, event_image_url, event_format, organizer:organizers(name, logo_url)",
+      )
+      .in("id", eventIds);
+
+    if (error || !data) {
+      return new Map();
+    }
+
+    return new Map(
+      ((data ?? []) as FeedEventRow[]).map((event) => {
+        const organizer = Array.isArray(event.organizer)
+          ? event.organizer[0]
+          : event.organizer;
+
+        return [
+          event.id,
+          {
+            id: event.id,
+            slug: event.slug ?? event.id,
+            title: event.title ?? "Untitled event",
+            description: event.description ?? null,
+            location: event.location,
+            startTime: event.start_time,
+            endTime: event.end_time ?? null,
+            imageUrl: event.event_image_url ?? null,
+            organizerLogoUrl: organizer?.logo_url ?? null,
+            organizerName: organizer?.name ?? null,
+            formatLabel: event.event_format ?? null,
+          },
+        ];
+      }),
+    );
+  }
+
+  private static async getFeedAttachments({
+    postIds,
+    readClient,
+  }: {
+    postIds: string[];
+    readClient: SupabaseClientType;
+  }): Promise<FeedAttachmentBundle> {
+    if (postIds.length === 0) {
+      return {
+        mentions: new Map(),
+        media: new Map(),
+        linkPreviews: new Map(),
+      };
+    }
+
+    const attachmentClient = readClient as any;
+    const [mentionsResult, mediaResult, linksResult] = await Promise.all([
+      attachmentClient
+        .from('circle_post_mentions')
+        .select('post_id, mentioned_profile_id, profile:profiles!circle_post_mentions_mentioned_profile_id_fkey(id, username, full_name, avatar_url)')
+        .in('post_id', postIds),
+      attachmentClient
+        .from('circle_post_media')
+        .select('id, post_id, storage_path, width, height, position')
+        .in('post_id', postIds)
+        .order('position', { ascending: true }),
+      attachmentClient
+        .from('circle_post_links')
+        .select('id, post_id, url, title, description, image_url, site_name')
+        .in('post_id', postIds)
+        .order('created_at', { ascending: true }),
+    ]);
+
+    const mentions = new Map<string, NonNullable<CommunityFeedPost['mentions']>>();
+    ((mentionsResult.data ?? []) as Array<{
+      post_id: string;
+      mentioned_profile_id: string;
+      profile:
+        | {
+            id: string;
+            username: string | null;
+            full_name: string | null;
+            avatar_url: string | null;
+          }
+        | Array<{
+            id: string;
+            username: string | null;
+            full_name: string | null;
+            avatar_url: string | null;
+          }>
+        | null;
+    }>).forEach((row) => {
+      const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+      const postMentions = mentions.get(row.post_id) ?? [];
+      postMentions.push({
+        userId: row.mentioned_profile_id,
+        username: profile?.username ?? null,
+        fullName: profile?.full_name ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
+      });
+      mentions.set(row.post_id, postMentions);
+    });
+
+    const media = new Map<string, NonNullable<CommunityFeedPost['media']>>();
+    ((mediaResult.data ?? []) as Array<{
+      id: string;
+      post_id: string;
+      storage_path: string;
+      width: number;
+      height: number;
+      position: number;
+    }>).forEach((row) => {
+      const publicUrl = readClient.storage
+        .from('community-media')
+        .getPublicUrl(row.storage_path).data.publicUrl;
+      const postMedia = media.get(row.post_id) ?? [];
+      postMedia.push({
+        id: row.id,
+        path: row.storage_path,
+        url: publicUrl,
+        width: row.width,
+        height: row.height,
+        position: row.position,
+      });
+      media.set(row.post_id, postMedia);
+    });
+
+    const linkPreviews = new Map<string, NonNullable<CommunityFeedPost['linkPreviews']>>();
+    ((linksResult.data ?? []) as Array<{
+      id: string;
+      post_id: string;
+      url: string;
+      title: string | null;
+      description: string | null;
+      image_url: string | null;
+      site_name: string | null;
+    }>).forEach((row) => {
+      const postLinks = linkPreviews.get(row.post_id) ?? [];
+      postLinks.push({
+        id: row.id,
+        url: row.url,
+        title: row.title,
+        description: row.description,
+        imageUrl: row.image_url,
+        siteName: row.site_name,
+      });
+      linkPreviews.set(row.post_id, postLinks);
+    });
+
+    return { mentions, media, linkPreviews };
   }
 
   // ── Circles ───────────────────────────────────────────────────

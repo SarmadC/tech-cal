@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react";
-import { Animated, Pressable, StyleSheet, Text } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
@@ -9,11 +9,13 @@ export function KureButton({
   variant = "primary",
   disabled = false,
   onPress,
+  style,
   testID,
 }: PropsWithChildren<{
   variant?: "primary" | "secondary" | "ghost" | "danger";
   disabled?: boolean;
   onPress?: () => void | Promise<unknown>;
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }>) {
   const { tokens } = useAppTheme();
@@ -52,6 +54,7 @@ export function KureButton({
           borderColor: tokens.colors.danger,
         },
         disabled && styles.disabled,
+        style,
       ]}
     >
       <Animated.View style={[styles.content, { transform: [{ scale }] }]}>

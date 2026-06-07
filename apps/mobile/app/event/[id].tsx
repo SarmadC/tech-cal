@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform, Share, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import type {
   MobileCalendarConnectionStatus,
+  MobileCommunityCircle,
   MobileEventDetail,
   MobileEventEngagement,
   MobileEventNetworkingFeedback,
@@ -13,6 +14,12 @@ import type {
 
 import { MobileEventDetailScreen } from '../../src/components/event-detail/MobileEventDetailScreen';
 import { EventReviewSheet } from '../../src/components/event-detail/EventReviewSheet';
+import {
+  CommunityComposerModal,
+  type CommunityComposerEventOption,
+  type CommunityComposerImageAttachment,
+} from '../../src/components/community/CommunityComposerModal';
+import { useCommunityImageAttachments } from '../../src/hooks/useCommunityImageAttachments';
 import {
   buildMapsSearchUrl,
   getAttendanceCtaState,
@@ -28,8 +35,10 @@ import {
   loadMobileEventDetail,
   loadMobileEventNetworkingFeedback,
   loadMobileGoogleCalendarStatus,
+  loadMobileCommunityHome,
   syncMobileGoogleCalendarEvent,
   unsyncMobileGoogleCalendarEvent,
+  createMobileCommunityPost,
   updateMobileEventAgendaSave,
   updateMobileEventEngagement,
   updateMobileEventNetworkingFeedback,
@@ -47,8 +56,20 @@ export default function EventDetailRoute() {
   const [attendancePending, setAttendancePending] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [postComposerVisible, setPostComposerVisible] = useState(false);
+  const [postComposerTitle, setPostComposerTitle] = useState('');
+  const [postComposerBody, setPostComposerBody] = useState('');
+  const [postComposerPosting, setPostComposerPosting] = useState(false);
+  const [postComposerCircles, setPostComposerCircles] = useState<
+    MobileCommunityCircle[]
+  >([]);
+  const [postComposerSelectedCircleId, setPostComposerSelectedCircleId] =
+    useState<string | null>(null);
   const [reviewFeedback, setReviewFeedback] =
     useState<MobileEventNetworkingFeedback | null>(null);
+  const postImageAttachments = useCommunityImageAttachments({
+    isBusy: postComposerPosting,
+  });
   const [pendingAgendaSaveIds, setPendingAgendaSaveIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -482,6 +503,97 @@ export default function EventDetailRoute() {
     setReviewVisible(false);
   }
 
+  async function loadPostComposerCircles() {
+    try {
+      const home = await loadMobileCommunityHome();
+      setPostComposerCircles(
+        home.circles?.filter((circle) => circle.isJoined) ?? []
+      );
+    } catch (nextError) {
+      Alert.alert(
+        'Community unavailable',
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to load your circles.'
+      );
+    }
+  }
+
+  function resetPostComposer() {
+    setPostComposerTitle('');
+    setPostComposerBody('');
+    setPostComposerPosting(false);
+    setPostComposerSelectedCircleId(null);
+    postImageAttachments.resetMedia();
+  }
+
+  function closePostComposer() {
+    if (postComposerPosting || postImageAttachments.isUploadingMedia) {
+      return;
+    }
+
+    postImageAttachments.cleanupUnpublishedMedia();
+    setPostComposerVisible(false);
+  }
+
+  async function openPostComposer() {
+    setPostComposerVisible(true);
+    if (!postComposerCircles.length) {
+      await loadPostComposerCircles();
+    }
+  }
+
+  async function handleCreatePost() {
+    if (!data || !eventId || postComposerPosting || postImageAttachments.isUploadingMedia) {
+      return;
+    }
+
+    const circle =
+      postComposerCircles.find((c) => c.id === postComposerSelectedCircleId) ??
+      postComposerCircles[0];
+    if (!circle) {
+      Alert.alert('Join a circle', 'Join a circle before creating a post.');
+      return;
+    }
+
+    const title = postComposerTitle.trim();
+    const body = postComposerBody.trim();
+    if (!title) {
+      Alert.alert('Add a title', 'Give your post a title before publishing.');
+      return;
+    }
+
+    setPostComposerPosting(true);
+    try {
+      const media = postImageAttachments.media.map((item) => ({
+        path: item.path,
+        width: item.width,
+        height: item.height,
+      }));
+
+      await createMobileCommunityPost({
+        circleId: circle.id,
+        circleSlug: circle.slug,
+        title,
+        content: body,
+        postType: 'event_note',
+        eventId: data.event.id,
+        media,
+      });
+
+      postImageAttachments.markMediaPublished(media.map((m) => m.path));
+      setPostComposerVisible(false);
+      Alert.alert('Post shared', 'Your post is attached to this event.');
+    } catch (nextError) {
+      Alert.alert(
+        'Post failed',
+        nextError instanceof Error ? nextError.message : 'Unable to post.'
+      );
+    } finally {
+      setPostComposerPosting(false);
+    }
+  }
+
   async function handleToggleAgendaSave(agendaItemId: string, isSaved: boolean) {
     if (!data || pendingAgendaSaveIds.has(agendaItemId)) {
       return;
@@ -565,6 +677,28 @@ export default function EventDetailRoute() {
           ? 'warning'
           : 'neutral';
   const attendanceCta = getAttendanceCtaState(data.event, data.event.engagement);
+  // Explicitly selected circle — no auto-select fallback so the dropdown shows "Select circle" by default
+  const postComposerCircle =
+    postComposerCircles.find((c) => c.id === postComposerSelectedCircleId) ?? null;
+  // First circle used as fallback reference for the modal's effectiveCircle and canSubmit computation
+  const postComposerFallbackCircle = postComposerCircles[0] ?? null;
+  const attachedEvent: CommunityComposerEventOption | null =
+    postComposerFallbackCircle
+      ? {
+          id: data.event.id,
+          slug: data.event.slug ?? data.event.id,
+          title: data.event.title,
+          startTime: data.event.startTime,
+          location: data.event.location ?? null,
+          format: data.event.formatLabel ?? null,
+          organizerLogoUrl: data.host?.logoUrl ?? null,
+          circle: {
+            id: postComposerFallbackCircle.id,
+            name: postComposerFallbackCircle.name,
+            slug: postComposerFallbackCircle.slug,
+          },
+        }
+      : null;
 
   return (
     <>
@@ -604,6 +738,51 @@ export default function EventDetailRoute() {
         }}
         onShareEvent={() => {
           void handleShareEvent();
+        }}
+        onStartThread={() => {
+          void openPostComposer();
+        }}
+      />
+      <CommunityComposerModal
+        attachedEvent={attachedEvent}
+        body={postComposerBody}
+        bodyPlaceholder="Share context, ask a question, kick off a conversation..."
+        circle={postComposerCircle}
+        circles={postComposerCircles}
+        emptyNotice="Join a circle before creating a community post."
+        fallbackCircle={postComposerFallbackCircle}
+        isUploadingMedia={postImageAttachments.isUploadingMedia}
+        isWorking={postComposerPosting}
+        media={postImageAttachments.media}
+        modalTitle="Create post"
+        requireCircle
+        showAttachedEventPreview
+        showCircleControls={postComposerCircles.length > 0}
+        showCommunityControls={false}
+        showEventControls={false}
+        showImageControls
+        showPostTypeControls={false}
+        submitLabel="Post"
+        title={postComposerTitle}
+        titlePlaceholder="Title"
+        visible={postComposerVisible}
+        onAfterClose={resetPostComposer}
+        onChangeBody={setPostComposerBody}
+        onChangeCircle={(circleId) =>
+          setPostComposerSelectedCircleId((prev) =>
+            prev === circleId ? null : circleId,
+          )
+        }
+        onChangeTitle={setPostComposerTitle}
+        onClose={closePostComposer}
+        onPickImages={() => {
+          void postImageAttachments.pickImages();
+        }}
+        onRemoveImage={(path) => {
+          void postImageAttachments.removeImage(path);
+        }}
+        onSubmit={() => {
+          void handleCreatePost();
         }}
       />
       <EventReviewSheet

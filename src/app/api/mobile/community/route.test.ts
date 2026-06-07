@@ -7,8 +7,9 @@ import { GET } from "./route";
 const mocks = vi.hoisted(() => ({
   createServiceClient: vi.fn(),
   getAuthenticatedRequestContext: vi.fn(),
+  getCircles: vi.fn(),
+  getFeedPageData: vi.fn(),
   getHomeData: vi.fn(),
-  getPulsePreview: vi.fn(),
 }));
 
 vi.mock("@/utils/supabase/requestAuth", () => ({
@@ -27,9 +28,15 @@ vi.mock("@/services/communityNetworkingHomeService", () => ({
   },
 }));
 
-vi.mock("@/services/mobileCommunityPulseService", () => ({
-  MobileCommunityPulseService: {
-    getPulsePreview: (...args: unknown[]) => mocks.getPulsePreview(...args),
+vi.mock("@/services/communityCirclesService", () => ({
+  CommunityCirclesService: {
+    getCircles: (...args: unknown[]) => mocks.getCircles(...args),
+  },
+}));
+
+vi.mock("@/services/communityHubService", () => ({
+  CommunityHubService: {
+    getFeedPageData: (...args: unknown[]) => mocks.getFeedPageData(...args),
   },
 }));
 
@@ -180,7 +187,17 @@ describe("/api/mobile/community", () => {
         roomsWithFreshTrackingCount: 1,
       },
     });
-    mocks.getPulsePreview.mockResolvedValue({
+    mocks.getCircles.mockResolvedValue([
+      {
+        id: "circle-1",
+        slug: "mobile-devs",
+        name: "Mobile Devs",
+        description: "Mobile builders.",
+        isJoined: true,
+        memberCount: 88,
+      },
+    ]);
+    mocks.getFeedPageData.mockResolvedValue({
       feed: [
         {
           id: "post-1",
@@ -201,26 +218,8 @@ describe("/api/mobile/community", () => {
           recentComments: [],
         },
       ],
-      circles: [
-        {
-          id: "circle-1",
-          slug: "mobile-devs",
-          name: "Mobile Devs",
-          description: "Mobile builders.",
-          isJoined: true,
-          memberCount: 88,
-        },
-      ],
-      communityUpcomingEvents: [
-        {
-          id: "event-1",
-          slug: "expo-conf",
-          title: "Expo Conf",
-          startTime: "2026-04-10T18:00:00.000Z",
-          location: "Remote",
-          format: "virtual",
-        },
-      ],
+      circles: [],
+      upcomingEvents: [],
     });
   });
 
@@ -245,10 +244,10 @@ describe("/api/mobile/community", () => {
       "Spring Summit",
     );
     expect(parsed.speakerMatches?.[0]?.speaker.name).toBe("Jamie Chen");
-    expect(parsed.ambientActivity?.publicTrackersToday).toBe(18);
+    expect(parsed.ambientActivity).toBeUndefined();
     expect(parsed.feed?.[0]?.circle.slug).toBe("ai-builders");
     expect(parsed.circles?.[0]?.slug).toBe("mobile-devs");
-    expect(parsed.communityUpcomingEvents?.[0]?.slug).toBe("expo-conf");
+    expect(parsed.communityUpcomingEvents).toBeUndefined();
     expect(mocks.createServiceClient).toHaveBeenCalledWith(
       "https://example.supabase.co",
       "service-role-key",
@@ -257,7 +256,11 @@ describe("/api/mobile/community", () => {
       viewerId: "22222222-2222-4222-8222-222222222222",
       readClient: { kind: "read-supabase" },
     });
-    expect(mocks.getPulsePreview).toHaveBeenCalledWith({
+    expect(mocks.getCircles).toHaveBeenCalledWith({
+      viewerId: "22222222-2222-4222-8222-222222222222",
+      readClient: { kind: "read-supabase" },
+    });
+    expect(mocks.getFeedPageData).toHaveBeenCalledWith({
       viewerId: "22222222-2222-4222-8222-222222222222",
       readClient: { kind: "read-supabase" },
     });
@@ -273,11 +276,32 @@ describe("/api/mobile/community", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns networking data when pulse preview fails", async () => {
+  it("returns networking data when circles fail", async () => {
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
-    mocks.getPulsePreview.mockRejectedValueOnce(new Error("pulse unavailable"));
+    mocks.getCircles.mockRejectedValueOnce(new Error("circles unavailable"));
+
+    const response = await GET(
+      new Request("http://localhost/api/mobile/community", {
+        headers: { Authorization: "Bearer mobile-token" },
+      }),
+    );
+    const payload = await response.json();
+    const parsed = mobileCommunityHomeSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.upcomingMoments).toHaveLength(1);
+    expect(parsed.circles).toEqual([]);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("returns networking data when feed fails", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mocks.getFeedPageData.mockRejectedValueOnce(new Error("feed unavailable"));
 
     const response = await GET(
       new Request("http://localhost/api/mobile/community", {
@@ -290,8 +314,7 @@ describe("/api/mobile/community", () => {
     expect(response.status).toBe(200);
     expect(parsed.upcomingMoments).toHaveLength(1);
     expect(parsed.feed).toEqual([]);
-    expect(parsed.circles).toEqual([]);
-    expect(parsed.communityUpcomingEvents).toEqual([]);
+    expect(parsed.circles?.[0]?.slug).toBe("mobile-devs");
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });

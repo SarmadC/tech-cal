@@ -3,9 +3,10 @@ import type {
   MobileCommunityRoomThreadList,
 } from "@kurecal/domain";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -18,7 +19,11 @@ import {
   MobilePage,
 } from "../../../../src/components/chrome/MobilePage";
 import { ScreenState } from "../../../../src/components/chrome/ScreenState";
-import { loadMobileEventThreads } from "../../../../src/lib/mobileApi";
+import { CommunityComposerModal } from "../../../../src/components/community/CommunityComposerModal";
+import {
+  createMobileCommunityRoomThread,
+  loadMobileEventThreads,
+} from "../../../../src/lib/mobileApi";
 import { useAppTheme } from "../../../../src/providers/ThemeProvider";
 
 function getInitials(name: string): string {
@@ -50,15 +55,26 @@ function formatReplyLabel(count: number): string {
 
 export default function EventThreadsScreen() {
   const { tokens } = useAppTheme();
-  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const params = useLocalSearchParams<{
+    compose?: string | string[];
+    id: string | string[];
+  }>();
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const composeParam = Array.isArray(params.compose)
+    ? params.compose[0]
+    : params.compose;
 
   const [threads, setThreads] = useState<MobileCommunityRoomThread[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [composerVisible, setComposerVisible] = useState(false);
+  const [composerTitle, setComposerTitle] = useState("");
+  const [composerBody, setComposerBody] = useState("");
+  const [composerPosting, setComposerPosting] = useState(false);
   const requestSequenceRef = useRef(0);
+  const consumedComposeRef = useRef<string | null>(null);
 
   const loadPage = useCallback(
     async (mode: "initial" | "more") => {
@@ -113,44 +129,128 @@ export default function EventThreadsScreen() {
     }, [eventId]),
   );
 
+  useEffect(() => {
+    if (!eventId || composeParam !== "1") {
+      return;
+    }
+
+    const key = `${eventId}:compose`;
+    if (consumedComposeRef.current === key) {
+      return;
+    }
+
+    consumedComposeRef.current = key;
+    setComposerVisible(true);
+  }, [composeParam, eventId]);
+
   const openThread = (threadId: string) => {
     if (!eventId) return;
     router.push(`/event/${eventId}/threads/${threadId}`);
   };
 
   const openComposer = () => {
-    if (!eventId) return;
-    router.push(`/event/${eventId}/threads/new`);
+    setComposerVisible(true);
   };
 
-  return (
-    <MobilePage
-      title="Threads"
-      action={
-        <HeaderActionButton label="Back" onPress={() => router.back()} />
-      }
-    >
-      {loading && threads.length === 0 ? (
-        <ScreenState
-          mode="loading"
-          title="Loading threads"
-          description="Pulling the latest discussions for this event."
-        />
-      ) : null}
+  function resetComposer() {
+    setComposerTitle("");
+    setComposerBody("");
+    setComposerPosting(false);
+  }
 
-      {error && threads.length === 0 ? (
-        <ScreenState
-          mode="error"
-          title="Threads unavailable"
-          description={error}
-          action={
+  function closeComposer() {
+    if (composerPosting) return;
+    setComposerVisible(false);
+  }
+
+  async function handleCreateThread() {
+    if (!eventId || composerPosting) return;
+
+    const title = composerTitle.trim();
+    const body = composerBody.trim();
+    if (!title || !body) {
+      Alert.alert("Add details", "Add a title and a body to start the thread.");
+      return;
+    }
+
+    setComposerPosting(true);
+    try {
+      const thread = await createMobileCommunityRoomThread(eventId, {
+        title,
+        body,
+      });
+      setComposerVisible(false);
+      router.push(`/event/${eventId}/threads/${thread.id}`);
+    } catch (nextError) {
+      Alert.alert(
+        "Post failed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Couldn't post the thread.",
+      );
+    } finally {
+      setComposerPosting(false);
+    }
+  }
+
+  return (
+    <>
+      <MobilePage
+        title="Threads"
+        action={
+          <HeaderActionButton label="Back" onPress={() => router.back()} />
+        }
+      >
+        {loading && threads.length === 0 ? (
+          <ScreenState
+            mode="loading"
+            title="Loading threads"
+            description="Pulling the latest discussions for this event."
+          />
+        ) : null}
+
+        {error && threads.length === 0 ? (
+          <ScreenState
+            mode="error"
+            title="Threads unavailable"
+            description={error}
+            action={
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void loadPage("initial")}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  {
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.sm,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={{
+                    color: tokens.colors.textPrimary,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 13,
+                    fontWeight: "700",
+                  }}
+                >
+                  Try again
+                </Text>
+              </Pressable>
+            }
+          />
+        ) : null}
+
+        {!loading || threads.length > 0 ? (
+          <View style={styles.stack}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => void loadPage("initial")}
+              onPress={openComposer}
               style={({ pressed }) => [
-                styles.retryButton,
+                styles.startButton,
                 {
-                  borderColor: tokens.colors.border,
+                  backgroundColor: tokens.colors.accent,
                   borderRadius: tokens.radius.sm,
                 },
                 pressed && styles.pressed,
@@ -158,137 +258,128 @@ export default function EventThreadsScreen() {
             >
               <Text
                 style={{
-                  color: tokens.colors.textPrimary,
+                  color: tokens.colors.textInverse,
                   fontFamily: tokens.typography.sans,
                   fontSize: 13,
                   fontWeight: "700",
                 }}
               >
-                Try again
+                Start a thread
               </Text>
             </Pressable>
-          }
-        />
-      ) : null}
 
-      {!loading || threads.length > 0 ? (
-        <View style={styles.stack}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={openComposer}
-            style={({ pressed }) => [
-              styles.startButton,
-              {
-                backgroundColor: tokens.colors.accent,
-                borderRadius: tokens.radius.sm,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text
-              style={{
-                color: tokens.colors.textInverse,
-                fontFamily: tokens.typography.sans,
-                fontSize: 13,
-                fontWeight: "700",
-              }}
-            >
-              Start a thread
-            </Text>
-          </Pressable>
-
-          {threads.length === 0 ? (
-            <View
-              style={[
-                styles.emptyState,
-                {
-                  backgroundColor: tokens.colors.surface,
-                  borderColor: tokens.colors.border,
-                  borderRadius: tokens.radius.sm,
-                },
-              ]}
-            >
-              <Text
+            {threads.length === 0 ? (
+              <View
                 style={[
-                  styles.emptyTitle,
+                  styles.emptyState,
                   {
-                    color: tokens.colors.textPrimary,
-                    fontFamily: tokens.typography.sans,
+                    backgroundColor: tokens.colors.surface,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.sm,
                   },
                 ]}
               >
-                No threads yet
-              </Text>
-              <Text
-                style={[
-                  styles.emptyBody,
-                  {
-                    color: tokens.colors.textTertiary,
-                    fontFamily: tokens.typography.sans,
-                  },
-                ]}
-              >
-                Start the first conversation about this event.
-              </Text>
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.list,
-                {
-                  backgroundColor: tokens.colors.surface,
-                  borderColor: tokens.colors.border,
-                  borderRadius: tokens.radius.sm,
-                },
-              ]}
-            >
-              {threads.map((thread, index) => (
-                <ThreadCard
-                  key={thread.id}
-                  thread={thread}
-                  isLast={index === threads.length - 1}
-                  onOpen={() => openThread(thread.id)}
-                />
-              ))}
-            </View>
-          )}
-
-          {nextCursor ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={loadingMore}
-              onPress={() => void loadPage("more")}
-              style={({ pressed }) => [
-                styles.loadMore,
-                {
-                  borderColor: tokens.colors.border,
-                  borderRadius: tokens.radius.sm,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              {loadingMore ? (
-                <ActivityIndicator
-                  color={tokens.colors.textSecondary}
-                  size="small"
-                />
-              ) : (
                 <Text
-                  style={{
-                    color: tokens.colors.textSecondary,
-                    fontFamily: tokens.typography.sans,
-                    fontSize: 13,
-                    fontWeight: "700",
-                  }}
+                  style={[
+                    styles.emptyTitle,
+                    {
+                      color: tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
                 >
-                  Load more
+                  No threads yet
                 </Text>
-              )}
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-    </MobilePage>
+                <Text
+                  style={[
+                    styles.emptyBody,
+                    {
+                      color: tokens.colors.textTertiary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
+                >
+                  Start the first conversation about this event.
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.list,
+                  {
+                    backgroundColor: tokens.colors.surface,
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.sm,
+                  },
+                ]}
+              >
+                {threads.map((thread, index) => (
+                  <ThreadCard
+                    key={thread.id}
+                    thread={thread}
+                    isLast={index === threads.length - 1}
+                    onOpen={() => openThread(thread.id)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {nextCursor ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={loadingMore}
+                onPress={() => void loadPage("more")}
+                style={({ pressed }) => [
+                  styles.loadMore,
+                  {
+                    borderColor: tokens.colors.border,
+                    borderRadius: tokens.radius.sm,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator
+                    color={tokens.colors.textSecondary}
+                    size="small"
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      color: tokens.colors.textSecondary,
+                      fontFamily: tokens.typography.sans,
+                      fontSize: 13,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Load more
+                  </Text>
+                )}
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </MobilePage>
+      <CommunityComposerModal
+        body={composerBody}
+        bodyPlaceholder="Share context, ask a question, kick off a conversation..."
+        isWorking={composerPosting}
+        modalTitle="New thread"
+        requireBody
+        showCommunityControls={false}
+        submitLabel="Post thread"
+        title={composerTitle}
+        titlePlaceholder="What's this thread about?"
+        visible={composerVisible}
+        onAfterClose={resetComposer}
+        onChangeBody={setComposerBody}
+        onChangeTitle={setComposerTitle}
+        onClose={closeComposer}
+        onSubmit={() => {
+          void handleCreateThread();
+        }}
+      />
+    </>
   );
 }
 

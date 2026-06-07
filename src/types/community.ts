@@ -83,6 +83,31 @@ export interface CommunityLaunchpadData {
 
 // ── Community Hub (redesigned page) ──────────────────────────────
 
+export type CommunityPostType =
+  | 'update'
+  | 'question'
+  | 'intro'
+  | 'showcase'
+  | 'event_note'
+  | 'announcement';
+
+export interface CommunityEmbeddedEvent {
+  id: string;
+  title: string;
+  slug?: string;
+  description?: string | null;
+  location?: string | null;
+  startTime: string;
+  endTime?: string | null;
+  imageUrl?: string | null;
+  organizerLogoUrl?: string | null;
+  organizerName?: string | null;
+  tags?: string[];
+  timeLabel?: string | null;
+  formatLabel?: string | null;
+  priceLabel?: string | null;
+}
+
 export interface CommunityFeedPost {
   id: string;
   title?: string;
@@ -97,6 +122,33 @@ export interface CommunityFeedPost {
     content: string;
     createdAt: string;
     author: { id: string; fullName: string | null; avatarUrl: string | null };
+  }>;
+  score?: number;
+  userVote?: -1 | 0 | 1;
+  postType?: CommunityPostType;
+  eventId?: string | null;
+  event?: CommunityEmbeddedEvent | null;
+  mentions?: Array<{
+    userId: string;
+    username: string | null;
+    fullName: string | null;
+    avatarUrl: string | null;
+  }>;
+  media?: Array<{
+    id?: string;
+    path: string;
+    url: string;
+    width: number;
+    height: number;
+    position: number;
+  }>;
+  linkPreviews?: Array<{
+    id?: string;
+    url: string;
+    title: string | null;
+    description: string | null;
+    imageUrl: string | null;
+    siteName: string | null;
   }>;
 }
 
@@ -115,19 +167,13 @@ export interface CommunityFeedPageData {
   upcomingEvents: CommunityUpcomingEvent[];
 }
 
-export interface MobileCommunityPulseCircle {
+export interface MobileCommunityCirclePreview {
   id: string;
   slug: string;
   name: string;
   description: string;
   isJoined: boolean;
   memberCount: number;
-}
-
-export interface MobileCommunityPulsePreviewData {
-  feed: CommunityFeedPost[];
-  circles: MobileCommunityPulseCircle[];
-  communityUpcomingEvents: CommunityUpcomingEvent[];
 }
 
 // ── Community Networking Hub ───────────────────────────────────

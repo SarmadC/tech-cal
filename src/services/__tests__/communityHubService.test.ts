@@ -80,6 +80,32 @@ function createProfilesChain(data: unknown[]) {
   return chain;
 }
 
+function createMentionsChain(data: unknown[]) {
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.in = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
+}
+
+function createOrderedAttachmentChain(data: unknown[]) {
+  const chain: {
+    select: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+  } = {} as never;
+
+  chain.select = vi.fn(() => chain);
+  chain.in = vi.fn(() => chain);
+  chain.order = vi.fn(async () => ({ data, error: null }));
+
+  return chain;
+}
+
 describe('CommunityHubService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,36 +124,44 @@ describe('CommunityHubService', () => {
     const joinedPostsChain = createPostsChain([
       {
         id: 'post-1',
+        title: 'Safe joined post',
         content: 'Safe joined post',
         created_at: '2026-03-24T10:00:00.000Z',
         author_id: 'safe-author',
         circle_id: 'circle-1',
+        post_type: 'update',
         moderation_status: 'active',
       },
       {
         id: 'post-2',
+        title: 'Blocked author post',
         content: 'Blocked author post',
         created_at: '2026-03-24T09:00:00.000Z',
         author_id: 'blocked-user',
         circle_id: 'circle-1',
+        post_type: 'update',
         moderation_status: 'active',
       },
     ]);
     const globalPostsChain = createPostsChain([
       {
         id: 'post-1',
+        title: 'Safe joined post',
         content: 'Safe joined post',
         created_at: '2026-03-24T10:00:00.000Z',
         author_id: 'safe-author',
         circle_id: 'circle-1',
+        post_type: 'update',
         moderation_status: 'active',
       },
       {
         id: 'post-3',
+        title: 'Global safe post',
         content: 'Global safe post',
         created_at: '2026-03-24T08:00:00.000Z',
         author_id: 'global-author',
         circle_id: 'circle-2',
+        post_type: 'question',
         moderation_status: 'active',
       },
     ]);
@@ -164,6 +198,18 @@ describe('CommunityHubService', () => {
         avatar_url: null,
       },
     ]);
+    const mentionsChain = createMentionsChain([]);
+    const mediaChain = createOrderedAttachmentChain([
+      {
+        id: 'media-1',
+        post_id: 'post-1',
+        storage_path: 'posts/post-1/image.jpg',
+        width: 1200,
+        height: 800,
+        position: 0,
+      },
+    ]);
+    const linksChain = createOrderedAttachmentChain([]);
 
     let circlePostsCallCount = 0;
 
@@ -190,8 +236,27 @@ describe('CommunityHubService', () => {
           return profilesChain;
         }
 
+        if (table === 'circle_post_mentions') {
+          return mentionsChain;
+        }
+
+        if (table === 'circle_post_media') {
+          return mediaChain;
+        }
+
+        if (table === 'circle_post_links') {
+          return linksChain;
+        }
+
         throw new Error(`Unexpected table ${table}`);
       }),
+      storage: {
+        from: vi.fn(() => ({
+          getPublicUrl: vi.fn((path: string) => ({
+            data: { publicUrl: `https://cdn.example.com/${path}` },
+          })),
+        })),
+      },
     } as any;
 
     const feed = await (CommunityHubService as any).getFeed({
@@ -207,6 +272,12 @@ describe('CommunityHubService', () => {
     expect(feed).toHaveLength(2);
     expect(feed.map((post: { id: string }) => post.id)).toEqual(['post-1', 'post-3']);
     expect(feed[0].commentCount).toBe(1);
+    expect(feed[0].media?.[0]).toEqual(
+      expect.objectContaining({
+        id: 'media-1',
+        url: 'https://cdn.example.com/posts/post-1/image.jpg',
+      })
+    );
     expect(feed[0].recentComments).toEqual([
       expect.objectContaining({
         id: 'comment-1',

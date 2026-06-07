@@ -30,6 +30,11 @@ import {
 import { KureButton } from '../chrome/KureButton';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
+const DETAIL_HORIZONTAL_GUTTER = 24;
+const DETAIL_CARD_INSET = 18;
+const DETAIL_SECTION_GAP = 30;
+const DETAIL_CTA_HEIGHT = 46;
+
 function IconMetaRow({
   icon,
   children,
@@ -43,7 +48,7 @@ function IconMetaRow({
 
   const inner = (
     <View style={styles.iconMetaRow}>
-      <FontAwesome name={icon} size={13} color={tokens.colors.textTertiary} style={styles.iconMetaIcon} />
+      <FontAwesome name={icon} size={22} color={tokens.colors.textSecondary} style={styles.iconMetaIcon} />
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -160,6 +165,7 @@ export function MobileEventDetailScreen({
   onOpenEventPage,
   onOpenLocation,
   onShareEvent,
+  onStartThread,
 }: {
   detail: MobileEventDetail;
   engagement?: MobileEventEngagement;
@@ -179,6 +185,7 @@ export function MobileEventDetailScreen({
   onOpenEventPage: () => void;
   onOpenLocation: (location: string) => void;
   onShareEvent: () => void;
+  onStartThread: () => void;
 }) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -278,7 +285,7 @@ export function MobileEventDetailScreen({
                         : pressed
                           ? tokens.colors.surfaceStrong
                           : tokens.colors.surface,
-                      borderColor: isBookmarked ? tokens.colors.warning : tokens.colors.border,
+                      borderColor: isBookmarked ? tokens.colors.warning : 'transparent',
                       opacity: isBookmarkPending ? 0.45 : 1,
                     },
                   ]}
@@ -441,15 +448,7 @@ export function MobileEventDetailScreen({
           showsVerticalScrollIndicator={false}
         >
           {/* Event facts */}
-          <View
-            style={[
-              styles.factPanel,
-              {
-                backgroundColor: tokens.colors.surface,
-                borderColor: tokens.colors.border,
-              },
-            ]}
-          >
+          <View style={styles.factList}>
             <IconMetaRow icon="calendar">
               <Text selectable style={[styles.metaRowText, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
                 {formatEventDateTime(event.startTime, event.endTime, event.timezone)}
@@ -776,7 +775,10 @@ export function MobileEventDetailScreen({
           ) : null}
 
           {/* ── Discussions / Event Room ── */}
-          <EventDiscussionSection eventId={event.id} />
+          <EventDiscussionSection
+            eventId={event.id}
+            onStartThread={onStartThread}
+          />
         </ScrollView>
 
         {/* ── Sticky CTA bar ── */}
@@ -792,7 +794,9 @@ export function MobileEventDetailScreen({
         >
           <View style={styles.ctaRow}>
             <View style={{ flex: 1 }}>
-              <KureButton onPress={onPrimaryAction}>{primaryLabel}</KureButton>
+              <KureButton onPress={onPrimaryAction} style={styles.primaryCtaButton}>
+                {primaryLabel}
+              </KureButton>
             </View>
             <Pressable
               accessibilityLabel={attendanceCta.accessibilityLabel}
@@ -847,7 +851,7 @@ const styles = StyleSheet.create({
   header: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingBottom: 24,
-    paddingHorizontal: 14,
+    paddingHorizontal: DETAIL_HORIZONTAL_GUTTER,
   },
   headerRow: {
     gap: 16,
@@ -935,76 +939,80 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    gap: 30,
-    paddingHorizontal: 14,
+    gap: DETAIL_SECTION_GAP,
+    paddingHorizontal: DETAIL_HORIZONTAL_GUTTER,
     paddingTop: 26,
     paddingBottom: 36,
   },
-  factPanel: {
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+  factList: {
+    gap: 0,
   },
   iconMetaRowPressable: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 20,
   },
   iconMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 18,
   },
   iconMetaIcon: {
-    width: 18,
+    width: 34,
     textAlign: 'center',
   },
   metaRowText: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 21,
+    lineHeight: 28,
     fontWeight: '600',
   },
   calendarStatusLabel: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 4,
   },
   metaDivider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: 16,
+    marginLeft: 52,
   },
   organizerLabel: {
-    fontSize: 11,
+    fontSize: 16,
+    lineHeight: 21,
     fontWeight: '600',
-    marginBottom: 1,
+    marginBottom: 4,
   },
   hostLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 4,
+    width: 52,
+    height: 52,
+    borderRadius: 7,
   },
   hostFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 4,
+    width: 52,
+    height: 52,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
   hostFallbackText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   ctaBar: {
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: DETAIL_HORIZONTAL_GUTTER,
   },
   ctaRow: {
     flexDirection: 'row',
     gap: 10,
+    alignItems: 'stretch',
+  },
+  primaryCtaButton: {
+    minHeight: DETAIL_CTA_HEIGHT,
+    height: DETAIL_CTA_HEIGHT,
   },
   attendanceButton: {
     minWidth: 118,
-    minHeight: 32,
+    minHeight: DETAIL_CTA_HEIGHT,
+    height: DETAIL_CTA_HEIGHT,
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1065,7 +1073,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
     justifyContent: 'space-between',
-    padding: 16,
+    padding: DETAIL_CARD_INSET,
   },
   pulseLabel: {
     fontSize: 11,
@@ -1107,7 +1115,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   speakerListRow: {
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 10,
   },
   speakerAvatar: {
@@ -1144,7 +1152,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 10,
   },
   agendaHeaderCopy: {
@@ -1158,7 +1166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 10,
   },
   agendaTime: {

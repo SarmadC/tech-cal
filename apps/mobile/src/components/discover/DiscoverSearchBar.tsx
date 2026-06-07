@@ -70,7 +70,6 @@ export function DiscoverSearchBar({
               activeFilterCount > 0
                 ? tokens.colors.discoverToolbarStrong
                 : "transparent",
-            borderColor: tokens.colors.discoverToolbarBorder,
             opacity: pressed ? 0.82 : 1,
           },
         ]}
@@ -125,7 +124,6 @@ const styles = StyleSheet.create({
   filterButton: {
     alignItems: "center",
     borderRadius: 4,
-    borderWidth: 1,
     justifyContent: "center",
     minHeight: 30,
     width: 30,

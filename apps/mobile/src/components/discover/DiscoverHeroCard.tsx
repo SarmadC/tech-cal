@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "space-between",
-    minHeight: 172,
+    minHeight: 224,
     overflow: "hidden",
   },
   pressed: {

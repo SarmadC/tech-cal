@@ -822,42 +822,49 @@ export default function CommunityCircleScreen() {
             ) : null}
 
             {data?.posts.length ? (
-              <View style={styles.listSurface}>
-                {data.posts.map((post) => (
-                  <CommunityFeedCard
+              <View style={styles.postListSurface}>
+                {data.posts.map((post, index) => (
+                  <View
                     key={post.id}
-                    post={{
-                      id: post.id,
-                      title: post.title,
-                      content: post.content,
-                      createdAt: post.createdAt,
-                      author: post.author,
-                      circle: {
-                        slug: data.circle.slug,
-                        name: data.circle.name,
-                      },
-                      commentCount: countCommunityComments(post.comments),
-                      isTrending: countCommunityComments(post.comments) >= 8,
-                      score: post.score,
-                      userVote: post.userVote,
-                      postType: post.postType,
-                      eventId: post.eventId,
-                      event: post.event,
-                      mentions: post.mentions,
-                      media: post.media,
-                      linkPreviews: post.linkPreviews,
-                    }}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/community/[slug]/post/[postId]',
-                        params: { slug: data.circle.slug, postId: post.id },
-                      })
-                    }
-                    onVote={(_feedPost, voteType) => {
-                      void handlePostVote(post, voteType);
-                    }}
-                    variant="row"
-                  />
+                    style={[
+                      styles.postListRow,
+                      index < data.posts.length - 1 ? styles.postListDivider : null,
+                    ]}
+                  >
+                    <CommunityFeedCard
+                      post={{
+                        id: post.id,
+                        title: post.title,
+                        content: post.content,
+                        createdAt: post.createdAt,
+                        author: post.author,
+                        circle: {
+                          slug: data.circle.slug,
+                          name: data.circle.name,
+                        },
+                        commentCount: countCommunityComments(post.comments),
+                        isTrending: countCommunityComments(post.comments) >= 8,
+                        score: post.score,
+                        userVote: post.userVote,
+                        postType: post.postType,
+                        eventId: post.eventId,
+                        event: post.event,
+                        mentions: post.mentions,
+                        media: post.media,
+                        linkPreviews: post.linkPreviews,
+                      }}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/community/[slug]/post/[postId]',
+                          params: { slug: data.circle.slug, postId: post.id },
+                        })
+                      }
+                      onVote={(_feedPost, voteType) => {
+                        void handlePostVote(post, voteType);
+                      }}
+                      variant="thread"
+                    />
+                  </View>
                 ))}
               </View>
             ) : (
@@ -1060,7 +1067,17 @@ const styles = StyleSheet.create({
   },
   listSurface: {
     backgroundColor: 'transparent',
-    gap: 0,
+    gap: 10,
+  },
+  postListDivider: {
+    borderBottomColor: design.border,
+    borderBottomWidth: 1,
+  },
+  postListRow: {
+    paddingVertical: 2,
+  },
+  postListSurface: {
+    backgroundColor: 'transparent',
   },
   memberHeadline: {
     color: design.muted,

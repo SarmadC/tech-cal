@@ -20,6 +20,7 @@ import { useTabBarVisibility } from '../chrome/TabBarVisibilityProvider';
 interface DiscoverShellProps extends PropsWithChildren {
   contentStyle?: StyleProp<ViewStyle>;
   header: (compact: boolean, controlsVisible: boolean) => ReactNode;
+  onControlsVisibilityChange?: (visible: boolean) => void;
   refreshControl?: ReactElement<RefreshControlProps>;
 }
 
@@ -27,6 +28,7 @@ export function DiscoverShell({
   children,
   contentStyle,
   header,
+  onControlsVisibilityChange,
   refreshControl,
 }: DiscoverShellProps) {
   const { tokens } = useAppTheme();
@@ -102,12 +104,15 @@ export function DiscoverShell({
           if (offsetY <= 8 && !controlsVisible) {
             if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(true);
+            onControlsVisibilityChange?.(true);
           } else if (delta > 12 && offsetY > 40 && controlsVisible) {
             if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(false);
+            onControlsVisibilityChange?.(false);
           } else if (delta < -8 && !controlsVisible) {
             if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setControlsVisible(true);
+            onControlsVisibilityChange?.(true);
           }
 
           handleScroll(offsetY);

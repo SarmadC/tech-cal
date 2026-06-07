@@ -2,7 +2,6 @@ import { FontAwesome } from "@expo/vector-icons";
 import type {
   CommunityPostType,
   MobileCommunityCircle,
-  MobileCommunityEventCard,
   MobileCommunityFeedPost,
   MobileCommunityHome,
   MobileCommunityNetworkingEvent,
@@ -11,27 +10,19 @@ import type {
   MobileCommunityNetworkingSharedEvent,
 } from "@kurecal/domain";
 import { router, useFocusEffect } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Easing,
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  useWindowDimensions,
   View,
 } from "react-native";
 
 import {
-  DURATIONS,
-  SPRING_CONFIG,
-  useReduceMotion,
   useScalePress,
 } from "../../src/hooks/useAnimation";
 
@@ -39,7 +30,12 @@ import { KureButton } from "../../src/components/chrome/KureButton";
 import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
 import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
-import { CommunityAttachedEventRow } from "../../src/components/community/CommunityAttachedEventRow";
+import {
+  CommunityComposerModal,
+  type CommunityComposerEventOption,
+  type CommunityComposerImageAttachment,
+} from "../../src/components/community/CommunityComposerModal";
+import { useCommunityImageAttachments } from "../../src/hooks/useCommunityImageAttachments";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
 import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
@@ -47,15 +43,12 @@ import { CommunityFeedCard } from "../../src/components/CommunityFeedCard";
 import { formatCommunityTabCount } from "../../src/components/community/presentation";
 import {
   createMobileCommunityPost,
-  deleteCommunityPostImage,
   followMobileUser,
   joinMobileCommunityCircle,
   leaveMobileCommunityCircle,
   loadMobileCommunityEvents,
   loadMobileCommunityHome,
   unfollowMobileUser,
-  uploadCommunityPostImage,
-  type CommunityPostImageUploadResult,
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
@@ -86,25 +79,7 @@ const PEOPLE_LENSES: Array<{ id: PeopleLens; label: string }> = [
   { id: "recent", label: "Recent" },
 ];
 
-const POST_TYPE_OPTIONS: Array<{ label: string; value: CommunityPostType }> = [
-  { label: "Update", value: "update" },
-  { label: "Question", value: "question" },
-  { label: "Intro", value: "intro" },
-  { label: "Showcase", value: "showcase" },
-  { label: "Event note", value: "event_note" },
-  { label: "Announcement", value: "announcement" },
-];
-
-const MAX_POST_IMAGES = 4;
-const MAX_POST_IMAGE_EDGE = 8_000;
-
-interface CommunityPostImageAttachment extends CommunityPostImageUploadResult {
-  localUri: string;
-}
-
-interface ComposerEventOption extends MobileCommunityEventCard {
-  circle: Pick<MobileCommunityCircle, "id" | "name" | "slug">;
-}
+type ComposerEventOption = CommunityComposerEventOption;
 
 function getCommunityLoadErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
@@ -287,12 +262,9 @@ export default function CommunityScreen() {
     useState(false);
   const [composerEventPickerOpen, setComposerEventPickerOpen] = useState(false);
   const [composerEventPickerQuery, setComposerEventPickerQuery] = useState("");
-  const [composerSelectedMedia, setComposerSelectedMedia] = useState<
-    CommunityPostImageAttachment[]
-  >([]);
-  const [composerUploadingMedia, setComposerUploadingMedia] = useState(false);
-  const composerSelectedMediaRef = useRef<CommunityPostImageAttachment[]>([]);
-  const composerPublishedMediaPathsRef = useRef<Set<string>>(new Set());
+  const composerImageAttachments = useCommunityImageAttachments({
+    isBusy: composerWorking,
+  });
   const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
   const [roomSheetEventId, setRoomSheetEventId] = useState<string | null>(null);
 
@@ -361,39 +333,6 @@ export default function CommunityScreen() {
   const composerPublishCircle =
     composerCircle ?? composerAttachedEvent?.circle ?? composerFallbackCircle;
 
-  useEffect(() => {
-    composerSelectedMediaRef.current = composerSelectedMedia;
-  }, [composerSelectedMedia]);
-
-  useEffect(
-    () => () => {
-      const unpublishedPaths = composerSelectedMediaRef.current
-        .map((item) => item.path)
-        .filter((path) => !composerPublishedMediaPathsRef.current.has(path));
-
-      if (unpublishedPaths.length) {
-        void Promise.allSettled(
-          unpublishedPaths.map((path) => deleteCommunityPostImage(path)),
-        );
-      }
-    },
-    [],
-  );
-
-  function cleanupUnpublishedComposerMedia() {
-    const unpublishedPaths = composerSelectedMedia
-      .map((item) => item.path)
-      .filter((path) => !composerPublishedMediaPathsRef.current.has(path));
-
-    if (unpublishedPaths.length) {
-      void Promise.allSettled(
-        unpublishedPaths.map((path) => deleteCommunityPostImage(path)),
-      );
-    }
-
-    composerPublishedMediaPathsRef.current = new Set();
-  }
-
   function resetComposer() {
     setComposerCircleId(null);
     setComposerPostType(null);
@@ -405,8 +344,7 @@ export default function CommunityScreen() {
     setComposerEventPickerLoading(false);
     setComposerEventPickerOpen(false);
     setComposerEventPickerQuery("");
-    setComposerSelectedMedia([]);
-    setComposerUploadingMedia(false);
+    composerImageAttachments.resetMedia();
   }
 
   function handleOpenComposer() {
@@ -414,17 +352,16 @@ export default function CommunityScreen() {
   }
 
   function handleCloseComposer() {
-    if (composerWorking || composerUploadingMedia) {
+    if (composerWorking || composerImageAttachments.isUploadingMedia) {
       return;
     }
 
-    cleanupUnpublishedComposerMedia();
+    composerImageAttachments.cleanupUnpublishedMedia();
     setIsComposerOpen(false);
   }
 
   function handleComposerAfterClose() {
     resetComposer();
-    composerPublishedMediaPathsRef.current = new Set();
   }
 
   function handleChangeComposerCircle(circleId: string) {
@@ -480,109 +417,8 @@ export default function CommunityScreen() {
     }
   }
 
-  async function handlePickComposerImages() {
-    if (composerWorking || composerUploadingMedia) {
-      return;
-    }
-
-    const remainingSlots = MAX_POST_IMAGES - composerSelectedMedia.length;
-    if (remainingSlots <= 0) {
-      Alert.alert("Image limit reached", `You can attach up to ${MAX_POST_IMAGES} images.`);
-      return;
-    }
-
-    let result: ImagePicker.ImagePickerResult;
-    try {
-      result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: false,
-        allowsMultipleSelection: true,
-        mediaTypes: ["images"],
-        orderedSelection: true,
-        preferredAssetRepresentationMode:
-          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
-        quality: 0.86,
-        selectionLimit: remainingSlots,
-      });
-    } catch (nextError) {
-      Alert.alert(
-        "Photos unavailable",
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to open your photo library.",
-      );
-      return;
-    }
-
-    if (result.canceled) {
-      return;
-    }
-
-    const assets = result.assets
-      .filter((asset) => asset.uri && asset.width > 0 && asset.height > 0)
-      .slice(0, remainingSlots);
-
-    if (!assets.length) {
-      return;
-    }
-
-    if (
-      assets.some(
-        (asset) => asset.width > MAX_POST_IMAGE_EDGE || asset.height > MAX_POST_IMAGE_EDGE,
-      )
-    ) {
-      Alert.alert("Image too large", "Choose images under 8000 pixels wide or tall.");
-      return;
-    }
-
-    const uploads: CommunityPostImageAttachment[] = [];
-    setComposerUploadingMedia(true);
-    try {
-      for (const asset of assets) {
-        const uploaded = await uploadCommunityPostImage({
-          fileName: asset.fileName,
-          height: asset.height,
-          mimeType: asset.mimeType,
-          uri: asset.uri,
-          width: asset.width,
-        });
-        uploads.push({ ...uploaded, localUri: asset.uri });
-      }
-      setComposerSelectedMedia((current) =>
-        [...current, ...uploads].slice(0, MAX_POST_IMAGES),
-      );
-    } catch (nextError) {
-      await Promise.allSettled(
-        uploads.map((item) => deleteCommunityPostImage(item.path)),
-      );
-      Alert.alert(
-        "Upload failed",
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to upload the selected image.",
-      );
-    } finally {
-      setComposerUploadingMedia(false);
-    }
-  }
-
-  async function handleRemoveComposerImage(path: string) {
-    try {
-      await deleteCommunityPostImage(path);
-      setComposerSelectedMedia((current) =>
-        current.filter((item) => item.path !== path),
-      );
-    } catch (nextError) {
-      Alert.alert(
-        "Remove failed",
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to remove the selected image.",
-      );
-    }
-  }
-
   async function handleOpenComposerEventPicker() {
-    if (composerWorking || composerUploadingMedia) {
+    if (composerWorking || composerImageAttachments.isUploadingMedia) {
       return;
     }
 
@@ -653,7 +489,7 @@ export default function CommunityScreen() {
     setComposerWorking(true);
 
     try {
-      const media = composerSelectedMedia.map((item) => ({
+      const media = composerImageAttachments.media.map((item) => ({
         path: item.path,
         width: item.width,
         height: item.height,
@@ -668,9 +504,7 @@ export default function CommunityScreen() {
         eventId: composerAttachedEvent?.id,
         media,
       });
-      media.forEach((item) => {
-        composerPublishedMediaPathsRef.current.add(item.path);
-      });
+      composerImageAttachments.markMediaPublished(media.map((m) => m.path));
       setIsComposerOpen(false);
       await loadCommunity("refresh");
     } catch (nextError) {
@@ -736,7 +570,7 @@ export default function CommunityScreen() {
           eventId={roomSheetEventId}
           onClose={() => setRoomSheetEventId(null)}
         />
-        <HomeComposerModal
+        <CommunityComposerModal
           attachedEvent={composerAttachedEvent}
           body={composerBody}
           circle={composerCircle}
@@ -747,8 +581,8 @@ export default function CommunityScreen() {
           eventPickerOpen={composerEventPickerOpen}
           eventPickerQuery={composerEventPickerQuery}
           isWorking={composerWorking}
-          isUploadingMedia={composerUploadingMedia}
-          media={composerSelectedMedia}
+          isUploadingMedia={composerImageAttachments.isUploadingMedia}
+          media={composerImageAttachments.media}
           postType={composerPostType}
           title={composerTitle}
           visible={isComposerOpen}
@@ -763,11 +597,11 @@ export default function CommunityScreen() {
             void handleOpenComposerEventPicker();
           }}
           onPickImages={() => {
-            void handlePickComposerImages();
+            void composerImageAttachments.pickImages();
           }}
           onRemoveEvent={() => setComposerAttachedEvent(null)}
           onRemoveImage={(path) => {
-            void handleRemoveComposerImage(path);
+            void composerImageAttachments.removeImage(path);
           }}
           onSelectEvent={(event) => {
             setComposerAttachedEvent(event);
@@ -1082,694 +916,6 @@ function SecondarySectionHeader({
         </Text>
       ) : null}
     </View>
-  );
-}
-
-function HomeComposerModal({
-  attachedEvent,
-  body,
-  circle,
-  circles,
-  eventPickerEvents,
-  eventPickerLoading,
-  eventPickerOpen,
-  eventPickerQuery,
-  fallbackCircle,
-  isWorking,
-  isUploadingMedia,
-  media,
-  onChangeBody,
-  onChangeCircle,
-  onChangeEventPickerQuery,
-  onChangePostType,
-  onChangeTitle,
-  onAfterClose,
-  onClose,
-  onOpenEventPicker,
-  onPickImages,
-  onRemoveEvent,
-  onRemoveImage,
-  onSelectEvent,
-  onSubmit,
-  postType,
-  title,
-  visible,
-}: {
-  attachedEvent: ComposerEventOption | null;
-  body: string;
-  circle: MobileCommunityCircle | null;
-  circles: MobileCommunityCircle[];
-  eventPickerEvents: ComposerEventOption[];
-  eventPickerLoading: boolean;
-  eventPickerOpen: boolean;
-  eventPickerQuery: string;
-  fallbackCircle: MobileCommunityCircle | null;
-  isWorking: boolean;
-  isUploadingMedia: boolean;
-  media: CommunityPostImageAttachment[];
-  onChangeBody: (value: string) => void;
-  onChangeCircle: (circleId: string) => void;
-  onChangeEventPickerQuery: (value: string) => void;
-  onChangePostType: (value: CommunityPostType | null) => void;
-  onChangeTitle: (value: string) => void;
-  onAfterClose: () => void;
-  onClose: () => void;
-  onOpenEventPicker: () => void;
-  onPickImages: () => void;
-  onRemoveEvent: () => void;
-  onRemoveImage: (path: string) => void;
-  onSelectEvent: (event: ComposerEventOption) => void;
-  onSubmit: () => void;
-  postType: CommunityPostType | null;
-  title: string;
-  visible: boolean;
-}) {
-  const { tokens } = useAppTheme();
-  const { height: windowHeight } = useWindowDimensions();
-  const reduceMotion = useReduceMotion();
-  const [initialVisible] = useState(visible);
-  const animationProgress = useMemo(() => new Animated.Value(initialVisible ? 1 : 0), [initialVisible]);
-  const [shouldRender, setShouldRender] = useState(visible);
-  // Derived state: mount immediately when visible becomes true (no effect needed)
-  if (visible && !shouldRender) setShouldRender(true);
-  const hasOpenedRef = useRef(false);
-  const onAfterCloseRef = useRef(onAfterClose);
-  const [isPostTypeOpen, setIsPostTypeOpen] = useState(false);
-  const effectiveCircle = circle ?? attachedEvent?.circle ?? fallbackCircle;
-  const canSubmit = Boolean(
-    effectiveCircle && title.trim() && !isWorking && !isUploadingMedia,
-  );
-  const eventQuery = eventPickerQuery.trim().toLowerCase();
-  const filteredEvents = eventQuery
-    ? eventPickerEvents.filter((event) =>
-        [event.title, event.location, event.format]
-          .filter((field): field is string => Boolean(field))
-          .some((field) => field.toLowerCase().includes(eventQuery)),
-      )
-    : eventPickerEvents;
-  const scrimOpacity = useMemo(
-    () => animationProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
-    [animationProgress],
-  );
-  const sheetTranslateY = useMemo(
-    () => animationProgress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }),
-    [animationProgress, windowHeight],
-  );
-
-  useEffect(() => {
-    onAfterCloseRef.current = onAfterClose;
-  }, [onAfterClose]);
-
-  useEffect(() => {
-    if (visible) {
-      hasOpenedRef.current = true;
-      setIsPostTypeOpen(false);
-      animationProgress.stopAnimation();
-
-      if (reduceMotion) {
-        animationProgress.setValue(1);
-        return;
-      }
-
-      Animated.timing(animationProgress, {
-        toValue: 1,
-        duration: DURATIONS.standard,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    if (!shouldRender) {
-      return;
-    }
-
-    setIsPostTypeOpen(false);
-    animationProgress.stopAnimation();
-
-    if (reduceMotion) {
-      animationProgress.setValue(0);
-      setShouldRender(false);
-      if (hasOpenedRef.current) {
-        onAfterCloseRef.current();
-      }
-      return;
-    }
-
-    Animated.spring(animationProgress, {
-      toValue: 0,
-      ...SPRING_CONFIG,
-    }).start(({ finished }) => {
-      if (!finished) {
-        return;
-      }
-
-      setShouldRender(false);
-      if (hasOpenedRef.current) {
-        onAfterCloseRef.current();
-      }
-    });
-  }, [animationProgress, reduceMotion, shouldRender, visible]);
-
-  if (!shouldRender) {
-    return null;
-  }
-
-  return (
-    <Modal
-      animationType="none"
-      transparent
-      visible={shouldRender}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalScrim}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close composer"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        >
-          <Animated.View
-            style={[styles.modalBackdrop, { opacity: scrimOpacity }]}
-          />
-        </Pressable>
-        <Animated.View
-          style={[
-            styles.composerModal,
-            {
-              backgroundColor: tokens.colors.surfaceStrong,
-              borderColor: tokens.colors.border,
-              borderRadius: tokens.radius.lg,
-              transform: [{ translateY: sheetTranslateY }],
-            },
-          ]}
-        >
-          <View style={styles.composerHeader}>
-            <Text
-              style={[
-                styles.composerTitle,
-                {
-                  color: tokens.colors.textPrimary,
-                  fontFamily: tokens.typography.sans,
-                },
-              ]}
-            >
-              Create post
-            </Text>
-            <Pressable accessibilityRole="button" onPress={onClose}>
-              <FontAwesome
-                name="close"
-                size={18}
-                color={tokens.colors.textSecondary}
-              />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            style={styles.composerScroll}
-            contentContainerStyle={styles.composerScrollContent}
-          >
-            {circles.length === 0 ? (
-              <View
-                style={[
-                  styles.composerNotice,
-                  {
-                    backgroundColor: tokens.colors.surfaceMuted,
-                    borderColor: tokens.colors.border,
-                    borderRadius: tokens.radius.sm,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.composerNoticeText,
-                    {
-                      color: tokens.colors.textSecondary,
-                      fontFamily: tokens.typography.sans,
-                    },
-                  ]}
-                >
-                  Join a circle before creating a community post.
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.composerLabel}>Circle (optional)</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.composerChipRow}
-                >
-                  {circles.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: circle?.id === item.id }}
-                      onPress={() => onChangeCircle(item.id)}
-                      style={[
-                        styles.composerChip,
-                        {
-                          backgroundColor:
-                            circle?.id === item.id
-                              ? tokens.colors.pillActive
-                              : tokens.colors.surfaceMuted,
-                          borderRadius: tokens.radius.xs,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.composerChipText,
-                          {
-                            color:
-                              circle?.id === item.id
-                                ? tokens.colors.pillActiveText
-                                : tokens.colors.textPrimary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        {item.name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                <Text style={styles.composerLabel}>Type</Text>
-                <View style={styles.postTypeSelectWrap}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Select post type"
-                    onPress={() => setIsPostTypeOpen((current) => !current)}
-                    style={({ pressed }) => [
-                      styles.postTypeSelect,
-                      {
-                        backgroundColor: tokens.colors.surfaceMuted,
-                        borderRadius: tokens.radius.xs,
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.postTypeSelectLabel,
-                        {
-                          color: postType
-                            ? tokens.colors.textPrimary
-                            : tokens.colors.textTertiary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {POST_TYPE_OPTIONS.find((option) => option.value === postType)
-                        ?.label ?? "Select type"}
-                    </Text>
-                    <FontAwesome
-                      name={isPostTypeOpen ? "chevron-up" : "chevron-down"}
-                      size={11}
-                      color={tokens.colors.textSecondary}
-                    />
-                  </Pressable>
-                  {isPostTypeOpen ? (
-                    <View
-                      style={[
-                        styles.postTypeMenu,
-                        {
-                          backgroundColor: tokens.colors.surfaceMuted,
-                          borderColor: tokens.colors.border,
-                          borderRadius: tokens.radius.xs,
-                        },
-                      ]}
-                    >
-                      {POST_TYPE_OPTIONS.map((option) => {
-                        const isSelected = option.value === postType;
-
-                        return (
-                          <Pressable
-                            key={option.value}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: isSelected }}
-                            onPress={() => {
-                              onChangePostType(isSelected ? null : option.value);
-                              setIsPostTypeOpen(false);
-                            }}
-                            style={({ pressed }) => [
-                              styles.postTypeOption,
-                              pressed && styles.pressed,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.postTypeOptionLabel,
-                                {
-                                  color: isSelected
-                                    ? tokens.colors.accent
-                                    : tokens.colors.textPrimary,
-                                  fontFamily: tokens.typography.sans,
-                                },
-                              ]}
-                            >
-                              {option.label}
-                            </Text>
-                            {isSelected ? (
-                              <FontAwesome
-                                name="check"
-                                size={11}
-                                color={tokens.colors.accent}
-                              />
-                            ) : null}
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </View>
-
-              <TextInput
-                placeholder="Title"
-                placeholderTextColor={tokens.colors.textTertiary}
-                value={title}
-                onChangeText={onChangeTitle}
-                style={[
-                  styles.composerInput,
-                  {
-                    borderColor: tokens.colors.border,
-                    color: tokens.colors.textPrimary,
-                    fontFamily: tokens.typography.sans,
-                  },
-                ]}
-              />
-              <TextInput
-                multiline
-                placeholder="Optional details"
-                placeholderTextColor={tokens.colors.textTertiary}
-                textAlignVertical="top"
-                value={body}
-                onChangeText={onChangeBody}
-                style={[
-                  styles.composerBodyInput,
-                  {
-                    borderColor: tokens.colors.border,
-                    color: tokens.colors.textPrimary,
-                    fontFamily: tokens.typography.sans,
-                  },
-                ]}
-              />
-              <View style={styles.composerToolbar}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isUploadingMedia ? "Uploading image" : "Add image"
-                  }
-                  disabled={
-                    isWorking ||
-                    isUploadingMedia ||
-                    media.length >= MAX_POST_IMAGES
-                  }
-                  onPress={onPickImages}
-                  style={({ pressed }) => [
-                    styles.composerToolButton,
-                    {
-                      backgroundColor: tokens.colors.surfaceMuted,
-                      borderRadius: tokens.radius.xs,
-                      opacity:
-                        isWorking ||
-                        isUploadingMedia ||
-                        media.length >= MAX_POST_IMAGES
-                          ? 0.48
-                          : 1,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <FontAwesome
-                    name="image"
-                    size={15}
-                    color={tokens.colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.composerToolLabel,
-                      {
-                        color: tokens.colors.textSecondary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                  >
-                    {isUploadingMedia ? "Uploading" : "Image"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    attachedEvent ? "Change attached event" : "Attach event"
-                  }
-                  disabled={isWorking || isUploadingMedia || !circles.length}
-                  onPress={onOpenEventPicker}
-                  style={({ pressed }) => [
-                    styles.composerToolButton,
-                    {
-                      backgroundColor: tokens.colors.surfaceMuted,
-                      borderRadius: tokens.radius.xs,
-                      opacity:
-                        isWorking || isUploadingMedia || !circles.length
-                          ? 0.48
-                          : 1,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <FontAwesome
-                    name="calendar-plus-o"
-                    size={15}
-                    color={tokens.colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.composerToolLabel,
-                      {
-                        color: tokens.colors.textSecondary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                  >
-                    {attachedEvent ? "Change event" : "Event"}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {attachedEvent ? (
-                <View style={styles.attachmentPreview}>
-                  <CommunityAttachedEventRow
-                    event={attachedEvent}
-                    variant="selected"
-                    onPress={onOpenEventPicker}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={onRemoveEvent}
-                    style={({ pressed }) => [
-                      styles.attachmentRemoveAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.attachmentRemoveText,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      Remove event
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : null}
-
-              {media.length ? (
-                <View style={styles.mediaPreviewRow}>
-                  {media.map((item) => (
-                    <View key={item.path} style={styles.mediaPreviewItem}>
-                      <Image
-                        source={{ uri: item.localUri }}
-                        style={styles.mediaPreviewImage}
-                      />
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => onRemoveImage(item.path)}
-                        style={({ pressed }) => [
-                          styles.mediaRemoveButton,
-                          {
-                            backgroundColor: tokens.colors.surfaceStrong,
-                            borderColor: tokens.colors.border,
-                            borderRadius: tokens.radius.xs,
-                          },
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.mediaRemoveLabel,
-                            {
-                              color: tokens.colors.textPrimary,
-                              fontFamily: tokens.typography.sans,
-                            },
-                          ]}
-                        >
-                          Remove
-                        </Text>
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-
-              {eventPickerOpen ? (
-                <View
-                  style={[
-                    styles.eventPickerPanel,
-                    {
-                      backgroundColor: tokens.colors.surfaceMuted,
-                      borderColor: tokens.colors.border,
-                      borderRadius: tokens.radius.sm,
-                    },
-                  ]}
-                >
-                  <TextInput
-                    value={eventPickerQuery}
-                    onChangeText={onChangeEventPickerQuery}
-                    placeholder="Search events"
-                    placeholderTextColor={tokens.colors.textTertiary}
-                    style={[
-                      styles.eventPickerSearch,
-                      {
-                        borderColor: tokens.colors.border,
-                        color: tokens.colors.textPrimary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                  />
-                  <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    style={styles.eventPickerList}
-                  >
-                    {eventPickerLoading ? (
-                      <Text
-                        style={[
-                          styles.eventPickerState,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        Loading events...
-                      </Text>
-                    ) : null}
-                    {!eventPickerLoading && !eventPickerEvents.length ? (
-                      <Text
-                        style={[
-                          styles.eventPickerState,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        No linked events are available for this circle.
-                      </Text>
-                    ) : null}
-                    {!eventPickerLoading &&
-                    eventPickerEvents.length > 0 &&
-                    filteredEvents.length === 0 ? (
-                      <Text
-                        style={[
-                          styles.eventPickerState,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        {`No events match "${eventPickerQuery.trim()}".`}
-                      </Text>
-                    ) : null}
-                    {filteredEvents.map((event, index) => (
-                      <CommunityAttachedEventRow
-                        key={event.id}
-                        event={event}
-                        variant="picker"
-                        showDivider={index < filteredEvents.length - 1}
-                        onPress={() => onSelectEvent(event)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
-              </>
-            )}
-          </ScrollView>
-
-          <View style={styles.composerActions}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              disabled={isWorking || isUploadingMedia}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                {
-                  borderColor: tokens.colors.border,
-                  borderRadius: tokens.radius.xs,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.secondaryActionText,
-                  {
-                    color: tokens.colors.textSecondary,
-                    fontFamily: tokens.typography.sans,
-                  },
-                ]}
-              >
-                Cancel
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              disabled={!canSubmit}
-              onPress={onSubmit}
-              style={({ pressed }) => [
-                styles.primaryAction,
-                {
-                  backgroundColor: tokens.colors.pillActive,
-                  borderRadius: tokens.radius.xs,
-                  opacity: canSubmit ? 1 : 0.48,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.primaryActionText,
-                  {
-                    color: tokens.colors.pillActiveText,
-                    fontFamily: tokens.typography.sans,
-                  },
-                ]}
-              >
-                {isWorking ? "Posting..." : isUploadingMedia ? "Uploading..." : "Post"}
-              </Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
   );
 }
 

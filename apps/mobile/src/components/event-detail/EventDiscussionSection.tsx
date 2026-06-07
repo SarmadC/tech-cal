@@ -1,4 +1,4 @@
-import type { MobileCommunityRoomThread } from '@kurecal/domain';
+import type { MobileCommunityFeedPost } from '@kurecal/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 
 import { useScalePress } from '../../hooks/useAnimation';
-import { loadMobileEventThreads } from '../../lib/mobileApi';
+import { loadMobileEventCommunityPosts } from '../../lib/mobileApi';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
 const ROOM_THRESHOLD = 5;
 const PREVIEW_LIMIT = 3;
+const DETAIL_CARD_INSET = 18;
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ function isSafeUrl(url: string | null | undefined): url is string {
   return Boolean(url && /^https?:\/\//i.test(url));
 }
 
-function ThreadAvatar({ avatarUrl, name }: { avatarUrl: string | null | undefined; name: string }) {
+function PostAvatar({ avatarUrl, name }: { avatarUrl: string | null | undefined; name: string }) {
   const { tokens } = useAppTheme();
   const size = 20;
 
@@ -80,19 +81,19 @@ function ThreadAvatar({ avatarUrl, name }: { avatarUrl: string | null | undefine
   );
 }
 
-// ─── thread preview row ──────────────────────────────────────────────────────
+// ─── post preview row ────────────────────────────────────────────────────────
 
-function ThreadPreviewRow({
-  thread,
+function PostPreviewRow({
+  post,
   isLast,
   onPress,
 }: {
-  thread: MobileCommunityRoomThread;
+  post: MobileCommunityFeedPost;
   isLast: boolean;
   onPress: () => void;
 }) {
   const { tokens } = useAppTheme();
-  const authorName = thread.author.fullName ?? `@${thread.author.username}`;
+  const authorName = post.author.fullName ?? 'Community member';
 
   return (
     <Pressable
@@ -104,17 +105,19 @@ function ThreadPreviewRow({
         pressed && { backgroundColor: tokens.colors.surfaceMuted },
       ]}
     >
-      <ThreadAvatar avatarUrl={thread.author.avatarUrl} name={authorName} />
+      <PostAvatar avatarUrl={post.author.avatarUrl} name={authorName} />
       <Text
         numberOfLines={1}
         style={[styles.previewTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}
       >
-        {thread.title}
+        {post.title}
       </Text>
       <Text
         style={[styles.previewMeta, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}
       >
-        {thread.commentCount > 0 ? `${thread.commentCount} repl${thread.commentCount === 1 ? 'y' : 'ies'}` : formatRelative(thread.lastActivityAt)}
+        {post.commentCount > 0
+          ? `${post.commentCount} repl${post.commentCount === 1 ? 'y' : 'ies'}`
+          : formatRelative(post.createdAt)}
       </Text>
     </Pressable>
   );
@@ -123,19 +126,19 @@ function ThreadPreviewRow({
 // ─── room banner ─────────────────────────────────────────────────────────────
 
 function RoomBanner({
-  threadCount,
+  postCount,
   lastActivityAt,
-  onViewRoom,
-  onNewThread,
+  onViewAll,
+  onNewPost,
 }: {
-  threadCount: number;
+  postCount: number;
   lastActivityAt: string | null;
-  onViewRoom: () => void;
-  onNewThread: () => void;
+  onViewAll: () => void;
+  onNewPost: () => void;
 }) {
   const { tokens } = useAppTheme();
-  const newThreadPress = useScalePress();
-  const viewRoomPress = useScalePress();
+  const newPostPress = useScalePress();
+  const viewAllPress = useScalePress();
 
   return (
     <View
@@ -146,37 +149,37 @@ function RoomBanner({
     >
       <View style={styles.bannerMeta}>
         <Text style={[styles.bannerTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-          Event Room
+          Event Discussions
         </Text>
         <Text style={[styles.bannerSub, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
-          {threadCount} thread{threadCount !== 1 ? 's' : ''}
+          {postCount} post{postCount !== 1 ? 's' : ''}
           {lastActivityAt ? ` · active ${formatRelative(lastActivityAt)}` : ''}
         </Text>
       </View>
       <View style={styles.bannerActions}>
         <Pressable
           accessibilityRole="button"
-          onPress={onNewThread}
-          onPressIn={newThreadPress.onPressIn}
-          onPressOut={newThreadPress.onPressOut}
+          onPress={onNewPost}
+          onPressIn={newPostPress.onPressIn}
+          onPressOut={newPostPress.onPressOut}
           style={[styles.ghostButton, { borderColor: tokens.colors.border, borderRadius: tokens.radius.sm }]}
         >
-          <Animated.View style={{ transform: [{ scale: newThreadPress.scale }] }}>
+          <Animated.View style={{ transform: [{ scale: newPostPress.scale }] }}>
             <Text style={[styles.ghostButtonLabel, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
-              New thread
+              New post
             </Text>
           </Animated.View>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={onViewRoom}
-          onPressIn={viewRoomPress.onPressIn}
-          onPressOut={viewRoomPress.onPressOut}
+          onPress={onViewAll}
+          onPressIn={viewAllPress.onPressIn}
+          onPressOut={viewAllPress.onPressOut}
           style={[styles.accentButton, { backgroundColor: tokens.colors.accent, borderRadius: tokens.radius.sm }]}
         >
-          <Animated.View style={{ transform: [{ scale: viewRoomPress.scale }] }}>
+          <Animated.View style={{ transform: [{ scale: viewAllPress.scale }] }}>
             <Text style={[styles.accentButtonLabel, { color: tokens.colors.textInverse, fontFamily: tokens.typography.sans }]}>
-              View Room
+              View All
             </Text>
           </Animated.View>
         </Pressable>
@@ -190,9 +193,15 @@ function RoomBanner({
 type LoadState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'loaded'; threads: MobileCommunityRoomThread[]; totalCount: number };
+  | { status: 'loaded'; posts: MobileCommunityFeedPost[]; totalCount: number };
 
-export function EventDiscussionSection({ eventId }: { eventId: string }) {
+export function EventDiscussionSection({
+  eventId,
+  onStartThread,
+}: {
+  eventId: string;
+  onStartThread: () => void;
+}) {
   const { tokens } = useAppTheme();
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   // Guard against stale responses from in-flight requests on focus change
@@ -203,12 +212,12 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
     // Only show loading spinner on first fetch; keep stale data visible on re-fetches
     setLoadState((prev) => (prev.status === 'loaded' ? prev : { status: 'loading' }));
     try {
-      const data = await loadMobileEventThreads(eventId);
+      const data = await loadMobileEventCommunityPosts(eventId);
       if (requestId !== requestSequenceRef.current) return;
       setLoadState({
         status: 'loaded',
-        threads: data.threads,
-        totalCount: data.threads.length,
+        posts: data.posts,
+        totalCount: data.totalCount,
       });
     } catch {
       if (requestId !== requestSequenceRef.current) return;
@@ -222,14 +231,6 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
       void load();
     }, [load]),
   );
-
-  const goToThreads = useCallback(() => {
-    router.push(`/event/${eventId}/threads`);
-  }, [eventId]);
-
-  const goToNewThread = useCallback(() => {
-    router.push(`/event/${eventId}/threads/new`);
-  }, [eventId]);
 
   // Must be declared before any early returns (Rules of Hooks)
   const emptyPress = useScalePress();
@@ -288,11 +289,15 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
     );
   }
 
-  const { threads, totalCount } = loadState;
+  const { posts, totalCount } = loadState;
   const roomOpen = totalCount >= ROOM_THRESHOLD;
-  const preview = threads.slice(0, PREVIEW_LIMIT);
-  const isEmpty = threads.length === 0;
-  const lastActivityAt = threads[0]?.lastActivityAt ?? null;
+  const preview = posts.slice(0, PREVIEW_LIMIT);
+  const isEmpty = posts.length === 0;
+  const lastActivityAt = posts[0]?.createdAt ?? null;
+
+  const goToPost = (post: MobileCommunityFeedPost) => {
+    router.push(`/community/${post.circle.slug}/post/${post.id}`);
+  };
 
   return (
     <View style={styles.section}>
@@ -301,11 +306,11 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
         <Text style={[styles.sectionTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
           Discussions
         </Text>
-        {/* Only show header button when there are threads and the room isn't open yet */}
+        {/* Only show header button when there are posts and the room isn't open yet */}
         {!roomOpen && !isEmpty && (
           <Pressable
             accessibilityRole="button"
-            onPress={goToNewThread}
+            onPress={onStartThread}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <Text style={[styles.headerAction, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
@@ -318,15 +323,17 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
       {/* ── body ───────────────────────────────────────────────────────── */}
       {roomOpen ? (
         <RoomBanner
-          threadCount={totalCount}
+          postCount={totalCount}
           lastActivityAt={lastActivityAt}
-          onViewRoom={goToThreads}
-          onNewThread={goToNewThread}
+          onViewAll={() => {
+            if (posts[0]) goToPost(posts[0]);
+          }}
+          onNewPost={onStartThread}
         />
       ) : isEmpty ? (
         <Pressable
           accessibilityRole="button"
-          onPress={goToNewThread}
+          onPress={onStartThread}
           onPressIn={emptyPress.onPressIn}
           onPressOut={emptyPress.onPressOut}
           style={[styles.emptyPrompt, { borderColor: tokens.colors.border, borderRadius: tokens.radius.sm }]}
@@ -345,19 +352,21 @@ export function EventDiscussionSection({ eventId }: { eventId: string }) {
               { backgroundColor: tokens.colors.surface, borderColor: tokens.colors.border, borderRadius: tokens.radius.sm },
             ]}
           >
-            {preview.map((thread, index) => (
-              <ThreadPreviewRow
-                key={thread.id}
-                thread={thread}
+            {preview.map((post, index) => (
+              <PostPreviewRow
+                key={post.id}
+                post={post}
                 isLast={index === preview.length - 1}
-                onPress={() => router.push(`/event/${eventId}/threads/${thread.id}`)}
+                onPress={() => goToPost(post)}
               />
             ))}
           </View>
           {totalCount > PREVIEW_LIMIT && (
             <Pressable
               accessibilityRole="button"
-              onPress={goToThreads}
+              onPress={() => {
+                if (posts[0]) goToPost(posts[0]);
+              }}
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, alignSelf: 'flex-start' })}
             >
               <Text style={[styles.seeAll, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
@@ -390,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 10,
   },
   bannerActions: {
@@ -411,7 +420,7 @@ const styles = StyleSheet.create({
   },
   emptyPrompt: {
     borderWidth: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 12,
   },
   emptyText: {
@@ -446,7 +455,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: DETAIL_CARD_INSET,
     paddingVertical: 10,
   },
   previewTitle: {
@@ -468,7 +477,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 10,
-    paddingTop: 20,
   },
   sectionHeader: {
     alignItems: 'center',

@@ -5,8 +5,8 @@ import { useScalePress } from '../hooks/useAnimation';
 
 import type { MobileCommunityFeedPost } from '@kurecal/domain';
 
-import { EventSummaryCard } from './EventSummaryCard';
 import { CommunityRichPostContent } from './CommunityRichPostContent';
+import { CommunityAttachedEventRow } from './community/CommunityAttachedEventRow';
 import {
   formatCommunityRelativeTime,
 } from '../lib/communityPresentation';
@@ -25,10 +25,11 @@ const colors = {
 };
 
 interface CommunityFeedCardProps {
+  onOpenEvent?: (eventId: string) => void;
   onVote?: (post: MobileCommunityFeedPost, voteType: -1 | 1) => void;
   onPress?: () => void;
   post: MobileCommunityFeedPost;
-  variant?: 'card' | 'row';
+  variant?: 'card' | 'row' | 'thread';
 }
 
 function VoteButton({
@@ -60,17 +61,21 @@ function VoteButton({
 
 function Content({
   onPress,
+  onOpenEvent,
   onVote,
   post,
   variant,
 }: {
   onPress?: () => void;
+  onOpenEvent?: (eventId: string) => void;
   onVote?: (post: MobileCommunityFeedPost, voteType: -1 | 1) => void;
   post: MobileCommunityFeedPost;
-  variant: 'card' | 'row';
+  variant: 'card' | 'row' | 'thread';
 }) {
   const score = post.score ?? 0;
   const userVote = post.userVote ?? 0;
+  const isThread = variant === 'thread';
+  const attachedEventId = post.event?.id ?? post.eventId ?? null;
   const body = (
     <>
       <CommunityRichPostContent
@@ -78,16 +83,24 @@ function Content({
         linkPreviews={post.linkPreviews}
         media={post.media}
         mentions={post.mentions}
-        numberOfLines={4}
+        numberOfLines={isThread ? undefined : 4}
         textVariant="post"
         title={post.title}
       />
 
       {post.event ? (
-        <EventSummaryCard event={post.event} tone="highlight" />
+        <CommunityAttachedEventRow
+          event={post.event}
+          variant="selected"
+          onPress={
+            onOpenEvent && attachedEventId
+              ? () => onOpenEvent(attachedEventId)
+              : undefined
+          }
+        />
       ) : null}
 
-      <View style={styles.footerRow}>
+      <View style={[styles.footerRow, isThread ? styles.threadFooterRow : null]}>
         <View style={styles.footerActions}>
           <Text style={styles.footerText}>
             {post.commentCount} repl{post.commentCount === 1 ? 'y' : 'ies'}
@@ -101,7 +114,7 @@ function Content({
         ) : null}
       </View>
 
-      {post.recentComments?.length ? (
+      {!isThread && post.recentComments?.length ? (
         <View style={styles.previewStack}>
           {post.recentComments.slice(0, 2).map((comment) => (
             <View key={comment.id} style={styles.previewRow}>
@@ -119,9 +132,15 @@ function Content({
   );
 
   return (
-    <View style={[styles.card, variant === 'row' ? styles.rowCard : null]}>
-      {variant === 'row' ? (
-        <View style={styles.threadRow}>
+    <View
+      style={[
+        styles.card,
+        variant === 'row' ? styles.rowCard : null,
+        variant === 'thread' ? styles.threadCard : null,
+      ]}
+    >
+      {variant === 'row' || variant === 'thread' ? (
+        <View style={variant === 'thread' ? styles.fullThreadRow : styles.threadRow}>
           <View style={styles.voteRail}>
             <VoteButton
               accessibilityLabel="Upvote thread"
@@ -140,7 +159,7 @@ function Content({
           <Pressable
             onPress={onPress}
             style={({ pressed }) => [
-              styles.threadCopy,
+              variant === 'thread' ? styles.fullThreadCopy : styles.threadCopy,
               pressed ? styles.pressablePressed : null,
             ]}
           >
@@ -155,6 +174,7 @@ function Content({
 }
 
 export function CommunityFeedCard({
+  onOpenEvent,
   onVote,
   onPress,
   post,
@@ -162,10 +182,11 @@ export function CommunityFeedCard({
 }: CommunityFeedCardProps) {
   const { scale, onPressIn, onPressOut } = useScalePress();
 
-  if (!onPress || variant === 'row') {
+  if (!onPress || variant === 'row' || variant === 'thread') {
     return (
       <Content
         onPress={onPress}
+        onOpenEvent={onOpenEvent}
         onVote={onVote}
         post={post}
         variant={variant}
@@ -183,6 +204,7 @@ export function CommunityFeedCard({
       <Animated.View style={{ transform: [{ scale }] }}>
         <Content
           onPress={onPress}
+          onOpenEvent={onOpenEvent}
           onVote={onVote}
           post={post}
           variant={variant}
@@ -213,11 +235,32 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
+  fullThreadCopy: {
+    flex: 1,
+    gap: 10,
+    minWidth: 0,
+  },
+  fullThreadRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+  },
   threadRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     gap: 14,
     paddingVertical: 12,
+  },
+  threadCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 12,
+  },
+  threadFooterRow: {
+    justifyContent: 'space-between',
+    paddingTop: 0,
   },
   footerAction: {
     alignItems: 'center',
@@ -237,15 +280,15 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: colors.textSubtle,
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   metaText: {
     color: colors.textSubtle,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 19,
+    lineHeight: 16,
   },
   previewAuthor: {
     color: colors.textMuted,

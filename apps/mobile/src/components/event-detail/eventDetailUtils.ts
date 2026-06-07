@@ -290,7 +290,10 @@ export function buildAgendaSecondaryText(agendaItem: MobileEventDetailAgendaItem
     .join(', ');
 
   const parts = [agendaItem.track, agendaItem.location, speakerNames].filter(
-    (value): value is string => Boolean(value && value.trim())
+    (value): value is string => {
+      const trimmed = value?.trim();
+      return Boolean(trimmed) && trimmed!.toLowerCase() !== 'no track';
+    },
   );
 
   return parts.length > 0 ? parts.join(' · ') : null;

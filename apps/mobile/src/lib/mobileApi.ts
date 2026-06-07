@@ -51,6 +51,7 @@ import {
   type MobileCommunityCirclePage,
   type MobileCommunityEvents,
   type MobileCommunityHome,
+  type MobileCommunityFeedPost,
   type MobileCommunityMentionCandidate,
   type MobileCommunityPostPage,
   type MobileDashboardSummary,
@@ -76,6 +77,7 @@ import {
   type NormalizedSubscription,
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
+  mobileCommunityFeedPostSchema,
   mobileCommunityRoomDetailSchema,
   mobileCommunityRoomThreadCommentDraftSchema,
   mobileCommunityRoomThreadCommentEditDraftSchema,
@@ -941,6 +943,25 @@ export async function loadMobileCommunityRoom(
   return fetchMobileContract(
     `/api/mobile/community/rooms/${encodeURIComponent(eventId)}`,
     mobileCommunityRoomDetailSchema
+  );
+}
+
+const mobileEventCommunityPostsSchema = z.object({
+  posts: z.array(mobileCommunityFeedPostSchema),
+  totalCount: z.number().int().nonnegative(),
+});
+
+export type MobileEventCommunityPosts = z.infer<typeof mobileEventCommunityPostsSchema>;
+
+export async function loadMobileEventCommunityPosts(
+  eventId: string
+): Promise<MobileEventCommunityPosts> {
+  if (!eventId.trim()) {
+    throw new Error('Event id is required');
+  }
+  return fetchMobileContract(
+    `/api/mobile/community/event-posts?eventId=${encodeURIComponent(eventId)}`,
+    mobileEventCommunityPostsSchema
   );
 }
 

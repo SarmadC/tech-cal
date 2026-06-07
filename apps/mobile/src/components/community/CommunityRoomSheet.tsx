@@ -182,7 +182,10 @@ export function CommunityRoomSheet({
     if (!detail) return;
     onClose();
     if (mode === "new") {
-      router.push(`/event/${detail.event.id}/threads/new`);
+      router.push({
+        pathname: "/event/[id]/threads",
+        params: { compose: "1", id: detail.event.id },
+      });
     } else {
       router.push(`/event/${detail.event.id}/threads`);
     }

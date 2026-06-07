@@ -315,13 +315,13 @@ export default function DashboardScreen() {
       : () => router.push("/discover");
 
   return (
+    <>
     <MobilePage
       title="Dashboard"
       headerHidden
       showAccentGlow={false}
       contentStyle={[styles.pageContent, { paddingTop: insets.top + 52 }]}
     >
-      <TabMenuOverlay />
       <View style={styles.canvas}>
 
         {loading ? (
@@ -937,6 +937,8 @@ export default function DashboardScreen() {
         ) : null}
       </View>
     </MobilePage>
+    {(!loading || !!data) && <TabMenuOverlay />}
+    </>
   );
 }
 

@@ -31,8 +31,8 @@ import type { CommunityPeopleData } from "@/services/communityPeopleService";
 import type { FollowStatus } from "@/services/followService";
 import type { PublicProfileResult } from "@/services/publicProfileService";
 import type {
+  CommunityFeedPost,
   CommunityNetworkingHomeData,
-  MobileCommunityPulsePreviewData,
   NetworkingFollowUpCard,
   NetworkingOpportunityEvent,
   NetworkingPersonCard,
@@ -308,7 +308,8 @@ function getFollowUpWhyNow(person: NetworkingFollowUpCard): string {
 
 export function buildMobileCommunityHome(
   data: CommunityNetworkingHomeData,
-  pulse?: MobileCommunityPulsePreviewData,
+  circles: MobileCommunityCircle[] = [],
+  feed: CommunityFeedPost[] = [],
 ): MobileCommunityHome {
   return mobileCommunityHomeSchema.parse({
     summary: data.summary,
@@ -362,22 +363,8 @@ export function buildMobileCommunityHome(
     })),
     starterProfiles: data.starterProfiles ?? [],
     publicProfileCount: data.publicProfileCount ?? 0,
-    ambientActivity: data.ambientActivity ?? {
-      publicTrackersToday: 0,
-      newPublicProfilesThisWeek: 0,
-      roomsWithFreshTrackingCount: 0,
-    },
-    feed: pulse?.feed ?? [],
-    circles:
-      pulse?.circles.map((circle) => ({
-        id: circle.id,
-        slug: circle.slug,
-        name: circle.name,
-        description: circle.description,
-        memberCount: circle.memberCount,
-        isJoined: circle.isJoined,
-      })) ?? [],
-    communityUpcomingEvents: pulse?.communityUpcomingEvents ?? [],
+    circles,
+    feed,
   });
 }
 

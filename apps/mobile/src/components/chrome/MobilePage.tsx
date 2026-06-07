@@ -1,5 +1,6 @@
 import {
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
   type ReactNode,
@@ -36,6 +37,7 @@ interface MobilePageProps extends PropsWithChildren {
   showAccentGlow?: boolean;
   footerInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
+  onControlsVisibilityChange?: (visible: boolean) => void;
   scrollRef?: RefObject<ScrollView | null>;
 }
 
@@ -49,12 +51,15 @@ export function MobilePage({
   children,
   footerInset,
   contentStyle,
+  onControlsVisibilityChange,
   scrollRef,
 }: MobilePageProps) {
   const { tokens } = useAppTheme();
   const { handleScroll, isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
   const [compact, setCompact] = useState(false);
+  const controlsVisibleRef = useRef(true);
+  const lastOffsetRef = useRef(0);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
   const bottomInset =
     footerInset ??
@@ -166,11 +171,30 @@ export function MobilePage({
           contentStyle,
         ]}
         onScroll={(event) => {
-          const offsetY = event.nativeEvent.contentOffset.y;
+          const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
           const nextCompact = offsetY > 22;
+          const delta = offsetY - lastOffsetRef.current;
+          lastOffsetRef.current = offsetY;
+
           if (nextCompact !== compact) {
             setCompact(nextCompact);
           }
+
+          if (offsetY <= 8 && !controlsVisibleRef.current) {
+            controlsVisibleRef.current = true;
+            onControlsVisibilityChange?.(true);
+          } else if (
+            delta > 12 &&
+            offsetY > 40 &&
+            controlsVisibleRef.current
+          ) {
+            controlsVisibleRef.current = false;
+            onControlsVisibilityChange?.(false);
+          } else if (delta < -8 && !controlsVisibleRef.current) {
+            controlsVisibleRef.current = true;
+            onControlsVisibilityChange?.(true);
+          }
+
           handleScroll(offsetY);
         }}
         scrollEventThrottle={16}
