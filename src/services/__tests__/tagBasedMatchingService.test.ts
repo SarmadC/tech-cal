@@ -171,8 +171,28 @@ describe('TagBasedMatchingService', () => {
   });
 
   describe('Beginner weighting', () => {
-    it('weights skills to learn higher for beginners', () => {
+    it('weights skills to learn higher for junior-seniority users', () => {
       const profile = createTestProfile({
+        seniority: 'junior',
+        primarySkills: ['HTML'],
+        skillsToLearn: ['React']
+      });
+      const primaryEvent = createTestEvent('HTML Workshop', [
+        buildEventTag({ id: '1', name: 'HTML', color: 'blue', category: 'Programming' })
+      ]);
+      const learningEvent = createTestEvent('React Workshop', [
+        buildEventTag({ id: '2', name: 'React', color: 'blue', category: 'Programming' })
+      ]);
+      const primaryScore = TagBasedMatchingService.calculateTagSimilarity(primaryEvent, profile).score;
+      const learningScore = TagBasedMatchingService.calculateTagSimilarity(learningEvent, profile).score;
+      expect(learningScore).toBeGreaterThan(primaryScore);
+    });
+
+    it('does not treat experienced hands-on learners as beginners', () => {
+      // Seniority is authoritative: a mid-level user who prefers hands-on
+      // formats keeps the standard weighting (primary skills dominate).
+      const profile = createTestProfile({
+        seniority: 'mid-level',
         primarySkills: ['HTML'],
         skillsToLearn: ['React'],
         learningStyle: ['hands-on']
@@ -185,7 +205,7 @@ describe('TagBasedMatchingService', () => {
       ]);
       const primaryScore = TagBasedMatchingService.calculateTagSimilarity(primaryEvent, profile).score;
       const learningScore = TagBasedMatchingService.calculateTagSimilarity(learningEvent, profile).score;
-      expect(learningScore).toBeGreaterThan(primaryScore);
+      expect(primaryScore).toBeGreaterThan(learningScore);
     });
   });
 

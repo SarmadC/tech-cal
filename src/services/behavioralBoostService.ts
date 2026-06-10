@@ -94,36 +94,40 @@ export class BehavioralBoostService {
       let similarity = 0;
         const reasons: string[] = [];
 
-      // Category similarity (40% weight)
-      if (targetEvent.eventTypeId === interactedEvent.eventTypeId) {
-        similarity += 0.4;
+      // Category similarity (45% weight)
+      if (targetEvent.eventTypeId && targetEvent.eventTypeId === interactedEvent.eventTypeId) {
+        similarity += 0.45;
         reasons.push('Same category');
       }
 
-      // Format similarity (25% weight) - using default values since format not in DB
-      if ((targetEvent as unknown as Record<string, unknown>).format === (interactedEvent as unknown as Record<string, unknown>).format) {
+      // Format similarity (25% weight) — only when both events carry real data.
+      // Missing fields must not match (undefined === undefined previously
+      // granted this weight to every event pair).
+      if (
+        targetEvent.eventFormat &&
+        interactedEvent.eventFormat &&
+        targetEvent.eventFormat === interactedEvent.eventFormat
+      ) {
         similarity += 0.25;
         reasons.push('Same format');
       }
 
-      // Cost similarity (15% weight) - using default values since cost not in DB
-      if ((targetEvent as unknown as Record<string, unknown>).cost === (interactedEvent as unknown as Record<string, unknown>).cost) {
+      // Difficulty similarity (15% weight) — same both-sides-present rule
+      if (
+        targetEvent.difficulty &&
+        interactedEvent.difficulty &&
+        targetEvent.difficulty === interactedEvent.difficulty
+      ) {
         similarity += 0.15;
-        reasons.push('Same cost level');
-      }
-
-      // Difficulty similarity (10% weight)
-      if (targetEvent.difficulty === interactedEvent.difficulty) {
-        similarity += 0.1;
         reasons.push('Same difficulty');
       }
 
-      // Time similarity (10% weight)
+      // Time similarity (15% weight)
       const timeSimilarity = this.calculateTimeSimilarity(
         targetEvent.startTime,
         interactedEvent.startTime
       );
-      similarity += timeSimilarity * 0.1;
+      similarity += timeSimilarity * 0.15;
       if (timeSimilarity > 0.5) {
         reasons.push('Similar time');
       }
@@ -148,10 +152,12 @@ export class BehavioralBoostService {
   ): number {
     if (similarities.length === 0) return 0;
 
-    // Weight similarities by recency and strength
+    // Dampen weaker matches: the list is sorted by similarity strength (not
+    // recency — interaction order is not preserved at this point), so the
+    // strongest evidence dominates the boost.
     const weightedSimilarities = similarities.map((sim, index) => {
-      const recencyWeight = 1 - (index * 0.1); // More recent events have higher weight
-      return sim.similarity * recencyWeight;
+      const strengthWeight = 1 - (index * 0.1);
+      return sim.similarity * strengthWeight;
     });
 
     const averageSimilarity = weightedSimilarities.reduce((sum, sim) => sum + sim, 0) / weightedSimilarities.length;

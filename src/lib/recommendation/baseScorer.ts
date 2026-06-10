@@ -117,7 +117,14 @@ export type CoreAlignmentResult = BaseScorerResult;
 function calculateColdStartScore(event: Event): BaseScorerResult {
   let score = 0;
   const alignmentReasons: AlignmentReason[] = [];
-  
+
+  // Component accumulators — report where points actually came from.
+  // (Previously the breakdown was synthesized as fixed fractions of the total,
+  // which fabricated e.g. a careerStageMatch value with no profile to match.)
+  let networkingValue = 0; // popularity signals
+  let timingBonus = 0; // recency signals
+  let industryRelevance = 0; // organizer reputation + event quality signals
+
   // 1. Popularity score (0-15 points)
   const attendeeCount = event.attendeeCount || 0;
   if (attendeeCount > 1000) {
@@ -144,7 +151,8 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
   } else if (attendeeCount > 50) {
     score += 5;
   }
-  
+  networkingValue = score;
+
   // 2. Recency/Timing score (0-10 points)
   const eventDate = new Date(event.startTime);
   const now = new Date();
@@ -162,7 +170,8 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
   } else if (daysUntilEvent > 0 && daysUntilEvent <= 60) {
     score += 4;
   }
-  
+  timingBonus = score - networkingValue;
+
   // 3. Organizer reputation (0-8 points)
   const orgName = (event.organization?.name || event.organizer || '').toLowerCase();
   const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'uber', 'airbnb', 'stripe', 'github'];
@@ -213,18 +222,22 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
     });
   }
   
+  industryRelevance = score - networkingValue - timingBonus;
+
   // Normalize to 15-55 range for cold start
   // Wider range provides better differentiation among anonymous/new users
   const normalizedScore = Math.min(55, Math.max(15, score));
-  
+
   return {
     overall: normalizedScore,
+    // Raw point contributions per signal (same semantics as the profile path);
+    // skill/career-stage are genuinely 0 without a profile.
     components: {
       skillRelevance: 0,
-      careerStageMatch: normalizedScore * 0.4,
-      networkingValue: normalizedScore * 0.3,
-      industryRelevance: normalizedScore * 0.2,
-      timingBonus: normalizedScore * 0.1
+      careerStageMatch: 0,
+      networkingValue,
+      industryRelevance,
+      timingBonus
     },
     alignmentReasons: alignmentReasons.length > 0 
       ? alignmentReasons 

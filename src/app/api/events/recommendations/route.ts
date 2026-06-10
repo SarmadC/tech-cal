@@ -170,6 +170,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
         careerProfile: enrichedCareerProfile,
         limit,
         tags,
+        userLocation,
       });
 
       events = personalizedCandidates.events;
@@ -200,6 +201,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
         userId: user.id,
         careerProfile: enrichedCareerProfile,
         limit,
+        userLocation,
       });
 
       events = personalizedCandidates.events;

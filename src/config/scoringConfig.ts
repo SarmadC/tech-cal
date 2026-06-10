@@ -328,8 +328,10 @@ export const TAG_MATCHING_CONFIG = deepFreeze({
     'webinar': ['online', 'virtual', 'livestream'],
     
     // Difficulty Levels
+    // Note: levels deliberately do not map to each other ('intermediate' is not
+    // similar to 'advanced') — cross-level links made difficulty matching meaningless.
     'beginner': ['intro', '101', 'fundamentals', 'basics'],
-    'intermediate': ['advanced', 'experienced', 'professional'],
+    'intermediate': ['experienced', 'professional'],
     'advanced': ['expert', 'senior', 'master', 'specialist'],
     
     // Industry Context

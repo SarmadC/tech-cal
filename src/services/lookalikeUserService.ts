@@ -102,12 +102,16 @@ export class LookalikeUserService {
             : 'Retrieved from similar professionals';
           const recommendationMetadata: RecommendationMetadata = {
             matchedTags: [],
-            matchScore: lookalikeSupport,
+            // matchScore/totalScore are on a 0-100 scale elsewhere in the system;
+            // the lookalike support count lives in lookalikeSupport below. Putting
+            // the raw count here let "support = 1" normalize to a perfect score
+            // in surfaces like mobile Top Picks.
+            matchScore: 0,
             impactScore: 0,
             profileBoost: 0,
             recencyBoost: 0,
             popularityBoost: 0,
-            totalScore: lookalikeSupport,
+            totalScore: 0,
             reasons: [primaryReason],
             candidateSources: ['lookalike', 'cold-start'],
             source: 'lookalike',
@@ -153,10 +157,7 @@ export class LookalikeUserService {
     limit: number = 20
   ): Promise<Event[]> {
     try {
-      // Get events with high attendee count from the last 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
+      // Upcoming events ranked by attendee count
       const { data, error } = await supabaseClient
         .from('events')
         .select(`
@@ -164,7 +165,6 @@ export class LookalikeUserService {
           event_type:event_type_id (*),
           organizer:organizers (id, name, logo_url)
         `)
-        .gte('start_time', thirtyDaysAgo.toISOString())
         .gte('start_time', new Date().toISOString())
         .order('attendee_count', { ascending: false })
         .limit(limit);
@@ -184,9 +184,10 @@ export class LookalikeUserService {
         organizerId: event.organizer_id,
         attendeeCount: event.attendee_count || 0,
         location: event.location || '',
-        format: 'virtual', // Default format
-        cost: 'free', // Default cost
-        difficulty: 'beginner', // Default difficulty
+        // No fabricated format/cost/difficulty: downstream behavioral similarity
+        // must only see real event data.
+        difficulty: (event.difficulty_level as Event['difficulty']) ?? null,
+        eventFormat: (event.event_format as Event['eventFormat']) ?? null,
         color: '#3B82F6', // Default color
         tags: [], // Default empty tags
         careerImpactScore: 0, // Default score
@@ -216,6 +217,12 @@ export class LookalikeUserService {
     supabaseClient: SupabaseClientType,
     limit: number
   ): Promise<CareerProfile[]> {
+    // Both cohort queries match on exact industry; without one the eq() filter
+    // is meaningless and the "cohort" would be arbitrary profiles.
+    if (!careerProfile.industry) {
+      return [];
+    }
+
     // Attempt role-based cohort first
     if (careerProfile.currentRole) {
       const roleQuery = supabaseClient

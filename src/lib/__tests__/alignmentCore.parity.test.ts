@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
+import { LocationScoringService } from '@/services/locationScoringService';
 import type { Event, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
 
@@ -77,7 +78,14 @@ describe('Alignment Core vs Enrichment parity', () => {
     process.env.DISCOVERY_SCORING = originalStrategy;
   });
 
-  it('enrichment overall scores match core scores for the same inputs', async () => {
+  it('enrichment overall = core score + tag affinity + location adjustment', async () => {
+    // Enrichment deliberately layers two adjustments on top of the alignment core:
+    //  - tag affinity: min(20, round(tagSimilarity * 0.2)), exposed in metadata
+    //  - location: (locationScore - 0.8) * 10, e.g. +2 for virtual events
+    // This test pins that exact relationship so any further drift between the
+    // core and the enrichment path fails loudly instead of silently diverging.
+    const LOCATION_NEUTRAL_SCORE = 0.8;
+
     const coreScores = events.map(e => calculateBaseScore(e, sampleCareerProfile).overall);
 
     const enriched = await enrichEventsWithCareerImpact(
@@ -87,12 +95,25 @@ describe('Alignment Core vs Enrichment parity', () => {
       'test-user'
     );
 
-    const enrichmentScores = enriched.map(e => e.careerImpact?.overall ?? 0);
+    expect(enriched.length).toBe(coreScores.length);
 
-    expect(enrichmentScores.length).toBe(coreScores.length);
-    enrichmentScores.forEach((score, idx) => {
-      const delta = Math.abs(score - coreScores[idx]);
-      expect(delta).toBeLessThanOrEqual(2);
+    enriched.forEach((enrichedEvent, idx) => {
+      const careerImpact = enrichedEvent.careerImpact;
+      expect(careerImpact).toBeDefined();
+
+      const tagAffinityContribution = Number(careerImpact?.metadata?.tagAffinityContribution ?? 0);
+      expect(tagAffinityContribution).toBeGreaterThanOrEqual(0);
+      expect(tagAffinityContribution).toBeLessThanOrEqual(20);
+
+      const locationAdjustment =
+        (LocationScoringService.calculateLocationScore(events[idx]).score - LOCATION_NEUTRAL_SCORE) * 10;
+
+      const expected = Math.max(
+        0,
+        Math.min(100, Math.min(100, coreScores[idx] + tagAffinityContribution) + locationAdjustment)
+      );
+
+      expect(careerImpact?.overall).toBe(expected);
     });
   });
 });

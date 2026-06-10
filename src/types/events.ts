@@ -34,6 +34,7 @@ export interface CareerImpactScore {
     candidateSources?: RecommendationCandidateSource[];
     tagAffinityScore?: number;
     tagAffinityContribution?: number;
+    diversityAdjustment?: number; // Rank-context adjustment from diversity enhancement; never folded into `overall`
     appliedAdjustments?: {
       typePreferenceGate?: number; // Multiplier applied (e.g., 0.75)
       beginnerBoost?: number; // Points added for beginner-friendly content

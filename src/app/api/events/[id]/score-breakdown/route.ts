@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { ScoringStrategyFactory } from '@/services/scoring';
+import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
 import { normalizeEventType } from '@/utils/eventTypeUtils';
 
 interface ScoreBreakdownResponse {
@@ -116,15 +116,28 @@ export async function GET(
       );
     }
 
-    // Calculate score with strategy (direct call, no cache)
-    const strategy = ScoringStrategyFactory.getDefaultStrategy();
-    const score = await strategy.calculate({ event, careerProfile });
+    // Score through the same enrichment path production uses, so the breakdown
+    // reflects what users actually see. The previous AdvancedScorer call here
+    // reported numbers from an algorithm that doesn't run in production ranking.
+    const [enriched] = await enrichEventsWithCareerImpact(
+      [event],
+      careerProfile,
+      supabase,
+      undefined // no userId: bypass the KV cache for a fresh calculation
+    );
+    const score = enriched?.careerImpact;
+    if (!score) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to score event' },
+        { status: 500 }
+      );
+    }
 
     // Extract triggers from metadata and cap at 20
-    const scoringTriggers = (score.metadata.scoringTriggers || []).slice(0, 20);
+    const scoringTriggers = ((score.metadata?.scoringTriggers as string[] | undefined) || []).slice(0, 20);
 
     // Get top 1-2 reasons
-    const topReasons = score.explanation.reasons.slice(0, 2);
+    const topReasons = (score.explanation?.reasons || []).slice(0, 2);
 
     // Normalize event type
     const rawType = event.category?.name || null;
@@ -160,7 +173,7 @@ export async function GET(
         },
         scoringTriggers,
         topReasons,
-        algorithmVersion: strategy.version,
+        algorithmVersion: String(score.metadata?.algorithmVersion ?? 'alignment-core-v2'),
       },
     };
 
