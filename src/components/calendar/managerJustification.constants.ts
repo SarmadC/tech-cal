@@ -1,4 +1,6 @@
 
+import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
+
 export const IMPACT_LABELS = {
   HIGH: 'High Impact',
   STRONG: 'Strong Match',
@@ -6,10 +8,12 @@ export const IMPACT_LABELS = {
   FAIR: 'Fair Match',
 } as const;
 
+// Derived from the shared recommendation thresholds so UI bucketing
+// can't drift from the rest of the system.
 export const SCORE_THRESHOLDS = {
-  HIGH: 80,
-  STRONG: 50,
-  GOOD: 20,
+  HIGH: RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH,
+  STRONG: RECOMMENDATION_THRESHOLDS.BUCKETS.MODERATE,
+  GOOD: RECOMMENDATION_THRESHOLDS.BUCKETS.LOW,
 } as const;
 
 export const COST_DISPLAY = {

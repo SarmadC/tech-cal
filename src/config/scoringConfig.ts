@@ -48,7 +48,12 @@ export const ADVANCED_SCORER_CONFIG: ScoringAlgorithmConfig = {
 };
 
 /**
- * Score thresholds for categorization
+ * AdvancedScorer-internal thresholds for confidence-boost categorization.
+ *
+ * NOT for user-facing bucketing — UI buckets and "recommended" gating live in
+ * RECOMMENDATION_THRESHOLDS (@/config/recommendationThresholds), which uses
+ * 80/50/20. These values are deliberately stricter because they categorize
+ * scores for confidence weighting inside the advanced scorer only.
  */
 export const SCORE_THRESHOLDS = {
   HIGH: 80,
@@ -172,6 +177,51 @@ export const EVENT_TYPE_SCORES: Record<string, number> = {
  * Default score for unknown event types
  */
 export const DEFAULT_EVENT_TYPE_SCORE = 30;
+
+// ============================================
+// TIMING BONUS (base scorer)
+// ============================================
+
+/**
+ * Timing bonus for the alignment core.
+ *
+ * Only applied when an event already has some profile alignment — an
+ * irrelevant event is not more relevant because it happens soon. The bonus is
+ * scaled by the user's career timeframe: someone planning long-term cares
+ * less about immediacy than someone with immediate goals.
+ */
+export const TIMING_BONUS_CONFIG = {
+  /** Points by days-until-event (first matching tier wins) */
+  TIERS: [
+    { maxDays: 14, points: 10 },
+    { maxDays: 30, points: 6 },
+    { maxDays: 60, points: 3 },
+  ],
+  /** Multiplier by careerProfile.timeframe (default 1 when unset/unknown) */
+  TIMEFRAME_MULTIPLIERS: {
+    'immediate': 1,
+    'short-term': 1,
+    'medium-term': 0.6,
+    'long-term': 0.3,
+  } as Record<string, number>,
+} as const;
+
+// ============================================
+// COLD START SIGNALS
+// ============================================
+
+/**
+ * Organizer names treated as reputable for cold-start scoring (8 bonus points).
+ *
+ * Stopgap: this is a static brand list because no organizer-reputation data
+ * source exists yet. It biases cold start toward big-tech events — when an
+ * engagement-based reputation signal (e.g. aggregate attendance per organizer)
+ * becomes available, replace this list with it.
+ */
+export const COLD_START_MAJOR_ORGANIZERS = [
+  'google', 'microsoft', 'amazon', 'meta', 'apple',
+  'netflix', 'uber', 'airbnb', 'stripe', 'github',
+] as const;
 
 // ============================================
 // SENIORITY MATCHING

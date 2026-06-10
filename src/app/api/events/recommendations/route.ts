@@ -13,13 +13,42 @@ import {
 import { UserLocation } from '@/services/locationScoringService';
 import { extractCityFromLocation, extractCountryFromLocation } from '@/utils/locationUtils';
 
-// Rate limiter for recommendations
-const ratelimit = new Ratelimit({
-  redis: kv,
-  limiter: Ratelimit.slidingWindow(20, '1 m'), // 20 requests per minute per user
-  analytics: true,
-  prefix: 'event-recommendations',
-});
+// Rate limiter for recommendations — constructed lazily so a missing KV
+// configuration degrades to fail-open instead of crashing the route at load.
+let ratelimit: Ratelimit | null | undefined;
+
+function getRatelimit(): Ratelimit | null {
+  if (ratelimit !== undefined) {
+    return ratelimit;
+  }
+  try {
+    ratelimit = new Ratelimit({
+      redis: kv,
+      limiter: Ratelimit.slidingWindow(20, '1 m'), // 20 requests per minute per user
+      analytics: true,
+      prefix: 'event-recommendations',
+    });
+  } catch (error) {
+    console.warn('[Recommendations API] Rate limiter unavailable; failing open', error);
+    ratelimit = null;
+  }
+  return ratelimit;
+}
+
+async function isRateLimited(userId: string): Promise<boolean> {
+  const limiter = getRatelimit();
+  if (!limiter) {
+    return false;
+  }
+  try {
+    const { success } = await limiter.limit(userId);
+    return !success;
+  } catch (error) {
+    // KV outage or misconfiguration: serve the request rather than 500/429 everyone
+    console.warn('[Recommendations API] Rate limit check failed; failing open', error);
+    return false;
+  }
+}
 
 interface RecommendationResponse {
   success: boolean;
@@ -70,8 +99,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
     }
 
     // Apply rate limiting
-    const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
-    if (!rateLimitSuccess) {
+    if (await isRateLimited(user.id)) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please try again later.' },
         { status: 429 }

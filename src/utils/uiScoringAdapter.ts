@@ -8,7 +8,7 @@
  */
 
 import { Event, CareerProfile } from '@/types';
-import { BookOpen, TrendUp, Target, Sparkle, Users } from '@phosphor-icons/react';
+import { BookOpen, TrendUp, Target, Sparkle, Users, Clock } from '@phosphor-icons/react';
 import { calculateBaseScore, type AlignmentReason } from '@/lib/recommendation/baseScorer';
 
 /**
@@ -41,7 +41,8 @@ function getUIPropertiesForReason(reason: AlignmentReason): UIAlignmentReason {
     goal: { icon: Target, color: 'text-purple-600 dark:text-purple-400' },
     interest: { icon: Sparkle, color: 'text-pink-600 dark:text-pink-400' },
     'learning-style': { icon: BookOpen, color: 'text-orange-600 dark:text-orange-400' },
-    networking: { icon: Users, color: 'text-teal-600 dark:text-teal-400' }
+    networking: { icon: Users, color: 'text-teal-600 dark:text-teal-400' },
+    timing: { icon: Clock, color: 'text-amber-600 dark:text-amber-400' }
   };
 
   const uiProps = iconMap[reason.type] || { icon: BookOpen, color: 'text-gray-600 dark:text-gray-400' };

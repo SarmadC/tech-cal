@@ -12,7 +12,8 @@ import { eventDetailedTransformer } from '@/utils/transformers';
 import { DiversityEnhancementService } from '@/services/diversityEnhancementService';
 import { CareerProfileService } from '@/services/careerProfileService';
 
-const SUPABASE_SENIORITY_LEVELS = new Set<Database['public']['Enums']['seniority_level']>([
+/** Seniority levels ordered by career progression, for proximity scoring */
+const SENIORITY_LADDER: ReadonlyArray<Database['public']['Enums']['seniority_level']> = [
   'student',
   'entry-level',
   'junior',
@@ -25,7 +26,7 @@ const SUPABASE_SENIORITY_LEVELS = new Set<Database['public']['Enums']['seniority
   'director',
   'vp',
   'founder'
-]);
+];
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
 
 /**
@@ -242,27 +243,67 @@ export class LookalikeUserService {
       // Otherwise, fall back to industry + seniority filtering
     }
 
-    // Fallback: Create fresh query for industry + seniority filtering
-    let query = supabaseClient
+    // Fallback: fetch a wider industry cohort, then rank in memory by profile
+    // similarity (seniority proximity + skill/interest overlap). The previous
+    // exact-seniority filter either excluded near-matches entirely or returned
+    // an arbitrary slice of the industry.
+    const fetchLimit = Math.max(limit * 3, 60);
+    const { data, error } = await supabaseClient
       .from('career_profiles')
       .select('*')
       .neq('user_id', userId)
       .eq('industry', careerProfile.industry)
-      .limit(limit);
-
-    const seniority = careerProfile.seniority as string | undefined;
-    if (seniority && SUPABASE_SENIORITY_LEVELS.has(seniority as Database['public']['Enums']['seniority_level'])) {
-      query = query.eq('seniority', seniority as Database['public']['Enums']['seniority_level']);
-    }
-
-    const { data, error } = await query;
+      .limit(fetchLimit);
 
     if (error) {
       console.warn('[Lookalike] Failed to fetch similar profiles:', error);
       return [];
     }
 
-      return (data || []).map(row => CareerProfileService['transformRowToCareerProfile'](row as never));
+    const cohort = (data || []).map(row => CareerProfileService['transformRowToCareerProfile'](row as never));
+    return this.rankCohortBySimilarity(careerProfile, cohort).slice(0, limit);
+  }
+
+  /**
+   * Rank a cohort of same-industry profiles by similarity to the user.
+   * Stable: ties keep the database order.
+   */
+  private static rankCohortBySimilarity(
+    user: CareerProfile,
+    cohort: CareerProfile[]
+  ): CareerProfile[] {
+    return cohort
+      .map((profile, index) => ({ profile, index, score: this.profileSimilarity(user, profile) }))
+      .sort((a, b) => (b.score !== a.score ? b.score - a.score : a.index - b.index))
+      .map(entry => entry.profile);
+  }
+
+  private static profileSimilarity(user: CareerProfile, candidate: CareerProfile): number {
+    let score = 0;
+
+    // Seniority proximity: exact 3, one step on the ladder 2, two steps 1
+    const userRung = SENIORITY_LADDER.indexOf(user.seniority as typeof SENIORITY_LADDER[number]);
+    const candidateRung = SENIORITY_LADDER.indexOf(candidate.seniority as typeof SENIORITY_LADDER[number]);
+    if (userRung >= 0 && candidateRung >= 0) {
+      const distance = Math.abs(userRung - candidateRung);
+      if (distance === 0) score += 3;
+      else if (distance === 1) score += 2;
+      else if (distance === 2) score += 1;
+    }
+
+    const overlap = (left?: string[], right?: string[]): number => {
+      if (!left?.length || !right?.length) return 0;
+      const rightSet = new Set(right.map(value => value.toLowerCase()));
+      return left.filter(value => rightSet.has(value.toLowerCase())).length;
+    };
+
+    // Caps keep one long list from dominating the ranking
+    score += Math.min(overlap(user.primarySkills, candidate.primarySkills), 4);
+    score += Math.min(overlap(user.interests, candidate.interests), 3);
+    // People who already have what the user wants to learn are good proxies
+    score += Math.min(overlap(user.skillsToLearn, candidate.primarySkills), 3);
+
+    return score;
   }
 
   private static async collectEventsFromProfiles(

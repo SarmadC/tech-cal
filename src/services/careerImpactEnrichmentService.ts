@@ -94,7 +94,10 @@ interface ScoringTelemetry {
  * Cache configuration
  */
 const CACHE_TTL_SECONDS = 3600; // 1 hour
-const ALIGNMENT_CORE_VERSION = 'alignment-core-v2';
+// v2.1: timing bonus added to the alignment core. The version participates in
+// the KV cache key (strategy fingerprint), so bumping it rolls the cache over
+// instead of serving scores computed without the new component.
+const ALIGNMENT_CORE_VERSION = 'alignment-core-v2.1';
 const ALIGNMENT_CORE_COLDSTART_VERSION = `${ALIGNMENT_CORE_VERSION}-coldstart`;
 const CACHE_PREFIX = 'career-impact:v3';
 const LOCATION_NEUTRAL_SCORE = 0.8;
