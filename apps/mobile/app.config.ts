@@ -77,6 +77,7 @@ export default function getMobileExpoConfig() {
           },
         ],
         'expo-notifications',
+        './plugins/withPrivacyManifest',
       ],
       ios: {
         ...baseConfig.expo.ios,
@@ -103,6 +104,7 @@ export default function getMobileExpoConfig() {
           NSPhotoLibraryUsageDescription: isProduction
             ? PROD_PHOTOS_DESCRIPTION
             : DEV_PHOTOS_DESCRIPTION,
+          ITSAppUsesNonExemptEncryption: false,
           UIBackgroundModes: Array.from(
             new Set([
               ...((baseConfig.expo.ios.infoPlist as { UIBackgroundModes?: string[] })

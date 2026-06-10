@@ -5,6 +5,7 @@ import type { MobileEventCard } from "@kurecal/domain";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
+import { isEventSaved } from "../../utils/eventMeta";
 
 interface DiscoverEventCardProps {
   event: MobileEventCard;
@@ -91,8 +92,7 @@ export function DiscoverEventCard({
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
-  const isSaved =
-    event.engagement?.isBookmarked || event.badges?.includes("Saved");
+  const isSaved = isEventSaved(event);
 
   return (
     <Pressable

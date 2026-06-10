@@ -41,7 +41,7 @@ import type { AgendaItem, Event, EventType } from '@/types';
 import type { FilteredEventsData } from '@/types/filteredEvents';
 import { isEventFreeFromPricing, normalizeEventFormat } from '@/utils/filterCountUtils';
 
-function resolveImageUrl(src: string | null | undefined): string | null {
+function resolveImageUrl(src: string | null | undefined, storageBucket?: string): string | null {
   const value = src?.trim();
   if (!value) return null;
 
@@ -56,6 +56,11 @@ function resolveImageUrl(src: string | null | undefined): string | null {
     if (url.protocol !== 'https:') return null;
     return url.toString();
   } catch {
+    // UUID-style filename stored in Supabase Storage
+    if (storageBucket) {
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+      return base ? `${base}/storage/v1/object/public/${storageBucket}/${value}` : null;
+    }
     return null;
   }
 }
@@ -498,7 +503,7 @@ export function toMobileEventCard(
     startTime: event.startTime,
     endTime: event.endTime ?? null,
     imageUrl: resolveImageUrl(event.eventImageUrl),
-    organizerLogoUrl: resolveImageUrl(event.organization?.logo),
+    organizerLogoUrl: resolveImageUrl(event.organization?.logo, 'logos'),
     organizerName:
       event.organization?.name?.trim() || event.organizer?.trim() || null,
     score:

@@ -14,26 +14,12 @@ import type { MobileEventCard } from "@kurecal/domain";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
 import { EventImageSurface } from "../shared/EventImageSurface";
+import { formatEventEyebrow, isEventSaved } from "../../utils/eventMeta";
 
 interface DiscoverHeroCardProps {
   event: MobileEventCard;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
-}
-
-function buildEyebrow(event: MobileEventCard) {
-  const start = new Date(event.startTime);
-  const dateLabel = start.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-
-  const location = event.location?.trim().split(",")[0]?.trim();
-  if (location && location.toLowerCase() !== "remote") {
-    return `${dateLabel} · ${location}`;
-  }
-
-  return dateLabel;
 }
 
 export function DiscoverHeroCard({
@@ -43,9 +29,8 @@ export function DiscoverHeroCard({
 }: DiscoverHeroCardProps) {
   const { tokens } = useAppTheme();
   const { scale, onPressIn, onPressOut } = useScalePress();
-  const isSaved =
-    event.engagement?.isBookmarked || event.badges?.includes("Saved");
-  const eyebrow = useMemo(() => buildEyebrow(event), [event]);
+  const isSaved = isEventSaved(event);
+  const eyebrow = useMemo(() => formatEventEyebrow(event.startTime, event.location), [event]);
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,16 +12,18 @@ import type {
 import { MobilePage } from "../../src/components/chrome/MobilePage";
 import { InlineNotice } from "../../src/components/chrome/InlineNotice";
 import { KureButton } from "../../src/components/chrome/KureButton";
+import { DashboardFollowThroughCard } from "../../src/components/dashboard/DashboardFollowThroughCard";
+import { DashboardHeroCard } from "../../src/components/dashboard/DashboardHeroCard";
 import { DashboardNetworkPulseCard } from "../../src/components/dashboard/DashboardNetworkPulseCard";
 import { ScreenState } from "../../src/components/chrome/ScreenState";
 import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
 import { DashboardRecommendationsCarousel } from "../../src/components/dashboard/DashboardRecommendationsCarousel";
-import { EventImageSurface } from "../../src/components/shared/EventImageSurface";
 import {
   loadMobileCommunityHome,
   loadMobileDashboardSummary,
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
+import { RECOMMENDATION_THRESHOLDS } from "../../../../src/config/recommendationThresholds";
 
 type DashboardAttentionItem = {
   id: string;
@@ -31,33 +33,6 @@ type DashboardAttentionItem = {
   action: string;
   onPress: () => void;
 };
-
-function formatHeroMeta(
-  startTime?: string,
-  location?: string | null,
-  daysUntil?: number,
-) {
-  if (!startTime) {
-    return null;
-  }
-
-  const start = new Date(startTime);
-  const dateLabel = start.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const parts = [dateLabel];
-  if (location?.trim()) {
-    parts.push(location.trim());
-  }
-  if (typeof daysUntil === "number") {
-    parts.push(daysUntil === 0 ? "Today" : `${daysUntil} days away`);
-  }
-
-  return parts.join(" • ");
-}
 
 export default function DashboardScreen() {
   const { tokens } = useAppTheme();
@@ -145,7 +120,7 @@ export default function DashboardScreen() {
     dashboard?.insights?.pipeline.highFitCount &&
     dashboard.insights.pipeline.highFitCount > 0
       ? dashboard.insights.pipeline.highFitCount
-      : pipelineScore >= 60
+      : pipelineScore >= RECOMMENDATION_THRESHOLDS.RECOMMENDED
         ? 1
         : 0;
   const nextCommitment = dashboard?.upcomingCommitments?.[0] ?? null;
@@ -260,15 +235,13 @@ export default function DashboardScreen() {
     : [];
   const primaryAttention = attentionItems[0] ?? null;
   const secondaryAttentionCount = Math.max(0, attentionItems.length - 1);
-  const pipelineStatus =
-    pipelineScore >= 67 ? "Strong" : pipelineScore >= 33 ? "Fair" : "Low";
   const pipelineStatusColor =
-    pipelineScore >= 67
+    pipelineScore >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH
       ? tokens.colors.accent
-      : pipelineScore >= 33
+      : pipelineScore >= RECOMMENDATION_THRESHOLDS.BUCKETS.MODERATE
         ? tokens.colors.accent
         : tokens.colors.warning;
-  const funnelValues = dashboard?.insights?.funnel
+  const funnelValues: [number, number, number] = dashboard?.insights?.funnel
     ? [
         dashboard.insights.funnel.savedOnly,
         dashboard.insights.funnel.rsvped,
@@ -286,18 +259,6 @@ export default function DashboardScreen() {
     : primaryAttention
       ? primaryAttention.label
       : "Nothing urgent. Your next strong-fit event is one tap away.";
-  const heroMeta = topRecommendation
-    ? formatHeroMeta(
-        topRecommendation.event.startTime,
-        topRecommendation.event.location,
-        topRecommendation.daysUntil,
-      )
-    : null;
-  const heroBadgeLabel = topRecommendation
-    ? recommendationScore != null
-      ? `${recommendationScore}% Match`
-      : (topRecommendation.impactLabel ?? "Strong fit")
-    : null;
   const heroBody = topRecommendation
     ? null
     : primaryAttention
@@ -352,255 +313,20 @@ export default function DashboardScreen() {
         {dashboard ? (
           <View style={styles.stack}>
             <View style={styles.statusBoard}>
-              {topRecommendation ? (
-                <EventImageSurface
-                  event={topRecommendation.event}
-                  onPress={heroCtaPress}
-                  style={[
-                    styles.heroStatusCard,
-                    {
-                      borderColor: tokens.colors.border,
-                    },
-                  ]}
-                  pressedStyle={styles.heroStatusPressed}
-                >
-                  <View
-                    style={[
-                      styles.heroImageOverlay,
-                      {
-                        backgroundColor: tokens.colors.overlay,
-                      },
-                    ]}
-                  />
-                  <View style={styles.heroStatusTop}>
-                    <View />
-                    {heroBadgeLabel ? (
-                      <View
-                        style={[
-                          styles.heroStatusBadge,
-                          styles.heroStatusBadgeOnImage,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.heroStatusBadgeText,
-                            {
-                              color: tokens.colors.textPrimary,
-                              fontFamily: tokens.typography.sans,
-                            },
-                          ]}
-                        >
-                          {heroBadgeLabel}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={styles.heroStatusCopy}>
-                    <Text
-                      style={[
-                        styles.heroStatusTitle,
-                        {
-                          color: tokens.colors.textPrimary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {heroTitle}
-                    </Text>
-                    {heroMeta ? (
-                      <Text
-                        style={[
-                          styles.heroStatusMeta,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        {heroMeta}
-                      </Text>
-                    ) : null}
-                    {heroBody ? (
-                      <Text
-                        style={[
-                          styles.heroStatusBody,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                        numberOfLines={2}
-                      >
-                        {heroBody}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.heroStatusFooter}>
-                    <Text
-                      style={[
-                        styles.heroFooterArrow,
-                        {
-                          color: tokens.colors.textPrimary,
-                          fontFamily: tokens.typography.mono,
-                        },
-                      ]}
-                    >
-                      →
-                    </Text>
-                  </View>
-                </EventImageSurface>
-              ) : (
-                <Pressable
-                  onPress={heroCtaPress}
-                  style={({ pressed }) => [
-                    styles.heroStatusCard,
-                    {
-                      borderColor: primaryAttention
-                        ? tokens.colors.borderStrong
-                        : tokens.colors.borderStrong,
-                      backgroundColor: tokens.colors.surface,
-                    },
-                    pressed && styles.heroStatusPressed,
-                  ]}
-                >
-                  <View style={styles.heroStatusTop}>
-                    <Text
-                      style={[
-                        styles.heroStatusEyebrow,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {heroEyebrow}
-                    </Text>
-                  </View>
-                  <View style={styles.heroStatusCopy}>
-                    <Text
-                      style={[
-                        styles.heroStatusTitle,
-                        {
-                          color: tokens.colors.textPrimary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {heroTitle}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.heroStatusBody,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                      numberOfLines={3}
-                    >
-                      {heroBody}
-                    </Text>
-                  </View>
-                  <View style={styles.heroStatusFooter}>
-                    <Text
-                      style={[
-                        styles.heroFooterArrow,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.mono,
-                        },
-                      ]}
-                    >
-                      →
-                    </Text>
-                  </View>
-                </Pressable>
-              )}
+              <DashboardHeroCard
+                event={topRecommendation?.event ?? null}
+                daysUntil={topRecommendation?.daysUntil}
+                eyebrow={heroEyebrow}
+                title={heroTitle}
+                body={heroBody}
+                onPress={heroCtaPress}
+              />
 
               <View style={styles.statusSideColumn}>
-                <View
-                  style={[
-                    styles.healthCard,
-                    {
-                      borderColor: tokens.colors.border,
-                      backgroundColor: tokens.colors.surface,
-                    },
-                  ]}
-                >
-                  <View style={styles.kpiHeaderRow}>
-                    <Text
-                      style={[
-                        styles.kpiCardLabel,
-                        {
-                          color: tokens.colors.textPrimary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      Follow-through
-                    </Text>
-                    <Text
-                      style={[
-                        styles.healthValue,
-                        {
-                          color: tokens.colors.textPrimary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {followThroughTotal > 0 ? `${followThroughRate}%` : "0%"}
-                    </Text>
-                  </View>
-                  <View style={styles.stepTrack}>
-                    {(["Saved", "RSVP", "Attended"] as const).map((lbl, i) => (
-                      <View key={lbl} style={styles.stepItem}>
-                        <View style={styles.stepCountSpacer} />
-                        <View
-                          style={[
-                            styles.stepSegment,
-                            {
-                              backgroundColor:
-                                funnelValues[i] > 0
-                                  ? tokens.colors.success
-                                  : tokens.colors.borderStrong,
-                              opacity: funnelValues[i] > 0 ? 1 : 0.55,
-                              height: funnelValues[i] > 0 ? 16 : 8,
-                            },
-                          ]}
-                        />
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.stepLabelRow}>
-                    {(["Saved", "RSVP", "Attended"] as const).map((lbl, i) => (
-                      <Text
-                        key={lbl}
-                        style={[
-                          styles.stepLabel,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                          },
-                        ]}
-                      >
-                        {lbl} {funnelValues[i]}
-                      </Text>
-                    ))}
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepHelperText,
-                      {
-                        color: tokens.colors.textSecondary,
-                        fontFamily: tokens.typography.sans,
-                      },
-                    ]}
-                  >
-                    {pendingConversion > 0
-                      ? "RSVP pending attendance"
-                      : "No pending follow-up"}
-                  </Text>
-                </View>
+                <DashboardFollowThroughCard
+                  followThroughRate={followThroughRate}
+                  funnelValues={funnelValues}
+                />
 
                 <View style={styles.utilityRow}>
                   <View
@@ -613,11 +339,22 @@ export default function DashboardScreen() {
                     ]}
                   >
                     <View style={styles.kpiHeaderRow}>
+                      <Text
+                        style={[
+                          styles.kpiCardLabel,
+                          {
+                            color: tokens.colors.textPrimary,
+                            fontFamily: tokens.typography.sans,
+                          },
+                        ]}
+                      >
+                        Top picks fit
+                      </Text>
                       {pipelineScore > 0 ? (
                         <View style={styles.scoreWithDenom}>
                           <Text
                             style={[
-                              styles.utilityValue,
+                              styles.healthValue,
                               {
                                 color: tokens.colors.textPrimary,
                                 fontFamily: tokens.typography.sans,
@@ -638,51 +375,8 @@ export default function DashboardScreen() {
                             /100
                           </Text>
                         </View>
-                      ) : (
-                        <Text
-                          style={[
-                            styles.utilityValueMuted,
-                            {
-                              color: tokens.colors.textPrimary,
-                              fontFamily: tokens.typography.sans,
-                            },
-                          ]}
-                        >
-                          Pipeline score
-                        </Text>
-                      )}
-                      {pipelineScore > 0 ? (
-                        <View
-                          style={[
-                            styles.statusChip,
-                            { borderColor: pipelineStatusColor },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.statusChipText,
-                              {
-                                color: pipelineStatusColor,
-                                fontFamily: tokens.typography.sans,
-                              },
-                            ]}
-                          >
-                            {pipelineStatus}
-                          </Text>
-                        </View>
                       ) : null}
                     </View>
-                    <Text
-                      style={[
-                        styles.kpiCardLabel,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {pipelineScore > 0 ? "Top picks fit" : "No score yet"}
-                    </Text>
                     <View style={styles.utilityViz}>
                       <View
                         style={[
@@ -700,21 +394,6 @@ export default function DashboardScreen() {
                           ]}
                         />
                       </View>
-                      <Text
-                        style={[
-                          styles.barLabel,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                            textAlign: "left",
-                            marginTop: 6,
-                          },
-                        ]}
-                      >
-                        {highFitCount > 0
-                          ? `${highFitCount} high-fit top pick${highFitCount === 1 ? "" : "s"}`
-                          : "No high-fit top picks yet"}
-                      </Text>
                     </View>
                   </View>
 
@@ -731,7 +410,7 @@ export default function DashboardScreen() {
                       style={[
                         unratedAttendedCount > 0
                           ? styles.utilityValue
-                          : styles.utilityValueMuted,
+                          : styles.kpiCardLabel,
                         {
                           color: tokens.colors.textPrimary,
                           fontFamily: tokens.typography.sans,
@@ -741,19 +420,6 @@ export default function DashboardScreen() {
                       {unratedAttendedCount > 0
                         ? String(unratedAttendedCount)
                         : "Ratings follow-up"}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.kpiCardLabel,
-                        {
-                          color: tokens.colors.textSecondary,
-                          fontFamily: tokens.typography.sans,
-                        },
-                      ]}
-                    >
-                      {unratedAttendedCount > 0
-                        ? "Ratings follow-up"
-                        : "No ratings to follow up"}
                     </Text>
                     <View style={styles.utilityViz}>
                       <View style={styles.ratingDots}>
@@ -772,21 +438,6 @@ export default function DashboardScreen() {
                           />
                         ))}
                       </View>
-                      <Text
-                        style={[
-                          styles.barLabel,
-                          {
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                            textAlign: "left",
-                            marginTop: 6,
-                          },
-                        ]}
-                      >
-                        {unratedAttendedCount > 0
-                          ? "Rate to improve recommendations"
-                          : "Attend events to unlock ratings"}
-                      </Text>
                     </View>
                   </View>
                 </View>
@@ -1000,129 +651,14 @@ const styles = StyleSheet.create({
   statusBoard: {
     gap: 10,
   },
-  heroStatusCard: {
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 8,
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    position: "relative",
-  },
-  heroStatusPressed: {
-    opacity: 0.96,
-    transform: [{ scale: 0.996 }],
-  },
-  heroImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroStatusTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  heroStatusBadge: {
-    minHeight: 24,
-    borderRadius: 4,
-    borderWidth: 1,
-    justifyContent: "center",
-    paddingHorizontal: 8,
-  },
-  heroStatusBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.4,
-  },
-  heroStatusBadgeOnImage: {
-    backgroundColor: "transparent",
-  },
-  heroStatusCopy: {
-    gap: 4,
-  },
-  heroStatusEyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  heroStatusTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: "700",
-    letterSpacing: -0.24,
-  },
-  heroStatusMeta: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  heroStatusBody: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  heroStatusFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 6,
-  },
-  heroFooterArrow: {
-    fontSize: 18,
-    lineHeight: 20,
-    fontWeight: "700",
-  },
   statusSideColumn: {
     gap: 10,
-  },
-  healthCard: {
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 6,
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   healthValue: {
     fontSize: 22,
     lineHeight: 26,
     fontWeight: "700",
     letterSpacing: -0.4,
-  },
-  stepTrack: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    marginTop: 2,
-  },
-  stepItem: {
-    flex: 1,
-    gap: 6,
-  },
-  stepCountSpacer: {
-    height: 22,
-  },
-  stepSegment: {
-    width: "100%",
-    height: 14,
-    borderRadius: 2,
-  },
-  stepLabelRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 1,
-  },
-  stepLabel: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  stepHelperText: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 1,
   },
   healthTrack: {
     height: 10,
