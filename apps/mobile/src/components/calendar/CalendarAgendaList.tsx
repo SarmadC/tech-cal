@@ -325,6 +325,7 @@ export function CalendarAgendaList({
                 >
                   <View style={styles.timeColumn}>
                     <Text
+                      numberOfLines={1}
                       testID={`calendar-agenda-time-${item.id}`}
                       style={{
                         color: tokens.colors.discoverTextMuted,
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   timeColumn: {
-    width: 46,
+    width: 58,
     paddingTop: 3,
     alignItems: 'flex-end',
   },
