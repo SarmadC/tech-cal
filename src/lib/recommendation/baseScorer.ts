@@ -17,9 +17,12 @@ import {
   ALIGNMENT_WEIGHTS,
   GOAL_KEYWORDS,
   LEARNING_STYLE_KEYWORDS,
+  TIMING_BONUS_CONFIG,
+  COLD_START_MAJOR_ORGANIZERS,
   getGoalReason,
   getLearningStyleReason,
 } from '@/config/scoringConfig';
+import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 
 /**
  * Test if a keyword matches as a complete word in the text
@@ -84,7 +87,7 @@ export { ALIGNMENT_WEIGHTS, GOAL_KEYWORDS, LEARNING_STYLE_KEYWORDS } from '@/con
  * Alignment reason (without UI-specific properties)
  */
 export interface AlignmentReason {
-  type: 'skill' | 'goal' | 'interest' | 'learning-style' | 'networking' | 'role';
+  type: 'skill' | 'goal' | 'interest' | 'learning-style' | 'networking' | 'role' | 'timing';
   reason: string;
   contribution: number;
 }
@@ -117,7 +120,14 @@ export type CoreAlignmentResult = BaseScorerResult;
 function calculateColdStartScore(event: Event): BaseScorerResult {
   let score = 0;
   const alignmentReasons: AlignmentReason[] = [];
-  
+
+  // Component accumulators — report where points actually came from.
+  // (Previously the breakdown was synthesized as fixed fractions of the total,
+  // which fabricated e.g. a careerStageMatch value with no profile to match.)
+  let networkingValue = 0; // popularity signals
+  let timingBonus = 0; // recency signals
+  let industryRelevance = 0; // organizer reputation + event quality signals
+
   // 1. Popularity score (0-15 points)
   const attendeeCount = event.attendeeCount || 0;
   if (attendeeCount > 1000) {
@@ -144,7 +154,8 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
   } else if (attendeeCount > 50) {
     score += 5;
   }
-  
+  networkingValue = score;
+
   // 2. Recency/Timing score (0-10 points)
   const eventDate = new Date(event.startTime);
   const now = new Date();
@@ -162,11 +173,11 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
   } else if (daysUntilEvent > 0 && daysUntilEvent <= 60) {
     score += 4;
   }
-  
+  timingBonus = score - networkingValue;
+
   // 3. Organizer reputation (0-8 points)
   const orgName = (event.organization?.name || event.organizer || '').toLowerCase();
-  const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'uber', 'airbnb', 'stripe', 'github'];
-  if (majorOrgs.some(org => orgName.includes(org))) {
+  if (COLD_START_MAJOR_ORGANIZERS.some(org => orgName.includes(org))) {
     score += 8;
     alignmentReasons.push({
       type: 'interest',
@@ -213,18 +224,22 @@ function calculateColdStartScore(event: Event): BaseScorerResult {
     });
   }
   
+  industryRelevance = score - networkingValue - timingBonus;
+
   // Normalize to 15-55 range for cold start
   // Wider range provides better differentiation among anonymous/new users
   const normalizedScore = Math.min(55, Math.max(15, score));
-  
+
   return {
     overall: normalizedScore,
+    // Raw point contributions per signal (same semantics as the profile path);
+    // skill/career-stage are genuinely 0 without a profile.
     components: {
       skillRelevance: 0,
-      careerStageMatch: normalizedScore * 0.4,
-      networkingValue: normalizedScore * 0.3,
-      industryRelevance: normalizedScore * 0.2,
-      timingBonus: normalizedScore * 0.1
+      careerStageMatch: 0,
+      networkingValue,
+      industryRelevance,
+      timingBonus
     },
     alignmentReasons: alignmentReasons.length > 0 
       ? alignmentReasons 
@@ -535,6 +550,31 @@ export function calculateBaseScore(
     }
   }
 
+  // 8. Timing bonus — amplifies events that already align with the profile.
+  // Gated on alignmentScore > 0: an irrelevant event is not more relevant
+  // because it happens soon. Scaled by the user's career timeframe.
+  let timingBonus = 0;
+  if (alignmentScore > 0) {
+    const daysUntilEvent =
+      (new Date(event.startTime).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (Number.isFinite(daysUntilEvent) && daysUntilEvent > 0) {
+      const tier = TIMING_BONUS_CONFIG.TIERS.find(t => daysUntilEvent <= t.maxDays);
+      if (tier) {
+        const multiplier =
+          TIMING_BONUS_CONFIG.TIMEFRAME_MULTIPLIERS[careerProfile.timeframe] ?? 1;
+        timingBonus = Math.round(tier.points * multiplier);
+      }
+    }
+    if (timingBonus > 0) {
+      alignmentScore += timingBonus;
+      alignmentReasons.push({
+        type: 'timing',
+        reason: 'Happening soon — good timing for your goals',
+        contribution: timingBonus
+      });
+    }
+  }
+
   // Normalize score to 0-100
   const normalizedScore = Math.min(100, alignmentScore);
 
@@ -545,7 +585,7 @@ export function calculateBaseScore(
       careerStageMatch,
       networkingValue,
       industryRelevance,
-      timingBonus: 0 // Reserved for future timing-based scoring
+      timingBonus
     },
     alignmentReasons,
     matchedSkills: [...new Set(matchedSkills)],
@@ -560,8 +600,8 @@ export function calculateBaseScore(
 export const calculateAlignment = calculateBaseScore;
 
 export function getAlignmentCategory(score: number): 'high' | 'moderate' | 'low' {
-  if (score >= 80) return 'high';
-  if (score >= 50) return 'moderate';
+  if (score >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH) return 'high';
+  if (score >= RECOMMENDATION_THRESHOLDS.BUCKETS.MODERATE) return 'moderate';
   return 'low';
 }
 
@@ -569,8 +609,8 @@ export function getAlignmentCategory(score: number): 'high' | 'moderate' | 'low'
  * Get match quality label from score
  */
 export function getMatchQuality(score: number): string {
-  if (score >= 80) return 'Perfect';
-  if (score >= 50) return 'Strong';
-  if (score >= 20) return 'Good';
+  if (score >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH) return 'Perfect';
+  if (score >= RECOMMENDATION_THRESHOLDS.BUCKETS.MODERATE) return 'Strong';
+  if (score >= RECOMMENDATION_THRESHOLDS.BUCKETS.LOW) return 'Good';
   return 'Fair';
 }

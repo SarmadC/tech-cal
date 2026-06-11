@@ -44,7 +44,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "title": "Advanced React Workshop",
     },
-    "impactScore": 53,
+    "impactScore": 64,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: React",
@@ -56,9 +56,9 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
         "React",
         "Performance",
       ],
-      "score": 40.8,
+      "score": 51,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 18,
     "reasons": [
       "Exact match: React",
@@ -67,7 +67,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "Hands-on workshop matches your learning style",
     ],
     "recencyBoost": 0,
-    "totalScore": 62.1,
+    "totalScore": 72.13,
   },
   {
     "event": {
@@ -96,7 +96,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "title": "Local Meetup London",
     },
-    "impactScore": 61,
+    "impactScore": 76,
     "locationScore": 0.5,
     "match": {
       "explanation": "Exact match: React",
@@ -109,9 +109,9 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
         "networking",
         "meetup",
       ],
-      "score": 46.8,
+      "score": 62,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 9,
     "reasons": [
       "Exact match: React",
@@ -120,54 +120,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "International event",
     ],
     "recencyBoost": 0,
-    "totalScore": 53.160000000000004,
-  },
-  {
-    "event": {
-      "attendee_count": 50,
-      "description": "Learn Rust from scratch.",
-      "end_time": "2024-06-03T17:00:00Z",
-      "event_agenda": [],
-      "event_type": {
-        "id": "workshop",
-        "name": "Workshop",
-      },
-      "id": "event-3-skill-to-learn",
-      "organizer": {
-        "name": "Rust Foundation",
-      },
-      "start_time": "2024-06-03T09:00:00Z",
-      "status": "confirmed",
-      "tags": [
-        {
-          "category": "Programming",
-          "color": "#6b7280",
-          "id": "t4",
-          "name": "Rust",
-        },
-      ],
-      "title": "Rust for Beginners",
-    },
-    "impactScore": 37,
-    "locationScore": 1,
-    "match": {
-      "explanation": "Learning: Exact match: Rust",
-      "matchedCategories": [
-        "Programming",
-      ],
-      "matchedTags": [
-        "Rust",
-      ],
-      "score": 30,
-    },
-    "popularityBoost": 0,
-    "profileBoost": 8,
-    "reasons": [
-      "Learning: Exact match: Rust",
-      "Matches your preferred event type",
-    ],
-    "recencyBoost": 0,
-    "totalScore": 42.64,
+    "totalScore": 65.82,
   },
   {
     "event": {
@@ -195,7 +148,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       ],
       "title": "TypeScript Symposium",
     },
-    "impactScore": 31,
+    "impactScore": 37,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: TypeScript",
@@ -205,16 +158,16 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "matchedTags": [
         "TypeScript",
       ],
-      "score": 24,
+      "score": 30,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 8,
     "reasons": [
       "Exact match: TypeScript",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 38.02,
+    "totalScore": 44.64,
   },
   {
     "event": {
@@ -245,7 +198,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "tags": [],
       "title": "General Tech Day",
     },
-    "impactScore": 22,
+    "impactScore": 27,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: CSS",
@@ -255,16 +208,63 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "matchedTags": [
         "CSS",
       ],
-      "score": 16.8,
+      "score": 21,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 4,
     "profileBoost": 8,
     "reasons": [
       "Exact match: CSS",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 32.08,
+    "totalScore": 39.49,
+  },
+  {
+    "event": {
+      "attendee_count": 50,
+      "description": "Learn Rust from scratch.",
+      "end_time": "2024-06-03T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-3-skill-to-learn",
+      "organizer": {
+        "name": "Rust Foundation",
+      },
+      "start_time": "2024-06-03T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t4",
+          "name": "Rust",
+        },
+      ],
+      "title": "Rust for Beginners",
+    },
+    "impactScore": 19,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Learning: Exact match: Rust",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "Rust",
+      ],
+      "score": 12,
+    },
+    "popularityBoost": 1,
+    "profileBoost": 8,
+    "reasons": [
+      "Learning: Exact match: Rust",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 29.78,
   },
   {
     "event": {
@@ -300,13 +300,13 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical di
       "matchedTags": [],
       "score": 0,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 0,
     "reasons": [
       "No specific matches found",
     ],
     "recencyBoost": 0,
-    "totalScore": 10,
+    "totalScore": 11,
   },
 ]
 `;
@@ -354,7 +354,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "title": "Advanced React Workshop",
     },
-    "impactScore": 53,
+    "impactScore": 64,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: React",
@@ -366,9 +366,9 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
         "React",
         "Performance",
       ],
-      "score": 40.8,
+      "score": 51,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 18,
     "reasons": [
       "Exact match: React",
@@ -377,7 +377,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "Hands-on workshop matches your learning style",
     ],
     "recencyBoost": 0,
-    "totalScore": 60.1,
+    "totalScore": 70.13,
   },
   {
     "event": {
@@ -406,7 +406,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "title": "Local Meetup London",
     },
-    "impactScore": 61,
+    "impactScore": 76,
     "locationScore": 0.5,
     "match": {
       "explanation": "Exact match: React",
@@ -419,9 +419,9 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
         "networking",
         "meetup",
       ],
-      "score": 46.8,
+      "score": 62,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 9,
     "reasons": [
       "Exact match: React",
@@ -430,54 +430,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "International event",
     ],
     "recencyBoost": 0,
-    "totalScore": 52.160000000000004,
-  },
-  {
-    "event": {
-      "attendee_count": 50,
-      "description": "Learn Rust from scratch.",
-      "end_time": "2024-06-03T17:00:00Z",
-      "event_agenda": [],
-      "event_type": {
-        "id": "workshop",
-        "name": "Workshop",
-      },
-      "id": "event-3-skill-to-learn",
-      "organizer": {
-        "name": "Rust Foundation",
-      },
-      "start_time": "2024-06-03T09:00:00Z",
-      "status": "confirmed",
-      "tags": [
-        {
-          "category": "Programming",
-          "color": "#6b7280",
-          "id": "t4",
-          "name": "Rust",
-        },
-      ],
-      "title": "Rust for Beginners",
-    },
-    "impactScore": 37,
-    "locationScore": 1,
-    "match": {
-      "explanation": "Learning: Exact match: Rust",
-      "matchedCategories": [
-        "Programming",
-      ],
-      "matchedTags": [
-        "Rust",
-      ],
-      "score": 30,
-    },
-    "popularityBoost": 0,
-    "profileBoost": 8,
-    "reasons": [
-      "Learning: Exact match: Rust",
-      "Matches your preferred event type",
-    ],
-    "recencyBoost": 0,
-    "totalScore": 40.64,
+    "totalScore": 64.82,
   },
   {
     "event": {
@@ -505,7 +458,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       ],
       "title": "TypeScript Symposium",
     },
-    "impactScore": 31,
+    "impactScore": 37,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: TypeScript",
@@ -515,16 +468,16 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "matchedTags": [
         "TypeScript",
       ],
-      "score": 24,
+      "score": 30,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 2,
     "profileBoost": 8,
     "reasons": [
       "Exact match: TypeScript",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 36.02,
+    "totalScore": 42.64,
   },
   {
     "event": {
@@ -555,7 +508,7 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "tags": [],
       "title": "General Tech Day",
     },
-    "impactScore": 22,
+    "impactScore": 27,
     "locationScore": 1,
     "match": {
       "explanation": "Exact match: CSS",
@@ -565,16 +518,63 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "matchedTags": [
         "CSS",
       ],
-      "score": 16.8,
+      "score": 21,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 4,
     "profileBoost": 8,
     "reasons": [
       "Exact match: CSS",
       "Matches your preferred event type",
     ],
     "recencyBoost": 0,
-    "totalScore": 33.08,
+    "totalScore": 40.49,
+  },
+  {
+    "event": {
+      "attendee_count": 50,
+      "description": "Learn Rust from scratch.",
+      "end_time": "2024-06-03T17:00:00Z",
+      "event_agenda": [],
+      "event_type": {
+        "id": "workshop",
+        "name": "Workshop",
+      },
+      "id": "event-3-skill-to-learn",
+      "organizer": {
+        "name": "Rust Foundation",
+      },
+      "start_time": "2024-06-03T09:00:00Z",
+      "status": "confirmed",
+      "tags": [
+        {
+          "category": "Programming",
+          "color": "#6b7280",
+          "id": "t4",
+          "name": "Rust",
+        },
+      ],
+      "title": "Rust for Beginners",
+    },
+    "impactScore": 19,
+    "locationScore": 1,
+    "match": {
+      "explanation": "Learning: Exact match: Rust",
+      "matchedCategories": [
+        "Programming",
+      ],
+      "matchedTags": [
+        "Rust",
+      ],
+      "score": 12,
+    },
+    "popularityBoost": 1,
+    "profileBoost": 8,
+    "reasons": [
+      "Learning: Exact match: Rust",
+      "Matches your preferred event type",
+    ],
+    "recencyBoost": 0,
+    "totalScore": 27.78,
   },
   {
     "event": {
@@ -610,13 +610,13 @@ exports[`TagBasedMatchingService Parity (Golden Master) > generates identical re
       "matchedTags": [],
       "score": 0,
     },
-    "popularityBoost": 0,
+    "popularityBoost": 1,
     "profileBoost": 0,
     "reasons": [
       "No specific matches found",
     ],
     "recencyBoost": 0,
-    "totalScore": 8,
+    "totalScore": 9,
   },
 ]
 `;

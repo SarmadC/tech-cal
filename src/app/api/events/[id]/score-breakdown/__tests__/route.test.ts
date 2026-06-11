@@ -35,61 +35,43 @@ vi.mock('@/services/careerProfileService', () => ({
   },
 }));
 
-const mockAlgorithmConfig = {
-  version: 'v2.0.0',
-  weights: {
-    skillRelevance: 0.3,
-    careerStageMatch: 0.25,
-    networkingValue: 0.2,
-    industryRelevance: 0.15,
-    timingBonus: 0.1,
+// The route scores through the production enrichment path (alignment core),
+// not a standalone scoring strategy — mock that path.
+const buildCareerImpact = (overrides: Record<string, unknown> = {}) => ({
+  overall: 75,
+  confidence: 0.85,
+  components: {
+    skillRelevance: 22.5,
+    careerStageMatch: 18.75,
+    networkingValue: 15,
+    industryRelevance: 11.25,
+    timingBonus: 7.5,
   },
-  thresholds: {
-    highImpact: 80,
-    moderateImpact: 60,
-    lowImpact: 40,
+  explanation: {
+    reasons: ['Excellent skill development opportunity'],
+    matchedSkills: ['React'],
+    speakerHighlights: [],
+    careerImpactCategory: 'moderate' as const,
+    confidenceFactors: [],
   },
-  confidenceFactors: {
-    dataCompleteness: 0.9,
-    profileCompleteness: 0.85,
-    eventDetailLevel: 0.8,
+  metadata: {
+    algorithmVersion: 'alignment-core-v2',
+    calculatedAt: new Date().toISOString(),
+    careerProfileHash: 'hash123',
+    eventDataHash: 'hash456',
+    scoringTriggers: ['type_pref_gate', 'beginner_boost'],
   },
-} as const;
+  ...overrides,
+});
 
-vi.mock('@/services/scoring', () => ({
-  ScoringStrategyFactory: {
-    getDefaultStrategy: vi.fn(() => ({
-      version: 'v2.0.0',
-      name: 'test-strategy',
-      getConfig: vi.fn(() => mockAlgorithmConfig),
-      canScore: vi.fn(() => true),
-      calculate: vi.fn(async () => ({
-        overall: 75,
-        confidence: 0.85,
-        components: {
-          skillRelevance: 22.5,
-          careerStageMatch: 18.75,
-          networkingValue: 15,
-          industryRelevance: 11.25,
-          timingBonus: 7.5,
-        },
-        explanation: {
-          reasons: ['Excellent skill development opportunity'],
-          matchedSkills: ['React'],
-          speakerHighlights: [],
-          careerImpactCategory: 'moderate' as const,
-          confidenceFactors: [],
-        },
-        metadata: {
-          algorithmVersion: 'v2.0.0',
-          calculatedAt: new Date().toISOString(),
-          careerProfileHash: 'hash123',
-          eventDataHash: 'hash456',
-          scoringTriggers: ['type_pref_gate', 'beginner_boost'],
-        },
-      })),
-    })),
-  },
+vi.mock('@/services/careerImpactEnrichmentService', () => ({
+  enrichEventsWithCareerImpact: vi.fn(async (events: Array<Record<string, unknown>>) =>
+    events.map(event => ({
+      ...event,
+      careerImpact: buildCareerImpact(),
+      isCareerScored: true,
+    }))
+  ),
 }));
 
 const withEnv = async (
@@ -170,7 +152,7 @@ describe('GET /api/events/[id]/score-breakdown', () => {
         expect(data.data.components.networkingValue).toBe(15);
         expect(data.data.components.industryRelevance).toBe(11.25);
         expect(data.data.components.timingBonus).toBe(7.5);
-        expect(data.data.algorithmVersion).toBe('v2.0.0');
+        expect(data.data.algorithmVersion).toBe('alignment-core-v2');
       },
     );
   });
@@ -202,40 +184,24 @@ describe('GET /api/events/[id]/score-breakdown', () => {
       },
       async () => {
         const mockTriggers = Array.from({ length: 25 }, (_, i) => `trigger_${i}`);
-        const scoringModule = await import('@/services/scoring');
+        const enrichmentModule = await import('@/services/careerImpactEnrichmentService');
         vi
-          .mocked(scoringModule.ScoringStrategyFactory.getDefaultStrategy)
-          .mockReturnValueOnce({
-            version: 'v2.0.0',
-            name: 'test-strategy',
-            getConfig: vi.fn(() => mockAlgorithmConfig),
-            canScore: vi.fn(() => true),
-            calculate: vi.fn(async () => ({
-              overall: 75,
-              confidence: 0.85,
-              components: {
-                skillRelevance: 22.5,
-                careerStageMatch: 18.75,
-                networkingValue: 15,
-                industryRelevance: 11.25,
-                timingBonus: 7.5,
-              },
-        explanation: {
-          reasons: ['Test reason'],
-          matchedSkills: [],
-          speakerHighlights: [],
-          careerImpactCategory: 'moderate' as const,
-          confidenceFactors: [],
-        },
-              metadata: {
-                algorithmVersion: 'v2.0.0',
-                calculatedAt: new Date().toISOString(),
-                careerProfileHash: 'hash123',
-                eventDataHash: 'hash456',
-                scoringTriggers: mockTriggers,
-              },
-            })),
-          });
+          .mocked(enrichmentModule.enrichEventsWithCareerImpact)
+          .mockImplementationOnce(async (events) =>
+            (events as unknown as Array<Record<string, unknown>>).map(event => ({
+              ...event,
+              careerImpact: buildCareerImpact({
+                metadata: {
+                  algorithmVersion: 'alignment-core-v2',
+                  calculatedAt: new Date().toISOString(),
+                  careerProfileHash: 'hash123',
+                  eventDataHash: 'hash456',
+                  scoringTriggers: mockTriggers,
+                },
+              }),
+              isCareerScored: true,
+            })) as never
+          );
 
         const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
         const params = Promise.resolve({ id: 'test-id' });

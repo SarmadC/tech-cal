@@ -1808,14 +1808,16 @@ export class EventService {
         userId: string,
         careerProfile: CareerProfile,
         supabaseClient: SupabaseClientType,
-        limit: number = 10
+        limit: number = 10,
+        userLocation?: UserLocation | null
     ): Promise<Event[]> {
         try {
             const recommendations = await TagBasedMatchingService.getRecommendedEventsByTags(
                 userId,
                 careerProfile,
                 supabaseClient,
-                limit
+                limit,
+                userLocation
             );
 
             return recommendations.map((recommendation, index) => {
@@ -1872,6 +1874,9 @@ export class EventService {
         limit: number = 50
     ): Promise<Event[]> {
         try {
+            // `tag_filter` is an inner-joined embed that restricts parent rows; the
+            // non-inner `tags` embed keeps the full tag list on each returned event.
+            // Filtering `tags.event_tags.event_tag` directly would not filter events at all.
             const { data: events, error } = await supabaseClient
                 .from('events')
                 .select(`
@@ -1880,9 +1885,12 @@ export class EventService {
                     organizer:organizers (*),
                     tags:event_tag_relations (
                         event_tags (event_tag, category)
+                    ),
+                    tag_filter:event_tag_relations!inner (
+                        event_tags!inner (event_tag)
                     )
                 `)
-                .in('tags.event_tags.event_tag', tagNames)
+                .in('tag_filter.event_tags.event_tag', tagNames)
                 .eq('status', 'confirmed')
                 .gte('start_time', new Date().toISOString())
                 .order('start_time', { ascending: true })
@@ -2149,9 +2157,9 @@ export class EventService {
         telemetry?: RecommendationTelemetryContext
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
-            const { data: events, error } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+            const { data: events, error, count } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .from('events_detailed')
-                .select('*')
+                .select('*', { count: 'exact' })
                 .gte('start_time', new Date().toISOString())
                 .order('attendee_count', { ascending: false })
                 .range((page - 1) * pageSize, page * pageSize - 1);
@@ -2187,7 +2195,9 @@ export class EventService {
 
             return {
                 events: appEvents,
-                totalCount: appEvents.length,
+                // Use the real total — reporting the page length here capped
+                // pagination at a single page.
+                totalCount: count ?? appEvents.length,
                 isColdStart: true
             };
         } catch (error) {

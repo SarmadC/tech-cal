@@ -35,6 +35,7 @@ export interface PersonalizedRecommendationCandidateOptions {
   careerProfile: CareerProfile | null;
   limit?: number;
   tags?: string[];
+  userLocation?: UserLocation | null;
 }
 
 export interface PersonalizedRecommendationCandidates {
@@ -70,6 +71,7 @@ export interface BestMatchCandidateCounts {
 
 export interface HybridBestMatchCandidateOptions extends FilteredRecommendationCandidateOptions {
   personalizedLimit?: number;
+  userLocation?: UserLocation | null;
 }
 
 export interface HybridBestMatchRecommendationCandidates extends FilteredRecommendationCandidates {
@@ -248,7 +250,11 @@ async function hydrateScorableEvents(
     return events;
   }
 
-  const eventIds = [...new Set(events.map((event) => event.id).filter(Boolean))];
+  // Only fetch events that are missing agenda data — retrieval paths
+  // (tag/text/discovery queries) already select event_agenda, so re-hydrating
+  // every candidate doubled the heaviest query of the pipeline.
+  const eventsNeedingHydration = events.filter((event) => !Array.isArray(event.agenda));
+  const eventIds = [...new Set(eventsNeedingHydration.map((event) => event.id).filter(Boolean))];
   if (eventIds.length === 0) {
     return events;
   }
@@ -280,6 +286,7 @@ export async function fetchPersonalizedRecommendationCandidates({
   careerProfile,
   limit = 10,
   tags = [],
+  userLocation,
 }: PersonalizedRecommendationCandidateOptions): Promise<PersonalizedRecommendationCandidates> {
   if (tags.length > 0) {
     const events = await EventService.searchEventsByTags(tags, supabaseClient, limit);
@@ -302,7 +309,8 @@ export async function fetchPersonalizedRecommendationCandidates({
     userId,
     careerProfile,
     supabaseClient,
-    limit
+    limit,
+    userLocation
   );
 
   return {
@@ -349,6 +357,7 @@ export async function fetchHybridBestMatchCandidates({
   telemetry,
   skipColdStart = false,
   personalizedLimit,
+  userLocation,
 }: HybridBestMatchCandidateOptions): Promise<HybridBestMatchRecommendationCandidates> {
   const broadPromise = fetchFilteredRecommendationCandidates({
     filters,
@@ -370,16 +379,16 @@ export async function fetchHybridBestMatchCandidates({
     userId,
     careerProfile,
     limit: personalizedLimit ?? calculatePersonalizedSupplementLimit(page, pageSize),
+    userLocation,
   }).then(
     (value) => ({ status: 'fulfilled' as const, value }),
     (reason) => ({ status: 'rejected' as const, reason }),
   );
 
+  // Cold-start users with a career profile still get the personalized,
+  // profile-driven supplement merged in: lookalike retrieval alone ignores the
+  // profile the user just completed. Lookalike results stay as the broad base.
   const broadResult = await broadPromise;
-  if (broadResult.isColdStart) {
-    await settledPersonalizedPromise;
-    return createFilteredOnlyCandidateResult(broadResult);
-  }
 
   const personalizedResult = await settledPersonalizedPromise;
   if (personalizedResult.status === 'rejected') {
@@ -464,7 +473,7 @@ export async function fetchHybridBestMatchCandidates({
   return {
     events: mergedEvents,
     totalCount: broadResult.totalCount,
-    isColdStart: false,
+    isColdStart: broadResult.isColdStart,
     candidateSources: mergeCandidateSourceMaps(
       broadResult.candidateSources,
       personalizedResult.value.candidateSources,
@@ -534,7 +543,13 @@ function decorateRecommendationMetadata(
       ...((existingMetadata.candidateSources as RecommendationCandidateSource[] | undefined) || []),
     ]) as RecommendationCandidateSource[];
 
-    const tagMatch = careerProfile
+    // Reuse the tag match computed during retrieval when present —
+    // calculateTagSimilarity is regex-heavy and was previously recomputed here
+    // for every event on every request.
+    const hasRetrievalTagMatch =
+      (typeof existingMetadata.matchScore === 'number' && existingMetadata.matchScore > 0) ||
+      (existingMetadata.matchedTags?.length ?? 0) > 0;
+    const tagMatch = careerProfile && !hasRetrievalTagMatch
       ? TagBasedMatchingService.calculateTagSimilarity(event, careerProfile)
       : null;
     const matchedTags = dedupeStrings([

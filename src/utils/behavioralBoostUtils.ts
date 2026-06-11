@@ -52,6 +52,8 @@ export async function getUserInteractedEvents(
           organizer_id,
           attendee_count,
           location,
+          difficulty_level,
+          event_format,
           created_at,
           source_url,
           livestream_url
@@ -79,9 +81,10 @@ export async function getUserInteractedEvents(
         organizerId: event.organizer_id,
         attendeeCount: event.attendee_count || 0,
         location: event.location || '',
-        format: 'virtual', // Default format
-        cost: 'free', // Default cost
-        difficulty: 'beginner', // Default difficulty
+        // Real values only — fabricated defaults here previously made
+        // behavioral similarity compare constants instead of event data.
+        difficulty: (event.difficulty_level as Event['difficulty']) ?? null,
+        eventFormat: (event.event_format as Event['eventFormat']) ?? null,
         color: '#3B82F6', // Default color
         tags: [], // Default empty tags
         careerImpactScore: 0, // Default score

@@ -227,8 +227,23 @@ describe('fetchPersonalizedRecommendationCandidates', () => {
       careerProfile: baseProfile,
     });
 
-    expect(mockGetRecommendedEventsByTags).toHaveBeenCalledWith('u1', baseProfile, supabaseStub, 10);
+    expect(mockGetRecommendedEventsByTags).toHaveBeenCalledWith('u1', baseProfile, supabaseStub, 10, undefined);
     expect(result.events).toHaveLength(1);
+  });
+
+  it('threads userLocation through to tag-based retrieval', async () => {
+    const events = [makeEvent('e1')];
+    mockGetRecommendedEventsByTags.mockResolvedValue(events);
+    const userLocation = { city: 'berlin', country: 'germany' };
+
+    await fetchPersonalizedRecommendationCandidates({
+      supabaseClient: supabaseStub,
+      userId: 'u1',
+      careerProfile: baseProfile,
+      userLocation,
+    });
+
+    expect(mockGetRecommendedEventsByTags).toHaveBeenCalledWith('u1', baseProfile, supabaseStub, 10, userLocation);
   });
 });
 
@@ -342,12 +357,21 @@ describe('fetchHybridBestMatchCandidates', () => {
     expect(result.candidateCounts.personalizedFiltered).toBe(0);
   });
 
-  it('returns filtered-only retrieval for cold-start candidate pools', async () => {
-    mockGetEventsWithColdStartHandling.mockResolvedValue({
-      events: [makeEvent('cold-1')],
-      totalCount: 1,
-      isColdStart: true,
-    });
+  it('merges the personalized supplement for cold-start users with a profile', async () => {
+    // Cold-start users who completed a career profile should not be limited to
+    // the lookalike pool: their profile-driven candidates are merged in.
+    mockGetEventsWithColdStartHandling
+      .mockResolvedValueOnce({
+        events: [makeEvent('cold-1')],
+        totalCount: 1,
+        isColdStart: true,
+      })
+      // Second call re-filters the personalized supplement (skipColdStart path)
+      .mockResolvedValueOnce({
+        events: [makeEvent('supplement')],
+        totalCount: 1,
+        isColdStart: false,
+      });
     mockGetRecommendedEventsByTags.mockResolvedValue([makeEvent('supplement')]);
 
     const result = await fetchHybridBestMatchCandidates({
@@ -356,9 +380,10 @@ describe('fetchHybridBestMatchCandidates', () => {
       userId: 'u1',
     });
 
-    expect(result.retrievalStrategy).toBe('filtered-only');
-    expect(result.supplemented).toBe(false);
-    expect(result.events.map((event) => event.id)).toEqual(['cold-1']);
+    expect(result.retrievalStrategy).toBe('hybrid-best-match-v1');
+    expect(result.supplemented).toBe(true);
+    expect(result.isColdStart).toBe(true);
+    expect(result.events.map((event) => event.id)).toEqual(['cold-1', 'supplement']);
   });
 
   it('skips supplement retrieval when the user is missing profile context', async () => {

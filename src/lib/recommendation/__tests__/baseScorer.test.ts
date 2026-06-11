@@ -536,4 +536,50 @@ describe('matchesWholeWord (indirect testing via calculateBaseScore)', () => {
       expect(highResult.overall - lowResult.overall).toBeGreaterThan(10);
     });
   });
+
+  describe('timing bonus', () => {
+    const daysFromNow = (days: number): string =>
+      new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+    const eventStartingIn = (days: number, title: string) => {
+      const event = createTestEvent(title);
+      (event as unknown as Record<string, unknown>).startTime = daysFromNow(days);
+      return event;
+    };
+
+    it('awards a timing bonus to aligned events happening soon', () => {
+      const profile = createTestProfile({ primarySkills: ['React'], timeframe: 'short-term' });
+      const soonEvent = eventStartingIn(7, 'React Workshop');
+      const distantEvent = eventStartingIn(120, 'React Workshop');
+
+      const soonResult = calculateBaseScore(soonEvent, profile);
+      const distantResult = calculateBaseScore(distantEvent, profile);
+
+      expect(soonResult.components.timingBonus).toBeGreaterThan(0);
+      expect(distantResult.components.timingBonus).toBe(0);
+      expect(soonResult.overall).toBeGreaterThan(distantResult.overall);
+      expect(soonResult.alignmentReasons.some(reason => reason.type === 'timing')).toBe(true);
+    });
+
+    it('gives no timing bonus to events with zero profile alignment', () => {
+      // An irrelevant event is not more relevant because it happens soon
+      const profile = createTestProfile({ primarySkills: ['React'] });
+      const result = calculateBaseScore(eventStartingIn(7, 'Unrelated Gathering'), profile);
+
+      expect(result.overall).toBe(0);
+      expect(result.components.timingBonus).toBe(0);
+    });
+
+    it('scales the bonus down for long-term planners', () => {
+      const shortTermProfile = createTestProfile({ primarySkills: ['React'], timeframe: 'short-term' });
+      const longTermProfile = createTestProfile({ primarySkills: ['React'], timeframe: 'long-term' });
+      const soonEvent = eventStartingIn(7, 'React Workshop');
+
+      const shortTermResult = calculateBaseScore(soonEvent, shortTermProfile);
+      const longTermResult = calculateBaseScore(soonEvent, longTermProfile);
+
+      expect(longTermResult.components.timingBonus).toBeGreaterThan(0);
+      expect(longTermResult.components.timingBonus).toBeLessThan(shortTermResult.components.timingBonus);
+    });
+  });
 });

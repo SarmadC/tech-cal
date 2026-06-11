@@ -112,7 +112,7 @@ describe('DiversityEnhancementService', () => {
       expect(result.swapsApplied).toHaveLength(0);
     });
 
-    it('should apply diversity bonus/penalty to scores', () => {
+    it('records diversity adjustments as metadata without rewriting scores', () => {
       const events = [
         createMockEvent('1', 'workshop', 'San Francisco, CA', null, 0.8),
         createMockEvent('2', 'workshop', 'New York, NY', null, 0.8),
@@ -122,13 +122,21 @@ describe('DiversityEnhancementService', () => {
 
       const result = DiversityEnhancementService.enhanceRecommendations(events, 4);
 
-      // Check that scores have been adjusted
       const enhancedEvents = result.enhancedRanking as EventWithCareerImpact[];
-      const hasAdjustedScores = enhancedEvents.some(event => 
-        event.careerImpact?.overall !== 0.8 && event.careerImpact?.overall !== 0.6
+
+      // Scores must remain exactly what the scorer produced — rewriting
+      // careerImpact.overall detached scores from their components and could
+      // flip UI impact buckets.
+      enhancedEvents.forEach(event => {
+        expect([0.8, 0.6]).toContain(event.careerImpact?.overall);
+      });
+
+      // The adjustment is recorded as rank-context metadata instead
+      const hasAdjustmentMetadata = enhancedEvents.some(event =>
+        typeof event.careerImpact?.metadata?.diversityAdjustment === 'number' &&
+        event.careerImpact.metadata.diversityAdjustment !== 0
       );
-      
-      expect(hasAdjustedScores).toBe(true);
+      expect(hasAdjustmentMetadata).toBe(true);
     });
 
     it('should handle events without career impact scores', () => {

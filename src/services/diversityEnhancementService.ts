@@ -379,10 +379,15 @@ export class DiversityEnhancementService {
   }
 
   /**
-   * Apply diversity scoring adjustments
+   * Record diversity adjustments without rewriting scores.
+   *
+   * The adjustment is rank-context metadata only. It must NOT be written into
+   * careerImpact.overall: doing so detached the displayed score from its
+   * components/explanation, could flip UI impact buckets, and compounded when
+   * the enhancement ran more than once on the same events.
    */
   private static applyDiversityScoring(events: Event[], _diversityMetrics: DiversityMetrics): Event[] {
-    // FIXED: Recalculate distribution for current events after swaps
+    // Recalculate distribution for current events after swaps
     const currentDistribution = new Map<string, number>();
     events.forEach(event => {
       const eventType = this.getEventType(event);
@@ -394,28 +399,27 @@ export class DiversityEnhancementService {
     return events.map(event => {
       const eventType = this.getEventType(event);
       const typeCount = currentDistribution.get(eventType) || 0;
-      
-      // Apply diversity bonus/penalty based on current distribution
+
       let diversityAdjustment = 0;
       if (totalEvents > 0) {
         const typeRatio = typeCount / totalEvents;
         if (typeRatio < DIVERSITY_CONSTANTS.UNDERREPRESENTED_THRESHOLD) {
-          diversityAdjustment = DIVERSITY_CONSTANTS.DIVERSITY_BONUS; // Bonus for underrepresented types
+          diversityAdjustment = DIVERSITY_CONSTANTS.DIVERSITY_BONUS;
         } else if (typeRatio > DIVERSITY_CONSTANTS.OVERREPRESENTED_THRESHOLD) {
-          diversityAdjustment = DIVERSITY_CONSTANTS.DIVERSITY_PENALTY; // Penalty for overrepresented types
+          diversityAdjustment = DIVERSITY_CONSTANTS.DIVERSITY_PENALTY;
         }
       }
 
-      // Apply adjustment to career impact score if it exists
-      if ((event as EventWithCareerImpact).careerImpact?.overall) {
-        const careerImpact = (event as EventWithCareerImpact).careerImpact!;
-        // Apply percentage-based adjustment (e.g., 0.1 = 10% bonus)
-        const adjustedScore = Math.max(0, Math.min(100, careerImpact.overall * (1 + diversityAdjustment)));
+      const careerImpact = (event as EventWithCareerImpact).careerImpact;
+      if (careerImpact && diversityAdjustment !== 0) {
         return {
           ...event,
           careerImpact: {
             ...careerImpact,
-            overall: adjustedScore
+            metadata: {
+              ...(careerImpact.metadata ?? {}),
+              diversityAdjustment
+            }
           }
         } as EventWithCareerImpact;
       }

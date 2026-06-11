@@ -255,7 +255,7 @@ describe('careerImpactEnrichmentService', () => {
         );
 
         expect(enriched[0].careerImpact?.overall).toBeGreaterThanOrEqual(50);
-        expect(enriched[0].careerImpact?.metadata?.algorithmVersion).toBe('alignment-core-v2');
+        expect(enriched[0].careerImpact?.metadata?.algorithmVersion).toBe('alignment-core-v2.1');
         expect(enriched[0].careerImpact?.metadata?.tagAffinityContribution).toBeGreaterThan(0);
         expect(enriched[0].careerImpact?.explanation?.matchedTags).toContain('Figma');
       }

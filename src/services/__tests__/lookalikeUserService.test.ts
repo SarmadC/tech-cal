@@ -156,7 +156,10 @@ describe('LookalikeUserService', () => {
     );
 
     expect(recommendations.map((event) => event.id)).toEqual(['config', 'meetup']);
-    expect(recommendations[0].recommendationMetadata?.matchScore).toBe(2);
+    // matchScore stays on the 0-100 scale (0 here: no tag scoring on this path);
+    // the raw similar-user count lives in lookalikeSupport.
+    expect(recommendations[0].recommendationMetadata?.matchScore).toBe(0);
+    expect(recommendations[0].recommendationMetadata?.lookalikeSupport).toBe(2);
     expect(recommendations[0].recommendationMetadata?.impactScore).toBe(0);
     expect(recommendations[0].recommendationMetadata?.reasons).toContain(
       'Popular with 2 similar professionals'

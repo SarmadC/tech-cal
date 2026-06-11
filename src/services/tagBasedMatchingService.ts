@@ -33,6 +33,14 @@ export interface TagRecommendationResult {
  * Replaces keyword-based matching with more accurate tag-based approach
  */
 export class TagBasedMatchingService {
+  // Diagnostic logging is dev-only: these payloads fire on every recommendation
+  // request and include profile statistics.
+  private static debugLog(message: string, payload?: Record<string, unknown>): void {
+    if (process.env.NODE_ENV !== 'production') {
+      console.info(message, payload);
+    }
+  }
+
   // Tag similarity mappings for better matching
   // We will normalize this to be bidirectional at runtime
   private static readonly RAW_TAG_SIMILARITIES: TagSimilarityMap = TAG_MATCHING_CONFIG.RAW_TAG_SIMILARITIES;
@@ -113,10 +121,15 @@ export class TagBasedMatchingService {
     const userInterests = careerProfile.interests || [];
     const userGoals = careerProfile.careerGoals || [];
     const skillsToLearn = careerProfile.skillsToLearn || [];
-    const learningStyle = careerProfile.learningStyle || [];
 
-    // Determine if user is a beginner (for weighted skill matching)
-    const isBeginner = learningStyle.includes('hands-on') || userSkills.length < 3;
+    // Determine if user is a beginner (for weighted skill matching).
+    // Seniority is the authoritative signal; skill count is only a fallback when
+    // seniority is unset. Learning style is deliberately not used — preferring
+    // hands-on formats says nothing about experience level.
+    const BEGINNER_SENIORITIES = new Set(['student', 'entry-level', 'junior']);
+    const isBeginner = careerProfile.seniority
+      ? BEGINNER_SENIORITIES.has(careerProfile.seniority as string)
+      : userSkills.length < 3;
 
     // Derive tags from agenda and merge with existing tags
     const candidateTerms = this.buildCandidateTerms(careerProfile);
@@ -159,7 +172,10 @@ export class TagBasedMatchingService {
     matchedCategories.push(...similarityMatches.categories);
     explanations.push(...similarityMatches.explanations);
 
-    const categoryMatches = this.findCategoryMatches(mergedTags, primaryTerms);
+    // Category matches only add signal for categories not already credited by a
+    // direct or similarity match — otherwise the same tags score a third time.
+    const alreadyMatchedTags = new Set(matchedTags.map(tag => tag.toLowerCase()));
+    const categoryMatches = this.findCategoryMatches(mergedTags, primaryTerms, alreadyMatchedTags);
     totalScore += categoryMatches.score * primaryWeight;
     matchedTags.push(...categoryMatches.tags);
     matchedCategories.push(...categoryMatches.categories);
@@ -331,7 +347,8 @@ export class TagBasedMatchingService {
    */
   private static findCategoryMatches(
     eventTags: EventTag[],
-    userTerms: string[]
+    userTerms: string[],
+    excludeMatchedTags: Set<string> = new Set()
   ): { score: number; tags: string[]; categories: string[]; explanations: string[] } {
     let score = 0;
     const tags: string[] = [];
@@ -347,6 +364,10 @@ export class TagBasedMatchingService {
 
     // Check if user has skills in the same categories
     for (const [category, categoryTags] of Object.entries(categoryGroups)) {
+      // Skip categories already represented by a direct/similarity match
+      if (categoryTags.some(tag => excludeMatchedTags.has(tag.name.toLowerCase()))) {
+        continue;
+      }
       const categoryWeight = (this.CATEGORY_WEIGHTS as Record<string, number>)[category] || 0.5;
       
       // Simple category matching - if user has any skill in this category
@@ -396,7 +417,7 @@ export class TagBasedMatchingService {
     const hasSkillsToLearn = (careerProfile.skillsToLearn || []).length > 0;
     const hasInterests = (careerProfile.interests || []).length > 0;
     
-    console.info('[TagBasedMatching] Profile validation', {
+    this.debugLog('[TagBasedMatching] Profile validation', {
       hasCurrentRole,
       hasPrimarySkills,
       primarySkillsCount: (careerProfile.primarySkills || []).length,
@@ -424,6 +445,10 @@ export class TagBasedMatchingService {
     const limitedQueryTerms = queryTerms.slice(0, 100);
     const hasTagTerms = limitedQueryTerms.length > 0;
     
+    // `tag_filter` is a second, inner-joined embed of the same relation used purely
+    // to restrict parent rows: filters on a non-inner embed (like `tags`) only strip
+    // embedded rows and would return every upcoming event regardless of tags.
+    // `tags` stays non-inner so events keep their full tag list for scoring/display.
     const tagQueryPromise = hasTagTerms
       ? supabaseClient
           .from('events')
@@ -434,6 +459,9 @@ export class TagBasedMatchingService {
             tags:event_tag_relations (
               event_tags (event_tag, category)
             ),
+            tag_filter:event_tag_relations!inner (
+              event_tags!inner (event_tag)
+            ),
           event_agenda (
               id, title, description, start_time, end_time, agenda_type, topics
             )
@@ -442,7 +470,7 @@ export class TagBasedMatchingService {
           .gte('start_time', new Date().toISOString())
           .order('start_time', { ascending: true })
           .limit(tagFetchLimit)
-          .in('tags.event_tags.event_tag', limitedQueryTerms)
+          .in('tag_filter.event_tags.event_tag', limitedQueryTerms)
       : Promise.resolve({ data: [], error: null });
 
     // 2. Text Search Query: High-value term matches
@@ -493,7 +521,7 @@ export class TagBasedMatchingService {
     const rawDiscoveryEvents = discoveryResults.data || [];
 
     // Debug logging: Log candidate counts from each source
-    console.info('[TagBasedMatching] Candidate sources', {
+    this.debugLog('[TagBasedMatching] Candidate sources', {
       tag: rawTagEvents.length,
       text: rawTextEvents.length,
       discovery: rawDiscoveryEvents.length,
@@ -637,7 +665,7 @@ export class TagBasedMatchingService {
       .slice(0, limit);
 
     // Debug logging: Log final sorted results
-    console.info('[TagBasedMatching] Final recommendations', {
+    this.debugLog('[TagBasedMatching] Final recommendations', {
       totalCandidates: scored.length,
       returnedCount: sorted.length,
       topScores: sorted.slice(0, 5).map(r => ({
@@ -699,7 +727,7 @@ export class TagBasedMatchingService {
     const rawTextEvents = textResults || [];
     
     // Debug logging: Log candidate counts from discovery-only path
-    console.info('[TagBasedMatching] Discovery-only candidate sources', {
+    this.debugLog('[TagBasedMatching] Discovery-only candidate sources', {
       text: rawTextEvents.length,
       discovery: rawDiscoveryEvents.length,
       totalCandidates: rawTextEvents.length + rawDiscoveryEvents.length,
@@ -773,7 +801,7 @@ export class TagBasedMatchingService {
         .slice(0, limit);
       
       // Debug logging: Log final discovery-only results
-      console.info('[TagBasedMatching] Discovery-only final recommendations', {
+      this.debugLog('[TagBasedMatching] Discovery-only final recommendations', {
         totalCandidates: scored.length,
         returnedCount: sorted.length,
         topScores: sorted.slice(0, 5).map(r => ({
@@ -854,25 +882,19 @@ export class TagBasedMatchingService {
       getRoleKeywords(careerProfile.currentRole).forEach(addToQueue);
     }
 
-    // 2. Process queue to find transitive similarities
-    // Limit depth/iterations to prevent performance issues if graph is huge (though it's small now)
-    let iterations = 0;
-    const MAX_ITERATIONS = 1000; 
-
-    while (queue.length > 0 && iterations < MAX_ITERATIONS) {
-      const currentTerm = queue.shift()!;
-      iterations++;
-
-      const similarSet = this.TAG_SIMILARITIES!.get(currentTerm);
-      if (similarSet) {
-        similarSet.forEach(sim => {
-          // If we haven't processed this similar term yet, add it to queue
-          if (!processedTerms.has(sim)) {
-             addToQueue(sim);
-          }
-        });
-      }
-    }
+    // 2. Expand one hop only: add direct synonyms of the user's own terms.
+    // Transitive (BFS) expansion chained unrelated concepts together
+    // (e.g. react -> javascript -> typescript -> ts) and over-broadened retrieval.
+    const seedTerms = [...queue];
+    queue.length = 0;
+    seedTerms.forEach(seed => {
+      const similarSet = this.TAG_SIMILARITIES!.get(seed);
+      similarSet?.forEach(sim => {
+        if (!processedTerms.has(sim)) {
+          addToQueue(sim);
+        }
+      });
+    });
 
     return Array.from(terms);
   }
@@ -980,10 +1002,12 @@ export class TagBasedMatchingService {
         // Determine match location
         const title = String(event.title || '').toLowerCase();
         const description = String(event.description || '').toLowerCase();
-        const matchedTerm = expandedTerms.find(term => 
+        const matchedTerm = expandedTerms.find(term =>
           title.includes(term.toLowerCase()) || description.includes(term.toLowerCase())
         );
-        const matchLocation = title.includes(matchedTerm?.toLowerCase() || '') ? 'title' : 'description';
+        // Only credit a title match when a term actually matched the title;
+        // `''.includes` is always true and would mislabel everything as 'title'.
+        const matchLocation = matchedTerm && title.includes(matchedTerm.toLowerCase()) ? 'title' : 'description';
         eventMap.set(id, { ...event, _matchLocation: matchLocation });
       }
     });
