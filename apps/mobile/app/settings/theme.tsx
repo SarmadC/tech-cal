@@ -5,6 +5,7 @@ import {
   SettingsFieldLabel,
   SettingsGroup,
 } from "../../src/components/settings/mobile-settings-ui";
+import { haptics } from "../../src/lib/haptics";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 import type { ThemePreference } from "../../src/theme/tokens";
 
@@ -50,7 +51,10 @@ export default function SettingsThemeRoute() {
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 key={option.value}
-                onPress={() => setThemePreference(option.value)}
+                onPress={() => {
+                  haptics.selection();
+                  setThemePreference(option.value);
+                }}
                 style={({ pressed }) => [
                   styles.segment,
                   {

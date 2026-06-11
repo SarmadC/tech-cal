@@ -1,9 +1,9 @@
 import { FontAwesome } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -28,6 +28,7 @@ import {
   useUnreadNotifications,
 } from '../../src/hooks/useUnreadNotifications';
 import type { MobileNotificationItem } from '@kurecal/domain';
+import { haptics } from '../../src/lib/haptics';
 
 export default function NotificationsScreen() {
   const { tokens } = useAppTheme();
@@ -64,6 +65,7 @@ export default function NotificationsScreen() {
     visibleUnreadIds.current.clear();
     await loadFirstPage();
     await refreshUnread();
+    haptics.success();
     setRefreshing(false);
   }, [loadFirstPage, refreshUnread]);
 
@@ -240,7 +242,7 @@ export default function NotificationsScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={items}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (

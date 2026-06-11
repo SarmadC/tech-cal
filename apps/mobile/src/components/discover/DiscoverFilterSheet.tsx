@@ -1,7 +1,9 @@
 import { FontAwesome } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import Animated from "react-native-reanimated";
 import { useState, type ReactNode } from "react";
 import {
-  Animated,
+
   Modal,
   Pressable,
   ScrollView,
@@ -20,6 +22,7 @@ import {
   type DiscoverDraftFilters as DiscoverDraftFiltersValue,
 } from "../../lib/discoverState";
 import { resolveCurrentLocationLabel } from "../../lib/discoverLocationUtils";
+import { haptics } from "../../lib/haptics";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
 import { DiscoverQuickDatePicker } from "./DiscoverQuickDatePicker";
@@ -84,7 +87,10 @@ function FilterChoice({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        haptics.selection();
+        onPress();
+      }}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       style={styles.choiceRow}
@@ -203,10 +209,23 @@ export function DiscoverFilterSheet({
         transparent
         visible={visible}
       >
-        <Pressable
-          style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
-          onPress={onClose}
-        />
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <BlurView
+            intensity={28}
+            tint={
+              tokens.mode === "dark"
+                ? "systemThickMaterialDark"
+                : "systemThinMaterialLight"
+            }
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: tokens.colors.overlay },
+            ]}
+          />
+        </Pressable>
         <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
           <View
             style={[

@@ -1,8 +1,9 @@
 import type { MobileCommunityFeedPost } from '@kurecal/domain';
+import Animated from "react-native-reanimated";
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-  Animated,
+
   Image,
   Pressable,
   StyleSheet,

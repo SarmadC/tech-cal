@@ -47,6 +47,8 @@ import {
   updateMobileEventThread,
   updateMobileEventThreadComment,
 } from "../../../../src/lib/mobileApi";
+import { showActionSheet } from "../../../../src/lib/actionSheet";
+import { haptics } from "../../../../src/lib/haptics";
 import { supabase } from "../../../../src/lib/supabase";
 import { useAppTheme } from "../../../../src/providers/ThemeProvider";
 
@@ -727,21 +729,20 @@ export default function EventThreadDetailScreen() {
 
   const handleConfirmDelete = (target: MenuTarget) => {
     const label = target.kind === "thread" ? "thread" : "comment";
-    Alert.alert(
-      `Delete ${label}?`,
-      `This can't be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
+    haptics.warning();
+    showActionSheet({
+      title: `Delete ${label}?`,
+      message: "This can't be undone.",
+      options: [
         {
-          text: "Delete",
-          style: "destructive",
+          label: "Delete",
+          destructive: true,
           onPress: () => {
             void performDelete(target);
           },
         },
       ],
-      { cancelable: true },
-    );
+    });
   };
 
   const performDelete = async (target: MenuTarget) => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useScalePress } from "../../hooks/useAnimation";
 import { useAppTheme } from "../../providers/ThemeProvider";

@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { router } from 'expo-router';
 import {
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -36,6 +35,7 @@ import { useAuth } from '../../src/context/AuthProvider';
 import { mergeDiscoverFeedPage } from '../../src/lib/discoverState';
 import { loadMobileDiscoverFeed } from '../../src/lib/mobileApi';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
+import { haptics } from '../../src/lib/haptics';
 
 const DEFAULT_RANKING_MODE: MobileDiscoverRankingMode = 'best-match';
 
@@ -316,11 +316,61 @@ export default function DiscoverScreen() {
         refreshControl={
           <RefreshControl
             onRefresh={() => {
-              void runDiscoverRequest(appliedRequest, 'refresh');
+              void runDiscoverRequest(appliedRequest, 'refresh').then(() => {
+                haptics.success();
+              });
             }}
             refreshing={refreshing}
             tintColor={tokens.colors.accent}
           />
+        }
+        data={events}
+        keyExtractor={(event) => event.id}
+        renderItem={(event, index) => (
+          <DiscoverEventCard
+            event={event}
+            onPress={() => router.push(`/event/${event.id}`)}
+            showDivider={index < events.length - 1}
+          />
+        )}
+        onEndReached={() => {
+          if (hasMore && !loadingMore && !refreshing && !isInitialLoading) {
+            void runDiscoverRequest(
+              { ...appliedRequest, page: currentPage + 1 },
+              'more'
+            );
+          }
+        }}
+        listFooter={
+          <>
+            {loadingMore ? (
+              <View style={styles.loadMoreWrap}>
+                <BrandLoadingLogo color={tokens.colors.textPrimary} inline label={null} size={20} />
+              </View>
+            ) : null}
+
+            {showEmptyState ? (
+              <ScreenState
+                description="Broaden the search, remove a few filters, or switch the ranking mode to surface more options."
+                mode="empty"
+                title="Adjust the feed and try again"
+                variant="discover"
+              />
+            ) : null}
+
+            {error && feed ? (
+              <Text
+                style={{
+                  color: tokens.colors.danger,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 13,
+                  lineHeight: 18,
+                }}
+              >
+                {error}
+              </Text>
+            ) : null}
+          </>
         }
       >
         {isInitialLoading ? (
@@ -349,75 +399,6 @@ export default function DiscoverScreen() {
           />
         ) : null}
 
-        {events.length > 0 ? (
-          <View style={styles.feedList}>
-            {events.map((event, index) => (
-              <DiscoverEventCard
-                key={event.id}
-                event={event}
-                onPress={() => router.push(`/event/${event.id}`)}
-                showDivider={index < events.length - 1}
-              />
-            ))}
-          </View>
-        ) : null}
-
-        {loadingMore ? (
-          <View style={styles.loadMoreWrap}>
-            <BrandLoadingLogo color={tokens.colors.textPrimary} inline label={null} size={20} />
-          </View>
-        ) : null}
-
-        {hasMore && !loadingMore ? (
-          <Pressable
-            onPress={() => {
-              void runDiscoverRequest(
-                { ...appliedRequest, page: currentPage + 1 },
-                'more'
-              );
-            }}
-            style={[
-              styles.loadMoreButton,
-              {
-                backgroundColor: tokens.colors.discoverToolbar,
-                borderColor: tokens.colors.discoverToolbarBorderStrong,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: tokens.colors.textPrimary,
-                fontFamily: tokens.typography.sans,
-                fontSize: 14,
-                fontWeight: '700',
-              }}
-            >
-              Show more
-            </Text>
-          </Pressable>
-        ) : null}
-
-        {showEmptyState ? (
-          <ScreenState
-            description="Broaden the search, remove a few filters, or switch the ranking mode to surface more options."
-            mode="empty"
-            title="Adjust the feed and try again"
-            variant="discover"
-          />
-        ) : null}
-
-        {error && feed ? (
-          <Text
-            style={{
-              color: tokens.colors.danger,
-              fontFamily: tokens.typography.sans,
-              fontSize: 13,
-              lineHeight: 18,
-            }}
-          >
-            {error}
-          </Text>
-        ) : null}
       </DiscoverShell>
       {!isInitialLoading && headerControlsVisible && <TabMenuOverlay />}
 
@@ -455,9 +436,6 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  feedList: {
-    gap: 0,
-  },
   headerStack: {
     gap: 4,
     paddingLeft: 44,
@@ -465,13 +443,6 @@ const styles = StyleSheet.create({
   headerStackCompact: {
     gap: 2,
     paddingLeft: 44,
-  },
-  loadMoreButton: {
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 48,
   },
   loadMoreWrap: {
     alignItems: 'center',
