@@ -12,6 +12,7 @@ import { ZodError } from 'zod';
 import { loadEngagementMap } from '@/app/api/mobile/engagement';
 import { selectSharedTopPickEvents } from '@/app/api/mobile/recommendations/topPicks';
 import { buildDiscoverFeed, toMobileEventCard } from '@/app/api/mobile/serializers';
+import { normalizeDisplayScore } from '@/lib/recommendation/displayScore';
 import { CareerProfileService } from '@/services/careerProfileService';
 import {
   buildUserLocationFromProfileContext,
@@ -224,7 +225,9 @@ function buildBestMatchInsight(metadata: RecommendationMetadata | null | undefin
     return mappedReason;
   }
 
-  const score = metadata?.alignmentScore ?? metadata?.matchScore ?? null;
+  const score = normalizeDisplayScore(
+    metadata?.alignmentScore ?? metadata?.matchScore ?? null
+  );
   if (typeof score === 'number') {
     if (score >= 78) return 'Strong match';
     if (score >= 60) return 'Good fit';

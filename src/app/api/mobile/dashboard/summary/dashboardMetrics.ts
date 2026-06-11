@@ -20,6 +20,7 @@ import {
 
 import { RECOMMENDATION_THRESHOLDS } from '@/config/recommendationThresholds';
 import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
+import { getEventDisplayScore } from '@/lib/recommendation/displayScore';
 import type { EventFeedback } from '@/services/eventFeedbackService';
 import type { EventNetworkingSummary } from '@/services/eventNetworkingSummaryService';
 import type { HydratedUserNetworkingContact } from '@/services/userNetworkingContactService';
@@ -130,29 +131,6 @@ function isNetworkingEvent(event: Event): boolean {
   return NETWORKING_KEYWORDS.some(
     (keyword) => eventText.includes(keyword) || tagText.includes(keyword)
   );
-}
-
-function getEventScore(event: Event, careerProfile: CareerProfile | null): number {
-  const scoredEvent = event as Event & {
-    careerImpactLite?: { overall?: number };
-    careerImpact?: { overall?: number };
-  };
-  const candidate =
-    event.recommendationMetadata?.alignmentScore ??
-    event.recommendationMetadata?.matchScore ??
-    scoredEvent.careerImpactLite?.overall ??
-    scoredEvent.careerImpact?.overall ??
-    0;
-
-  if (typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0) {
-    return Math.round(candidate <= 1 ? candidate * 100 : candidate);
-  }
-
-  try {
-    return Math.round(calculateBaseScore(event, careerProfile).overall);
-  } catch {
-    return Math.round(calculateBaseScore(event, null).overall);
-  }
 }
 
 function formatCompactCount(value: number): string {
@@ -278,7 +256,7 @@ function getEventAlignmentSnapshot(
   event: Event,
   careerProfile: CareerProfile | null
 ): AttendedEventAlignment {
-  const score = getEventScore(event, careerProfile);
+  const score = getEventDisplayScore(event, careerProfile);
 
   if (!careerProfile) {
     return {

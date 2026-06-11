@@ -6,6 +6,7 @@ import { GET } from './route';
 
 const mocks = vi.hoisted(() => ({
   fetchPersonalizedRecommendationCandidates: vi.fn(),
+  rankEventsWithRecommendationPipeline: vi.fn(),
   getCareerProfile: vi.fn(),
   getAuthenticatedRequestContext: vi.fn(),
   getAllContactsForViewer: vi.fn(),
@@ -74,6 +75,8 @@ vi.mock('@/services/eventServices', () => ({
 vi.mock('@/services/recommendations/recommendationPipeline', () => ({
   fetchPersonalizedRecommendationCandidates: (...args: unknown[]) =>
     mocks.fetchPersonalizedRecommendationCandidates(...args),
+  rankEventsWithRecommendationPipeline: (...args: unknown[]) =>
+    mocks.rankEventsWithRecommendationPipeline(...args),
 }));
 
 vi.mock('@/app/api/mobile/engagement', () => ({
@@ -207,6 +210,11 @@ function buildRecommendedEvent(
 describe('GET /api/mobile/dashboard/summary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: ranking passes candidates through unchanged so existing
+    // expectations on retrieval-time scores keep holding.
+    mocks.rankEventsWithRecommendationPipeline.mockImplementation(
+      async (options: { events: unknown[] }) => options.events
+    );
     mocks.getAuthenticatedRequestContext.mockResolvedValue({
       authMethod: 'bearer',
       supabase: {},
@@ -504,5 +512,87 @@ describe('GET /api/mobile/dashboard/summary', () => {
 
     expect(response.status).toBe(401);
     expect(payload.error).toBe('Authentication required');
+  });
+
+  it('ranks recommendation candidates through the shared pipeline with discover-parity flags', async () => {
+    const candidateSources = new Map([['event-2', ['tag-based']]]);
+    mocks.fetchPersonalizedRecommendationCandidates.mockResolvedValueOnce({
+      events: [recommendedEvent],
+      matchedTags: [],
+      candidateSources,
+    });
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.rankEventsWithRecommendationPipeline).toHaveBeenCalledTimes(1);
+    expect(mocks.rankEventsWithRecommendationPipeline).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: [recommendedEvent],
+        candidateSources,
+        applyDiversityEnhancement: false,
+        allowRerank: true,
+        sortByCareerImpact: true,
+        careerImpactSortDirection: 'desc',
+        userId: 'user-1',
+      })
+    );
+  });
+
+  it('serves pipeline alignment scores on recommendation cards (parity with discover)', async () => {
+    mocks.rankEventsWithRecommendationPipeline.mockImplementationOnce(
+      async (options: { events: Array<Record<string, unknown>> }) =>
+        options.events.map((event) => ({
+          ...event,
+          recommendationMetadata: { alignmentScore: 73, matchScore: 87 },
+        }))
+    );
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+    const payload = await response.json();
+    const parsed = mobileDashboardSummarySchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.topRecommendation?.event.score).toBe(73);
+    expect(parsed.recommendations[0]?.insight).toBe('Alignment 73');
+  });
+
+  it('falls back to unranked candidates when pipeline ranking fails', async () => {
+    mocks.rankEventsWithRecommendationPipeline.mockRejectedValueOnce(
+      new Error('enrichment outage')
+    );
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+    const payload = await response.json();
+    const parsed = mobileDashboardSummarySchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.topRecommendation?.event.score).toBe(87);
+  });
+
+  it('does not rank when the user has no career profile (cold start)', async () => {
+    mocks.getCareerProfile.mockResolvedValueOnce(null);
+    mocks.getEvents.mockResolvedValueOnce([recommendedEvent]);
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/dashboard/summary', {
+        headers: { Authorization: 'Bearer mobile-token' },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.rankEventsWithRecommendationPipeline).not.toHaveBeenCalled();
   });
 });

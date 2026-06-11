@@ -1,21 +1,12 @@
 import type { Event } from '@/types';
+import { extractRecommendationScore } from '@/lib/recommendation/displayScore';
 
 const TOP_PICK_MIN_SCORE = 60;
 const TOP_PICK_VIEWPORT_SIZE = 3;
 const TOP_PICK_MAX_CANDIDATES = 9;
 
 export function getRecommendationScoreForTopPicks(event: Event): number {
-  const raw =
-    event.recommendationMetadata?.alignmentScore ??
-    event.recommendationMetadata?.matchScore ??
-    0;
-
-  if (!Number.isFinite(raw)) {
-    return 0;
-  }
-
-  const normalized = raw <= 1 ? raw * 100 : raw;
-  return Math.round(Math.min(100, Math.max(0, normalized)));
+  return extractRecommendationScore(event) ?? 0;
 }
 
 function getStartTimestamp(event: Event): number {

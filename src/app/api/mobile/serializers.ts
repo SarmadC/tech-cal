@@ -37,6 +37,7 @@ import {
   type MobileSurfaceHeader,
 } from '@kurecal/domain';
 
+import { extractRecommendationScore } from '@/lib/recommendation/displayScore';
 import type { AgendaItem, Event, EventType } from '@/types';
 import type { FilteredEventsData } from '@/types/filteredEvents';
 import { isEventFreeFromPricing, normalizeEventFormat } from '@/utils/filterCountUtils';
@@ -506,10 +507,7 @@ export function toMobileEventCard(
     organizerLogoUrl: resolveImageUrl(event.organization?.logo, 'logos'),
     organizerName:
       event.organization?.name?.trim() || event.organizer?.trim() || null,
-    score:
-      event.recommendationMetadata?.alignmentScore ??
-      event.recommendationMetadata?.matchScore ??
-      null,
+    score: extractRecommendationScore(event),
     engagement: options.engagement ?? undefined,
     badges,
     insight: options.insight ?? null,

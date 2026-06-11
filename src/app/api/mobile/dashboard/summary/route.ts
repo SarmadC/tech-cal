@@ -28,10 +28,16 @@ import { CareerProfileService } from '@/services/careerProfileService';
 import { EventService } from '@/services/eventServices';
 import { EventFeedbackService } from '@/services/eventFeedbackService';
 import { EventNetworkingSummaryService } from '@/services/eventNetworkingSummaryService';
+import { extractRecommendationScore } from '@/lib/recommendation/displayScore';
+import { buildUserLocationFromProfileContext } from '@/services/filteredEventsService';
 import { ProfileService } from '@/services/profileService';
-import { fetchPersonalizedRecommendationCandidates } from '@/services/recommendations/recommendationPipeline';
+import {
+  fetchPersonalizedRecommendationCandidates,
+  rankEventsWithRecommendationPipeline,
+} from '@/services/recommendations/recommendationPipeline';
 import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
 import { UserEventService } from '@/services/userEventService';
+import type { Event } from '@/types';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -100,26 +106,50 @@ export async function GET(request: Request) {
       feedbackList.map((item) => [item.eventId, item] as const)
     );
 
-    const recommendedEvents = careerProfile
-      ? (
-          await fetchPersonalizedRecommendationCandidates({
-            supabaseClient: authContext.supabase,
-            userId: authContext.user.id,
-            careerProfile,
-            limit: DASHBOARD_RECOMMENDATION_POOL,
-          })
-        ).events
-      : await EventService.getEvents(
-          {
-            startDate: new Date(now),
-            status: ['confirmed'],
-            sortBy: 'date',
-            sortDirection: 'asc',
-          },
-          authContext.supabase,
-          1,
-          DASHBOARD_RECOMMENDATION_POOL
+    let recommendedEvents: Event[];
+    if (careerProfile) {
+      const candidates = await fetchPersonalizedRecommendationCandidates({
+        supabaseClient: authContext.supabase,
+        userId: authContext.user.id,
+        careerProfile,
+        limit: DASHBOARD_RECOMMENDATION_POOL,
+      });
+
+      // Score through the same pipeline as discover best-match so the
+      // dashboard shows identical alignment scores for the same events.
+      try {
+        recommendedEvents = await rankEventsWithRecommendationPipeline({
+          events: candidates.events,
+          careerProfile,
+          supabaseClient: authContext.supabase,
+          userId: authContext.user.id,
+          userLocation: buildUserLocationFromProfileContext(profile),
+          applyDiversityEnhancement: false,
+          allowRerank: true,
+          sortByCareerImpact: true,
+          careerImpactSortDirection: 'desc',
+          candidateSources: candidates.candidateSources,
+        });
+      } catch (rankError) {
+        console.error(
+          'mobile dashboard summary: recommendation ranking failed, serving unranked candidates',
+          rankError
         );
+        recommendedEvents = candidates.events;
+      }
+    } else {
+      recommendedEvents = await EventService.getEvents(
+        {
+          startDate: new Date(now),
+          status: ['confirmed'],
+          sortBy: 'date',
+          sortDirection: 'asc',
+        },
+        authContext.supabase,
+        1,
+        DASHBOARD_RECOMMENDATION_POOL
+      );
+    }
 
     const upcomingTrackedEvents = trackedEvents
       .filter((record) => record.event && isUpcoming(record.event.startTime, now))
@@ -146,15 +176,13 @@ export async function GET(request: Request) {
         toMobileEventSummary(record.event!, engagementFromTrackedEvent(record))
       );
 
-    const recommendedCards = recommendedEvents.map((event) =>
-      toMobileEventCard(event, {
+    const recommendedCards = recommendedEvents.map((event) => {
+      const score = extractRecommendationScore(event);
+      return toMobileEventCard(event, {
         engagement: engagementMap.get(event.id),
-        insight:
-          event.recommendationMetadata?.alignmentScore != null
-            ? `Alignment ${Math.round(event.recommendationMetadata.alignmentScore)}`
-            : 'Fresh recommendation',
-      })
-    );
+        insight: score != null ? `Alignment ${score}` : 'Fresh recommendation',
+      });
+    });
 
     const topPickEvents = selectSharedTopPickEvents(recommendedEvents);
     const topPickCards = topPickEvents
