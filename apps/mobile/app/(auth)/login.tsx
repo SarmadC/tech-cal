@@ -67,7 +67,7 @@ export default function LoginScreen() {
   const oauthDisabled = submitting || pendingProvider !== null || loading;
 
   if (session) {
-    return <Redirect href="../(tabs)/dashboard" />;
+    return <Redirect href="../(tabs)/discover" />;
   }
 
   const handleSignIn = async () => {
@@ -89,7 +89,7 @@ export default function LoginScreen() {
       return;
     }
 
-    router.replace('../(tabs)/dashboard');
+    router.replace('../(tabs)/discover');
     setSubmitting(false);
   };
 

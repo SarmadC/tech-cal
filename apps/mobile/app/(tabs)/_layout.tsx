@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { setLastTab } from "../../src/lib/lastTab";
 import { SymbolView } from "expo-symbols";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -203,9 +204,17 @@ function TabsNavigator() {
     <Tabs
       initialRouteName="discover"
       screenListeners={{
-        state: () => {
+        state: (e) => {
           resetScrollTracking();
           showTabBar();
+          const routes = e.data?.state?.routes;
+          const index = e.data?.state?.index;
+          if (routes && index !== undefined) {
+            const name = routes[index]?.name;
+            if (name && name in TAB_ICONS) {
+              setLastTab(`/(tabs)/${name}`);
+            }
+          }
         },
       }}
       tabBar={(props) => (

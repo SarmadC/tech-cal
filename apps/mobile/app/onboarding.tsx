@@ -226,7 +226,7 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     if (bootstrap?.status.onboarded && !allowManualOpen) {
-      router.replace('./(tabs)/dashboard');
+      router.replace('./(tabs)/discover');
     }
   }, [allowManualOpen, bootstrap?.status.onboarded]);
 
@@ -270,7 +270,7 @@ export default function OnboardingScreen() {
               try {
                 await skipMobileCareerOnboarding();
                 await refreshProfile();
-                router.replace('./(tabs)/dashboard');
+                router.replace('./(tabs)/discover');
               } catch (nextError) {
                 Alert.alert(
                   'Unable to skip',
@@ -304,7 +304,7 @@ export default function OnboardingScreen() {
     try {
       await completeMobileCareerOnboarding(draft);
       await refreshProfile();
-      router.replace('./(tabs)/dashboard');
+      router.replace('./(tabs)/discover');
     } catch (nextError) {
       Alert.alert(
         'Unable to save profile',
