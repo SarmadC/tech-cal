@@ -1,3 +1,4 @@
+import Animated from "react-native-reanimated";
 import {
   useMemo,
   useRef,
@@ -8,7 +9,8 @@ import {
 } from "react";
 import {
   type LayoutChangeEvent,
-  Animated,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 
 import { useScalePress } from "../../hooks/useAnimation";
 import {
@@ -26,9 +29,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
-import { useTabBarVisibility } from "./TabBarVisibilityProvider";
 
-interface MobilePageProps extends PropsWithChildren {
+interface MobilePageProps<T> extends PropsWithChildren {
   eyebrow?: string;
   title: string;
   subtitle?: string;
@@ -39,9 +41,17 @@ interface MobilePageProps extends PropsWithChildren {
   contentStyle?: StyleProp<ViewStyle>;
   onControlsVisibilityChange?: (visible: boolean) => void;
   scrollRef?: RefObject<ScrollView | null>;
+  // List mode — when data/renderItem are provided the body renders as a
+  // virtualized FlashList: `children` become the list header and `listFooter`
+  // trails the rows.
+  data?: T[];
+  keyExtractor?: (item: T, index: number) => string;
+  renderItem?: (item: T, index: number) => ReactNode;
+  onEndReached?: () => void;
+  listFooter?: ReactNode;
 }
 
-export function MobilePage({
+export function MobilePage<T>({
   eyebrow,
   title,
   subtitle,
@@ -53,19 +63,19 @@ export function MobilePage({
   contentStyle,
   onControlsVisibilityChange,
   scrollRef,
-}: MobilePageProps) {
+  data,
+  keyExtractor,
+  renderItem,
+  onEndReached,
+  listFooter,
+}: MobilePageProps<T>) {
   const { tokens } = useAppTheme();
-  const { handleScroll, isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
   const [compact, setCompact] = useState(false);
   const controlsVisibleRef = useRef(true);
   const lastOffsetRef = useRef(0);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
-  const bottomInset =
-    footerInset ??
-    (isVisible
-      ? tokens.spacing.tabBarBottom
-      : Math.max(insets.bottom + 16, 24));
+  const bottomInset = footerInset ?? tokens.spacing.tabBarBottom;
 
   const fallbackHeaderOffset = useMemo(
     () => (headerHidden ? insets.top + 8 : insets.top + (subtitle ? 112 : 92)),
@@ -79,6 +89,28 @@ export function MobilePage({
     const nextHeight = event.nativeEvent.layout.height;
     if (Math.abs((headerHeight ?? 0) - nextHeight) > 1) {
       setHeaderHeight(nextHeight);
+    }
+  }
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
+    const nextCompact = offsetY > 22;
+    const delta = offsetY - lastOffsetRef.current;
+    lastOffsetRef.current = offsetY;
+
+    if (nextCompact !== compact) {
+      setCompact(nextCompact);
+    }
+
+    if (offsetY <= 8 && !controlsVisibleRef.current) {
+      controlsVisibleRef.current = true;
+      onControlsVisibilityChange?.(true);
+    } else if (delta > 12 && offsetY > 40 && controlsVisibleRef.current) {
+      controlsVisibleRef.current = false;
+      onControlsVisibilityChange?.(false);
+    } else if (delta < -8 && !controlsVisibleRef.current) {
+      controlsVisibleRef.current = true;
+      onControlsVisibilityChange?.(true);
     }
   }
 
@@ -159,49 +191,46 @@ export function MobilePage({
           </View>
         </View>
       ) : null}
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: headerOffset,
-            paddingBottom: bottomInset,
-            paddingHorizontal: tokens.spacing.page,
-          },
-          contentStyle,
-        ]}
-        onScroll={(event) => {
-          const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
-          const nextCompact = offsetY > 22;
-          const delta = offsetY - lastOffsetRef.current;
-          lastOffsetRef.current = offsetY;
-
-          if (nextCompact !== compact) {
-            setCompact(nextCompact);
-          }
-
-          if (offsetY <= 8 && !controlsVisibleRef.current) {
-            controlsVisibleRef.current = true;
-            onControlsVisibilityChange?.(true);
-          } else if (
-            delta > 12 &&
-            offsetY > 40 &&
-            controlsVisibleRef.current
-          ) {
-            controlsVisibleRef.current = false;
-            onControlsVisibilityChange?.(false);
-          } else if (delta < -8 && !controlsVisibleRef.current) {
-            controlsVisibleRef.current = true;
-            onControlsVisibilityChange?.(true);
-          }
-
-          handleScroll(offsetY);
-        }}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {data && renderItem ? (
+        <FlashList
+          data={data}
+          keyExtractor={keyExtractor}
+          renderItem={({ item, index }) => <>{renderItem(item, index)}</>}
+          ListHeaderComponent={<>{children}</>}
+          ListFooterComponent={listFooter ? <>{listFooter}</> : null}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.6}
+          contentContainerStyle={[
+            {
+              paddingTop: headerOffset,
+              paddingBottom: bottomInset,
+              paddingHorizontal: tokens.spacing.page,
+            },
+            contentStyle,
+          ]}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: headerOffset,
+              paddingBottom: bottomInset,
+              paddingHorizontal: tokens.spacing.page,
+            },
+            contentStyle,
+          ]}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

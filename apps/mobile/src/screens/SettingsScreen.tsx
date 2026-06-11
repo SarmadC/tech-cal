@@ -25,18 +25,20 @@ import {
   SettingsDivider,
   SettingsGroup,
   SettingsRow,
-} from "../../src/components/settings/mobile-settings-ui";
-import { ScreenStateView } from "../../src/components/ScreenStateView";
-import { buildAvatarInitials } from "../../src/components/community/presentation";
-import { useAuth } from "../../src/context/AuthProvider";
-import { getMobileApiBaseUrl } from "../../src/lib/env";
-import { getDeviceCalendarPermissionStatus } from "../../src/lib/deviceCalendarSync";
+} from "../components/settings/mobile-settings-ui";
+import { ScreenStateView } from "../components/ScreenStateView";
+import { buildAvatarInitials } from "../components/community/presentation";
+import { useAuth } from "../context/AuthProvider";
+import { getMobileApiBaseUrl } from "../lib/env";
+import { getDeviceCalendarPermissionStatus } from "../lib/deviceCalendarSync";
 import {
   loadMobileGoogleCalendarStatus,
   loadMobileSubscriptionStatus,
-} from "../../src/lib/mobileApi";
-import { formatSubscriptionSummary } from "../../src/lib/settingsPresentation";
-import { useAppTheme } from "../../src/providers/ThemeProvider";
+} from "../lib/mobileApi";
+import { formatSubscriptionSummary } from "../lib/settingsPresentation";
+import { useAppTheme } from "../providers/ThemeProvider";
+import { showActionSheet } from "../lib/actionSheet";
+import { haptics } from "../lib/haptics";
 
 function getVisibilityLabel(value: string): string {
   if (value === "connections") {
@@ -138,6 +140,7 @@ export default function SettingsScreen({
 
     try {
       await Promise.all([refreshProfile(), loadSettingsStatus()]);
+      haptics.success();
     } catch (nextError) {
       setError(
         nextError instanceof Error
@@ -234,7 +237,7 @@ export default function SettingsScreen({
         contentContainerStyle={[
           styles.content,
           {
-            paddingBottom: Math.max(insets.bottom + 116, 140),
+            paddingBottom: Math.max(insets.bottom + 32, 48),
           },
         ]}
         refreshControl={
@@ -407,7 +410,20 @@ export default function SettingsScreen({
         <Pressable
           accessibilityRole="button"
           onPress={() => {
-            void signOut();
+            haptics.warning();
+            showActionSheet({
+              title: "Log out?",
+              message: "You can sign back in at any time.",
+              options: [
+                {
+                  label: "Log Out",
+                  destructive: true,
+                  onPress: () => {
+                    void signOut();
+                  },
+                },
+              ],
+            });
           }}
           style={({ pressed }) => [
             styles.logoutButton,

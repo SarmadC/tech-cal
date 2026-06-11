@@ -27,7 +27,9 @@ import { CommunityCommentThread } from '../../../../src/components/CommunityComm
 import { EventSummaryCard } from '../../../../src/components/EventSummaryCard';
 import { CommunityRichPostContent } from '../../../../src/components/CommunityRichPostContent';
 import { ScreenStateView } from '../../../../src/components/ScreenStateView';
+import { showActionSheet } from '../../../../src/lib/actionSheet';
 import { getMobileApiBaseUrl } from '../../../../src/lib/env';
+import { haptics } from '../../../../src/lib/haptics';
 import {
   countCommunityComments,
   formatCommunityRelativeTime,
@@ -300,27 +302,15 @@ export default function CommunityPostScreen() {
       return;
     }
 
-    Alert.alert('Report thread', 'Choose a reason for this report.', [
-      {
-        text: 'Spam',
-        onPress: () => {
-          void submitReport('spam');
-        },
-      },
-      {
-        text: 'Harassment',
-        onPress: () => {
-          void submitReport('harassment');
-        },
-      },
-      {
-        text: 'Other',
-        onPress: () => {
-          void submitReport('other');
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    showActionSheet({
+      title: 'Report thread',
+      message: 'Choose a reason for this report.',
+      options: [
+        { label: 'Spam', onPress: () => void submitReport('spam') },
+        { label: 'Harassment', onPress: () => void submitReport('harassment') },
+        { label: 'Other', onPress: () => void submitReport('other') },
+      ],
+    });
   }
 
   function handleDeletePost() {
@@ -328,20 +318,19 @@ export default function CommunityPostScreen() {
       return;
     }
 
-    Alert.alert(
-      'Delete thread',
-      'Delete this thread? Replies will no longer be shown in the circle feed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
+    haptics.warning();
+    showActionSheet({
+      title: 'Delete thread',
+      message:
+        'Delete this thread? Replies will no longer be shown in the circle feed.',
+      options: [
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deletePost();
-          },
+          label: 'Delete',
+          destructive: true,
+          onPress: () => void deletePost(),
         },
-      ]
-    );
+      ],
+    });
   }
 
   function handleCommentReply(comment: MobileCommunityComment) {
@@ -354,27 +343,24 @@ export default function CommunityPostScreen() {
       return;
     }
 
-    Alert.alert('Report comment', 'Choose a reason for this report.', [
-      {
-        text: 'Spam',
-        onPress: () => {
-          void submitReport('spam', 'comment', comment.id);
+    showActionSheet({
+      title: 'Report comment',
+      message: 'Choose a reason for this report.',
+      options: [
+        {
+          label: 'Spam',
+          onPress: () => void submitReport('spam', 'comment', comment.id),
         },
-      },
-      {
-        text: 'Harassment',
-        onPress: () => {
-          void submitReport('harassment', 'comment', comment.id);
+        {
+          label: 'Harassment',
+          onPress: () => void submitReport('harassment', 'comment', comment.id),
         },
-      },
-      {
-        text: 'Other',
-        onPress: () => {
-          void submitReport('other', 'comment', comment.id);
+        {
+          label: 'Other',
+          onPress: () => void submitReport('other', 'comment', comment.id),
         },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      ],
+    });
   }
 
   function handleCommentDelete(comment: MobileCommunityComment) {
@@ -382,16 +368,18 @@ export default function CommunityPostScreen() {
       return;
     }
 
-    Alert.alert('Delete reply', 'Delete this reply?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void deleteComment(comment);
+    haptics.warning();
+    showActionSheet({
+      title: 'Delete reply',
+      message: 'Delete this reply?',
+      options: [
+        {
+          label: 'Delete',
+          destructive: true,
+          onPress: () => void deleteComment(comment),
         },
-      },
-    ]);
+      ],
+    });
   }
 
   async function handleShare(comment?: MobileCommunityComment) {

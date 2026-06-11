@@ -1,11 +1,30 @@
 import { useState } from "react";
-import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
+import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
 import type { MobileEventCard } from "@kurecal/domain";
 
+import { showActionSheet } from "../../lib/actionSheet";
+import { getMobileApiBaseUrl } from "../../lib/env";
+import { haptics } from "../../lib/haptics";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
 import { isEventSaved } from "../../utils/eventMeta";
+
+export function shareEventCard(event: MobileEventCard) {
+  let url: string | null = null;
+  try {
+    url = new URL(`/events/${event.slug}`, getMobileApiBaseUrl()).toString();
+  } catch {
+    url = null;
+  }
+
+  void Share.share({
+    message: [event.title, url].filter(Boolean).join("\n"),
+  }).catch(() => {
+    // iOS throws on cancel; ignore.
+  });
+}
 
 interface DiscoverEventCardProps {
   event: MobileEventCard;
@@ -88,7 +107,7 @@ export function DiscoverEventCard({
   showDivider = true,
 }: DiscoverEventCardProps) {
   const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
+  const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
@@ -99,6 +118,16 @@ export function DiscoverEventCard({
       accessibilityLabel={`Open recommended event ${event.title}`}
       accessibilityRole="button"
       onPress={onPress}
+      onLongPress={() => {
+        haptics.medium();
+        showActionSheet({
+          title: event.title,
+          options: [
+            { label: "Open", onPress },
+            { label: "Share", onPress: () => shareEventCard(event) },
+          ],
+        });
+      }}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       style={styles.pressable}

@@ -317,6 +317,7 @@ export function CommunityComposerModal({
           </View>
 
           <ScrollView
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             style={styles.composerScroll}

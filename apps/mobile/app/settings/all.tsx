@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text } from "react-native";
 import { SymbolView } from "expo-symbols";
 import { router } from "expo-router";
 
-import SettingsScreen from "../(tabs)/settings";
+import SettingsScreen from "../../src/screens/SettingsScreen";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 export default function SettingsHomeRoute() {

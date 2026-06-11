@@ -26,6 +26,7 @@ function isSvgUrl(url: string): boolean {
 interface EventImageSurfaceProps extends PropsWithChildren {
   event: MobileEventCard;
   onPress?: PressableProps['onPress'];
+  onLongPress?: PressableProps['onLongPress'];
   onPressIn?: PressableProps['onPressIn'];
   onPressOut?: PressableProps['onPressOut'];
   style?: StyleProp<ViewStyle>;
@@ -36,6 +37,7 @@ export function EventImageSurface({
   children,
   event,
   onPress,
+  onLongPress,
   onPressIn,
   onPressOut,
   style,
@@ -52,6 +54,7 @@ export function EventImageSurface({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       style={({ pressed }) => [style, pressed && pressedStyle]}

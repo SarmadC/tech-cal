@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BrandLoadingLogo } from '../../src/components/brand/BrandLoadingLogo';
-import { BrandLoadingScreen } from '../../src/components/brand/BrandLoadingScreen';
+import { BrandLoadingLogo } from '../src/components/brand/BrandLoadingLogo';
+import { BrandLoadingScreen } from '../src/components/brand/BrandLoadingScreen';
 import {
   EVENT_SUBMISSION_TYPE_OPTIONS,
   buildSubmitEventPayload,
@@ -23,8 +23,8 @@ import {
   submitEventSubmission,
   type SubmitEventFormState,
   validateSubmitEventForm,
-} from '../../src/lib/eventSubmission';
-import { useAuth } from '../../src/context/AuthProvider';
+} from '../src/lib/eventSubmission';
+import { useAuth } from '../src/context/AuthProvider';
 
 type FormErrors = Partial<Record<keyof SubmitEventFormState, string>> & {
   submit?: string;
@@ -144,6 +144,7 @@ export default function SubmitEventScreen() {
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>

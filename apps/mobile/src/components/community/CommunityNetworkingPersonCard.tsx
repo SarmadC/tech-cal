@@ -1,10 +1,11 @@
 import { FontAwesome } from '@expo/vector-icons';
+import Animated from "react-native-reanimated";
 import type {
   MobileCommunityNetworkingFollowUpCard,
   MobileCommunityNetworkingPersonCard,
   MobileCommunityNetworkingSharedEvent,
 } from '@kurecal/domain';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { useScalePress } from '../../hooks/useAnimation';

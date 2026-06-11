@@ -14,6 +14,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, Animated } from "react-native";
+import { useSharedValue, withSpring } from "react-native-reanimated";
+
+import { haptics } from "../lib/haptics";
 
 // §Timing Scale
 export const DURATIONS = {
@@ -97,28 +100,36 @@ export function AnimatedMount({
   );
 }
 
+// Reanimated spring equivalent of SPRING_CONFIG (no useNativeDriver flag).
+const REANIMATED_SPRING = { damping: 26, stiffness: 200 } as const;
+
 /**
  * §Micro-interactions — "Button press: Scale 1.0→0.97 on touchStart, spring back on touchEnd."
  *
- * Returns { scale, onPressIn, onPressOut } to wire into any Pressable + Animated.View pair:
+ * Runs on the UI thread via Reanimated. The returned `scale` is a shared value;
+ * wire it into a Reanimated Animated.View (inline shared values are supported):
  *
  *   const { scale, onPressIn, onPressOut } = useScalePress();
  *   <Pressable onPressIn={onPressIn} onPressOut={onPressOut}>
  *     <Animated.View style={{ transform: [{ scale }] }}>...</Animated.View>
  *   </Pressable>
+ *
+ * Pass { haptic: true } for a light impact on press-in.
  */
-export function useScalePress() {
+export function useScalePress(options?: { haptic?: boolean }) {
   const reduced = useReduceMotion();
-  const scale = useRef(new Animated.Value(1)).current;
+  const haptic = options?.haptic ?? false;
+  const scale = useSharedValue(1);
 
   const onPressIn = useCallback(() => {
+    if (haptic) haptics.light();
     if (reduced) return;
-    Animated.spring(scale, { toValue: 0.97, ...SPRING_CONFIG }).start();
-  }, [reduced, scale]);
+    scale.value = withSpring(0.97, REANIMATED_SPRING);
+  }, [haptic, reduced, scale]);
 
   const onPressOut = useCallback(() => {
     if (reduced) return;
-    Animated.spring(scale, { toValue: 1, ...SPRING_CONFIG }).start();
+    scale.value = withSpring(1, REANIMATED_SPRING);
   }, [reduced, scale]);
 
   return { scale, onPressIn, onPressOut };

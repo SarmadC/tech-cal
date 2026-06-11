@@ -1,8 +1,7 @@
 import { FontAwesome } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
-import { useEffect, useRef } from "react";
 import {
-  Animated,
   Dimensions,
   Modal,
   Pressable,
@@ -10,9 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { SlideInLeft } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../../context/AuthProvider";
+import { useReduceMotion } from "../../hooks/useAnimation";
 import { useAppTheme } from "../../providers/ThemeProvider";
 
 interface AppMenuSheetProps {
@@ -33,15 +34,8 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
   const { tokens } = useAppTheme();
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
-  const translateX = useRef(new Animated.Value(-PANEL_WIDTH)).current;
-
-  useEffect(() => {
-    Animated.timing(translateX, {
-      toValue: visible ? 0 : -PANEL_WIDTH,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
-  }, [visible, translateX]);
+  const reduceMotion = useReduceMotion();
+  const isDark = tokens.mode === "dark";
 
   const username = profile?.socialProfile.username?.trim();
 
@@ -79,20 +73,41 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
+        <BlurView
+          intensity={28}
+          tint={isDark ? "systemThickMaterialDark" : "systemThinMaterialLight"}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.backdropDim} />
+      </Pressable>
       <Animated.View
+        entering={reduceMotion ? undefined : SlideInLeft.duration(220)}
         style={[
           styles.panel,
           {
             width: PANEL_WIDTH,
             paddingTop: insets.top + 16,
             paddingBottom: insets.bottom + 16,
-            backgroundColor: tokens.colors.shellElevated,
             borderRightColor: tokens.colors.border,
-            transform: [{ translateX }],
           },
         ]}
       >
+        <BlurView
+          intensity={90}
+          tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: isDark
+                ? "rgba(13, 14, 15, 0.6)"
+                : "rgba(255, 255, 255, 0.5)",
+            },
+          ]}
+        />
         <Text
           style={[
             styles.heading,
@@ -144,11 +159,12 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
   },
   panel: {
+    overflow: "hidden",
     position: "absolute",
     top: 0,
     left: 0,

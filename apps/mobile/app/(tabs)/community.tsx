@@ -1,4 +1,5 @@
 import { FontAwesome } from "@expo/vector-icons";
+import Animated from "react-native-reanimated";
 import type {
   CommunityPostType,
   MobileCommunityCircle,
@@ -13,7 +14,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Animated,
+
   Image,
   Pressable,
   ScrollView,
@@ -236,6 +237,7 @@ function _filterPeople(
 }
 
 export default function CommunityScreen() {
+  const { tokens } = useAppTheme();
   const requestSequenceRef = useRef(0);
   const hasLoadedRef = useRef(false);
   const homeRef = useRef<MobileCommunityHome | null>(null);
@@ -517,6 +519,8 @@ export default function CommunityScreen() {
     }
   }
 
+  const feedPosts = home?.feed ?? [];
+
   return (
     <>
       <MobilePage
@@ -524,8 +528,50 @@ export default function CommunityScreen() {
         showAccentGlow={false}
         title="Community"
         onControlsVisibilityChange={setHeaderControlsVisible}
+        data={home ? feedPosts : undefined}
+        keyExtractor={(post) => post.id}
+        renderItem={(post, index) => (
+          <View
+            style={[
+              styles.feedRowWrap,
+              index < feedPosts.length - 1 && {
+                borderBottomColor: tokens.colors.divider,
+                borderBottomWidth: 1,
+              },
+            ]}
+          >
+            <CommunityFeedCard
+              post={post}
+              variant="thread"
+              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+              onPress={() =>
+                router.push({
+                  pathname: "/community/[slug]/post/[postId]",
+                  params: { slug: post.circle.slug, postId: post.id },
+                })
+              }
+            />
+          </View>
+        )}
+        listFooter={
+          home ? (
+            <View style={styles.belowFeedWrap}>
+              <CommunityHome
+                home={home}
+                joinedCircles={joinedCircles}
+                pendingCircleId={pendingCircleId}
+                pendingUserId={pendingUserId}
+                showFeed={false}
+                onCreatePress={handleOpenComposer}
+                onOpenRoom={handleOpenRoom}
+                onToggleCircle={handleToggleCircle}
+                onToggleFollow={handleToggleFollow}
+              />
+            </View>
+          ) : null
+        }
       >
-        <View style={styles.contentWrap}>
+        <View style={home ? styles.listHeaderWrap : styles.contentWrap}>
           {loading && !home ? (
             <ScreenState
               mode="loading"
@@ -553,16 +599,13 @@ export default function CommunityScreen() {
           {home ? (
             <>
               {inlineError ? <InlineAlert message={inlineError} /> : null}
-              <CommunityHome
-                home={home}
-                joinedCircles={joinedCircles}
-                pendingCircleId={pendingCircleId}
-                pendingUserId={pendingUserId}
-                onCreatePress={handleOpenComposer}
-                onOpenRoom={handleOpenRoom}
-                onToggleCircle={handleToggleCircle}
-                onToggleFollow={handleToggleFollow}
-              />
+              {feedPosts.length === 0 ? (
+                <PostFeedSection
+                  feed={[]}
+                  hasJoinedCircles={joinedCircles.length > 0}
+                  onCreatePress={handleOpenComposer}
+                />
+              ) : null}
             </>
           ) : null}
         </View>
@@ -631,6 +674,7 @@ function CommunityHome({
   onToggleFollow,
   pendingCircleId,
   pendingUserId,
+  showFeed = true,
 }: {
   home: MobileCommunityHome;
   joinedCircles: MobileCommunityCircle[];
@@ -640,6 +684,7 @@ function CommunityHome({
   onToggleFollow: (userId: string, isFollowing: boolean) => void;
   pendingCircleId: string | null;
   pendingUserId: string | null;
+  showFeed?: boolean;
 }) {
   const feed = home.feed ?? [];
   const activeRooms = home.upcomingMoments.slice(0, 3);
@@ -648,11 +693,13 @@ function CommunityHome({
 
   return (
     <>
-      <PostFeedSection
-        feed={feed}
-        hasJoinedCircles={joinedCircles.length > 0}
-        onCreatePress={onCreatePress}
-      />
+      {showFeed ? (
+        <PostFeedSection
+          feed={feed}
+          hasJoinedCircles={joinedCircles.length > 0}
+          onCreatePress={onCreatePress}
+        />
+      ) : null}
 
       <CircleShortcutSection
         circles={home.circles ?? []}
@@ -1862,6 +1909,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     minWidth: 0,
+  },
+  listHeaderWrap: {
+    width: "100%",
+    maxWidth: 430,
+    alignSelf: "center",
+    gap: 10,
+    marginTop: 44,
+    paddingBottom: 10,
+  },
+  feedRowWrap: {
+    width: "100%",
+    maxWidth: 430,
+    alignSelf: "center",
+    paddingVertical: 2,
+  },
+  belowFeedWrap: {
+    width: "100%",
+    maxWidth: 430,
+    alignSelf: "center",
+    gap: 10,
+    marginTop: 10,
+    paddingBottom: 24,
   },
   contentWrap: {
     width: "100%",

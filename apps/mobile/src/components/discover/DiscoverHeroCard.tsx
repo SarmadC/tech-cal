@@ -1,7 +1,8 @@
 import { FontAwesome } from "@expo/vector-icons";
+import Animated from "react-native-reanimated";
 import { useMemo } from "react";
 import {
-  Animated,
+
   StyleSheet,
   Text,
   View,
@@ -11,8 +12,11 @@ import {
 
 import type { MobileEventCard } from "@kurecal/domain";
 
+import { showActionSheet } from "../../lib/actionSheet";
+import { haptics } from "../../lib/haptics";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
+import { shareEventCard } from "./DiscoverEventCard";
 import { EventImageSurface } from "../shared/EventImageSurface";
 import { formatEventEyebrow, isEventSaved } from "../../utils/eventMeta";
 
@@ -28,7 +32,7 @@ export function DiscoverHeroCard({
   style,
 }: DiscoverHeroCardProps) {
   const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
+  const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   const isSaved = isEventSaved(event);
   const eyebrow = useMemo(() => formatEventEyebrow(event.startTime, event.location), [event]);
 
@@ -37,6 +41,16 @@ export function DiscoverHeroCard({
     <EventImageSurface
       event={event}
       onPress={onPress}
+      onLongPress={() => {
+        haptics.medium();
+        showActionSheet({
+          title: event.title,
+          options: [
+            { label: "Open", onPress: () => onPress?.() },
+            { label: "Share", onPress: () => shareEventCard(event) },
+          ],
+        });
+      }}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       style={[

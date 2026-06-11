@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useScalePress } from '../hooks/useAnimation';
 
@@ -43,7 +44,7 @@ function VoteButton({
   icon: 'arrow-up' | 'arrow-down';
   onPress?: () => void;
 }) {
-  const { scale, onPressIn, onPressOut } = useScalePress();
+  const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
@@ -180,7 +181,7 @@ export function CommunityFeedCard({
   post,
   variant = 'card',
 }: CommunityFeedCardProps) {
-  const { scale, onPressIn, onPressOut } = useScalePress();
+  const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
 
   if (!onPress || variant === 'row' || variant === 'thread') {
     return (

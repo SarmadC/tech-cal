@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
-import { Animated, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import Animated from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
@@ -19,7 +20,7 @@ export function KureButton({
   testID?: string;
 }>) {
   const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
+  const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
 
   return (
     <Pressable

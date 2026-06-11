@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
+import { FlashList } from "@shopify/flash-list";
 import {
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,10 +13,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { MobileSavedEventsFeed } from "@kurecal/domain";
 
-import { EventSummaryCard } from "../../src/components/EventSummaryCard";
-import { ScreenStateView } from "../../src/components/ScreenStateView";
-import { loadMobileSavedEvents } from "../../src/lib/mobileApi";
-import { useAppTheme } from "../../src/providers/ThemeProvider";
+import { EventSummaryCard } from "../src/components/EventSummaryCard";
+import { ScreenStateView } from "../src/components/ScreenStateView";
+import { loadMobileSavedEvents } from "../src/lib/mobileApi";
+import { useAppTheme } from "../src/providers/ThemeProvider";
+import { haptics } from "../src/lib/haptics";
 
 export default function SavedScreen() {
   const { tokens } = useAppTheme();
@@ -109,48 +110,45 @@ export default function SavedScreen() {
   return (
     <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView
+        <FlashList
+          data={events}
+          keyExtractor={(event) => event.id}
           contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          onEndReached={() => {
+            if (feed?.nextPage && !loadingMore) {
+              void loadSaved(feed.nextPage, "more");
+            }
+          }}
+          onEndReachedThreshold={0.6}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => {
-                void loadSaved(1, "refresh");
+                void loadSaved(1, "refresh").then(() => {
+                  haptics.success();
+                });
               }}
               tintColor={tokens.colors.accent}
             />
           }
-        >
-          <View style={styles.hero}>
-            <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-            <Text style={styles.title}>{header.title}</Text>
-            {header.subtitle ? (
-              <Text style={styles.subtitle}>{header.subtitle}</Text>
-            ) : null}
-            <Text style={styles.meta}>
-              {feed?.totalCount ?? events.length} saved event
-              {(feed?.totalCount ?? events.length) === 1 ? "" : "s"}
-            </Text>
-          </View>
-
-          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-          {events.length > 0 ? (
-            <View style={styles.stack}>
-              {events.map((event) => (
-                <EventSummaryCard
-                  key={event.id}
-                  event={event}
-                  onPress={() =>
-                    router.push({
-                      pathname: "../event/[id]",
-                      params: { id: event.id },
-                    })
-                  }
-                />
-              ))}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <View style={styles.hero}>
+                <Text style={styles.eyebrow}>{header.eyebrow}</Text>
+                <Text style={styles.title}>{header.title}</Text>
+                {header.subtitle ? (
+                  <Text style={styles.subtitle}>{header.subtitle}</Text>
+                ) : null}
+                <Text style={styles.meta}>
+                  {feed?.totalCount ?? events.length} saved event
+                  {(feed?.totalCount ?? events.length) === 1 ? "" : "s"}
+                </Text>
+              </View>
+              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
             </View>
-          ) : (
+          }
+          ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <ScreenStateView
                 mode="empty"
@@ -167,24 +165,26 @@ export default function SavedScreen() {
                 <Text style={styles.primaryActionLabel}>Browse discover</Text>
               </Pressable>
             </View>
+          }
+          ListFooterComponent={
+            feed?.nextPage && loadingMore ? (
+              <Text style={styles.secondaryActionLabel}>Loading…</Text>
+            ) : null
+          }
+          renderItem={({ item: event }) => (
+            <View style={styles.itemWrap}>
+              <EventSummaryCard
+                event={event}
+                onPress={() =>
+                  router.push({
+                    pathname: "../event/[id]",
+                    params: { id: event.id },
+                  })
+                }
+              />
+            </View>
           )}
-
-          {feed?.nextPage ? (
-            <Pressable
-              onPress={() => {
-                void loadSaved(feed.nextPage!, "more");
-              }}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                pressed ? styles.secondaryActionPressed : null,
-              ]}
-            >
-              <Text style={styles.secondaryActionLabel}>
-                {loadingMore ? "Loading…" : "Load more saved events"}
-              </Text>
-            </Pressable>
-          ) : null}
-        </ScrollView>
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -192,8 +192,14 @@ export default function SavedScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: 12,
     padding: 20,
+  },
+  listHeader: {
+    gap: 12,
+    paddingBottom: 12,
+  },
+  itemWrap: {
+    paddingBottom: 8,
   },
   emptyWrap: {
     gap: 8,
@@ -257,9 +263,6 @@ const styles = StyleSheet.create({
   },
   secondaryActionPressed: {
     opacity: 0.88,
-  },
-  stack: {
-    gap: 8,
   },
   stateWrap: {
     flex: 1,

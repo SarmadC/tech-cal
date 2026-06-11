@@ -45,7 +45,6 @@ import {
 } from "../../src/lib/calendarState";
 import { loadMobileCalendarFeed } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
-import { useTabBarVisibility } from "../../src/components/chrome/TabBarVisibilityProvider";
 
 const DEFAULT_FILTERS: CalendarDraftFilters = {
   tags: [],
@@ -104,11 +103,8 @@ function countActiveFilters(filters: CalendarDraftFilters) {
 export default function CalendarScreen() {
   const { profile } = useAuth();
   const { tokens } = useAppTheme();
-  const { isVisible } = useTabBarVisibility();
   const insets = useSafeAreaInsets();
-  const tabBarBottomInset = isVisible
-    ? tokens.spacing.tabBarBottom
-    : Math.max(insets.bottom + 20, 28);
+  const tabBarBottomInset = tokens.spacing.tabBarBottom;
   const [visibleMonthStart, setVisibleMonthStart] =
     useState<LocalCalendarDateKey>(() => resolveDefaultVisibleMonth());
   const [selectedDate, setSelectedDate] = useState<LocalCalendarDateKey | null>(

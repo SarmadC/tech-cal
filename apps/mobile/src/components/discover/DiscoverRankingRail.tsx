@@ -1,10 +1,12 @@
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 
 import type {
   MobileDiscoverFeed,
   MobileDiscoverRankingMode,
 } from "@kurecal/domain";
 
+import { haptics } from "../../lib/haptics";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScalePress } from "../../hooks/useAnimation";
 
@@ -50,7 +52,10 @@ export function DiscoverRankingRail({
           isActive={option.id === value}
           label={option.label}
           tokens={tokens}
-          onPress={() => onChange(option.id)}
+          onPress={() => {
+            haptics.selection();
+            onChange(option.id);
+          }}
         />
       ))}
     </View>
