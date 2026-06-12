@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { NormalizedSubscription } from '@kurecal/domain';
@@ -27,6 +28,8 @@ import {
   restoreRevenueCatPurchases,
   type RevenueCatPackage,
 } from '../src/lib/revenuecat';
+import { useScalePress } from '../src/hooks/useAnimation';
+import { useAppTheme } from '../src/providers/ThemeProvider';
 
 const FEATURE_ITEMS = [
   'Full recommendation engine',
@@ -141,6 +144,7 @@ function getSubscriptionHeadline(subscription: NormalizedSubscription | null): s
 
 export default function PaywallScreen() {
   const { session } = useAuth();
+  const { tokens } = useAppTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [screenError, setScreenError] = useState<string | null>(null);
@@ -155,6 +159,8 @@ export default function PaywallScreen() {
   const [workingAction, setWorkingAction] = useState<
     'manage' | 'purchase' | 'restore' | null
   >(null);
+
+  const { scale: subscribeScale, onPressIn: onSubscribePressIn, onPressOut: onSubscribePressOut } = useScalePress();
 
   async function loadScreen(mode: 'initial' | 'refresh' = 'initial') {
     if (mode === 'refresh') {
@@ -289,9 +295,13 @@ export default function PaywallScreen() {
     }
   }
 
+  const t = tokens.colors;
+  const sans = tokens.typography.sans;
+  const r = tokens.radius;
+
   if (loading && !subscription) {
     return (
-      <LinearGradient colors={['#071019', '#04070c', '#020304']} style={styles.gradient}>
+      <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
@@ -307,7 +317,7 @@ export default function PaywallScreen() {
 
   if (screenError && !subscription) {
     return (
-      <LinearGradient colors={['#071019', '#04070c', '#020304']} style={styles.gradient}>
+      <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
@@ -325,7 +335,7 @@ export default function PaywallScreen() {
   }
 
   return (
-    <LinearGradient colors={['#071019', '#04070c', '#020304']} style={styles.gradient}>
+    <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -335,62 +345,91 @@ export default function PaywallScreen() {
               onRefresh={() => {
                 void loadScreen('refresh');
               }}
-              tintColor="#7dd3fc"
+              tintColor={t.accent}
             />
           }
         >
+          {/* Hero */}
           <View style={styles.hero}>
-            <Text style={styles.eyebrow}>Subscription</Text>
-            <Text style={styles.title}>KureCal Pro</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.eyebrow, { color: t.textTertiary, fontFamily: sans }]}>
+              Subscription
+            </Text>
+            <Text style={[styles.title, { color: t.textPrimary, fontFamily: sans }]}>
+              KureCal Pro
+            </Text>
+            <Text style={[styles.subtitle, { color: t.textSecondary, fontFamily: sans }]}>
               Move from discovery to commitment with full recommendations,
               calendar sync, and unlimited saved events.
             </Text>
-            <Text style={styles.meta}>{getSubscriptionHeadline(subscription)}</Text>
-            <Text style={styles.sessionMeta}>
-              Signed in as {session?.user.email ?? 'unknown user'}
+            <Text style={[styles.meta, { color: t.textTertiary, fontFamily: sans }]}>
+              {getSubscriptionHeadline(subscription)}
+            </Text>
+            <Text style={[styles.sessionMeta, { color: t.textTertiary, fontFamily: sans }]}>
+              {session?.user.email ?? 'unknown user'}
             </Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Why upgrade</Text>
+          {/* Why upgrade */}
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
+              Why upgrade
+            </Text>
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
                 <View key={item} style={styles.featureRow}>
-                  <View style={styles.featureDot} />
-                  <Text style={styles.featureText}>{item}</Text>
+                  <View style={[styles.featureBar, { backgroundColor: t.accent }]} />
+                  <Text style={[styles.featureText, { color: t.textSecondary, fontFamily: sans }]}>
+                    {item}
+                  </Text>
                 </View>
               ))}
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Current access</Text>
-            <Text style={styles.cardBody}>
+          {/* Current access */}
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
+              Current access
+            </Text>
+            <Text style={[styles.cardBody, { color: t.textSecondary, fontFamily: sans }]}>
               {hasPaidAccess(subscription)
                 ? 'Your paid access is active on mobile. You can manage renewals or restore prior purchases at any time.'
                 : 'You are on the free tier. Upgrade to unlock the full recommendation engine and native planning controls.'}
             </Text>
             <View style={styles.statusRow}>
-              <View style={styles.statusChip}>
-                <Text style={styles.statusChipLabel}>
+              <View
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: t.accentSoft, borderColor: t.borderStrong, borderRadius: r.sm },
+                ]}
+              >
+                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
                   {subscription?.tier === 'free' ? 'Free' : 'Pro'}
                 </Text>
               </View>
-              <View style={styles.statusChip}>
-                <Text style={styles.statusChipLabel}>
+              <View
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: t.accentSoft, borderColor: t.borderStrong, borderRadius: r.sm },
+                ]}
+              >
+                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
                   {subscription?.status ?? 'unknown'}
                 </Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Choose your plan</Text>
-            <Text style={styles.cardBody}>
-              {annualSavingsLabel ??
-                'RevenueCat packages are loaded live for this account.'}
+          {/* Choose your plan */}
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
+              Choose your plan
             </Text>
+            {annualSavingsLabel ? (
+              <Text style={[styles.cardBody, { color: t.textSecondary, fontFamily: sans }]}>
+                {annualSavingsLabel} with yearly billing
+              </Text>
+            ) : null}
 
             {packages.length ? (
               <View style={styles.planStack}>
@@ -402,22 +441,36 @@ export default function PaywallScreen() {
                     <Pressable
                       key={pkg.identifier}
                       onPress={() => setSelectedPackageIdentifier(pkg.identifier)}
-                      style={({ pressed }) => [
+                      style={[
                         styles.planCard,
-                        selected ? styles.planCardSelected : null,
-                        pressed ? styles.planCardPressed : null,
+                        {
+                          backgroundColor: selected ? t.surfaceStrong : t.surface,
+                          borderColor: selected ? t.accent : t.border,
+                          borderRadius: r.md,
+                        },
                       ]}
                     >
                       <View style={styles.planHeader}>
-                        <Text style={styles.planTitle}>{getPackageTitle(pkg)}</Text>
+                        <Text style={[styles.planTitle, { color: t.textPrimary, fontFamily: sans }]}>
+                          {getPackageTitle(pkg)}
+                        </Text>
                         {selected ? (
-                          <View style={styles.selectedBadge}>
-                            <Text style={styles.selectedBadgeLabel}>SELECTED</Text>
+                          <View
+                            style={[
+                              styles.selectedBadge,
+                              { backgroundColor: t.pillActive, borderRadius: r.sm },
+                            ]}
+                          >
+                            <Text style={[styles.selectedBadgeLabel, { color: t.pillActiveText, fontFamily: sans }]}>
+                              Selected
+                            </Text>
                           </View>
                         ) : null}
                       </View>
-                      <Text style={styles.planPrice}>{pkg.product.priceString}</Text>
-                      <Text style={styles.planMeta}>
+                      <Text style={[styles.planPrice, { color: t.textPrimary, fontFamily: sans }]}>
+                        {pkg.product.priceString}
+                      </Text>
+                      <Text style={[styles.planMeta, { color: t.textTertiary, fontFamily: sans }]}>
                         {trialLabel ??
                           (getPackageTitle(pkg) === 'Yearly'
                             ? 'Billed annually'
@@ -439,23 +492,31 @@ export default function PaywallScreen() {
             )}
           </View>
 
+          {/* Actions */}
           <View style={styles.actionRow}>
             <Pressable
               disabled={!selectedPackage || workingAction === 'purchase'}
+              onPressIn={onSubscribePressIn}
+              onPressOut={onSubscribePressOut}
               onPress={() => {
                 void handlePurchase();
               }}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (!selectedPackage || workingAction === 'purchase')
-                  ? styles.buttonDisabled
-                  : null,
-                pressed ? styles.primaryButtonPressed : null,
-              ]}
             >
-              <Text style={styles.primaryButtonLabel}>
-                {workingAction === 'purchase' ? 'Subscribing…' : 'Subscribe now'}
-              </Text>
+              <Animated.View
+                style={[
+                  styles.primaryButton,
+                  {
+                    backgroundColor: t.pillActive,
+                    borderRadius: r.md,
+                    opacity: (!selectedPackage || workingAction === 'purchase') ? 0.5 : 1,
+                    transform: [{ scale: subscribeScale }],
+                  },
+                ]}
+              >
+                <Text style={[styles.primaryButtonLabel, { color: t.pillActiveText, fontFamily: sans }]}>
+                  {workingAction === 'purchase' ? 'Subscribing…' : 'Subscribe now'}
+                </Text>
+              </Animated.View>
             </Pressable>
 
             <Pressable
@@ -465,11 +526,14 @@ export default function PaywallScreen() {
               }}
               style={({ pressed }) => [
                 styles.secondaryButton,
-                workingAction === 'restore' ? styles.buttonDisabled : null,
-                pressed ? styles.secondaryButtonPressed : null,
+                {
+                  borderColor: t.border,
+                  borderRadius: r.md,
+                  opacity: workingAction === 'restore' ? 0.5 : pressed ? 0.75 : 1,
+                },
               ]}
             >
-              <Text style={styles.secondaryButtonLabel}>
+              <Text style={[styles.secondaryButtonLabel, { color: t.textSecondary, fontFamily: sans }]}>
                 {workingAction === 'restore' ? 'Restoring…' : 'Restore purchases'}
               </Text>
             </Pressable>
@@ -481,11 +545,14 @@ export default function PaywallScreen() {
               }}
               style={({ pressed }) => [
                 styles.secondaryButton,
-                workingAction === 'manage' ? styles.buttonDisabled : null,
-                pressed ? styles.secondaryButtonPressed : null,
+                {
+                  borderColor: t.border,
+                  borderRadius: r.md,
+                  opacity: workingAction === 'manage' ? 0.5 : pressed ? 0.75 : 1,
+                },
               ]}
             >
-              <Text style={styles.secondaryButtonLabel}>
+              <Text style={[styles.secondaryButtonLabel, { color: t.textSecondary, fontFamily: sans }]}>
                 {workingAction === 'manage'
                   ? 'Opening…'
                   : hasPaidAccess(subscription)
@@ -495,15 +562,22 @@ export default function PaywallScreen() {
             </Pressable>
           </View>
 
+          {/* Legal */}
           <View style={styles.legalRow}>
             <Pressable onPress={() => openLegal('/legal/terms')}>
-              <Text style={styles.legalLink}>Terms</Text>
+              <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
+                Terms
+              </Text>
             </Pressable>
             <Pressable onPress={() => openLegal('/legal/privacy')}>
-              <Text style={styles.legalLink}>Privacy</Text>
+              <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
+                Privacy
+              </Text>
             </Pressable>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.legalLink}>Close</Text>
+              <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
+                Close
+              </Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -514,45 +588,40 @@ export default function PaywallScreen() {
 
 const styles = StyleSheet.create({
   actionRow: {
-    gap: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    gap: 8,
   },
   card: {
-    backgroundColor: 'rgba(8, 15, 24, 0.88)',
-    borderColor: 'rgba(125, 211, 252, 0.14)',
-    borderRadius: 24,
     borderWidth: 1,
-    gap: 14,
-    padding: 22,
+    borderRadius: 6,
+    gap: 12,
+    padding: 16,
   },
   cardBody: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 18,
   },
   cardTitle: {
-    color: '#f8fafc',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
+    lineHeight: 24,
+    letterSpacing: -0.18,
   },
   content: {
-    gap: 18,
-    padding: 24,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   eyebrow: {
-    color: '#7dd3fc',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.8,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
-  featureDot: {
-    backgroundColor: '#2dd4bf',
-    borderRadius: 999,
-    height: 8,
-    width: 8,
+  featureBar: {
+    borderRadius: 1,
+    height: 14,
+    width: 2,
   },
   featureList: {
     gap: 10,
@@ -563,124 +632,103 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   featureText: {
-    color: '#e2e8f0',
     flex: 1,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 18,
   },
   gradient: {
     flex: 1,
   },
   hero: {
-    gap: 10,
+    gap: 6,
+    paddingBottom: 4,
   },
   legalLink: {
-    color: '#7dd3fc',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
   },
   legalRow: {
     flexDirection: 'row',
-    gap: 18,
+    gap: 20,
     justifyContent: 'center',
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   meta: {
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+    marginTop: 2,
   },
   planCard: {
-    backgroundColor: 'rgba(7, 15, 23, 0.88)',
-    borderColor: 'rgba(148, 163, 184, 0.12)',
-    borderRadius: 20,
     borderWidth: 1,
-    gap: 8,
-    padding: 16,
-  },
-  planCardPressed: {
-    opacity: 0.94,
-  },
-  planCardSelected: {
-    backgroundColor: 'rgba(14, 116, 144, 0.18)',
-    borderColor: 'rgba(125, 211, 252, 0.38)',
+    gap: 6,
+    padding: 14,
   },
   planHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     justifyContent: 'space-between',
   },
   planMeta: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
   },
   planPrice: {
-    color: '#f8fafc',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -1.2,
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    lineHeight: 30,
   },
   planStack: {
-    gap: 12,
+    gap: 8,
   },
   planTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: '#7dd3fc',
-    borderRadius: 18,
     justifyContent: 'center',
-    minHeight: 54,
-    paddingHorizontal: 20,
+    minHeight: 40,
+    paddingHorizontal: 16,
   },
   primaryButtonLabel: {
-    color: '#082f49',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  primaryButtonPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.992 }],
+    fontSize: 13,
+    fontWeight: '600',
   },
   safeArea: {
     flex: 1,
   },
   secondaryButton: {
     alignItems: 'center',
-    borderColor: 'rgba(148, 163, 184, 0.24)',
-    borderRadius: 18,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
+    minHeight: 36,
+    paddingHorizontal: 16,
   },
   secondaryButtonLabel: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  secondaryButtonPressed: {
-    opacity: 0.82,
-  },
-  selectedBadge: {
-    backgroundColor: '#7dd3fc',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  selectedBadgeLabel: {
-    color: '#082f49',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  sessionMeta: {
-    color: '#64748b',
     fontSize: 13,
     fontWeight: '500',
+  },
+  selectedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  selectedBadgeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  sessionMeta: {
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
   },
   stateWrap: {
     flex: 1,
@@ -688,34 +736,31 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   statusChip: {
-    backgroundColor: 'rgba(45, 212, 191, 0.12)',
-    borderColor: 'rgba(45, 212, 191, 0.18)',
-    borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   statusChipLabel: {
-    color: '#e2e8f0',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   statusRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   subtitle: {
-    color: '#94a3b8',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 18,
+    marginTop: 2,
   },
   title: {
-    color: '#f8fafc',
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.9,
-    lineHeight: 36,
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.24,
+    lineHeight: 30,
   },
 });
