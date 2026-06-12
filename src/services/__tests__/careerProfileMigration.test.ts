@@ -151,7 +151,8 @@ describe('CareerProfileService Migration', () => {
         available_time: mockCareerProfile.availableTime,
         budget: mockCareerProfile.budget,
         networking_goals: mockCareerProfile.networkingGoals,
-        preferred_event_types: mockCareerProfile.preferredEventTypes
+        preferred_event_types: mockCareerProfile.preferredEventTypes,
+        target_path: null
       });
     });
   });

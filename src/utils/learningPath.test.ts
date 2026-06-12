@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Event } from '@/types';
 import {
     buildLearningPathOverview,
@@ -136,6 +136,9 @@ describe('learningPath utilities', () => {
     });
 
     it('counts streaks only from events that match target skills', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-15T12:00:00.000Z'));
+
         const currentMonthNetworking = createEvent({
             id: 'networking-event',
             title: 'Tech Networking Night',
@@ -187,5 +190,7 @@ describe('learningPath utilities', () => {
         expect(streak.lastMonthEvents).toBe(1);
         expect(streak.currentStreak).toBe(0);
         expect(streak.trend).toBe('declining');
+
+        vi.useRealTimers();
     });
 });

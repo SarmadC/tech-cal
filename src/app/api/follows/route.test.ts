@@ -54,6 +54,7 @@ describe('POST /api/follows', () => {
     });
 
     const response = await POST({
+      headers: new Headers(),
       json: async () => ({ userId: targetUserId }),
     } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     const payload = await response.json();

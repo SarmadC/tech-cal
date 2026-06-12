@@ -94,7 +94,10 @@ describe('POST /api/events/submit', () => {
                     organizer_name: '  Tech Cal  ',
                     tags: [' react ', 'typescript', '', 42],
                 }),
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Origin: 'http://localhost',
+                },
                 method: 'POST',
             }) as never
         );
@@ -217,7 +220,10 @@ describe('POST /api/events/submit', () => {
                     start_date: '2026-05-01T09:00:00Z',
                     location: 'Edmonton',
                 }),
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Origin: 'http://localhost',
+                },
                 method: 'POST',
             }) as never
         );
@@ -243,7 +249,10 @@ describe('POST /api/events/submit', () => {
                     location: 'Edmonton',
                     registration_url: 'https://localhost/register',
                 }),
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Origin: 'http://localhost',
+                },
                 method: 'POST',
             }) as never
         );
