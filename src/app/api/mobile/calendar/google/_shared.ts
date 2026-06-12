@@ -7,9 +7,21 @@ import { NextResponse } from 'next/server';
 import { CalendarConnectionService, type CalendarConnection } from '@/services/calendarConnectionService';
 import type { SupabaseClientType } from '@/types';
 import type { SubscriptionStatus } from '@/types/subscription';
-import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
+import {
+  getAuthenticatedRequestContext,
+  type AuthenticatedRequestContext,
+} from '@/utils/supabase/requestAuth';
 
-export async function requireMobileAuth(request: Request) {
+// Explicit discriminated union: with an inferred return type TS normalizes
+// the union with optional members, so `'response' in auth` fails to narrow
+// and every route handler is inferred to return `NextResponse | undefined`.
+export type MobileAuthResult =
+  | { response: NextResponse }
+  | { authContext: AuthenticatedRequestContext };
+
+export async function requireMobileAuth(
+  request: Request
+): Promise<MobileAuthResult> {
   const authContext = await getAuthenticatedRequestContext(request as never);
   if (!authContext) {
     return {

@@ -8,7 +8,7 @@ import {
   requireMobileAuth,
 } from '../_shared';
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<NextResponse> {
   const auth = await requireMobileAuth(request);
   if ('response' in auth) {
     return auth.response;
