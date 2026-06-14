@@ -22,6 +22,7 @@ import {
   type MobileDashboardEngagementStreak,
   type MobileDashboardMonthlyPulse,
   type MobileDashboardNetworkPulse,
+  type MobileDashboardPeerComparison,
   type MobileDashboardPerformance,
   type MobileDashboardPredictionAccuracy,
   type MobileDashboardCareerImpact,
@@ -754,6 +755,7 @@ export function buildDashboardSummary({
   engagementStreak,
   discoveryBreadth,
   networkPulse,
+  peerComparison,
   predictionAccuracy,
   careerImpact,
   careerOutcomes,
@@ -777,6 +779,7 @@ export function buildDashboardSummary({
   engagementStreak?: MobileDashboardEngagementStreak;
   discoveryBreadth?: MobileDashboardDiscoveryBreadth;
   networkPulse?: MobileDashboardNetworkPulse;
+  peerComparison?: MobileDashboardPeerComparison | null;
   predictionAccuracy?: MobileDashboardPredictionAccuracy;
   careerImpact?: MobileDashboardCareerImpact;
   careerOutcomes?: MobileDashboardCareerOutcomes;
@@ -852,6 +855,7 @@ export function buildDashboardSummary({
     engagementStreak,
     discoveryBreadth,
     networkPulse,
+    peerComparison: peerComparison ?? null,
     predictionAccuracy,
     careerImpact,
     careerOutcomes,

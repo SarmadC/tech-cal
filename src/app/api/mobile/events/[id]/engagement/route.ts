@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 import { UserEventService } from '@/services/userEventService';
+import { getFeatureLimits, getSubscriptionByUserId } from '@/lib/subscription';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 interface RouteContext {
@@ -36,6 +37,38 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
 
     if (Object.prototype.hasOwnProperty.call(payload, 'isBookmarked')) {
+      if (payload.isBookmarked === true) {
+        const currentState = await UserEventService.isEventTracked(
+          authContext.user.id,
+          eventId,
+          authContext.supabase
+        );
+        if (!currentState.isBookmarked) {
+          const subscription = await getSubscriptionByUserId(authContext.user.id);
+          const limits = getFeatureLimits(subscription);
+
+          if (Number.isFinite(limits.bookmarkLimit)) {
+            const trackedEvents = await UserEventService.getTrackedEvents(
+              authContext.user.id,
+              authContext.supabase
+            );
+            const bookmarkCount = trackedEvents.filter(
+              (record) => record.isBookmarked
+            ).length;
+
+            if (bookmarkCount >= limits.bookmarkLimit) {
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: `You've reached the free bookmark limit (${limits.bookmarkLimit}). Upgrade to add more.`,
+                },
+                { status: 403 }
+              );
+            }
+          }
+        }
+      }
+
       await UserEventService.toggleBookmark(
         authContext.user.id,
         eventId,

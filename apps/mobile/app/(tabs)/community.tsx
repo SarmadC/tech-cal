@@ -4,6 +4,7 @@ import type {
   CommunityPostType,
   MobileCommunityCircle,
   MobileCommunityFeedPost,
+  MobileCommunityDirectoryPerson,
   MobileCommunityHome,
   MobileCommunityNetworkingEvent,
   MobileCommunityNetworkingFollowUpCard,
@@ -20,6 +21,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -38,6 +40,7 @@ import {
 } from "../../src/components/community/CommunityComposerModal";
 import { useCommunityImageAttachments } from "../../src/hooks/useCommunityImageAttachments";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
+import { CommunityDirectoryPersonCard } from "../../src/components/community/CommunityDirectoryPersonCard";
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
 import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
 import { CommunityFeedCard } from "../../src/components/CommunityFeedCard";
@@ -49,6 +52,7 @@ import {
   leaveMobileCommunityCircle,
   loadMobileCommunityEvents,
   loadMobileCommunityHome,
+  searchMobileCommunityDirectory,
   unfollowMobileUser,
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
@@ -1305,80 +1309,252 @@ function _PeopleTab({
   pendingUserId: string | null;
   peopleToMeet: MobileCommunityNetworkingPersonCard[];
 }) {
+  const { tokens } = useAppTheme();
   const speakers = home.speakerMatches ?? [];
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directoryPeople, setDirectoryPeople] = useState<
+    MobileCommunityDirectoryPerson[]
+  >([]);
+  const [directoryCursor, setDirectoryCursor] = useState<string | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryLoadingMore, setDirectoryLoadingMore] = useState(false);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+  const trimmedDirectoryQuery = directoryQuery.trim();
+  const isDirectorySearchActive = trimmedDirectoryQuery.length > 0;
+
+  useEffect(() => {
+    if (!isDirectorySearchActive) {
+      setDirectoryPeople([]);
+      setDirectoryCursor(null);
+      setDirectoryError(null);
+      setDirectoryLoading(false);
+      return;
+    }
+
+    let active = true;
+    setDirectoryLoading(true);
+    setDirectoryError(null);
+
+    const timeout = setTimeout(() => {
+      searchMobileCommunityDirectory(trimmedDirectoryQuery)
+        .then((result) => {
+          if (!active) return;
+          setDirectoryPeople(result.people);
+          setDirectoryCursor(result.nextCursor);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setDirectoryPeople([]);
+          setDirectoryCursor(null);
+          setDirectoryError(
+            error instanceof Error
+              ? error.message
+              : "Unable to search the community directory",
+          );
+        })
+        .finally(() => {
+          if (active) {
+            setDirectoryLoading(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
+  }, [isDirectorySearchActive, trimmedDirectoryQuery]);
+
+  async function loadMoreDirectoryPeople() {
+    if (!directoryCursor || directoryLoadingMore) {
+      return;
+    }
+
+    setDirectoryLoadingMore(true);
+    setDirectoryError(null);
+
+    try {
+      const result = await searchMobileCommunityDirectory(
+        trimmedDirectoryQuery,
+        directoryCursor,
+      );
+      setDirectoryPeople((current) => [...current, ...result.people]);
+      setDirectoryCursor(result.nextCursor);
+    } catch (error) {
+      setDirectoryError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load more people",
+      );
+    } finally {
+      setDirectoryLoadingMore(false);
+    }
+  }
 
   return (
     <>
-      <LensRail
-        activeId={lens}
-        items={PEOPLE_LENSES}
-        onSelect={(id) => onChangeLens(id as PeopleLens)}
-      />
+      <View
+        style={[
+          styles.directorySearchWrap,
+          {
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border,
+          },
+        ]}
+      >
+        <FontAwesome color={tokens.colors.textTertiary} name="search" size={14} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+          onChangeText={setDirectoryQuery}
+          placeholder="Search people"
+          placeholderTextColor={tokens.colors.textTertiary}
+          returnKeyType="search"
+          style={[
+            styles.directorySearchInput,
+            {
+              color: tokens.colors.textPrimary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+          value={directoryQuery}
+        />
+      </View>
 
-      <SectionTitle title="People Around Your Events" />
-      {peopleToMeet.length > 0 ? (
-        <View style={styles.stack}>
-          {peopleToMeet.slice(0, 5).map((person) => (
-            <CommunityNetworkingPersonCard
-              key={person.id}
-              isFollowing={person.isInNetwork}
-              isPending={pendingUserId === person.id}
-              mode="meet"
-              person={person}
-              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
-              onOpenProfile={() => router.push(`/profile/${person.username}`)}
-              onToggleFollow={() =>
-                onToggleFollow(person.id, person.isInNetwork)
-              }
-            />
-          ))}
-        </View>
-      ) : (
-        <SectionEmptyNote title="No event-based people in this view yet" />
-      )}
-
-      {speakers.length > 0 ? (
+      {isDirectorySearchActive ? (
         <>
-          <SectionTitle title="Speakers Worth Knowing" />
-          <View style={styles.stack}>
-            {speakers.slice(0, 3).map((match, index) => (
-              <CommunityNetworkingSpeakerCard
-                key={`${match.speaker.id}:${match.event.id}`}
-                eventTitle={match.event.title}
-                isPastEvent={match.isPastEvent}
-                matchIndex={index}
-                matchReason={match.matchReason}
-                speaker={match.speaker}
-                onOpenSpeaker={() =>
-                  router.push({
-                    pathname: "/speaker/[id]",
-                    params: {
-                      id: match.speaker.id,
-                      eventId: match.event.id,
-                      eventTitle: match.event.title,
+          <SectionTitle title="Directory Results" />
+          {directoryLoading ? (
+            <SectionEmptyNote title="Searching people..." />
+          ) : directoryError ? (
+            <SectionEmptyNote title={directoryError} />
+          ) : directoryPeople.length > 0 ? (
+            <View style={styles.stack}>
+              {directoryPeople.map((person) => (
+                <CommunityDirectoryPersonCard
+                  key={person.id}
+                  isPending={pendingUserId === person.id}
+                  person={person}
+                  onOpenProfile={
+                    person.username
+                      ? () => router.push(`/profile/${person.username}`)
+                      : undefined
+                  }
+                  onToggleFollow={() =>
+                    onToggleFollow(person.id, person.activity.isViewerFollowing)
+                  }
+                />
+              ))}
+              {directoryCursor ? (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={directoryLoadingMore}
+                  onPress={() => {
+                    void loadMoreDirectoryPeople();
+                  }}
+                  style={({ pressed }) => [
+                    styles.loadMoreButton,
+                    {
+                      borderColor: tokens.colors.borderStrong,
+                      backgroundColor: tokens.colors.surface,
                     },
-                  })
-                }
-              />
-            ))}
-          </View>
+                    pressed ? styles.pressed : null,
+                    directoryLoadingMore ? styles.disabled : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.loadMoreText,
+                      {
+                        color: tokens.colors.textPrimary,
+                        fontFamily: tokens.typography.sans,
+                      },
+                    ]}
+                  >
+                    {directoryLoadingMore ? "Loading..." : "Load more"}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : (
+            <SectionEmptyNote title="No people match this search" />
+          )}
         </>
-      ) : null}
-
-      <SectionTitle title="Recent Encounters" />
-      {followUps.length > 0 ? (
-        <View style={styles.stack}>
-          {followUps.slice(0, 4).map((person) => (
-            <EncounterCard
-              key={person.id}
-              person={person}
-              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
-              onOpenProfile={() => router.push(`/profile/${person.username}`)}
-            />
-          ))}
-        </View>
       ) : (
-        <SectionEmptyNote title="No recent encounters yet" />
+        <>
+          <LensRail
+            activeId={lens}
+            items={PEOPLE_LENSES}
+            onSelect={(id) => onChangeLens(id as PeopleLens)}
+          />
+
+          <SectionTitle title="People Around Your Events" />
+          {peopleToMeet.length > 0 ? (
+            <View style={styles.stack}>
+              {peopleToMeet.slice(0, 5).map((person) => (
+                <CommunityNetworkingPersonCard
+                  key={person.id}
+                  isFollowing={person.isInNetwork}
+                  isPending={pendingUserId === person.id}
+                  mode="meet"
+                  person={person}
+                  onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+                  onOpenProfile={() => router.push(`/profile/${person.username}`)}
+                  onToggleFollow={() =>
+                    onToggleFollow(person.id, person.isInNetwork)
+                  }
+                />
+              ))}
+            </View>
+          ) : (
+            <SectionEmptyNote title="No event-based people in this view yet" />
+          )}
+
+          {speakers.length > 0 ? (
+            <>
+              <SectionTitle title="Speakers Worth Knowing" />
+              <View style={styles.stack}>
+                {speakers.slice(0, 3).map((match, index) => (
+                  <CommunityNetworkingSpeakerCard
+                    key={`${match.speaker.id}:${match.event.id}`}
+                    eventTitle={match.event.title}
+                    isPastEvent={match.isPastEvent}
+                    matchIndex={index}
+                    matchReason={match.matchReason}
+                    speaker={match.speaker}
+                    onOpenSpeaker={() =>
+                      router.push({
+                        pathname: "/speaker/[id]",
+                        params: {
+                          id: match.speaker.id,
+                          eventId: match.event.id,
+                          eventTitle: match.event.title,
+                        },
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          <SectionTitle title="Recent Encounters" />
+          {followUps.length > 0 ? (
+            <View style={styles.stack}>
+              {followUps.slice(0, 4).map((person) => (
+                <EncounterCard
+                  key={person.id}
+                  person={person}
+                  onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+                  onOpenProfile={() => router.push(`/profile/${person.username}`)}
+                />
+              ))}
+            </View>
+          ) : (
+            <SectionEmptyNote title="No recent encounters yet" />
+          )}
+        </>
       )}
     </>
   );
@@ -2072,8 +2248,42 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingRight: 12,
   },
+  directorySearchWrap: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
+  directorySearchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 20,
+    minWidth: 0,
+    paddingVertical: 10,
+  },
+  loadMoreButton: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
   pressed: {
     opacity: 0.82,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   modalScrim: {
     flex: 1,

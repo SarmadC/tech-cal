@@ -41,10 +41,12 @@ import {
   loadMobileSubscriptionStatus,
   followMobileUser,
   reconcileMobileRevenueCatSubscription,
+  searchMobileCommunityDirectory,
   skipMobileCareerOnboarding,
   submitMobileCommunityReport,
   submitMobileCommunityVote,
   syncMobileGoogleCalendarEvent,
+  unblockMobileUser,
   unfollowMobileUser,
   unsyncMobileGoogleCalendarEvent,
   updateMobileEventAgendaSave,
@@ -565,10 +567,23 @@ describe('mobile api helpers', () => {
             headers: { 'Content-Type': 'application/json' },
           }
         )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'User unblocked successfully.',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
       );
 
     const blockedUsers = await loadMobileBlockedUsers();
     await blockMobileUser('11111111-1111-4111-8111-111111111111');
+    await unblockMobileUser('11111111-1111-4111-8111-111111111111');
 
     expect(blockedUsers[0]?.username).toBe('blocked-member');
     expect(fetchSpy).toHaveBeenNthCalledWith(
@@ -586,6 +601,68 @@ describe('mobile api helpers', () => {
         body: JSON.stringify({
           blockedUserId: '11111111-1111-4111-8111-111111111111',
         }),
+        headers: expect.any(Headers),
+      })
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      'https://mobile.kurecal.test/api/blocks/11111111-1111-4111-8111-111111111111',
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.any(Headers),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('searches the mobile community directory with pagination', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            people: [
+              {
+                id: '11111111-1111-4111-8111-111111111111',
+                fullName: 'Ada Lovelace',
+                avatarUrl: null,
+                username: 'ada',
+                headline: 'Computing pioneer',
+                joinedAt: '2026-04-01T00:00:00.000Z',
+                followerCount: 12,
+                followingCount: 4,
+                activity: {
+                  upcomingAttendingCount: 2,
+                  attendingThisWeekCount: 1,
+                  sharedSavedEventCount: 1,
+                  recentFollowerCount: 3,
+                  isViewerFollowing: false,
+                  sharedCircleCount: 2,
+                },
+              },
+            ],
+            nextCursor: null,
+            highlights: {
+              attendingSavedEvents: [],
+              networkAttendingThisWeek: [],
+              newMembers: [],
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+
+    const result = await searchMobileCommunityDirectory(' ada ', 'cursor-1');
+
+    expect(result.people[0]?.username).toBe('ada');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/community/directory?q=ada&cursor=cursor-1&limit=20',
+      expect.objectContaining({
         headers: expect.any(Headers),
       })
     );

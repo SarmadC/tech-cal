@@ -1,4 +1,5 @@
 import type { SupabaseClientType } from '@/types/database';
+import { BlockService } from '@/services/blockService';
 
 export interface CommunityPerson {
   id: string;
@@ -119,10 +120,32 @@ export class CommunityPeopleService {
       };
     }
 
+    const blockedIds =
+      viewerId
+        ? await BlockService.getBlockedUserIdsForViewer(
+            viewerId,
+            memberIds.filter((id) => id !== viewerId),
+            readClient
+          )
+        : new Set<string>();
+    const visibleMemberRows = memberRows.filter((m) => !blockedIds.has(m.user_id));
+    const visibleMemberIds = visibleMemberRows.map((m) => m.user_id);
+
+    if (visibleMemberIds.length === 0) {
+      return {
+        circle: this.toCircle(circle, viewerMembershipState),
+        peopleForYou: [],
+        activeMembers: [],
+        goingToNextEvent: [],
+        mutuals: [],
+        newMembers: [],
+      };
+    }
+
     const profilesResult = await readClient
       .from('profiles')
       .select('id, full_name, username, avatar_url, headline')
-      .in('id', memberIds);
+      .in('id', visibleMemberIds);
     const profiles = (profilesResult.data ?? []) as ProfileRow[];
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
@@ -145,14 +168,14 @@ export class CommunityPeopleService {
       };
     };
 
-    const sortedByCreated = [...memberRows].sort(
+    const sortedByCreated = [...visibleMemberRows].sort(
       (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)
     );
     const newMembers = sortedByCreated
       .slice(0, SECTION_LIMIT)
       .map((m) => toPerson(m.user_id, 'Just joined'));
 
-    const sortedByActivity = [...memberRows].sort((a, b) => {
+    const sortedByActivity = [...visibleMemberRows].sort((a, b) => {
       const av = a.last_visited_at ? Date.parse(a.last_visited_at) : 0;
       const bv = b.last_visited_at ? Date.parse(b.last_visited_at) : 0;
       return bv - av;
@@ -190,7 +213,7 @@ export class CommunityPeopleService {
           .from('user_events')
           .select('user_id')
           .eq('event_id', nextEvent.id)
-          .in('user_id', memberIds);
+          .in('user_id', visibleMemberIds);
         const rsvpUsers = (
           (rsvpResult.data ?? []) as Array<{ user_id: string }>
         ).map((r) => r.user_id);
@@ -203,7 +226,7 @@ export class CommunityPeopleService {
     }
 
     // People for you — heuristic: members with a headline who aren't the viewer.
-    const peopleForYou = memberRows
+    const peopleForYou = visibleMemberRows
       .filter((m) => m.user_id !== viewerId)
       .slice(0, SECTION_LIMIT)
       .map((m) => toPerson(m.user_id, 'In your community'));

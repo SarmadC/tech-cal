@@ -186,6 +186,39 @@ export const mobileCommunityMentionCandidateSchema = z.object({
   avatarUrl: z.string().nullable(),
 });
 
+export const mobileCommunityDirectoryPersonActivitySchema = z.object({
+  upcomingAttendingCount: z.number().int().nonnegative(),
+  attendingThisWeekCount: z.number().int().nonnegative(),
+  sharedSavedEventCount: z.number().int().nonnegative(),
+  recentFollowerCount: z.number().int().nonnegative(),
+  isViewerFollowing: z.boolean(),
+  sharedCircleCount: z.number().int().nonnegative(),
+});
+
+export const mobileCommunityDirectoryPersonSchema = z.object({
+  id: z.string(),
+  fullName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  username: z.string().nullable(),
+  headline: z.string().nullable(),
+  joinedAt: z.string().nullable(),
+  followerCount: z.number().int().nonnegative(),
+  followingCount: z.number().int().nonnegative(),
+  activity: mobileCommunityDirectoryPersonActivitySchema,
+});
+
+export const mobileCommunityDirectoryHighlightsSchema = z.object({
+  attendingSavedEvents: z.array(mobileCommunityDirectoryPersonSchema),
+  networkAttendingThisWeek: z.array(mobileCommunityDirectoryPersonSchema),
+  newMembers: z.array(mobileCommunityDirectoryPersonSchema),
+});
+
+export const mobileCommunityDirectorySchema = z.object({
+  people: z.array(mobileCommunityDirectoryPersonSchema),
+  nextCursor: z.string().nullable(),
+  highlights: mobileCommunityDirectoryHighlightsSchema.optional(),
+});
+
 export const mobileCommunityPostMediaSchema = z.object({
   id: z.string().optional(),
   path: z.string(),
@@ -709,6 +742,18 @@ export type MobileCommunityPostMention = z.infer<
 >;
 export type MobileCommunityMentionCandidate = z.infer<
   typeof mobileCommunityMentionCandidateSchema
+>;
+export type MobileCommunityDirectoryPersonActivity = z.infer<
+  typeof mobileCommunityDirectoryPersonActivitySchema
+>;
+export type MobileCommunityDirectoryPerson = z.infer<
+  typeof mobileCommunityDirectoryPersonSchema
+>;
+export type MobileCommunityDirectoryHighlights = z.infer<
+  typeof mobileCommunityDirectoryHighlightsSchema
+>;
+export type MobileCommunityDirectory = z.infer<
+  typeof mobileCommunityDirectorySchema
 >;
 export type MobileCommunityPostMedia = z.infer<
   typeof mobileCommunityPostMediaSchema

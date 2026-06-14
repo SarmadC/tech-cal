@@ -50,7 +50,7 @@ We combine high-quality curation, adaptive scoring, intelligent scheduling, and 
   FullCalendar-powered scheduling with event detail panels, quick filters, and deep linking across views (`src/app/calendar/CalendarClientView.tsx`).
 
 - **Career Dashboard**  
-  Goal progress, skill growth, networking insights, and event timelines rendered once onboarding is complete (`src/app/dashboard/DashboardClientView.tsx`).
+  Goal progress, skill growth, networking insights, and event timelines rendered from the shared dashboard summary service once onboarding is complete (`src/app/(protected)/dashboard/page.tsx`, `src/services/dashboard/dashboardSummaryService.ts`).
 
 - **Hackathon Coordination**  
   Team creation/join workflows, capacity validation, and participation analytics for hackathon cohorts (`src/app/hackathons/HackathonClientView.tsx`, `src/services/hackathonService.ts`).
@@ -72,7 +72,7 @@ Key server components & API entry points:
 - Authenticated layout guard: `src/app/(protected)/layout.tsx`
 - Filtered events API: `src/app/api/events/filtered/route.ts`
 - Recommendations API: `src/app/api/events/recommendations/route.ts`
-- Dashboard analytics API: `src/app/api/dashboard/analytics/route.ts`
+- Dashboard summary service: `src/services/dashboard/dashboardSummaryService.ts`
 
 ---
 

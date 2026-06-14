@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
 import { BlockService } from '@/services/blockService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 const ParamsSchema = z.object({
   userId: z.string().uuid(),
@@ -12,21 +12,20 @@ const ParamsSchema = z.object({
 const unblockActionRateLimiter = createRateLimiter('social-unblock-actions', 'LOW_FREQUENCY');
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const authContext = await getAuthenticatedRequestContext(request as never);
 
-    if (authError || !user) {
+    if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const rateLimitResult = await checkRateLimit(unblockActionRateLimiter, user.id);
+    const rateLimitResult = await checkRateLimit(unblockActionRateLimiter, authContext.user.id);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please try again later.' },
@@ -42,8 +41,15 @@ export async function DELETE(
       );
     }
 
-    await BlockService.unblockUser(user.id, parsedParams.data.userId, supabase);
-    await TrustLevelService.evaluateAndPersistTrustLevel(user.id, supabase);
+    await BlockService.unblockUser(
+      authContext.user.id,
+      parsedParams.data.userId,
+      authContext.supabase
+    );
+    await TrustLevelService.evaluateAndPersistTrustLevel(
+      authContext.user.id,
+      authContext.supabase
+    );
 
     return NextResponse.json({
       success: true,

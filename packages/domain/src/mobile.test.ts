@@ -328,6 +328,13 @@ describe('mobile domain contracts', () => {
           },
         },
       },
+      peerComparison: {
+        percentile: 64,
+        comparison: 'above',
+        sampleSize: 25,
+        confidence: 'medium',
+        recommendation: 'Keep attending one high-fit event each month.',
+      },
       predictionAccuracy: {
         accuracy: 82,
         sampleSize: 4,
@@ -387,6 +394,7 @@ describe('mobile domain contracts', () => {
     });
 
     expect(parsed.hero.highlight).toBe('AI Builders Night');
+    expect(parsed.peerComparison?.comparison).toBe('above');
     expect(parsed.upcoming.length).toBe(1);
     expect(parsed.recommendations.length).toBe(1);
     expect(parsed.topRecommendation?.impactLabel).toBe('High Impact');

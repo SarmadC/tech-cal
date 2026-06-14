@@ -11,6 +11,7 @@ import {
   mobileCareerOnboardingBootstrapSchema,
   mobileCareerOnboardingDataSchema,
   mobileCommunityCirclePageSchema,
+  mobileCommunityDirectorySchema,
   mobileCommunityEventsSchema,
   mobileCommunityHomeSchema,
   mobileCommunityMentionCandidateSchema,
@@ -27,7 +28,6 @@ import {
   mobileFollowStatusSchema,
   mobileGoogleCalendarBulkSyncResultSchema,
   mobileGoogleCalendarSyncInputSchema,
-  mobileLinkedInOutreachLogSchema,
   mobileNetworkingContactRecordSchema,
   mobileNetworkingContactUpdateSchema,
   mobileOnboardingStatusSchema,
@@ -49,6 +49,7 @@ import {
   type MobileCareerOnboardingBootstrap,
   type MobileCareerOnboardingData,
   type MobileCommunityCirclePage,
+  type MobileCommunityDirectory,
   type MobileCommunityEvents,
   type MobileCommunityHome,
   type MobileCommunityFeedPost,
@@ -65,7 +66,6 @@ import {
   type MobileEventEngagementUpdate,
   type MobileFollowStatus,
   type MobileGoogleCalendarBulkSyncResult,
-  type MobileLinkedInOutreachLog,
   type MobileNetworkingContactRecord,
   type MobileNetworkingContactUpdate,
   type MobileOnboardingStatus,
@@ -185,10 +185,24 @@ async function fetchMobileEnvelope(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${getMobileApiBaseUrl()}${path}`, {
-    ...init,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${getMobileApiBaseUrl()}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const payload = (await response
     .json()
@@ -662,28 +676,6 @@ export async function updateMobileNetworkingContact(
   );
 }
 
-export async function logMobileLinkedInRequest(
-  eventId: string
-): Promise<MobileLinkedInOutreachLog> {
-  if (!eventId.trim()) {
-    throw new Error('Event id is required');
-  }
-
-  const result = await fetchMobileContract(
-    `/api/mobile/events/${encodeURIComponent(eventId.trim())}/networking-outreach`,
-    mobileLinkedInOutreachLogSchema,
-    {
-      method: 'POST',
-    }
-  );
-
-  await syncPendingNetworkingFollowUpEventId(
-    result.linkedinRequestsSent > result.connectionsMade ? result.eventId : null
-  );
-
-  return result;
-}
-
 export async function loadMobileEventNetworkingFeedback(
   eventId: string
 ): Promise<MobileEventNetworkingFeedback> {
@@ -766,6 +758,42 @@ export async function blockMobileUser(blockedUserId: string): Promise<void> {
       blockedUserId: blockedUserId.trim(),
     }),
   });
+}
+
+export async function unblockMobileUser(blockedUserId: string): Promise<void> {
+  if (!blockedUserId.trim()) {
+    throw new Error('Blocked user id is required');
+  }
+
+  await fetchMobileEnvelope(
+    `/api/blocks/${encodeURIComponent(blockedUserId.trim())}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function searchMobileCommunityDirectory(
+  query: string,
+  cursor?: string | null
+): Promise<MobileCommunityDirectory> {
+  const params = new URLSearchParams();
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery) {
+    params.set('q', trimmedQuery);
+  }
+
+  if (cursor?.trim()) {
+    params.set('cursor', cursor.trim());
+  }
+
+  params.set('limit', '20');
+
+  return fetchMobileContract(
+    `/api/mobile/community/directory?${params.toString()}`,
+    mobileCommunityDirectorySchema
+  );
 }
 
 export async function createMobileCommunityPost(

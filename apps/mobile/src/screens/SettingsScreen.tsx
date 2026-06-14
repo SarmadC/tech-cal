@@ -328,6 +328,13 @@ export default function SettingsScreen({
             }
             title="Visibility and attendance"
           />
+          <SettingsDivider />
+          <SettingsRow
+            icon="person.crop.circle.badge.xmark"
+            onPress={() => router.push("/settings/blocked-users" as never)}
+            subtitle="Review and unblock hidden profiles"
+            title="Blocked users"
+          />
         </SettingsGroup>
 
         <SettingsGroup>

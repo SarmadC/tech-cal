@@ -127,28 +127,4 @@ export class EventNetworkingSummaryService {
     return transformSummary(data);
   }
 
-  static async incrementLinkedInRequestsSent(
-    eventId: string,
-    userId: string,
-    supabase: SupabaseClientType
-  ): Promise<EventNetworkingSummary> {
-    const existing = await this.getSummaryForEvent(eventId, userId, supabase);
-    const nextCount = (existing?.linkedinRequestsSent ?? 0) + 1;
-
-    const result = await this.setLinkedInRequestsSent(
-      {
-        eventId,
-        userId,
-        linkedinRequestsSent: nextCount,
-        lastOutreachLoggedAt: new Date().toISOString(),
-      },
-      supabase
-    );
-
-    if (!result) {
-      throw new Error('Failed to persist LinkedIn outreach summary');
-    }
-
-    return result;
-  }
 }

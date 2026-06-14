@@ -14,10 +14,12 @@ const mocks = vi.hoisted(() => ({
   getAllSummariesForUser: vi.fn(),
   getEventCount: vi.fn(),
   getEvents: vi.fn(),
+  getPeerProfilesForComparison: vi.fn(),
   getProfile: vi.fn(),
   getTrackedEvents: vi.fn(),
   hydrateContacts: vi.fn(),
   loadEngagementMap: vi.fn(),
+  calculatePeerComparison: vi.fn(),
 }));
 
 vi.mock('@/utils/supabase/requestAuth', () => ({
@@ -34,6 +36,15 @@ vi.mock('@/services/userEventService', () => ({
 vi.mock('@/services/careerProfileService', () => ({
   CareerProfileService: {
     getCareerProfile: (...args: unknown[]) => mocks.getCareerProfile(...args),
+    getPeerProfilesForComparison: (...args: unknown[]) =>
+      mocks.getPeerProfilesForComparison(...args),
+  },
+}));
+
+vi.mock('@/services/peerCohortService', () => ({
+  PeerCohortService: {
+    calculatePeerComparison: (...args: unknown[]) =>
+      mocks.calculatePeerComparison(...args),
   },
 }));
 
@@ -221,10 +232,21 @@ describe('GET /api/mobile/dashboard/summary', () => {
       user: { id: 'user-1' },
     });
     mocks.getCareerProfile.mockResolvedValue({
+      userId: 'user-1',
       currentRole: 'Engineer',
+      seniority: 'mid',
+      industry: 'Developer tools',
       careerGoals: ['networking'],
       skillsToLearn: ['Product Strategy'],
       networkingGoals: ['Meet more product operators'],
+    });
+    mocks.getPeerProfilesForComparison.mockResolvedValue([]);
+    mocks.calculatePeerComparison.mockReturnValue({
+      percentile: 64,
+      comparison: 'above',
+      sampleSize: 0,
+      confidence: 'low',
+      recommendation: 'Baseline comparison derived from your role and activity patterns',
     });
     mocks.getProfile.mockResolvedValue({
       preferences: {
@@ -390,6 +412,7 @@ describe('GET /api/mobile/dashboard/summary', () => {
     expect(parsed.networkPulse?.confirmedConnectionCount).toBe(1);
     expect(parsed.networkPulse?.pendingRequestCount).toBe(1);
     expect(parsed.networkPulse?.nextContactToConfirm?.id).toBe('speaker-1');
+    expect(parsed.peerComparison?.comparison).toBe('above');
     expect(parsed.predictionAccuracy?.sampleSize).toBe(1);
     expect(parsed.careerImpact?.totalEvents).toBe(1);
     expect(parsed.careerOutcomes?.feedbackCount).toBe(1);

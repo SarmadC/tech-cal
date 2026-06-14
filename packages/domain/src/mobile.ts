@@ -84,12 +84,6 @@ export const mobileEventAgendaSaveSchema = z.object({
   isSaved: z.boolean(),
 });
 
-export const mobileLinkedInOutreachLogSchema = z.object({
-  eventId: z.string(),
-  connectionsMade: z.number().int().nonnegative(),
-  linkedinRequestsSent: z.number().int().nonnegative(),
-});
-
 export const mobileEventNetworkingFeedbackSchema = z.object({
   eventId: z.string(),
   actualValueRating: z.number().int().min(1).max(5).nullable(),
@@ -504,6 +498,14 @@ export const mobileDashboardNetworkPulseSchema = z.object({
     .optional(),
 });
 
+export const mobileDashboardPeerComparisonSchema = z.object({
+  percentile: z.number().int().min(0).max(100),
+  comparison: z.enum(['above', 'below', 'average']),
+  sampleSize: z.number().int().nonnegative(),
+  confidence: z.enum(['high', 'medium', 'low']),
+  recommendation: z.string(),
+});
+
 export const mobileDashboardPredictionConfidenceSchema = z.enum([
   'not_enough_data',
   'learning',
@@ -592,6 +594,7 @@ export const mobileDashboardSummarySchema = z.object({
   engagementStreak: mobileDashboardEngagementStreakSchema.optional(),
   discoveryBreadth: mobileDashboardDiscoveryBreadthSchema.optional(),
   networkPulse: mobileDashboardNetworkPulseSchema.optional(),
+  peerComparison: mobileDashboardPeerComparisonSchema.nullable().optional(),
   predictionAccuracy: mobileDashboardPredictionAccuracySchema.optional(),
   careerImpact: mobileDashboardCareerImpactSchema.optional(),
   careerOutcomes: mobileDashboardCareerOutcomesSchema.optional(),
@@ -820,9 +823,6 @@ export type MobileGoogleCalendarBulkSyncResult = z.infer<
 export type MobileEventEngagementUpdate = z.infer<
   typeof mobileEventEngagementUpdateSchema
 >;
-export type MobileLinkedInOutreachLog = z.infer<
-  typeof mobileLinkedInOutreachLogSchema
->;
 export type MobileEventNetworkingFeedback = z.infer<
   typeof mobileEventNetworkingFeedbackSchema
 >;
@@ -903,6 +903,9 @@ export type MobileDashboardDiscoveryBreadth = z.infer<
 >;
 export type MobileDashboardNetworkPulse = z.infer<
   typeof mobileDashboardNetworkPulseSchema
+>;
+export type MobileDashboardPeerComparison = z.infer<
+  typeof mobileDashboardPeerComparisonSchema
 >;
 export type MobileDashboardPredictionConfidence = z.infer<
   typeof mobileDashboardPredictionConfidenceSchema

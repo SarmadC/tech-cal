@@ -4,6 +4,7 @@ import {
   blockedUserSummarySchema,
   communityPostDraftSchema,
   mobileCommunityCirclePageSchema,
+  mobileCommunityDirectorySchema,
   mobileCommunityHubHomeSchema,
   mobileCommunityHomeSchema,
   mobileCommunityNetworkingHomeSchema,
@@ -469,5 +470,39 @@ describe("community domain contracts", () => {
     });
 
     expect(blocked.username).toBe("blocked-member");
+  });
+
+  it("parses mobile community directory search payloads", () => {
+    const person = {
+      id: "11111111-1111-4111-8111-111111111111",
+      fullName: "Ada Lovelace",
+      avatarUrl: null,
+      username: "ada",
+      headline: "Computing pioneer",
+      joinedAt: "2026-04-01T00:00:00.000Z",
+      followerCount: 12,
+      followingCount: 4,
+      activity: {
+        upcomingAttendingCount: 2,
+        attendingThisWeekCount: 1,
+        sharedSavedEventCount: 1,
+        recentFollowerCount: 3,
+        isViewerFollowing: false,
+        sharedCircleCount: 2,
+      },
+    };
+
+    const parsed = mobileCommunityDirectorySchema.parse({
+      people: [person],
+      nextCursor: "cursor",
+      highlights: {
+        attendingSavedEvents: [person],
+        networkAttendingThisWeek: [],
+        newMembers: [person],
+      },
+    });
+
+    expect(parsed.people[0]?.username).toBe("ada");
+    expect(parsed.highlights?.newMembers).toHaveLength(1);
   });
 });
