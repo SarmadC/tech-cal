@@ -126,6 +126,7 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
   const requestSequenceRef = useRef(0);
 
   useEffect(() => {
@@ -399,7 +400,7 @@ export default function CalendarScreen() {
           ]}
         />
 
-        {!showInitialLoading && <TabMenuOverlay />}
+        {!showInitialLoading && headerControlsVisible && <TabMenuOverlay />}
         <View
           onLayout={handleHeaderLayout}
           style={[
@@ -498,6 +499,7 @@ export default function CalendarScreen() {
             }}
             topInset={headerOffset}
             bottomInset={tabBarBottomInset}
+            onControlsVisibilityChange={setHeaderControlsVisible}
           />
         ) : null}
       </SafeAreaView>

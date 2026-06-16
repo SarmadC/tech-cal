@@ -3,6 +3,7 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useEffect } from "react";
 import { DynamicColorIOS, Platform, type ColorValue } from "react-native";
 
+import { useTabBarVisibility } from "../../src/context/TabBarVisibilityContext";
 import { BrandLoadingScreen } from "../../src/components/brand/BrandLoadingScreen";
 import { useAuth } from "../../src/context/AuthProvider";
 import { useUnreadNotifications } from "../../src/hooks/useUnreadNotifications";
@@ -33,6 +34,7 @@ export default function TabsLayout() {
   const { tokens } = useAppTheme();
   const { count: unreadCount } = useUnreadNotifications();
   const pathname = usePathname();
+  const { visible, setVisible } = useTabBarVisibility();
 
   // Record the active tab so app/index.tsx can restore it on next launch.
   useEffect(() => {
@@ -60,7 +62,11 @@ export default function TabsLayout() {
   }
 
   return (
-    <NativeTabs tintColor={tabTintColor}>
+    <NativeTabs
+      tintColor={tabTintColor}
+      hidden={!visible}
+      screenListeners={{ focus: () => setVisible(true) }}
+    >
       <NativeTabs.Trigger name="discover">
         <NativeTabs.Trigger.Icon
           sf={{ default: "safari", selected: "safari.fill" }}

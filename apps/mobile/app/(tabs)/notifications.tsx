@@ -1,7 +1,7 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { FlashList } from '@shopify/flash-list';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FontAwesome } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,26 +9,27 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { NotificationItem } from '../../src/components/notifications/NotificationItem';
-import { TabMenuOverlay } from '../../src/components/chrome/TabMenuOverlay';
-import { useAppTheme } from '../../src/providers/ThemeProvider';
+import { NotificationItem } from "../../src/components/notifications/NotificationItem";
+import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
+import { useAppTheme } from "../../src/providers/ThemeProvider";
+import { useScrollControlsVisibility } from "../../src/hooks/useScrollControlsVisibility";
 import {
   loadMobileNotifications,
   markMobileNotificationsRead,
-} from '../../src/lib/mobileApi';
+} from "../../src/lib/mobileApi";
 import {
   pushPayloadForNotification,
   routeForNotificationData,
-} from '../../src/lib/notificationRouting';
+} from "../../src/lib/notificationRouting";
 import {
   setLocalUnreadCount,
   useUnreadNotifications,
-} from '../../src/hooks/useUnreadNotifications';
-import type { MobileNotificationItem } from '@kurecal/domain';
-import { haptics } from '../../src/lib/haptics';
+} from "../../src/hooks/useUnreadNotifications";
+import type { MobileNotificationItem } from "@kurecal/domain";
+import { haptics } from "../../src/lib/haptics";
 
 export default function NotificationsScreen() {
   const { tokens } = useAppTheme();
@@ -37,10 +38,14 @@ export default function NotificationsScreen() {
 
   const [items, setItems] = useState<MobileNotificationItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [mode, setMode] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [mode, setMode] = useState<"loading" | "ready" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
   const visibleUnreadIds = useRef<Set<string>>(new Set());
+  const handleScroll = useScrollControlsVisibility({
+    onVisibilityChange: setHeaderControlsVisible,
+  });
 
   const loadFirstPage = useCallback(async () => {
     try {
@@ -50,9 +55,9 @@ export default function NotificationsScreen() {
       page.items.forEach((item) => {
         if (item.readAt == null) visibleUnreadIds.current.add(item.id);
       });
-      setMode('ready');
+      setMode("ready");
     } catch {
-      setMode('error');
+      setMode("error");
     }
   }, []);
 
@@ -92,7 +97,9 @@ export default function NotificationsScreen() {
       if (item.readAt == null) {
         const nowIso = new Date().toISOString();
         setItems((prev) =>
-          prev.map((row) => (row.id === item.id ? { ...row, readAt: nowIso } : row))
+          prev.map((row) =>
+            row.id === item.id ? { ...row, readAt: nowIso } : row,
+          ),
         );
         visibleUnreadIds.current.delete(item.id);
         setLocalUnreadCount(Math.max(0, count - 1));
@@ -104,14 +111,16 @@ export default function NotificationsScreen() {
       const path = routeForNotificationData(pushPayloadForNotification(item));
       if (path) router.push(path as never);
     },
-    [count]
+    [count],
   );
 
   const handleMarkAll = useCallback(async () => {
     if (count === 0) return;
     const nowIso = new Date().toISOString();
     setItems((prev) =>
-      prev.map((row) => (row.readAt == null ? { ...row, readAt: nowIso } : row))
+      prev.map((row) =>
+        row.readAt == null ? { ...row, readAt: nowIso } : row,
+      ),
     );
     visibleUnreadIds.current.clear();
     setLocalUnreadCount(0);
@@ -134,13 +143,13 @@ export default function NotificationsScreen() {
   }, []);
 
   const empty = useMemo(
-    () => mode === 'ready' && items.length === 0,
-    [mode, items.length]
+    () => mode === "ready" && items.length === 0,
+    [mode, items.length],
   );
 
   return (
     <View style={[styles.screen, { backgroundColor: tokens.colors.shell }]}>
-      <TabMenuOverlay topOffset={12} />
+      {headerControlsVisible && <TabMenuOverlay topOffset={12} />}
       <View
         style={[
           styles.header,
@@ -161,7 +170,7 @@ export default function NotificationsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Notification preferences"
             hitSlop={10}
-            onPress={() => router.push('/notifications/preferences')}
+            onPress={() => router.push("/notifications/preferences")}
             style={styles.iconButton}
           >
             <FontAwesome
@@ -182,20 +191,18 @@ export default function NotificationsScreen() {
               },
             ]}
           >
-            <Text
-              style={[styles.markAllText, { color: tokens.colors.accent }]}
-            >
+            <Text style={[styles.markAllText, { color: tokens.colors.accent }]}>
               Mark all read
             </Text>
           </Pressable>
         </View>
       </View>
 
-      {mode === 'loading' ? (
+      {mode === "loading" ? (
         <View style={styles.center}>
           <ActivityIndicator color={tokens.colors.accent} />
         </View>
-      ) : mode === 'error' ? (
+      ) : mode === "error" ? (
         <View style={styles.center}>
           <Text style={{ color: tokens.colors.textSecondary }}>
             Couldn’t load notifications.
@@ -205,7 +212,7 @@ export default function NotificationsScreen() {
               style={{
                 color: tokens.colors.accent,
                 marginTop: 12,
-                fontFamily: 'DMSans',
+                fontFamily: "DMSans",
               }}
             >
               Try again
@@ -222,8 +229,8 @@ export default function NotificationsScreen() {
           <Text
             style={{
               color: tokens.colors.textPrimary,
-              fontFamily: 'DMSans',
-              fontWeight: '600',
+              fontFamily: "DMSans",
+              fontWeight: "600",
               marginTop: 12,
             }}
           >
@@ -232,9 +239,9 @@ export default function NotificationsScreen() {
           <Text
             style={{
               color: tokens.colors.textTertiary,
-              fontFamily: 'DMSans',
+              fontFamily: "DMSans",
               marginTop: 4,
-              textAlign: 'center',
+              textAlign: "center",
               paddingHorizontal: 32,
             }}
           >
@@ -250,6 +257,8 @@ export default function NotificationsScreen() {
           )}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.6}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -275,47 +284,47 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontFamily: 'DMSans',
+    fontFamily: "DMSans",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     flex: 1,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   iconButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   markAll: {
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
   markAllText: {
-    fontFamily: 'DMSans',
+    fontFamily: "DMSans",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   center: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
 });

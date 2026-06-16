@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SymbolView } from 'expo-symbols';
 
 import type { NormalizedSubscription } from '@kurecal/domain';
 
 import { ScreenStateView } from '../src/components/ScreenStateView';
-import { useAuth } from '../src/context/AuthProvider';
+import { useSubscription } from '../src/context/SubscriptionContext';
 import { getMobileApiBaseUrl } from '../src/lib/env';
-import { loadMobileSubscriptionStatus } from '../src/lib/mobileApi';
 import {
   getKureCalOfferingPackages,
   isRevenueCatPurchaseCancelled,
@@ -32,31 +32,20 @@ import { useScalePress } from '../src/hooks/useAnimation';
 import { useAppTheme } from '../src/providers/ThemeProvider';
 
 const FEATURE_ITEMS = [
-  'Full recommendation engine',
-  'Calendar sync and native planning',
-  'Unlimited saved events',
-  'Advanced opportunity insight surfaces',
+  {
+    description: 'Save beyond the free bookmark limit.',
+    title: 'More saved events',
+  },
+  {
+    description: 'Sync saved and attending events with Google Calendar.',
+    title: 'Google Calendar sync',
+  },
+  {
+    description: 'Use your profile to rank events around your goals.',
+    title: 'Personalized recommendations',
+  },
 ] as const;
 
-function hasPaidAccess(subscription: NormalizedSubscription | null): boolean {
-  if (!subscription || subscription.tier === 'free') {
-    return false;
-  }
-
-  if (
-    subscription.status === 'active' ||
-    subscription.status === 'trialing' ||
-    subscription.status === 'past_due'
-  ) {
-    return true;
-  }
-
-  if (subscription.status === 'canceled' && subscription.currentPeriodEnd) {
-    return new Date(subscription.currentPeriodEnd).getTime() > Date.now();
-  }
-
-  return false;
-}
 
 function formatCurrency(value: number, currencyCode: string): string {
   try {
@@ -69,6 +58,15 @@ function formatCurrency(value: number, currencyCode: string): string {
   } catch {
     return `${currencyCode} ${value.toFixed(2)}`;
   }
+}
+
+function getProductCurrencyCode(pkg: RevenueCatPackage): string | null {
+  const currencyCode = pkg.product.currencyCode?.trim().toUpperCase();
+  return currencyCode || null;
+}
+
+function hasUsablePrice(pkg: RevenueCatPackage): boolean {
+  return Number.isFinite(pkg.product.price) && pkg.product.price > 0;
 }
 
 function formatPeriodLabel(unit: string, units: number): string {
@@ -116,7 +114,17 @@ function getAnnualSavingsLabel(packages: RevenueCatPackage[]): string | null {
         pkg.identifier.toLowerCase().includes('annual')
     );
 
-  if (!monthly || !annual) {
+  if (!monthly || !annual || !hasUsablePrice(monthly) || !hasUsablePrice(annual)) {
+    return null;
+  }
+
+  const monthlyCurrencyCode = getProductCurrencyCode(monthly);
+  const annualCurrencyCode = getProductCurrencyCode(annual);
+  if (
+    !monthlyCurrencyCode ||
+    !annualCurrencyCode ||
+    monthlyCurrencyCode !== annualCurrencyCode
+  ) {
     return null;
   }
 
@@ -125,7 +133,7 @@ function getAnnualSavingsLabel(packages: RevenueCatPackage[]): string | null {
     return null;
   }
 
-  return `Save ${formatCurrency(savings, annual.product.currencyCode)}`;
+  return `Save ${formatCurrency(savings, annualCurrencyCode)}`;
 }
 
 function getSubscriptionHeadline(subscription: NormalizedSubscription | null): string {
@@ -142,81 +150,73 @@ function getSubscriptionHeadline(subscription: NormalizedSubscription | null): s
   return `${tier} · ${status}`;
 }
 
+function getPackageBillingLabel(pkg: RevenueCatPackage): string {
+  return getPackageTitle(pkg) === 'Yearly' ? 'Billed annually' : 'Billed monthly';
+}
+
 export default function PaywallScreen() {
-  const { session } = useAuth();
   const { tokens } = useAppTheme();
-  const [loading, setLoading] = useState(true);
+  const {
+    hasPaidAccess: isPaidAccessActive,
+    refreshSubscription,
+    subscription,
+    subscriptionLoadFailed,
+    subscriptionLoading,
+  } = useSubscription();
+
+  const [packagesLoading, setPackagesLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [screenError, setScreenError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [packages, setPackages] = useState<RevenueCatPackage[]>([]);
   const [selectedPackageIdentifier, setSelectedPackageIdentifier] = useState<
     string | null
   >(null);
-  const [subscription, setSubscription] = useState<NormalizedSubscription | null>(
-    null
-  );
   const [workingAction, setWorkingAction] = useState<
     'manage' | 'purchase' | 'restore' | null
   >(null);
 
-  const { scale: subscribeScale, onPressIn: onSubscribePressIn, onPressOut: onSubscribePressOut } = useScalePress();
+  const {
+    scale: primaryScale,
+    onPressIn: onPrimaryPressIn,
+    onPressOut: onPrimaryPressOut,
+  } = useScalePress();
 
-  async function loadScreen(mode: 'initial' | 'refresh' = 'initial') {
-    if (mode === 'refresh') {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
+  async function loadPackages() {
+    setPackagesLoading(true);
     try {
-      const [subscriptionResult, packagesResult] = await Promise.allSettled([
-        loadMobileSubscriptionStatus(),
-        getKureCalOfferingPackages(),
-      ]);
-
-      if (subscriptionResult.status === 'rejected') {
-        throw subscriptionResult.reason;
-      }
-
-      setSubscription(subscriptionResult.value);
-      setScreenError(null);
-
-      if (packagesResult.status === 'fulfilled') {
-        setPackages(packagesResult.value);
-        setPlanError(null);
-        setSelectedPackageIdentifier((current) => {
-          if (current) {
-            return current;
-          }
-
-          return (
-            packagesResult.value.find((pkg) => pkg.packageType === 'MONTHLY')
-              ?.identifier ??
-            packagesResult.value[0]?.identifier ??
-            null
-          );
-        });
-      } else {
-        setPackages([]);
-        setPlanError(
-          packagesResult.reason instanceof Error
-            ? packagesResult.reason.message
-            : 'Unable to load subscription plans right now.'
+      const result = await getKureCalOfferingPackages();
+      setPackages(result);
+      setPlanError(null);
+      setSelectedPackageIdentifier((current) => {
+        if (current && result.some((pkg) => pkg.identifier === current)) {
+          return current;
+        }
+        return (
+          result.find((pkg) => pkg.packageType === 'MONTHLY')?.identifier ??
+          result[0]?.identifier ??
+          null
         );
-      }
+      });
     } catch (error) {
-      setScreenError(
-        error instanceof Error ? error.message : 'Unable to load the paywall'
+      setPackages([]);
+      setPlanError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load subscription plans right now.'
       );
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setPackagesLoading(false);
     }
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.allSettled([refreshSubscription(), loadPackages()]);
+    setRefreshing(false);
+  }
+
   useEffect(() => {
-    void loadScreen();
+    void loadPackages();
   }, []);
 
   const selectedPackage = useMemo(
@@ -231,6 +231,7 @@ export default function PaywallScreen() {
     () => getAnnualSavingsLabel(packages),
     [packages]
   );
+  const isAnyActionWorking = workingAction !== null;
 
   function openLegal(path: string) {
     void Linking.openURL(`${getMobileApiBaseUrl()}${path}`).catch((error) => {
@@ -242,14 +243,14 @@ export default function PaywallScreen() {
   }
 
   async function handlePurchase() {
-    if (!selectedPackage) {
+    if (!selectedPackage || isAnyActionWorking) {
       return;
     }
 
     setWorkingAction('purchase');
     try {
       await purchaseRevenueCatPackage(selectedPackage);
-      await loadScreen('refresh');
+      await refreshSubscription();
       Alert.alert('Subscription active', 'KureCal Pro is now active.');
       router.back();
     } catch (error) {
@@ -265,10 +266,14 @@ export default function PaywallScreen() {
   }
 
   async function handleRestore() {
+    if (isAnyActionWorking) {
+      return;
+    }
+
     setWorkingAction('restore');
     try {
       await restoreRevenueCatPurchases();
-      await loadScreen('refresh');
+      await refreshSubscription();
       Alert.alert('Restore complete', 'Your purchases were restored.');
     } catch (error) {
       Alert.alert(
@@ -281,10 +286,14 @@ export default function PaywallScreen() {
   }
 
   async function handleManage() {
+    if (isAnyActionWorking || !isPaidAccessActive) {
+      return;
+    }
+
     setWorkingAction('manage');
     try {
       await presentKureCalCustomerCenter();
-      await loadScreen('refresh');
+      await refreshSubscription();
     } catch (error) {
       Alert.alert(
         'Unable to open subscription center',
@@ -299,7 +308,9 @@ export default function PaywallScreen() {
   const sans = tokens.typography.sans;
   const r = tokens.radius;
 
-  if (loading && !subscription) {
+  const initialLoading = (subscriptionLoading && !subscription) || packagesLoading;
+
+  if (initialLoading) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
@@ -315,7 +326,7 @@ export default function PaywallScreen() {
     );
   }
 
-  if (screenError && !subscription) {
+  if (subscriptionLoadFailed && !subscription) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
         <SafeAreaView style={styles.safeArea}>
@@ -323,9 +334,9 @@ export default function PaywallScreen() {
             <ScreenStateView
               mode="error"
               title="Paywall unavailable"
-              description={screenError}
+              description="Unable to load your subscription status."
               onRetry={() => {
-                void loadScreen();
+                void refreshSubscription();
               }}
             />
           </View>
@@ -337,93 +348,81 @@ export default function PaywallScreen() {
   return (
     <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
+        <View style={styles.modalHeader}>
+          <Pressable
+            accessibilityLabel="Close"
+            accessibilityRole="button"
+            hitSlop={12}
+            onPress={() => router.back()}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+          >
+            <SymbolView
+              name="xmark"
+              size={18}
+              tintColor={t.textTertiary}
+              type="monochrome"
+            />
+          </Pressable>
+        </View>
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => {
-                void loadScreen('refresh');
+                void handleRefresh();
               }}
               tintColor={t.accent}
             />
           }
         >
-          {/* Hero */}
           <View style={styles.hero}>
-            <Text style={[styles.eyebrow, { color: t.textTertiary, fontFamily: sans }]}>
-              Subscription
-            </Text>
+            <View style={styles.heroHeader}>
+              <Text style={[styles.eyebrow, { color: t.textTertiary, fontFamily: sans }]}>
+                Subscription
+              </Text>
+              <View
+                accessibilityLabel={`Current access: ${getSubscriptionHeadline(subscription)}`}
+                style={[
+                  styles.statusChip,
+                  {
+                    backgroundColor: t.accentSoft,
+                    borderColor: t.borderStrong,
+                    borderRadius: r.sm,
+                  },
+                ]}
+              >
+                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
+                  {getSubscriptionHeadline(subscription)}
+                </Text>
+              </View>
+            </View>
             <Text style={[styles.title, { color: t.textPrimary, fontFamily: sans }]}>
               KureCal Pro
             </Text>
-            <Text style={[styles.subtitle, { color: t.textSecondary, fontFamily: sans }]}>
-              Move from discovery to commitment with full recommendations,
-              calendar sync, and unlimited saved events.
-            </Text>
-            <Text style={[styles.meta, { color: t.textTertiary, fontFamily: sans }]}>
-              {getSubscriptionHeadline(subscription)}
-            </Text>
-            <Text style={[styles.sessionMeta, { color: t.textTertiary, fontFamily: sans }]}>
-              {session?.user.email ?? 'unknown user'}
-            </Text>
           </View>
 
-          {/* Why upgrade */}
-          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
-              Why upgrade
-            </Text>
+          <View style={[styles.section, { borderTopColor: t.border }]}>
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
-                <View key={item} style={styles.featureRow}>
+                <View key={item.title} style={styles.featureRow}>
                   <View style={[styles.featureBar, { backgroundColor: t.accent }]} />
-                  <Text style={[styles.featureText, { color: t.textSecondary, fontFamily: sans }]}>
-                    {item}
-                  </Text>
+                  <View style={styles.featureCopy}>
+                    <Text style={[styles.featureTitle, { color: t.textPrimary, fontFamily: sans }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.featureText, { color: t.textSecondary, fontFamily: sans }]}>
+                      {item.description}
+                    </Text>
+                  </View>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Current access */}
-          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+          <View style={[styles.section, { borderTopColor: t.border }]}>
             <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
-              Current access
-            </Text>
-            <Text style={[styles.cardBody, { color: t.textSecondary, fontFamily: sans }]}>
-              {hasPaidAccess(subscription)
-                ? 'Your paid access is active on mobile. You can manage renewals or restore prior purchases at any time.'
-                : 'You are on the free tier. Upgrade to unlock the full recommendation engine and native planning controls.'}
-            </Text>
-            <View style={styles.statusRow}>
-              <View
-                style={[
-                  styles.statusChip,
-                  { backgroundColor: t.accentSoft, borderColor: t.borderStrong, borderRadius: r.sm },
-                ]}
-              >
-                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
-                  {subscription?.tier === 'free' ? 'Free' : 'Pro'}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusChip,
-                  { backgroundColor: t.accentSoft, borderColor: t.borderStrong, borderRadius: r.sm },
-                ]}
-              >
-                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
-                  {subscription?.status ?? 'unknown'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Choose your plan */}
-          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
-              Choose your plan
+              Plan
             </Text>
             {annualSavingsLabel ? (
               <Text style={[styles.cardBody, { color: t.textSecondary, fontFamily: sans }]}>
@@ -439,6 +438,12 @@ export default function PaywallScreen() {
 
                   return (
                     <Pressable
+                      accessibilityHint="Selects this subscription plan"
+                      accessibilityLabel={`${getPackageTitle(pkg)} plan, ${pkg.product.priceString}, ${
+                        trialLabel ?? getPackageBillingLabel(pkg).toLowerCase()
+                      }`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
                       key={pkg.identifier}
                       onPress={() => setSelectedPackageIdentifier(pkg.identifier)}
                       style={[
@@ -471,10 +476,7 @@ export default function PaywallScreen() {
                         {pkg.product.priceString}
                       </Text>
                       <Text style={[styles.planMeta, { color: t.textTertiary, fontFamily: sans }]}>
-                        {trialLabel ??
-                          (getPackageTitle(pkg) === 'Yearly'
-                            ? 'Billed annually'
-                            : 'Billed monthly')}
+                        {trialLabel ?? getPackageBillingLabel(pkg)}
                       </Text>
                     </Pressable>
                   );
@@ -492,14 +494,24 @@ export default function PaywallScreen() {
             )}
           </View>
 
-          {/* Actions */}
           <View style={styles.actionRow}>
             <Pressable
-              disabled={!selectedPackage || workingAction === 'purchase'}
-              onPressIn={onSubscribePressIn}
-              onPressOut={onSubscribePressOut}
+              accessibilityLabel={isPaidAccessActive ? 'Manage subscription' : 'Subscribe now'}
+              accessibilityRole="button"
+              accessibilityState={{
+                disabled: isPaidAccessActive
+                  ? isAnyActionWorking
+                  : !selectedPackage || isAnyActionWorking,
+              }}
+              disabled={
+                isPaidAccessActive
+                  ? isAnyActionWorking
+                  : !selectedPackage || isAnyActionWorking
+              }
+              onPressIn={onPrimaryPressIn}
+              onPressOut={onPrimaryPressOut}
               onPress={() => {
-                void handlePurchase();
+                void (isPaidAccessActive ? handleManage() : handlePurchase());
               }}
             >
               <Animated.View
@@ -508,19 +520,35 @@ export default function PaywallScreen() {
                   {
                     backgroundColor: t.pillActive,
                     borderRadius: r.md,
-                    opacity: (!selectedPackage || workingAction === 'purchase') ? 0.5 : 1,
-                    transform: [{ scale: subscribeScale }],
+                    opacity:
+                      isPaidAccessActive
+                        ? isAnyActionWorking
+                          ? 0.5
+                          : 1
+                        : !selectedPackage || isAnyActionWorking
+                          ? 0.5
+                          : 1,
+                    transform: [{ scale: primaryScale }],
                   },
                 ]}
               >
                 <Text style={[styles.primaryButtonLabel, { color: t.pillActiveText, fontFamily: sans }]}>
-                  {workingAction === 'purchase' ? 'Subscribing…' : 'Subscribe now'}
+                  {workingAction === 'purchase'
+                    ? 'Subscribing...'
+                    : workingAction === 'manage'
+                      ? 'Opening...'
+                      : isPaidAccessActive
+                        ? 'Manage subscription'
+                        : 'Subscribe now'}
                 </Text>
               </Animated.View>
             </Pressable>
 
             <Pressable
-              disabled={workingAction === 'restore'}
+              accessibilityLabel="Restore purchases"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isAnyActionWorking }}
+              disabled={isAnyActionWorking}
               onPress={() => {
                 void handleRestore();
               }}
@@ -529,54 +557,33 @@ export default function PaywallScreen() {
                 {
                   borderColor: t.border,
                   borderRadius: r.md,
-                  opacity: workingAction === 'restore' ? 0.5 : pressed ? 0.75 : 1,
+                  opacity: isAnyActionWorking ? 0.5 : pressed ? 0.75 : 1,
                 },
               ]}
             >
               <Text style={[styles.secondaryButtonLabel, { color: t.textSecondary, fontFamily: sans }]}>
-                {workingAction === 'restore' ? 'Restoring…' : 'Restore purchases'}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              disabled={workingAction === 'manage'}
-              onPress={() => {
-                void handleManage();
-              }}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                {
-                  borderColor: t.border,
-                  borderRadius: r.md,
-                  opacity: workingAction === 'manage' ? 0.5 : pressed ? 0.75 : 1,
-                },
-              ]}
-            >
-              <Text style={[styles.secondaryButtonLabel, { color: t.textSecondary, fontFamily: sans }]}>
-                {workingAction === 'manage'
-                  ? 'Opening…'
-                  : hasPaidAccess(subscription)
-                    ? 'Manage subscription'
-                    : 'Open subscription center'}
+                {workingAction === 'restore' ? 'Restoring...' : 'Restore purchases'}
               </Text>
             </Pressable>
           </View>
 
-          {/* Legal */}
           <View style={styles.legalRow}>
-            <Pressable onPress={() => openLegal('/legal/terms')}>
+            <Pressable
+              accessibilityLabel="Open terms"
+              accessibilityRole="link"
+              onPress={() => openLegal('/legal/terms')}
+            >
               <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
                 Terms
               </Text>
             </Pressable>
-            <Pressable onPress={() => openLegal('/legal/privacy')}>
+            <Pressable
+              accessibilityLabel="Open privacy policy"
+              accessibilityRole="link"
+              onPress={() => openLegal('/legal/privacy')}
+            >
               <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
                 Privacy
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => router.back()}>
-              <Text style={[styles.legalLink, { color: t.textTertiary, fontFamily: sans }]}>
-                Close
               </Text>
             </Pressable>
           </View>
@@ -590,11 +597,10 @@ const styles = StyleSheet.create({
   actionRow: {
     gap: 8,
   },
-  card: {
-    borderWidth: 1,
-    borderRadius: 6,
+  section: {
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: 12,
-    padding: 16,
+    paddingVertical: 16,
   },
   cardBody: {
     fontSize: 13,
@@ -615,34 +621,47 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
+    letterSpacing: 0,
   },
   featureBar: {
     borderRadius: 1,
     height: 14,
     width: 2,
   },
+  featureCopy: {
+    flex: 1,
+    gap: 2,
+  },
   featureList: {
-    gap: 10,
+    gap: 8,
   },
   featureRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   featureText: {
-    flex: 1,
     fontSize: 13,
     fontWeight: '400',
+    lineHeight: 18,
+  },
+  featureTitle: {
+    fontSize: 13,
+    fontWeight: '600',
     lineHeight: 18,
   },
   gradient: {
     flex: 1,
   },
   hero: {
-    gap: 6,
+    gap: 8,
     paddingBottom: 4,
+  },
+  heroHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
   },
   legalLink: {
     fontSize: 12,
@@ -656,16 +675,10 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 8,
   },
-  meta: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-    marginTop: 2,
-  },
   planCard: {
     borderWidth: 1,
-    gap: 6,
-    padding: 14,
+    gap: 8,
+    padding: 12,
   },
   planHeader: {
     alignItems: 'center',
@@ -695,7 +708,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 32,
     paddingHorizontal: 16,
   },
   primaryButtonLabel: {
@@ -705,11 +718,18 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  modalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
   secondaryButton: {
     alignItems: 'center',
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: 28,
     paddingHorizontal: 16,
   },
   secondaryButtonLabel: {
@@ -725,11 +745,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.2,
   },
-  sessionMeta: {
-    fontSize: 12,
-    fontWeight: '400',
-    lineHeight: 16,
-  },
   stateWrap: {
     flex: 1,
     justifyContent: 'center',
@@ -743,20 +758,9 @@ const styles = StyleSheet.create({
   statusChipLabel: {
     fontSize: 11,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
-  statusRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  subtitle: {
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18,
-    marginTop: 2,
-  },
+
   title: {
     fontSize: 24,
     fontWeight: '700',

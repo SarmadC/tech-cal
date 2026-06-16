@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { useCallback, useMemo, useRef } from 'react';
+import type { ReactNode } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -7,12 +7,12 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
+} from "react-native";
 
 import type {
   LocalCalendarDateKey,
   MobileCalendarEvent,
-} from '@kurecal/domain';
+} from "@kurecal/domain";
 
 import {
   formatEventDateKey,
@@ -20,8 +20,9 @@ import {
   formatLocalDateKey,
   parseLocalDateKey,
   resolveMonthStartKey,
-} from '../../lib/calendarDateUtils';
-import { useAppTheme } from '../../providers/ThemeProvider';
+} from "../../lib/calendarDateUtils";
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScrollControlsVisibility } from "../../hooks/useScrollControlsVisibility";
 
 interface CalendarAgendaListProps {
   events: MobileCalendarEvent[];
@@ -34,6 +35,7 @@ interface CalendarAgendaListProps {
   topInset?: number;
   bottomInset?: number;
   monthStart?: LocalCalendarDateKey | null;
+  onControlsVisibilityChange?: (visible: boolean) => void;
 }
 
 export type AgendaSection = {
@@ -46,7 +48,7 @@ const RAIL_GAP = 12;
 
 function formatWeekdayLabel(dateKey: LocalCalendarDateKey) {
   const date = parseLocalDateKey(dateKey) ?? new Date();
-  return date.toLocaleDateString(undefined, { weekday: 'short' });
+  return date.toLocaleDateString(undefined, { weekday: "short" });
 }
 
 function formatDayNumber(dateKey: LocalCalendarDateKey) {
@@ -56,9 +58,9 @@ function formatDayNumber(dateKey: LocalCalendarDateKey) {
 
 function resolveEventAccentColor(
   event: MobileCalendarEvent,
-  colors: ReturnType<typeof useAppTheme>['tokens']['colors']
+  colors: ReturnType<typeof useAppTheme>["tokens"]["colors"],
 ) {
-  if (event.engagement?.status === 'attending') {
+  if (event.engagement?.status === "attending") {
     return colors.success;
   }
 
@@ -78,20 +80,23 @@ function hasUpcomingEventInSection(section: AgendaSection, now: Date) {
   });
 }
 
-export function buildAgendaSections(events: MobileCalendarEvent[]): AgendaSection[] {
+export function buildAgendaSections(
+  events: MobileCalendarEvent[],
+): AgendaSection[] {
   const grouped = new Map<LocalCalendarDateKey, MobileCalendarEvent[]>();
 
   events
     .slice()
     .sort(
       (left, right) =>
-        new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
+        new Date(left.startTime).getTime() -
+        new Date(right.startTime).getTime(),
     )
     .forEach((event) => {
       const dateKey = formatEventDateKey(
         event.startTime,
         event.endTime,
-        event.timezone
+        event.timezone,
       );
       const dayEvents = grouped.get(dateKey) ?? [];
       dayEvents.push(event);
@@ -106,7 +111,7 @@ export function buildAgendaSections(events: MobileCalendarEvent[]): AgendaSectio
 
 export function resolveInitialAgendaSectionIndex(
   sections: AgendaSection[],
-  now: Date
+  now: Date,
 ) {
   if (sections.length === 0) {
     return null;
@@ -114,7 +119,7 @@ export function resolveInitialAgendaSectionIndex(
 
   const todayDateKey = formatLocalDateKey(now);
   const todaySectionIndex = sections.findIndex(
-    (section) => section.dateKey === todayDateKey
+    (section) => section.dateKey === todayDateKey,
   );
 
   if (
@@ -125,7 +130,7 @@ export function resolveInitialAgendaSectionIndex(
   }
 
   const nextUpcomingSectionIndex = sections.findIndex((section) =>
-    hasUpcomingEventInSection(section, now)
+    hasUpcomingEventInSection(section, now),
   );
   if (nextUpcomingSectionIndex >= 0) {
     return nextUpcomingSectionIndex;
@@ -149,17 +154,22 @@ export function CalendarAgendaList({
   topInset = 0,
   bottomInset = 0,
   monthStart = null,
+  onControlsVisibilityChange,
 }: CalendarAgendaListProps) {
   const { tokens } = useAppTheme();
-  const listRef = useRef<SectionList<MobileCalendarEvent, AgendaSection> | null>(
-    null
-  );
+  const listRef = useRef<SectionList<
+    MobileCalendarEvent,
+    AgendaSection
+  > | null>(null);
   const initialMonthStartRef = useRef(resolveMonthStartKey(new Date()));
   const hasAutoScrolledRef = useRef(false);
+  const handleScroll = useScrollControlsVisibility({
+    onVisibilityChange: onControlsVisibilityChange,
+  });
 
   const sections = useMemo<AgendaSection[]>(
     () => buildAgendaSections(events),
-    [events]
+    [events],
   );
   const initialScrollTargetSectionIndex = useMemo(() => {
     if (hasAutoScrolledRef.current) {
@@ -178,7 +188,10 @@ export function CalendarAgendaList({
       return;
     }
 
-    if (!listRef.current || typeof listRef.current.scrollToLocation !== 'function') {
+    if (
+      !listRef.current ||
+      typeof listRef.current.scrollToLocation !== "function"
+    ) {
       return;
     }
 
@@ -222,6 +235,8 @@ export function CalendarAgendaList({
       }}
       onContentSizeChange={scrollToInitialSection}
       onScrollToIndexFailed={handleInitialScrollFailure}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
       ListHeaderComponent={
         header ? (
           <View style={styles.headerWrap}>
@@ -267,9 +282,9 @@ export function CalendarAgendaList({
                       color: tokens.colors.danger,
                       fontFamily: tokens.typography.sans,
                       fontSize: 10,
-                      fontWeight: '800',
+                      fontWeight: "800",
                       letterSpacing: 0.3,
-                      textTransform: 'uppercase',
+                      textTransform: "uppercase",
                     }}
                   >
                     {formatWeekdayLabel(section.dateKey)}
@@ -279,7 +294,7 @@ export function CalendarAgendaList({
                       color: tokens.colors.textPrimary,
                       fontFamily: tokens.typography.sans,
                       fontSize: 23,
-                      fontWeight: isSelectedDay ? '800' : '400',
+                      fontWeight: isSelectedDay ? "800" : "400",
                     }}
                   >
                     {formatDayNumber(section.dateKey)}
@@ -314,11 +329,11 @@ export function CalendarAgendaList({
                     {
                       backgroundColor: pressed
                         ? tokens.colors.accentSoft
-                        : 'transparent',
+                        : "transparent",
                       borderBottomColor:
                         index < section.data.length - 1
                           ? tokens.colors.discoverToolbarBorder
-                          : 'transparent',
+                          : "transparent",
                       opacity: pressed ? 0.92 : 1,
                     },
                   ]}
@@ -331,13 +346,13 @@ export function CalendarAgendaList({
                         color: tokens.colors.discoverTextMuted,
                         fontFamily: tokens.typography.mono,
                         fontSize: 10,
-                        fontWeight: '600',
+                        fontWeight: "600",
                       }}
                     >
                       {formatEventStartTimeLabel(
                         item.startTime,
                         item.endTime,
-                        item.timezone
+                        item.timezone,
                       )}
                     </Text>
                   </View>
@@ -346,7 +361,7 @@ export function CalendarAgendaList({
                     style={[
                       styles.eventAccent,
                       {
-                        backgroundColor: accentColor ?? 'transparent',
+                        backgroundColor: accentColor ?? "transparent",
                         opacity: accentColor ? 1 : 0,
                       },
                     ]}
@@ -359,7 +374,7 @@ export function CalendarAgendaList({
                         color: tokens.colors.textPrimary,
                         fontFamily: tokens.typography.sans,
                         fontSize: 15,
-                        fontWeight: '700',
+                        fontWeight: "700",
                         lineHeight: 19,
                       }}
                     >
@@ -375,7 +390,7 @@ export function CalendarAgendaList({
                               color: tokens.colors.textTertiary,
                               fontFamily: tokens.typography.sans,
                               fontSize: 11,
-                              fontWeight: '500',
+                              fontWeight: "500",
                             }}
                           >
                             {item.location}
@@ -400,7 +415,7 @@ export function CalendarAgendaList({
                               color: tokens.colors.textTertiary,
                               fontFamily: tokens.typography.sans,
                               fontSize: 11,
-                              fontWeight: '500',
+                              fontWeight: "500",
                             }}
                           >
                             Free
@@ -432,17 +447,17 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   contentInner: {
-    width: '100%',
+    width: "100%",
     maxWidth: 430,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   sectionHeaderWrap: {
     paddingHorizontal: 16,
     paddingTop: 2,
   },
   sectionHeaderInner: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: "row",
+    alignItems: "stretch",
   },
   dayRail: {
     width: RAIL_WIDTH,
@@ -450,7 +465,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     paddingBottom: 4,
     borderRightWidth: StyleSheet.hairlineWidth,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   sectionHeaderSpacer: {
     flex: 1,
@@ -460,8 +475,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   eventRowWrap: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: "row",
+    alignItems: "stretch",
   },
   rowRailSpacer: {
     width: RAIL_WIDTH,
@@ -471,8 +486,8 @@ const styles = StyleSheet.create({
   eventRow: {
     minHeight: 56,
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 9,
     paddingLeft: 8,
     paddingRight: 8,
@@ -482,7 +497,7 @@ const styles = StyleSheet.create({
   timeColumn: {
     width: 58,
     paddingTop: 3,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   eventAccent: {
     width: 3,
@@ -495,9 +510,9 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
 });

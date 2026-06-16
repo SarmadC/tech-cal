@@ -35,7 +35,7 @@ import {
   loadMobileGoogleCalendarStatus,
   loadMobileSubscriptionStatus,
 } from "../lib/mobileApi";
-import { formatSubscriptionSummary } from "../lib/settingsPresentation";
+import { formatSubscriptionSummary, hasPaidAccess } from "../lib/settingsPresentation";
 import { useAppTheme } from "../providers/ThemeProvider";
 import { showActionSheet } from "../lib/actionSheet";
 import { haptics } from "../lib/haptics";
@@ -347,7 +347,13 @@ export default function SettingsScreen({
           <SettingsDivider />
           <SettingsRow
             icon="crown"
-            onPress={() => router.push("/settings/subscription" as never)}
+            onPress={() =>
+              router.push(
+                (hasPaidAccess(subscription)
+                  ? "/settings/subscription"
+                  : "/paywall") as never,
+              )
+            }
             rightLabel={
               subscriptionLoading && !subscription
                 ? "Checking"

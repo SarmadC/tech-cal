@@ -8,15 +8,15 @@ import { SocialProfileService } from '@/services/socialProfileService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 export async function GET(request: Request) {
-  const authContext = await getAuthenticatedRequestContext(request as never);
-  if (!authContext) {
-    return NextResponse.json(
-      { success: false, error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
-
   try {
+    const authContext = await getAuthenticatedRequestContext(request as never);
+    if (!authContext) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const data = await buildMobileProfileState(authContext, request);
 
     return NextResponse.json({
@@ -38,15 +38,15 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const authContext = await getAuthenticatedRequestContext(request as never);
-  if (!authContext) {
-    return NextResponse.json(
-      { success: false, error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
-
   try {
+    const authContext = await getAuthenticatedRequestContext(request as never);
+    if (!authContext) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const payload = mobileProfileUpdateSchema.parse(
       await request.json().catch(() => ({}))
     );

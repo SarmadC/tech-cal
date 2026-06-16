@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import RevenueCatUI from 'react-native-purchases-ui';
 
@@ -29,6 +29,12 @@ const SUPPORTED_PLATFORMS = new Set<MobilePlatform>(['android', 'ios']);
 const CURRENT_PLATFORM = Platform.OS as MobilePlatform;
 const PRO_ENTITLEMENT_ID = getRevenueCatProEntitlementId();
 
+const SUBSCRIPTION_MANAGEMENT_URLS: Partial<Record<MobilePlatform, string>> = {
+  android: 'https://play.google.com/store/account/subscriptions',
+  ios: 'https://apps.apple.com/account/subscriptions',
+};
+const CUSTOMER_CENTER_PRESENT_TIMEOUT_MS = 6_000;
+
 let configured = false;
 let currentUserId: string | null = null;
 
@@ -49,6 +55,56 @@ function planTypeFromProduct(productId: string): 'annual' | 'monthly' {
 
 function statusFromEntitlementPeriod(periodType: string): SubscriptionStatus {
   return periodType === 'TRIAL' ? 'trialing' : 'active';
+}
+
+function getErrorSummary(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return { message: String(error) };
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    name?: unknown;
+  };
+
+  return {
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    message:
+      typeof candidate.message === 'string'
+        ? candidate.message
+        : String(error),
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+  };
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
+}
+
+async function openPlatformSubscriptionManagement() {
+  const url = SUBSCRIPTION_MANAGEMENT_URLS[CURRENT_PLATFORM];
+  if (!url) {
+    throw new Error('Subscription management is not available on this platform.');
+  }
+
+  await Linking.openURL(url);
 }
 
 function toReconcilePayload(
@@ -204,9 +260,42 @@ export async function restoreRevenueCatPurchases() {
 
 export async function presentKureCalCustomerCenter() {
   await ensureRevenueCatConfigured(currentUserId);
-  await RevenueCatUI.presentCustomerCenter();
-  const customerInfo = await Purchases.getCustomerInfo();
-  await reconcileRevenueCatCustomerInfo(customerInfo);
+
+  try {
+    await withTimeout(
+      RevenueCatUI.presentCustomerCenter(),
+      CUSTOMER_CENTER_PRESENT_TIMEOUT_MS,
+      'RevenueCat Customer Center did not open in time.'
+    );
+    const customerInfo = await Purchases.getCustomerInfo();
+    await reconcileRevenueCatCustomerInfo(customerInfo);
+  } catch (error) {
+    const customerCenterError = getErrorSummary(error);
+    console.warn(
+      '[revenuecat] Unable to present Customer Center. Opening platform subscription management fallback.',
+      {
+        error: customerCenterError,
+        platform: Platform.OS,
+      }
+    );
+
+    try {
+      await openPlatformSubscriptionManagement();
+    } catch (fallbackError) {
+      const fallbackSummary = getErrorSummary(fallbackError);
+      console.warn(
+        '[revenuecat] Unable to open platform subscription management fallback.',
+        {
+          error: fallbackSummary,
+          platform: Platform.OS,
+        }
+      );
+
+      throw new Error(
+        `Unable to open subscription management. Customer Center failed: ${customerCenterError.message}. Fallback failed: ${fallbackSummary.message}.`
+      );
+    }
+  }
 }
 
 export type { RevenueCatPackage };

@@ -44,6 +44,7 @@ export default function DashboardScreen() {
   >([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [headerControlsVisible, setHeaderControlsVisible] = useState(true);
 
   const loadSummary = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
@@ -282,6 +283,7 @@ export default function DashboardScreen() {
       headerHidden
       showAccentGlow={false}
       contentStyle={[styles.pageContent, { paddingTop: insets.top + 52 }]}
+      onControlsVisibilityChange={setHeaderControlsVisible}
     >
       <View style={styles.canvas}>
 
@@ -588,7 +590,7 @@ export default function DashboardScreen() {
         ) : null}
       </View>
     </MobilePage>
-    {(!loading || !!data) && <TabMenuOverlay />}
+    {(!loading || !!data) && headerControlsVisible && <TabMenuOverlay />}
     </>
   );
 }

@@ -13,6 +13,7 @@ import Animated, { SlideInLeft } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../../context/AuthProvider";
+import { useSubscription } from "../../context/SubscriptionContext";
 import { useReduceMotion } from "../../hooks/useAnimation";
 import { useAppTheme } from "../../providers/ThemeProvider";
 
@@ -33,6 +34,7 @@ const PANEL_WIDTH = Math.min(320, Dimensions.get("window").width * 0.82);
 export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
   const { tokens } = useAppTheme();
   const { profile } = useAuth();
+  const { hasPaidAccess } = useSubscription();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const isDark = tokens.mode === "dark";
@@ -51,6 +53,9 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
         ]
       : []),
     { key: "settings", label: "Settings", icon: "cog", route: "/settings/all" },
+    ...(!hasPaidAccess
+      ? [{ key: "upgrade", label: "KureCal Pro", icon: "star" as const, route: "/paywall" }]
+      : []),
     { key: "saved", label: "Saved", icon: "bookmark", route: "/saved" },
     {
       key: "submit-event",
@@ -117,41 +122,44 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
           Menu
         </Text>
         <View style={styles.rows}>
-          {rows.map((row) => (
-            <Pressable
-              key={row.key}
-              accessibilityRole="button"
-              accessibilityLabel={row.label}
-              onPress={() => go(row.route)}
-              style={({ pressed }) => [
-                styles.row,
-                {
-                  backgroundColor: pressed
-                    ? tokens.colors.surfaceStrong
-                    : "transparent",
-                  borderColor: tokens.colors.border,
-                },
-              ]}
-            >
-              <FontAwesome
-                name={row.icon}
-                size={18}
-                color={tokens.colors.textSecondary}
-                style={styles.rowIcon}
-              />
-              <Text
-                style={[
-                  styles.rowLabel,
+          {rows.map((row) => {
+            const isUpgrade = row.key === "upgrade";
+            return (
+              <Pressable
+                key={row.key}
+                accessibilityRole="button"
+                accessibilityLabel={row.label}
+                onPress={() => go(row.route)}
+                style={({ pressed }) => [
+                  styles.row,
                   {
-                    color: tokens.colors.textPrimary,
-                    fontFamily: tokens.typography.sans,
+                    backgroundColor: pressed
+                      ? tokens.colors.surfaceStrong
+                      : "transparent",
+                    borderColor: tokens.colors.border,
                   },
                 ]}
               >
-                {row.label}
-              </Text>
-            </Pressable>
-          ))}
+                <FontAwesome
+                  name={row.icon}
+                  size={18}
+                  color={isUpgrade ? tokens.colors.accent : tokens.colors.textSecondary}
+                  style={styles.rowIcon}
+                />
+                <Text
+                  style={[
+                    styles.rowLabel,
+                    {
+                      color: isUpgrade ? tokens.colors.accent : tokens.colors.textPrimary,
+                      fontFamily: tokens.typography.sans,
+                    },
+                  ]}
+                >
+                  {row.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </Animated.View>
     </Modal>

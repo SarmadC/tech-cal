@@ -57,6 +57,7 @@ interface AuthContextValue {
   loading: boolean;
   pendingPostAuthRoute: PendingPostAuthRoute;
   profile: MobileProfileState | null;
+  profileLoadFailed: boolean;
   refreshProfile: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   retryLastAuthCallback: () => Promise<void>;
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<MobileProfileState | null>(null);
   const [isCompletingAuth, setIsCompletingAuth] = useState(
@@ -129,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nextSession?.user) {
         startTransition(() => {
           setProfile(null);
+          setProfileLoadFailed(false);
           setProfileLoading(false);
         });
         void syncRevenueCatIdentity(null).catch((error) => {
@@ -145,11 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const nextProfile = await loadMobileProfileState();
         startTransition(() => {
           setProfile(nextProfile);
+          setProfileLoadFailed(false);
         });
       } catch (error) {
         console.error('Failed to hydrate mobile auth profile.', error);
         startTransition(() => {
           setProfile(null);
+          setProfileLoadFailed(true);
         });
       } finally {
         startTransition(() => {
@@ -351,6 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading: authLoading || (session ? profileLoading : false),
       pendingPostAuthRoute,
       profile,
+      profileLoadFailed,
       refreshProfile,
       requestPasswordReset: async (email: string) => {
         clearAuthCompletionState();
@@ -488,6 +494,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       oauthRedirectUrl,
       pendingPostAuthRoute,
       profile,
+      profileLoadFailed,
       profileLoading,
       recoveryRedirectUrl,
       refreshProfile,

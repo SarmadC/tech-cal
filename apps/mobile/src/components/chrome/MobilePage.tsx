@@ -1,7 +1,7 @@
 import Animated from "react-native-reanimated";
 import {
+  useCallback,
   useMemo,
-  useRef,
   useState,
   type PropsWithChildren,
   type ReactNode,
@@ -9,8 +9,6 @@ import {
 } from "react";
 import {
   type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,6 +27,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScrollControlsVisibility } from "../../hooks/useScrollControlsVisibility";
 
 interface MobilePageProps<T> extends PropsWithChildren {
   eyebrow?: string;
@@ -72,8 +71,6 @@ export function MobilePage<T>({
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [compact, setCompact] = useState(false);
-  const controlsVisibleRef = useRef(true);
-  const lastOffsetRef = useRef(0);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
   const bottomInset = footerInset ?? tokens.spacing.tabBarBottom;
 
@@ -92,27 +89,19 @@ export function MobilePage<T>({
     }
   }
 
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
-    const nextCompact = offsetY > 22;
-    const delta = offsetY - lastOffsetRef.current;
-    lastOffsetRef.current = offsetY;
-
-    if (nextCompact !== compact) {
-      setCompact(nextCompact);
-    }
-
-    if (offsetY <= 8 && !controlsVisibleRef.current) {
-      controlsVisibleRef.current = true;
-      onControlsVisibilityChange?.(true);
-    } else if (delta > 12 && offsetY > 40 && controlsVisibleRef.current) {
-      controlsVisibleRef.current = false;
-      onControlsVisibilityChange?.(false);
-    } else if (delta < -8 && !controlsVisibleRef.current) {
-      controlsVisibleRef.current = true;
-      onControlsVisibilityChange?.(true);
-    }
-  }
+  const handleOffsetChange = useCallback(
+    (offsetY: number) => {
+      const nextCompact = offsetY > 22;
+      if (nextCompact !== compact) {
+        setCompact(nextCompact);
+      }
+    },
+    [compact],
+  );
+  const handleScroll = useScrollControlsVisibility({
+    onOffsetChange: handleOffsetChange,
+    onVisibilityChange: onControlsVisibilityChange,
+  });
 
   return (
     <SafeAreaView

@@ -7,6 +7,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '../src/context/AuthProvider';
+import { SubscriptionProvider } from '../src/context/SubscriptionContext';
+import { TabBarVisibilityProvider } from '../src/context/TabBarVisibilityContext';
 import { MobileThemeProvider, useAppTheme } from '../src/providers/ThemeProvider';
 import {
   addNotificationResponseListener,
@@ -72,7 +74,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <MobileThemeProvider>
           <AuthProvider>
-            <RootNavigation />
+            <SubscriptionProvider>
+              <TabBarVisibilityProvider>
+                <RootNavigation />
+              </TabBarVisibilityProvider>
+            </SubscriptionProvider>
           </AuthProvider>
         </MobileThemeProvider>
       </SafeAreaProvider>

@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState, type PropsWithChildren, type ReactElement, type ReactNode } from 'react';
-import { BlurView } from 'expo-blur';
-import { FlashList } from '@shopify/flash-list';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { BlurView } from "expo-blur";
+import { FlashList } from "@shopify/flash-list";
 
-import { useReduceMotion } from '../../hooks/useAnimation';
+import { useReduceMotion } from "../../hooks/useAnimation";
 import {
   LayoutChangeEvent,
   LayoutAnimation,
@@ -11,15 +18,17 @@ import {
   StyleSheet,
   UIManager,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { useAppTheme } from '../../providers/ThemeProvider';
+import { useAppTheme } from "../../providers/ThemeProvider";
+import { useScrollControlsVisibility } from "../../hooks/useScrollControlsVisibility";
 
 interface DiscoverShellProps<T> extends PropsWithChildren {
   contentStyle?: StyleProp<ViewStyle>;
@@ -54,11 +63,10 @@ export function DiscoverShell<T>({
   const [compact, setCompact] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
-  const lastOffsetRef = useRef(0);
 
   useEffect(() => {
     if (
-      Platform.OS === 'android' &&
+      Platform.OS === "android" &&
       UIManager.setLayoutAnimationEnabledExperimental
     ) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -75,38 +83,45 @@ export function DiscoverShell<T>({
 
   const headerOffset = headerHeight ?? insets.top + 176;
 
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const offsetY = Math.max(0, event.nativeEvent.contentOffset.y);
-    const nextCompact = offsetY > 28;
-    const delta = offsetY - lastOffsetRef.current;
-    lastOffsetRef.current = offsetY;
-
-    if (nextCompact !== compact) {
-      setCompact(nextCompact);
-    }
-
-    if (offsetY <= 8 && !controlsVisible) {
-      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setControlsVisible(true);
-      onControlsVisibilityChange?.(true);
-    } else if (delta > 12 && offsetY > 40 && controlsVisible) {
-      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setControlsVisible(false);
-      onControlsVisibilityChange?.(false);
-    } else if (delta < -8 && !controlsVisible) {
-      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setControlsVisible(true);
-      onControlsVisibilityChange?.(true);
-    }
-  }
+  const handleOffsetChange = useCallback(
+    (offsetY: number) => {
+      const nextCompact = offsetY > 28;
+      if (nextCompact !== compact) {
+        setCompact(nextCompact);
+      }
+    },
+    [compact],
+  );
+  const handleVisibilityChange = useCallback(
+    (visible: boolean) => {
+      setControlsVisible(visible);
+      onControlsVisibilityChange?.(visible);
+    },
+    [onControlsVisibilityChange],
+  );
+  const handleScroll = useScrollControlsVisibility({
+    onBeforeVisibilityChange: () => {
+      if (!reduceMotion) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+    },
+    onOffsetChange: handleOffsetChange,
+    onVisibilityChange: handleVisibilityChange,
+  });
 
   return (
     <SafeAreaView
-      edges={['left', 'right']}
-      style={[styles.safeArea, { backgroundColor: tokens.colors.discoverShell }]}
+      edges={["left", "right"]}
+      style={[
+        styles.safeArea,
+        { backgroundColor: tokens.colors.discoverShell },
+      ]}
     >
       <View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: tokens.colors.discoverShell }]}
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: tokens.colors.discoverShell },
+        ]}
       />
 
       <View
@@ -114,7 +129,9 @@ export function DiscoverShell<T>({
         style={[
           styles.headerWrap,
           {
-            backgroundColor: compact ? "transparent" : tokens.colors.discoverShell,
+            backgroundColor: compact
+              ? "transparent"
+              : tokens.colors.discoverShell,
             borderBottomColor: compact
               ? tokens.colors.discoverToolbarBorder
               : "transparent",
@@ -135,7 +152,9 @@ export function DiscoverShell<T>({
             style={StyleSheet.absoluteFill}
           />
         ) : null}
-        <View style={styles.headerInner}>{header(compact, controlsVisible)}</View>
+        <View style={styles.headerInner}>
+          {header(compact, controlsVisible)}
+        </View>
       </View>
 
       {data && renderItem ? (
@@ -199,25 +218,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   contentInner: {
-    alignSelf: 'center',
+    alignSelf: "center",
     gap: 8,
     maxWidth: 430,
-    width: '100%',
+    width: "100%",
   },
   headerInner: {
-    alignSelf: 'center',
+    alignSelf: "center",
     maxWidth: 430,
-    width: '100%',
+    width: "100%",
   },
   rowInner: {
-    alignSelf: 'center',
+    alignSelf: "center",
     maxWidth: 430,
-    width: '100%',
+    width: "100%",
   },
   headerWrap: {
     left: 0,
     paddingHorizontal: 16,
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     top: 0,
     zIndex: 10,
