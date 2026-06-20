@@ -5,7 +5,7 @@ import { createServiceClient } from '@/utils/supabase/service';
 import { requireAdmin } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
-import { imageExtFromMimeType } from '@/lib/storagePathUtils';
+import { imageExtFromMimeType, sanitizeStoragePath } from '@/lib/storagePathUtils';
 
 export type CreatePostState = {
     message?: string;
@@ -65,7 +65,7 @@ async function uploadHeaderImage(
     }
 
     const fileExt = imageExtFromMimeType(file.type);
-    const fileName = `blog/${postId}-${Date.now()}.${fileExt}`;
+    const fileName = sanitizeStoragePath(`blog/${postId}-${Date.now()}.${fileExt}`);
 
     const { error: uploadError } = await adminClient.storage
         .from(BLOG_IMAGE_BUCKET)

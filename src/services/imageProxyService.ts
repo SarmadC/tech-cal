@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import * as Sentry from '@sentry/nextjs';
 
 import { fetchWithSafeRedirects } from '@/lib/ssrfProtection';
-import { imageExtFromMimeType } from '@/lib/storagePathUtils';
+import { imageExtFromMimeType, sanitizeStoragePath } from '@/lib/storagePathUtils';
 import type { SupabaseClientType } from '@/types';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -90,7 +90,7 @@ export async function proxyImageToStorage(params: {
             return null;
         }
 
-        const filePath = `${storagePath}.${imageExtFromMimeType(contentType)}`;
+        const filePath = sanitizeStoragePath(`${storagePath}.${imageExtFromMimeType(contentType)}`);
 
         const { error: uploadError } = await supabaseClient.storage
             .from(bucket)

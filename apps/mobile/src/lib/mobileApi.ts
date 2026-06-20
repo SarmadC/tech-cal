@@ -258,6 +258,10 @@ function randomUploadId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function sanitizeStoragePath(path: string): string {
+  return path.replace(/\.\.[/\\]/g, '').replace(/^\.\.$/,'').replace(/\0/g, '');
+}
+
 export async function uploadCommunityPostImage(
   input: CommunityPostImageUploadInput
 ): Promise<CommunityPostImageUploadResult> {
@@ -278,7 +282,7 @@ export async function uploadCommunityPostImage(
       .replace(/[^A-Za-z0-9_-]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 48) || 'community-image';
-  const path = `${user.id}/${randomUploadId()}-${safeFileStem}.${extension}`;
+  const path = sanitizeStoragePath(`${user.id}/${randomUploadId()}-${safeFileStem}.${extension}`);
   const response = await fetch(input.uri);
 
   if (!response.ok) {
@@ -321,13 +325,14 @@ export async function deleteCommunityPostImage(path: string): Promise<void> {
   }
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !trimmedPath.startsWith(`${user.id}/`)) {
+  const safePath = sanitizeStoragePath(trimmedPath);
+  if (!user || !safePath.startsWith(`${user.id}/`)) {
     throw new Error('Unauthorized: path does not belong to current user');
   }
 
   const { error } = await supabase.storage
     .from(COMMUNITY_MEDIA_BUCKET)
-    .remove([trimmedPath]);
+    .remove([safePath]);
 
   if (error) {
     throw new Error(error.message || 'Unable to remove selected image.');

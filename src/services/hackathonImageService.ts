@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { imageExtFromMimeType } from '@/lib/storagePathUtils';
+import { imageExtFromMimeType, sanitizeStoragePath } from '@/lib/storagePathUtils';
 
 export class HackathonImageService {
     private static normalizeImageMimeType(mimeType?: string | null): string {
@@ -31,7 +31,7 @@ export class HackathonImageService {
             }
 
             const fileExt = imageExtFromMimeType(normalizedType);
-            const fileName = `hackathons/${hackathonId}.${fileExt}`;
+            const fileName = sanitizeStoragePath(`hackathons/${hackathonId}.${fileExt}`);
 
             const bucketName = 'logos'; // Reuse existing public bucket
             const { data: uploadData, error: uploadError } = await supabaseClient.storage

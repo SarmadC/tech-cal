@@ -6,7 +6,7 @@
  */
 
 import type { SupabaseClientType } from '@/types';
-import { imageExtFromMimeType } from '@/lib/storagePathUtils';
+import { imageExtFromMimeType, sanitizeStoragePath } from '@/lib/storagePathUtils';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/ExtractNormalization';
@@ -1348,7 +1348,7 @@ export class EventEnrichmentService {
 
             // Generate filename
             const fileExt = imageExtFromMimeType(normalizedType);
-            const fileName = `events/${eventId}.${fileExt}`;
+            const fileName = sanitizeStoragePath(`events/${eventId}.${fileExt}`);
 
             // Upload to Supabase storage (use logos bucket or create events bucket)
             const bucketName = 'logos'; // Reuse logos bucket for now

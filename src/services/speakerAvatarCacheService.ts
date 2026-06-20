@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs';
 import pLimit from 'p-limit';
 
 import { fetchWithSafeRedirects } from '@/lib/ssrfProtection';
+import { sanitizeStoragePath } from '@/lib/storagePathUtils';
 import type { SupabaseClientType } from '@/types';
 
 const AVATAR_BUCKET = 'avatars';
@@ -222,7 +223,7 @@ export class SpeakerAvatarCacheService {
 
     try {
       const { blob, contentType } = await this.downloadAvatarBlob(linkedinUrl);
-      const filePath = this.buildCachedPath(speaker.id, linkedinUrl, contentType);
+      const filePath = sanitizeStoragePath(this.buildCachedPath(speaker.id, linkedinUrl, contentType));
 
       const { error: uploadError } = await supabaseClient.storage
         .from(AVATAR_BUCKET)
