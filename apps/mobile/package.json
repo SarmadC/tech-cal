@@ -58,7 +58,7 @@
     "zod": "^4.4.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.0",
+    "@babel/core": "^7.29.6",
     "@types/react": "~19.2.7",
     "babel-preset-expo": "~55.0.13",
     "expo-doctor": "^1.18.15",
