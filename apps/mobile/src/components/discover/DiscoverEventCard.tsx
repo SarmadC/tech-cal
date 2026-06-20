@@ -27,9 +27,11 @@ export function shareEventCard(event: MobileEventCard) {
 }
 
 interface DiscoverEventCardProps {
+  accessibilityLabel?: string;
   event: MobileEventCard;
   onPress?: () => void;
   showDivider?: boolean;
+  showSavedIndicator?: boolean;
 }
 
 function formatDateLabel(value: string) {
@@ -102,20 +104,22 @@ function buildMetadataLine(event: MobileEventCard) {
 }
 
 export function DiscoverEventCard({
+  accessibilityLabel,
   event,
   onPress,
   showDivider = true,
+  showSavedIndicator = true,
 }: DiscoverEventCardProps) {
   const { tokens } = useAppTheme();
   const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
-  const isSaved = isEventSaved(event);
+  const isSaved = showSavedIndicator && isEventSaved(event);
 
   return (
     <Pressable
-      accessibilityLabel={`Open recommended event ${event.title}`}
+      accessibilityLabel={accessibilityLabel ?? `Open recommended event ${event.title}`}
       accessibilityRole="button"
       onPress={onPress}
       onLongPress={() => {

@@ -28,6 +28,7 @@ interface EventRow {
   event_image_url: string | null;
   source_url: string | null;
   source_domain: string | null;
+  organizer?: { logo_url: string | null } | Array<{ logo_url: string | null }> | null;
   location: string | null;
   attendee_count: number | null;
   event_format: string | null;
@@ -97,6 +98,7 @@ export interface CommunityNetworkingEventInput {
   title: string;
   startTime: string;
   imageUrl?: string | null;
+  organizerLogoUrl?: string | null;
   attendeeCount?: number | null;
   location: string | null;
   format: string | null;
@@ -245,19 +247,6 @@ function addKeywords(target: Set<string>, value: string | null | undefined) {
   }
 }
 
-function getFirstOverlap(
-  source: Iterable<string>,
-  candidateKeywords: Set<string>
-): string | null {
-  for (const token of source) {
-    if (candidateKeywords.has(token)) {
-      return token;
-    }
-  }
-
-  return null;
-}
-
 function getPreferredOverlap(
   source: Iterable<string>,
   candidateKeywords: Set<string>
@@ -359,11 +348,20 @@ function toEventInput(
     title: event.title || 'Untitled event',
     startTime: event.start_time,
     imageUrl: event.event_image_url,
+    organizerLogoUrl: getEventOrganizerLogoUrl(event),
     attendeeCount: event.attendee_count,
     location: event.location,
     format: normalizeEventFormat(event.event_format),
     viewerContext,
   };
+}
+
+function getEventOrganizerLogoUrl(event: EventRow): string | null {
+  const organizer = Array.isArray(event.organizer)
+    ? event.organizer[0]
+    : event.organizer;
+
+  return organizer?.logo_url ?? null;
 }
 
 function isShowcaseEventSource(value: {
@@ -625,6 +623,7 @@ export function buildCommunityNetworkingHomeData({
         title: event.title,
         startTime: event.startTime,
         imageUrl: event.imageUrl ?? null,
+        organizerLogoUrl: event.organizerLogoUrl ?? null,
         location: event.location,
         format: event.format,
         viewerContext: event.viewerContext,
@@ -1219,7 +1218,7 @@ export class CommunityNetworkingHomeService {
       const batchResult = await readClient
         .from('events')
         .select(
-          'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status'
+          'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status, organizer:organizers(logo_url)'
         )
         .eq('status', 'confirmed')
         .lt('start_time', now.toISOString())
@@ -1578,7 +1577,7 @@ export class CommunityNetworkingHomeService {
     const starterEventsResult = await readClient
       .from('events')
       .select(
-        'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status'
+        'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status, organizer:organizers(logo_url)'
       )
       .eq('status', 'confirmed')
       .gte('start_time', nowIso)
@@ -1990,7 +1989,7 @@ export class CommunityNetworkingHomeService {
     const eventsResult = await readClient
       .from('events')
       .select(
-        'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status'
+        'id, slug, title, start_time, event_image_url, source_url, source_domain, location, attendee_count, event_format, event_type_id, status, organizer:organizers(logo_url)'
       )
       .in('id', eventIds)
       .eq('status', 'confirmed');
@@ -2024,6 +2023,7 @@ export class CommunityNetworkingHomeService {
         title: event.title || 'Untitled event',
         startTime: event.start_time,
         imageUrl: event.event_image_url,
+        organizerLogoUrl: getEventOrganizerLogoUrl(event),
         location: event.location,
         format: normalizeEventFormat(event.event_format),
         viewerContext,

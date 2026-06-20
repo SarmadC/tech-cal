@@ -243,7 +243,6 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   selectedRow: {
-    borderWidth: 1,
     padding: 12,
   },
   separator: {

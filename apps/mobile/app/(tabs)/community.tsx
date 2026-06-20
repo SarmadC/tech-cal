@@ -10,6 +10,7 @@ import type {
   MobileCommunityNetworkingFollowUpCard,
   MobileCommunityNetworkingPersonCard,
   MobileCommunityNetworkingSharedEvent,
+  MobileEventCard,
 } from "@kurecal/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,7 +37,6 @@ import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
 import {
   CommunityComposerModal,
   type CommunityComposerEventOption,
-  type CommunityComposerImageAttachment,
 } from "../../src/components/community/CommunityComposerModal";
 import { useCommunityImageAttachments } from "../../src/hooks/useCommunityImageAttachments";
 import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
@@ -44,7 +44,7 @@ import { CommunityDirectoryPersonCard } from "../../src/components/community/Com
 import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
 import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
 import { CommunityFeedCard } from "../../src/components/CommunityFeedCard";
-import { formatCommunityTabCount } from "../../src/components/community/presentation";
+import { DiscoverEventCard } from "../../src/components/discover/DiscoverEventCard";
 import {
   createMobileCommunityPost,
   followMobileUser,
@@ -58,15 +58,8 @@ import {
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
 type LoadMode = "initial" | "refresh";
-type CommunityTab = "rooms" | "circles" | "people";
 type RoomLens = "for_you" | "going" | "saved" | "nearby" | "past";
 type PeopleLens = "for_you" | "going" | "follows_you" | "mutuals" | "recent";
-
-const COMMUNITY_TABS: Array<{ id: CommunityTab; label: string }> = [
-  { id: "rooms", label: "Rooms" },
-  { id: "circles", label: "Circles" },
-  { id: "people", label: "People" },
-];
 
 const ROOM_LENSES: Array<{ id: RoomLens; label: string }> = [
   { id: "for_you", label: "For You" },
@@ -150,28 +143,6 @@ function formatShortRelativeTime(value: string | null): string {
   }
 
   return diffMs >= 0 ? `Starts in ${days}d` : `${days}d${suffix}`;
-}
-
-function getCompactTime(startTime: string | null): string {
-  if (!startTime) return "Soon";
-  const diffMs = new Date(startTime).getTime() - Date.now();
-  const absMinutes = Math.max(1, Math.round(Math.abs(diffMs) / 60_000));
-  if (absMinutes < 60) return `${absMinutes}m`;
-  const hours = Math.round(absMinutes / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.round(hours / 24)}d`;
-}
-
-function getRoomCompactMeta(event: MobileCommunityNetworkingEvent): string {
-  const isActive =
-    (event.recentTrackerCount ?? 0) > 0 || event.visibleAttendeeCount > 0;
-  if (isActive) {
-    const count = event.visibleAttendeeCount || event.networkAttendingCount;
-    return count > 0
-      ? `Active · ${formatCommunityTabCount(count)} here`
-      : "Active now";
-  }
-  return getCompactTime(event.startTime);
 }
 
 function _filterRooms(
@@ -562,11 +533,9 @@ export default function CommunityScreen() {
             <View style={styles.belowFeedWrap}>
               <CommunityHome
                 home={home}
-                joinedCircles={joinedCircles}
                 pendingCircleId={pendingCircleId}
                 pendingUserId={pendingUserId}
                 showFeed={false}
-                onCreatePress={handleOpenComposer}
                 onOpenRoom={handleOpenRoom}
                 onToggleCircle={handleToggleCircle}
                 onToggleFollow={handleToggleFollow}
@@ -603,13 +572,6 @@ export default function CommunityScreen() {
           {home ? (
             <>
               {inlineError ? <InlineAlert message={inlineError} /> : null}
-              {feedPosts.length === 0 ? (
-                <PostFeedSection
-                  feed={[]}
-                  hasJoinedCircles={joinedCircles.length > 0}
-                  onCreatePress={handleOpenComposer}
-                />
-              ) : null}
             </>
           ) : null}
         </View>
@@ -671,8 +633,6 @@ export default function CommunityScreen() {
 
 function CommunityHome({
   home,
-  joinedCircles,
-  onCreatePress,
   onOpenRoom,
   onToggleCircle,
   onToggleFollow,
@@ -681,8 +641,6 @@ function CommunityHome({
   showFeed = true,
 }: {
   home: MobileCommunityHome;
-  joinedCircles: MobileCommunityCircle[];
-  onCreatePress: () => void;
   onOpenRoom: (eventId: string) => void;
   onToggleCircle: (circle: MobileCommunityCircle) => void;
   onToggleFollow: (userId: string, isFollowing: boolean) => void;
@@ -698,11 +656,7 @@ function CommunityHome({
   return (
     <>
       {showFeed ? (
-        <PostFeedSection
-          feed={feed}
-          hasJoinedCircles={joinedCircles.length > 0}
-          onCreatePress={onCreatePress}
-        />
+        <PostFeedSection feed={feed} />
       ) : null}
 
       <CircleShortcutSection
@@ -712,7 +666,7 @@ function CommunityHome({
       />
 
       {activeRooms.length > 0 ? (
-        <SecondarySectionHeader title="Active rooms" meta={`${activeRooms.length} live`} />
+        <SecondarySectionHeader title="Upcoming events" />
       ) : null}
       {activeRooms.length > 0 ? (
         <RoomList events={activeRooms} onOpenRoom={onOpenRoom} />
@@ -796,105 +750,43 @@ function CommunityCreateButton({
 
 function PostFeedSection({
   feed,
-  hasJoinedCircles,
-  onCreatePress,
 }: {
   feed: MobileCommunityFeedPost[];
-  hasJoinedCircles: boolean;
-  onCreatePress: () => void;
 }) {
   const { tokens } = useAppTheme();
 
+  if (feed.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.feedSection}>
-      {feed.length > 0 ? (
-        <View style={styles.feedSurface}>
-          {feed.map((post, index) => (
-            <View
-              key={post.id}
-              style={[
-                styles.feedRow,
-                index < feed.length - 1 && {
-                  borderBottomColor: tokens.colors.divider,
-                  borderBottomWidth: 1,
-                },
-              ]}
-            >
-              <CommunityFeedCard
-                post={post}
-                variant="thread"
-                onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
-                onPress={() =>
-                  router.push({
-                    pathname: "/community/[slug]/post/[postId]",
-                    params: { slug: post.circle.slug, postId: post.id },
-                  })
-                }
-              />
-            </View>
-          ))}
-        </View>
-      ) : (
-        <View
-          style={[
-            styles.emptyFeed,
-            {
-              backgroundColor: tokens.colors.surface,
-              borderColor: tokens.colors.border,
-              borderRadius: tokens.radius.sm,
-            },
-          ]}
-        >
-          <Text
+      <View style={styles.feedSurface}>
+        {feed.map((post, index) => (
+          <View
+            key={post.id}
             style={[
-              styles.emptyFeedTitle,
-              {
-                color: tokens.colors.textPrimary,
-                fontFamily: tokens.typography.sans,
+              styles.feedRow,
+              index < feed.length - 1 && {
+                borderBottomColor: tokens.colors.divider,
+                borderBottomWidth: 1,
               },
             ]}
           >
-            No community posts yet
-          </Text>
-          <Text
-            style={[
-              styles.emptyFeedBody,
-              {
-                color: tokens.colors.textSecondary,
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {hasJoinedCircles
-              ? "Start a thread in one of your circles."
-              : "Join a circle to start posting, or browse public circles below."}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCreatePress}
-            style={({ pressed }) => [
-              styles.emptyFeedAction,
-              {
-                borderColor: tokens.colors.border,
-                borderRadius: tokens.radius.xs,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.emptyFeedActionText,
-                {
-                  color: tokens.colors.textPrimary,
-                  fontFamily: tokens.typography.sans,
-                },
-              ]}
-            >
-              Create post
-            </Text>
-          </Pressable>
-        </View>
-      )}
+            <CommunityFeedCard
+              post={post}
+              variant="thread"
+              onOpenEvent={(eventId) => router.push(`/event/${eventId}`)}
+              onPress={() =>
+                router.push({
+                  pathname: "/community/[slug]/post/[postId]",
+                  params: { slug: post.circle.slug, postId: post.id },
+                })
+              }
+            />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -916,17 +808,12 @@ function CircleShortcutSection({
 
   return (
     <>
-      <SecondarySectionHeader title="Circles" meta={`${visibleCircles.length} shown`} />
-      <View style={styles.stack}>
-        {visibleCircles.map((circle) => (
-          <CircleCard
-            key={circle.id}
-            circle={circle}
-            isPending={pendingCircleId === circle.id}
-            onToggleCircle={onToggleCircle}
-          />
-        ))}
-      </View>
+      <SecondarySectionHeader title="Circles" />
+      <CircleList
+        circles={visibleCircles}
+        onToggleCircle={onToggleCircle}
+        pendingCircleId={pendingCircleId}
+      />
     </>
   );
 }
@@ -991,16 +878,11 @@ function _CirclesTab({
       {joinedCircles.length > 0 ? (
         <>
           <SectionTitle title="Your Circles" />
-          <View style={styles.stack}>
-            {joinedCircles.map((circle) => (
-              <CircleCard
-                key={circle.id}
-                circle={circle}
-                isPending={pendingCircleId === circle.id}
-                onToggleCircle={onToggleCircle}
-              />
-            ))}
-          </View>
+          <CircleList
+            circles={joinedCircles}
+            onToggleCircle={onToggleCircle}
+            pendingCircleId={pendingCircleId}
+          />
         </>
       ) : null}
 
@@ -1008,16 +890,11 @@ function _CirclesTab({
         title={joinedCircles.length > 0 ? "Discover" : "Discover Circles"}
       />
       {discoverCircles.length > 0 ? (
-        <View style={styles.stack}>
-          {discoverCircles.map((circle) => (
-            <CircleCard
-              key={circle.id}
-              circle={circle}
-              isPending={pendingCircleId === circle.id}
-              onToggleCircle={onToggleCircle}
-            />
-          ))}
-        </View>
+        <CircleList
+          circles={discoverCircles}
+          onToggleCircle={onToggleCircle}
+          pendingCircleId={pendingCircleId}
+        />
       ) : joinedCircles.length > 0 ? (
         <SectionEmptyNote title="You have joined every circle available right now" />
       ) : (
@@ -1027,12 +904,63 @@ function _CirclesTab({
   );
 }
 
+function CircleList({
+  circles,
+  onToggleCircle,
+  pendingCircleId,
+}: {
+  circles: MobileCommunityCircle[];
+  onToggleCircle: (circle: MobileCommunityCircle) => void;
+  pendingCircleId: string | null;
+}) {
+  const { tokens } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.circleList,
+        {
+          borderBottomColor: tokens.colors.divider,
+          borderTopColor: tokens.colors.divider,
+        },
+      ]}
+    >
+      {circles.map((circle, index) => (
+        <CircleCard
+          key={circle.id}
+          circle={circle}
+          isLast={index === circles.length - 1}
+          isPending={pendingCircleId === circle.id}
+          onToggleCircle={onToggleCircle}
+        />
+      ))}
+    </View>
+  );
+}
+
+function getCircleIconName(circle: MobileCommunityCircle) {
+  const value = `${circle.slug} ${circle.name}`.toLowerCase();
+
+  if (value.includes("ai") || value.includes("llm")) return "magic";
+  if (value.includes("product") || value.includes("pm")) return "cube";
+  if (value.includes("founder") || value.includes("startup")) return "rocket";
+  if (value.includes("design") || value.includes("ux")) return "paint-brush";
+  if (value.includes("mobile") || value.includes("ios")) return "mobile";
+  if (value.includes("data")) return "database";
+  if (value.includes("security")) return "shield";
+  if (value.includes("cloud") || value.includes("infra")) return "cloud";
+
+  return "comments-o";
+}
+
 function CircleCard({
   circle,
+  isLast,
   isPending,
   onToggleCircle,
 }: {
   circle: MobileCommunityCircle;
+  isLast: boolean;
   isPending: boolean;
   onToggleCircle: (circle: MobileCommunityCircle) => void;
 }) {
@@ -1050,9 +978,8 @@ function CircleCard({
         style={[
           styles.circleCard,
           {
-            backgroundColor: tokens.colors.surface,
-            borderColor: tokens.colors.border,
-            borderRadius: tokens.radius.md,
+            borderBottomColor: tokens.colors.divider,
+            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
           },
         ]}
       >
@@ -1068,19 +995,14 @@ function CircleCard({
             style={[
               styles.circleIcon,
               {
-                backgroundColor: tokens.colors.surfaceMuted,
-                borderRadius: tokens.radius.sm,
+                borderRadius: tokens.radius.xs,
               },
             ]}
           >
             <FontAwesome
-              name={circle.isJoined ? "check-circle" : "circle-o"}
-              size={18}
-              color={
-                circle.isJoined
-                  ? tokens.colors.accent
-                  : tokens.colors.textTertiary
-              }
+              name={getCircleIconName(circle)}
+              size={20}
+              color={circle.isJoined ? tokens.colors.accent : tokens.colors.textTertiary}
             />
           </View>
           <View style={styles.circleCopy}>
@@ -1106,8 +1028,7 @@ function CircleCard({
                 },
               ]}
             >
-              {circle.description || "A community circle"} ·{" "}
-              {formatCommunityTabCount(circle.memberCount)} members
+              {circle.description || "A community circle"}
             </Text>
           </View>
         </Pressable>
@@ -1195,104 +1116,63 @@ function RoomList({
   events: MobileCommunityNetworkingEvent[];
   onOpenRoom: (eventId: string) => void;
 }) {
-  const { tokens } = useAppTheme();
-
   return (
-    <View
-      style={[
-        styles.roomList,
-        {
-          backgroundColor: tokens.colors.surface,
-          borderColor: tokens.colors.border,
-          borderRadius: tokens.radius.sm,
-        },
-      ]}
-    >
+    <View>
       {events.map((event, index) => (
-        <RoomRow
+        <DiscoverEventCard
           key={event.id}
-          event={event}
-          isLast={index === events.length - 1}
-          onOpenRoom={onOpenRoom}
+          accessibilityLabel={`Open event community for ${event.title}`}
+          event={toRoomDiscoverEventCard(event)}
+          onPress={() => onOpenRoom(event.id)}
+          showDivider={index < events.length - 1}
+          showSavedIndicator={false}
         />
       ))}
     </View>
   );
 }
 
-function RoomRow({
-  event,
-  isLast,
-  onOpenRoom,
-}: {
-  event: MobileCommunityNetworkingEvent;
-  isLast: boolean;
-  onOpenRoom: (eventId: string) => void;
-}) {
-  const { tokens } = useAppTheme();
-  const { scale, onPressIn, onPressOut } = useScalePress();
-  const isWarm =
-    event.viewerContext === "attending" || event.visibleAttendeeCount > 0;
-  const meta = getRoomCompactMeta(event);
+function normalizeRoomEventFormat(
+  format: MobileCommunityNetworkingEvent["format"],
+): MobileEventCard["format"] {
+  if (format === "virtual" || format === "in-person" || format === "hybrid") {
+    return format;
+  }
 
-  return (
-    <Pressable
-      accessibilityLabel={`Open room for ${event.title}`}
-      accessibilityRole="button"
-      onPress={() => onOpenRoom(event.id)}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      style={[
-        !isLast && {
-          borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.divider,
-        },
-      ]}
-    >
-      <Animated.View
-        style={[styles.roomRow, { transform: [{ scale }] }]}
-      >
-        <Text
-          numberOfLines={1}
-          style={[
-            styles.roomRowTitle,
-            {
-              color: tokens.colors.textPrimary,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {event.title}
-        </Text>
-        <View style={styles.roomRowMeta}>
-          <View
-            style={[
-              styles.roomStatusDot,
-              {
-                backgroundColor: isWarm
-                  ? tokens.colors.accent
-                  : tokens.colors.textTertiary,
-              },
-            ]}
-          />
-          <Text
-            style={[
-              styles.roomRowMetaText,
-              {
-                color: tokens.colors.textTertiary,
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {meta}
-          </Text>
-        </View>
-      </Animated.View>
-    </Pressable>
-  );
+  return null;
 }
 
-function _PeopleTab({
+function getRoomEventFormatLabel(format: MobileEventCard["format"]): string | null {
+  if (format === "virtual") return "Virtual";
+  if (format === "in-person") return "In person";
+  if (format === "hybrid") return "Hybrid";
+  return null;
+}
+
+function toRoomDiscoverEventCard(
+  event: MobileCommunityNetworkingEvent,
+): MobileEventCard {
+  const format = normalizeRoomEventFormat(event.format);
+  const isAttending = event.viewerContext === "attending";
+
+  return {
+    id: event.id,
+    slug: event.slug,
+    title: event.title,
+    startTime: event.startTime,
+    imageUrl: event.imageUrl ?? null,
+    organizerLogoUrl: event.organizerLogoUrl ?? null,
+    location: event.location,
+    format,
+    formatLabel: getRoomEventFormatLabel(format),
+    engagement: {
+      isBookmarked: event.viewerContext === "saved" || isAttending,
+      status: isAttending ? "attending" : null,
+    },
+  };
+}
+
+const _PeopleTab = function PeopleTab({
   followUps,
   home,
   lens,
@@ -1558,7 +1438,7 @@ function _PeopleTab({
       )}
     </>
   );
-}
+};
 
 function EncounterCard({
   onOpenEvent,
@@ -2063,10 +1943,10 @@ const styles = StyleSheet.create({
   },
   circleCard: {
     alignItems: "center",
-    borderWidth: 1,
     flexDirection: "row",
-    gap: 10,
-    padding: 12,
+    gap: 12,
+    paddingHorizontal: 2,
+    paddingVertical: 14,
   },
   circleCopy: {
     flex: 1,
@@ -2075,9 +1955,13 @@ const styles = StyleSheet.create({
   },
   circleIcon: {
     alignItems: "center",
-    height: 38,
+    height: 34,
     justifyContent: "center",
-    width: 38,
+    width: 34,
+  },
+  circleList: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   circleMainPressable: {
     alignItems: "center",
@@ -2127,34 +2011,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     lineHeight: 18,
-  },
-  emptyFeed: {
-    borderWidth: 1,
-    gap: 8,
-    padding: 12,
-  },
-  emptyFeedAction: {
-    alignItems: "center",
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    minHeight: 30,
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-  emptyFeedActionText: {
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
-  },
-  emptyFeedBody: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 18,
-  },
-  emptyFeedTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    lineHeight: 20,
   },
   emptyNote: {
     borderWidth: 1,
@@ -2368,37 +2224,6 @@ const styles = StyleSheet.create({
   roomList: {
     borderWidth: 1,
     overflow: "hidden",
-  },
-  roomRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  roomRowMeta: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 5,
-    flexShrink: 0,
-  },
-  roomRowMetaText: {
-    fontSize: 12,
-    fontWeight: "500",
-    lineHeight: 16,
-  },
-  roomRowTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: -0.1,
-    lineHeight: 18,
-  },
-  roomStatusDot: {
-    borderRadius: 2,
-    height: 4,
-    width: 4,
   },
   secondaryAction: {
     alignItems: "center",

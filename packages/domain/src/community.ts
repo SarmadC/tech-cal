@@ -399,6 +399,7 @@ export const mobileCommunityNetworkingEventSchema = z.object({
   title: z.string(),
   startTime: z.string(),
   imageUrl: z.string().nullable().optional(),
+  organizerLogoUrl: z.string().nullable().optional(),
   location: z.string().nullable(),
   format: z.string().nullable(),
   viewerContext: z.enum(["attending", "saved"]),

@@ -235,6 +235,7 @@ export interface NetworkingOpportunityEvent {
   title: string;
   startTime: string;
   imageUrl?: string | null;
+  organizerLogoUrl?: string | null;
   location: string | null;
   format: string | null;
   viewerContext: "attending" | "saved";

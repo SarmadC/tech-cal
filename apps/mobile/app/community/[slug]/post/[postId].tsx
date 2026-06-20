@@ -24,8 +24,8 @@ import type {
 } from '@kurecal/domain';
 
 import { CommunityCommentThread } from '../../../../src/components/CommunityCommentThread';
-import { EventSummaryCard } from '../../../../src/components/EventSummaryCard';
 import { CommunityRichPostContent } from '../../../../src/components/CommunityRichPostContent';
+import { CommunityAttachedEventRow } from '../../../../src/components/community/CommunityAttachedEventRow';
 import { ScreenStateView } from '../../../../src/components/ScreenStateView';
 import { showActionSheet } from '../../../../src/lib/actionSheet';
 import { getMobileApiBaseUrl } from '../../../../src/lib/env';
@@ -591,7 +591,11 @@ export default function CommunityPostScreen() {
               title={data.post.title}
             />
             {data.post.event ? (
-              <EventSummaryCard event={data.post.event} tone="highlight" />
+              <CommunityAttachedEventRow
+                event={data.post.event}
+                variant="selected"
+                onPress={() => router.push(`/event/${data.post.event?.id}`)}
+              />
             ) : null}
 
             <View style={styles.voteRow}>
