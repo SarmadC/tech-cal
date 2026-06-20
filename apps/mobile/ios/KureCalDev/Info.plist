@@ -52,13 +52,7 @@
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
 	</dict>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_expo._tcp</string>
-	</array>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Allow KureCal Dev to add, update, and remove events in your calendar.</string>
 	<key>NSCalendarsUsageDescription</key>
