@@ -4,6 +4,14 @@ import type { AppProfile, ProfileUpdateForm, Json, SupabaseClientType } from '@/
 import { profileTransformer } from '@/utils/transformers';
 import { CacheInvalidationService } from '@/services/cacheInvalidationService';
 import * as Sentry from "@sentry/nextjs";
+import { imageExtFromMimeType } from '@/lib/storagePathUtils';
+
+const AVATAR_ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+]);
 
 export class ProfileService {
     static async getProfile(
@@ -189,7 +197,10 @@ export class ProfileService {
         supabaseClient: SupabaseClientType
     ): Promise<{ avatarUrl: string }> {
         try {
-            const fileExt = avatarFile.name.split('.').pop();
+            if (!AVATAR_ALLOWED_MIME_TYPES.has(avatarFile.type)) {
+                throw new Error('Invalid avatar type. Allowed: JPEG, PNG, WebP, GIF.');
+            }
+            const fileExt = imageExtFromMimeType(avatarFile.type);
             const filePath = `avatars/${userId}-${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(filePath, avatarFile, { cacheControl: '3600', upsert: true });

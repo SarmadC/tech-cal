@@ -116,10 +116,13 @@ export default function ContactPage() {
         }
 
         if (shortcut.type === 'link' && shortcut.href) {
+            const href = shortcut.href;
+            const isSafe = href.startsWith('/') || href.startsWith('https://');
+            if (!isSafe) return;
             if (shortcut.target === '_blank') {
-                window.open(shortcut.href, '_blank', 'noopener,noreferrer');
+                window.open(href, '_blank', 'noopener,noreferrer');
             } else {
-                window.location.href = shortcut.href;
+                window.location.href = href;
             }
         }
     }, [handleOpenForm]);

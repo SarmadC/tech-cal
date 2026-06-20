@@ -243,8 +243,8 @@ export const mobileDiscoverCountsSchema = z.object({
     free: z.number().int().nonnegative(),
     paid: z.number().int().nonnegative(),
   }),
-  categories: z.record(z.number().int().nonnegative()),
-  tags: z.record(z.number().int().nonnegative()),
+  categories: z.record(z.string(), z.number().int().nonnegative()),
+  tags: z.record(z.string(), z.number().int().nonnegative()),
 });
 
 export const mobileDiscoverTopPicksSchema = z.object({
@@ -339,7 +339,7 @@ export const mobileCalendarCountsSchema = z.object({
     free: z.number().int().nonnegative(),
     paid: z.number().int().nonnegative(),
   }),
-  tags: z.record(z.number().int().nonnegative()),
+  tags: z.record(z.string(), z.number().int().nonnegative()),
 });
 
 export const mobileCalendarFeedSchema = z.object({
@@ -775,7 +775,7 @@ export const mobileOnboardingTaxonomySchema = z.object({
   roleGroups: z.array(mobileOnboardingRoleGroupSchema),
   skillOptions: z.array(mobileOnboardingTaxonomyOptionSchema),
   interestOptions: z.array(mobileOnboardingTaxonomyOptionSchema),
-  roleSuggestions: z.record(mobileOnboardingRoleSuggestionSchema),
+  roleSuggestions: z.record(z.string(), mobileOnboardingRoleSuggestionSchema),
 });
 
 export const mobileCareerOnboardingBootstrapSchema = z.object({

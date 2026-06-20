@@ -14,6 +14,19 @@ function isValidUUID(id: string): boolean {
     return UUID_REGEX.test(id);
 }
 
+function resolveInternalRedirect(redirectTo: string | undefined, fallback: string): string | null {
+    if (!redirectTo) {
+        return null;
+    }
+
+    const target = redirectTo.trim();
+    if (target.startsWith('/') && !target.startsWith('//')) {
+        return target;
+    }
+
+    return fallback;
+}
+
 export async function createCirclePost(circleId: string, content: string, circleSlug: string) {
     if (!isValidUUID(circleId)) {
         return { success: false, error: 'Invalid circle ID' };
@@ -239,8 +252,9 @@ export async function deleteCirclePost(postId: string, circleSlug: string, redir
         return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
 
-    if (didDelete && redirectTo) {
-        redirect(redirectTo);
+    const safeRedirectTo = resolveInternalRedirect(redirectTo, `/circle/${circleSlug}`);
+    if (didDelete && safeRedirectTo) {
+        redirect(safeRedirectTo);
     }
 
     return { success: true };

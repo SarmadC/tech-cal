@@ -10,6 +10,8 @@ import {
 } from '@/services/googleCalendarOAuthConfig';
 import { createAdminClient } from '@/utils/supabase/server';
 
+const DEFAULT_MOBILE_RETURN_URL = 'kurecal-dev://calendar/google/callback';
+
 interface OAuthStatePayload {
   expiresAt: number;
   returnUrl: string;
@@ -55,8 +57,29 @@ function decodeState(state: string | null): OAuthStatePayload | null {
   }
 }
 
+function isAllowedMobileReturnUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return (
+      (parsed.protocol === 'kurecal:' || parsed.protocol === 'kurecal-dev:') &&
+      parsed.host === 'calendar' &&
+      parsed.pathname === '/google/callback'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function resolveMobileReturnUrl(returnUrl: string | undefined) {
+  if (returnUrl && isAllowedMobileReturnUrl(returnUrl)) {
+    return returnUrl;
+  }
+
+  return DEFAULT_MOBILE_RETURN_URL;
+}
+
 function redirectWithResult(returnUrl: string, params: Record<string, string>) {
-  const target = new URL(returnUrl);
+  const target = new URL(resolveMobileReturnUrl(returnUrl));
   for (const [key, value] of Object.entries(params)) {
     target.searchParams.set(key, value);
   }
@@ -67,7 +90,7 @@ function redirectWithResult(returnUrl: string, params: Record<string, string>) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const statePayload = decodeState(requestUrl.searchParams.get('state'));
-  const returnUrl = statePayload?.returnUrl ?? 'kurecal-dev://calendar/google/callback';
+  const returnUrl = resolveMobileReturnUrl(statePayload?.returnUrl);
 
   try {
     const code = requestUrl.searchParams.get('code');

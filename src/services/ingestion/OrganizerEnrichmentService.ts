@@ -9,6 +9,7 @@ import type { SupabaseClientType } from '@/types';
 import { TIMEOUT_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 import { getLogoSources } from '@/utils/logoUtils';
+import { proxyImageToStorage, urlStorageKey } from '@/services/imageProxyService';
 import {
     extractCanonicalDomain,
     humanizeOrganizerNameFromDomain,
@@ -109,7 +110,15 @@ export class OrganizerEnrichmentService {
 
             // Create new organizer - try og:image first, then domain services
             const canonicalWebsiteUrl = input.websiteUrl || (domain ? `https://${domain}` : null);
-            const logoUrl = await this.fetchLogo(input.sourceUrl || canonicalWebsiteUrl || undefined, domain);
+            const rawLogoUrl = await this.fetchLogo(input.sourceUrl || canonicalWebsiteUrl || undefined, domain);
+            const logoUrl = rawLogoUrl
+                ? (await proxyImageToStorage({
+                    sourceUrl: rawLogoUrl,
+                    bucket: 'logos',
+                    storagePath: urlStorageKey('organizers', rawLogoUrl),
+                    supabaseClient,
+                })) ?? rawLogoUrl
+                : null;
 
             const { data: newOrganizer, error: createError } = await supabaseClient
                 .from('organizers')

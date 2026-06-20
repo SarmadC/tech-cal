@@ -320,6 +320,11 @@ export async function deleteCommunityPostImage(path: string): Promise<void> {
     return;
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !trimmedPath.startsWith(`${user.id}/`)) {
+    throw new Error('Unauthorized: path does not belong to current user');
+  }
+
   const { error } = await supabase.storage
     .from(COMMUNITY_MEDIA_BUCKET)
     .remove([trimmedPath]);

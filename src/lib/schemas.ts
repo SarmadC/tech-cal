@@ -11,7 +11,7 @@ export const SignupSchema = z.object({
     password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
     confirmPassword: z.string(),
     acceptTerms: z.literal('on', {
-        errorMap: () => ({ message: "You must accept the Terms of Service." })
+        message: "You must accept the Terms of Service."
     })
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match.",
@@ -49,7 +49,7 @@ export const EventTrackingSchema = z.object({
 export const EventStatusUpdateSchema = z.object({
     eventId: z.string().min(1, "Invalid event ID provided."),
     status: z.enum(['attending', 'attended', 'cancelled'], {  // 'bookmarked' removed
-        errorMap: () => ({ message: "Invalid status provided." })
+        message: "Invalid status provided."
     }),
     notes: z.union([z.string(), z.null()]).optional().transform(val => val === null ? undefined : val),
 });

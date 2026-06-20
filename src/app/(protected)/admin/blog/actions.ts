@@ -5,6 +5,7 @@ import { createServiceClient } from '@/utils/supabase/service';
 import { requireAdmin } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
+import { imageExtFromMimeType } from '@/lib/storagePathUtils';
 
 export type CreatePostState = {
     message?: string;
@@ -63,7 +64,7 @@ async function uploadHeaderImage(
         throw new Error('Header image file size exceeds 5MB.');
     }
 
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const fileExt = imageExtFromMimeType(file.type);
     const fileName = `blog/${postId}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await adminClient.storage

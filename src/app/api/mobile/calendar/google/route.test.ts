@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -115,6 +117,20 @@ function mockAuth(supabase = buildSupabase()) {
     user: { id: 'user-1' },
   });
   return supabase;
+}
+
+function encodeSignedState(payload: {
+  expiresAt: number;
+  returnUrl: string;
+  userId: string;
+}) {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? '')
+    .update(body)
+    .digest('base64url');
+
+  return `${body}.${signature}`;
 }
 
 describe('mobile Google Calendar routes', () => {
@@ -293,6 +309,9 @@ describe('mobile Google Calendar routes', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('connected=true');
+    expect(response.headers.get('location')).toContain(
+      'kurecal-dev://calendar/google/callback'
+    );
     const tokenRequest = vi.mocked(fetch).mock.calls[0]?.[1] as
       | RequestInit
       | undefined;
@@ -311,6 +330,67 @@ describe('mobile Google Calendar routes', () => {
       expect.anything()
     );
     expect(mocks.deleteConnection).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the default app callback for a signed absolute return URL', async () => {
+    mocks.getConnection.mockResolvedValueOnce(null);
+    const state = encodeSignedState({
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      returnUrl: 'https://evil.example/callback',
+      userId: 'user-1',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            access_token: 'access',
+            expires_in: 3600,
+            refresh_token: 'refresh',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    const response = await callbackGoogleCalendar(
+      new Request(
+        `http://localhost/api/mobile/calendar/google/callback?code=code-1&state=${encodeURIComponent(
+          state
+        )}`
+      )
+    );
+    const location = response.headers.get('location') ?? '';
+
+    expect(response.status).toBe(307);
+    expect(location).toContain('kurecal-dev://calendar/google/callback');
+    expect(location).toContain('connected=true');
+    expect(location).not.toContain('evil.example');
+  });
+
+  it.each([
+    'kurecal://evil/google/callback',
+    'kurecal://calendar/evil',
+  ])('falls back to the default app callback for invalid deep link %s', async (returnUrl) => {
+    const state = encodeSignedState({
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      returnUrl,
+      userId: 'user-1',
+    });
+
+    const response = await callbackGoogleCalendar(
+      new Request(
+        `http://localhost/api/mobile/calendar/google/callback?error=access_denied&state=${encodeURIComponent(
+          state
+        )}`
+      )
+    );
+    const location = response.headers.get('location') ?? '';
+
+    expect(response.status).toBe(307);
+    expect(location).toContain('kurecal-dev://calendar/google/callback');
+    expect(location).toContain('error=access_denied');
+    expect(location).not.toContain(returnUrl);
   });
 
   it('replaces Google Calendar credentials on reconnect without deleting the connection first', async () => {

@@ -1,6 +1,7 @@
 import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
 import { SpeakerAvatarCacheService } from '@/services/speakerAvatarCacheService';
+import { isSupabaseStorageUrl, proxyImageToStorage, urlStorageKey } from '@/services/imageProxyService';
 import {
     buildEventIdentityKeys,
     type EventIdentityKey,
@@ -213,6 +214,19 @@ export class EventRepository {
         payload: EventInsert,
         identity: EventIdentity
     ): Promise<{ eventId: string; created: boolean }> {
+        // Proxy external event image to Supabase Storage before persisting.
+        if (payload.event_image_url && !isSupabaseStorageUrl(payload.event_image_url)) {
+            const proxied = await proxyImageToStorage({
+                sourceUrl: payload.event_image_url,
+                bucket: 'logos',
+                storagePath: urlStorageKey('events', payload.event_image_url),
+                supabaseClient,
+            });
+            if (proxied) {
+                payload = { ...payload, event_image_url: proxied };
+            }
+        }
+
         let targetEventId: string | null = identity.eventId ?? null;
         const identityKeys = this.buildIdentityKeys(payload, identity);
         const canonicalEventId = await this.resolveEventIdByIdentityKeys(
@@ -476,15 +490,28 @@ export class EventRepository {
         // Step 4: Batch insert new speakers (single insert for all)
         const insertedSpeakerIds: string[] = [];
         if (speakersToInsert.length > 0) {
-            const insertPayload = speakersToInsert.map(speaker => ({
-                name: speaker.name,
-                linkedin_url: speaker.linkedinUrl || null,
-                title: speaker.title || null,
-                company: speaker.company || null,
-                bio: speaker.bio || null,
-                photo_url: speaker.photoUrl || null,
-                twitter_url: speaker.twitterUrl || null,
-                website_url: speaker.websiteUrl || null,
+            const insertPayload = await Promise.all(speakersToInsert.map(async speaker => {
+                // LinkedIn speakers are handled post-insert by SpeakerAvatarCacheService.
+                // Proxy external photos for non-LinkedIn speakers here at insert time.
+                let photoUrl = speaker.photoUrl || null;
+                if (photoUrl && !speaker.linkedinUrl && !isSupabaseStorageUrl(photoUrl)) {
+                    photoUrl = (await proxyImageToStorage({
+                        sourceUrl: photoUrl,
+                        bucket: 'avatars',
+                        storagePath: urlStorageKey('speakers', photoUrl),
+                        supabaseClient,
+                    })) ?? photoUrl;
+                }
+                return {
+                    name: speaker.name,
+                    linkedin_url: speaker.linkedinUrl || null,
+                    title: speaker.title || null,
+                    company: speaker.company || null,
+                    bio: speaker.bio || null,
+                    photo_url: photoUrl,
+                    twitter_url: speaker.twitterUrl || null,
+                    website_url: speaker.websiteUrl || null,
+                };
             }));
 
             const { data: insertedSpeakers, error: insertError } = await supabaseClient

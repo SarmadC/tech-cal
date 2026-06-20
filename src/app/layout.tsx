@@ -1,9 +1,10 @@
 // src/app/layout.tsx
-// Root layout is intentionally kept static. Nonced scripts belong in route
-// segments that opt into request-bound rendering.
+// Root layout is request-bound so the CSP nonce can propagate to global
+// framework and app-owned scripts.
 
 import type { Metadata } from "next";
 import { DM_Sans, Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
+import { headers } from 'next/headers';
 
 
 import "./styles/globals.css";
@@ -39,6 +40,7 @@ import { PostHogIdentitySync } from '@/components/providers/PostHogIdentitySync'
 import GoogleAnalytics from '@/components/providers/GoogleAnalytics';
 import { Suspense } from "react";
 import { SITE_URL } from '@/config/site';
+import { CSP_NONCE_HEADER } from '@/lib/security/csp';
 
 
 const inter = Inter({
@@ -119,18 +121,20 @@ export const metadata: Metadata = {
     },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const nonce = (await headers()).get(CSP_NONCE_HEADER) || undefined;
+
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
             <head>
                 {/* FullCalendar CSS moved to calendar-specific components for better performance */}
                 {/* Structured Data for SEO */}
-                <OrganizationJsonLd />
-                <WebsiteJsonLd />
+                <OrganizationJsonLd nonce={nonce} />
+                <WebsiteJsonLd nonce={nonce} />
                 <link rel="alternate" type="application/rss+xml" title="Kure-Cal Blog RSS Feed" href="/blog/feed.xml" />
             </head>
             <body className={`${inter.className} ${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
@@ -138,7 +142,7 @@ export default function RootLayout({
                     Skip to main content
                 </a>
                 <PostHogProvider>
-                    <GoogleAnalytics />
+                    <GoogleAnalytics nonce={nonce} />
                     <Suspense fallback={null}>
                         <PostHogPageView />
                     </Suspense>

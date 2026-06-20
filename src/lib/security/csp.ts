@@ -14,18 +14,11 @@ type CspFlags = {
     includeStrictDynamic: boolean;
 };
 
-function isStrictNonceModeEnabled() {
-    return process.env.CSP_STRICT_NONCE_MODE === 'true';
-}
-
 function getCspStage(isProduction: boolean): CspStage {
-    const fallbackStage = isProduction ? 'compat' : 'balanced';
+    const fallbackStage = isProduction ? 'strict' : 'balanced';
     const configuredStage = (process.env.CSP_STAGE || fallbackStage).toLowerCase();
 
     if (configuredStage === 'compat' || configuredStage === 'balanced' || configuredStage === 'strict') {
-        if (isProduction && configuredStage === 'strict' && !isStrictNonceModeEnabled()) {
-            return 'compat';
-        }
         return configuredStage;
     }
 
@@ -43,8 +36,8 @@ function getCspFlags(stage: CspStage, isProduction: boolean) {
     }
 
     return {
-        // `compat` and `balanced` intentionally stay static-safe until every
-        // public route is verified to render with a propagated request nonce.
+        // `compat` and `balanced` remain available as rollback stages for
+        // routes that are not ready for request-bound nonce rendering.
         allowUnsafeInline: true,
         allowUnsafeEval: !isProduction,
         includeNonce: false,
@@ -82,7 +75,7 @@ export function buildCsp({ frameAncestors, nonce }: CspOptions): string {
         script-src ${scriptSrc};
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
         style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
-        img-src 'self' data: blob: https:;
+        img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com https://us.i.posthog.com https://us-assets.i.posthog.com https://www.google-analytics.com https://region1.google-analytics.com;
         frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;

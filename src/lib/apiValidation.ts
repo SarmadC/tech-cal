@@ -33,13 +33,13 @@ export const adminSchemas = {
     queueId: commonSchemas.uuid,
     
     protectionMode: z.enum(['auto_update', 'protected', 'review_required'], {
-        errorMap: () => ({ message: 'Invalid protection mode' }),
+        message: 'Invalid protection mode',
     }),
     
     queueStatus: z.enum(['pending', 'approved', 'rejected', 'all']).default('pending'),
     
     queueAction: z.enum(['approve', 'reject', 'approve-selective', 'delete-event', 'update-field', 'reset'], {
-        errorMap: () => ({ message: 'Invalid queue action' }),
+        message: 'Invalid queue action',
     }),
     
     reportType: z.enum(['ingestion-summary', 'moderation-sla', 'enrichment-coverage']).default('ingestion-summary'),

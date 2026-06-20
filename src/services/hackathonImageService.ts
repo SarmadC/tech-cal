@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { imageExtFromMimeType } from '@/lib/storagePathUtils';
 
 export class HackathonImageService {
     private static normalizeImageMimeType(mimeType?: string | null): string {
@@ -29,7 +30,7 @@ export class HackathonImageService {
                 return { success: false, error: 'File size exceeds 5MB limit' };
             }
 
-            const fileExt = file.name.split('.').pop() || 'png';
+            const fileExt = imageExtFromMimeType(normalizedType);
             const fileName = `hackathons/${hackathonId}.${fileExt}`;
 
             const bucketName = 'logos'; // Reuse existing public bucket

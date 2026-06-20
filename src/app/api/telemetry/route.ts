@@ -13,8 +13,8 @@ const TelemetrySchema = z.object({
   sessionId: z.string().min(1).max(255).optional(),
   requestId: z.string().max(255).optional(),
   occurredAt: z.string().datetime().optional(),
-  context: z.record(z.unknown()).optional(),
-  metadata: z.record(z.unknown()).optional()
+  context: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export async function POST(request: NextRequest) {

@@ -66,6 +66,18 @@ describe('deleteCirclePost', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/circle/product');
   });
 
+  it.each(['https://evil.example/phish', '//evil.example/phish'])(
+    'falls back to the circle page for unsafe redirect target %s',
+    async (unsafeRedirectTo) => {
+      await expect(deleteCirclePost(postId, 'product', unsafeRedirectTo)).rejects.toThrow(
+        'REDIRECT:/circle/product'
+      );
+
+      expect(mocks.redirect).not.toHaveBeenCalledWith(unsafeRedirectTo);
+      expect(mocks.redirect).toHaveBeenCalledWith('/circle/product');
+    }
+  );
+
   it('returns success without redirect when no fallback target is provided', async () => {
     const result = await deleteCirclePost(postId, 'product');
 

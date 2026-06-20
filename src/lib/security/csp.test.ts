@@ -44,7 +44,7 @@ describe('buildCsp', () => {
         expect(scriptSrc).not.toContain("'nonce-balanced-nonce'");
     });
 
-    it('defaults production to a static-safe policy when CSP_STAGE is unset', () => {
+    it('defaults production to a nonce-based strict policy when CSP_STAGE is unset', () => {
         vi.stubEnv('NODE_ENV', 'production');
         vi.stubEnv('CSP_STAGE', '');
 
@@ -54,30 +54,15 @@ describe('buildCsp', () => {
         });
         const scriptSrc = getDirectiveValue(csp, 'script-src');
 
-        expect(scriptSrc).toContain("'unsafe-inline'");
-        expect(scriptSrc).not.toContain("'strict-dynamic'");
-        expect(scriptSrc).not.toContain("'nonce-default-nonce'");
+        expect(scriptSrc).toContain("'nonce-default-nonce'");
+        expect(scriptSrc).toContain("'strict-dynamic'");
+        expect(scriptSrc).not.toContain("'unsafe-inline'");
+        expect(scriptSrc).not.toContain("'unsafe-eval'");
     });
 
-    it('downgrades CSP_STAGE=strict to compat unless CSP_STRICT_NONCE_MODE is enabled', () => {
+    it('emits a nonce-based strict policy when CSP_STAGE=strict', () => {
         vi.stubEnv('NODE_ENV', 'production');
         vi.stubEnv('CSP_STAGE', 'strict');
-
-        const csp = buildCsp({
-            frameAncestors: "'none'",
-            nonce: 'strict-nonce',
-        });
-        const scriptSrc = getDirectiveValue(csp, 'script-src');
-
-        expect(scriptSrc).toContain("'unsafe-inline'");
-        expect(scriptSrc).not.toContain("'strict-dynamic'");
-        expect(scriptSrc).not.toContain("'nonce-strict-nonce'");
-    });
-
-    it('emits a nonce-based strict policy only when CSP_STRICT_NONCE_MODE is enabled', () => {
-        vi.stubEnv('NODE_ENV', 'production');
-        vi.stubEnv('CSP_STAGE', 'strict');
-        vi.stubEnv('CSP_STRICT_NONCE_MODE', 'true');
 
         const csp = buildCsp({
             frameAncestors: "'none'",
