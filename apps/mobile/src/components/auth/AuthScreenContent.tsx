@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, ClipPath, Defs, Rect } from 'react-native-svg';
 
 import { BrandLoadingLogo } from '../brand/BrandLoadingLogo';
@@ -249,7 +249,7 @@ export default function AuthScreenContent() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.root}>
         <View style={styles.vignette} />
         <KeyboardAvoidingView
@@ -446,7 +446,7 @@ export default function AuthScreenContent() {
           )}
         </KeyboardAvoidingView>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

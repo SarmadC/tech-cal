@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   MobileCareerOnboardingBootstrap,
@@ -175,6 +175,7 @@ export default function OnboardingScreen() {
   const { resume } = useLocalSearchParams<{ resume?: string }>();
   const allowManualOpen = resume === '1' || resume === 'true';
   const { profile, refreshProfile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [bootstrap, setBootstrap] = useState<MobileCareerOnboardingBootstrap | null>(
     null
   );
@@ -320,7 +321,15 @@ export default function OnboardingScreen() {
   if (loading) {
     return (
       <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -328,7 +337,7 @@ export default function OnboardingScreen() {
               description="Loading your career profile bootstrap and role suggestions."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
@@ -336,7 +345,15 @@ export default function OnboardingScreen() {
   if (error || !bootstrap) {
     return (
       <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -347,14 +364,22 @@ export default function OnboardingScreen() {
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
 
   return (
     <LinearGradient colors={['#04151f', '#031018', '#02060b']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.hero}>
             <View style={styles.heroRow}>
@@ -812,7 +837,7 @@ export default function OnboardingScreen() {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

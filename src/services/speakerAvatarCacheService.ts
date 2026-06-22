@@ -9,7 +9,9 @@ import type { SupabaseClientType } from '@/types';
 
 const AVATAR_BUCKET = 'avatars';
 const SPEAKER_AVATAR_PREFIX = 'speakers/';
+const MANUAL_SPEAKER_PROFILE_PHOTO_PREFIX = 'speaker-profile-photos/';
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const MIN_REAL_AVATAR_BYTES = 1_500;
 const DEFAULT_BACKFILL_LIMIT = 100;
 const DEFAULT_SCAN_BATCH_SIZE = 200;
 const DEFAULT_CONCURRENCY = 3;
@@ -22,6 +24,10 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   'image/webp',
   'image/avif',
   'image/gif',
+]);
+const KNOWN_GENERIC_LINKEDIN_AVATAR_HASHES = new Set([
+  // Unavatar's LinkedIn fallback logo for missing/unavailable LinkedIn profiles.
+  'eda6fe05a8638d28efe6d27dd867cff3259854a02403e234c6a7677db5ad564a',
 ]);
 
 export interface SpeakerAvatarCandidate {
@@ -99,6 +105,11 @@ function extensionFromContentType(contentType: string): string {
   }
 }
 
+async function sha256Blob(blob: Blob): Promise<string> {
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  return createHash('sha256').update(buffer).digest('hex');
+}
+
 export class SpeakerAvatarCacheService {
   static isCachedSpeakerAvatarUrl(value: string | null | undefined): boolean {
     const trimmed = value?.trim();
@@ -118,8 +129,30 @@ export class SpeakerAvatarCacheService {
     }
   }
 
+  static isManualSpeakerProfilePhotoUrl(value: string | null | undefined): boolean {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    if (trimmed.startsWith(MANUAL_SPEAKER_PROFILE_PHOTO_PREFIX)) {
+      return true;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      return parsed.pathname.includes(`/storage/v1/object/public/${AVATAR_BUCKET}/${MANUAL_SPEAKER_PROFILE_PHOTO_PREFIX}`);
+    } catch {
+      return trimmed.includes(`${AVATAR_BUCKET}/${MANUAL_SPEAKER_PROFILE_PHOTO_PREFIX}`);
+    }
+  }
+
   static shouldPopulatePhotoUrl(currentPhotoUrl: string | null | undefined): boolean {
     const trimmed = currentPhotoUrl?.trim();
+    if (this.isManualSpeakerProfilePhotoUrl(trimmed)) {
+      return false;
+    }
+
     return !trimmed || this.isCachedSpeakerAvatarUrl(trimmed);
   }
 
@@ -188,6 +221,8 @@ export class SpeakerAvatarCacheService {
           throw new Error('Avatar exceeds 5MB limit');
         }
 
+        await this.assertLooksLikeRealAvatar(blob);
+
         return { blob, contentType };
       } finally {
         clearTimeout(timeout);
@@ -195,6 +230,17 @@ export class SpeakerAvatarCacheService {
     }
 
     throw new Error('Avatar resolver returned 429 after all retries');
+  }
+
+  static async assertLooksLikeRealAvatar(blob: Blob): Promise<void> {
+    if (blob.size < MIN_REAL_AVATAR_BYTES) {
+      throw new Error('Avatar resolver returned a generic or too-small image');
+    }
+
+    const hash = await sha256Blob(blob);
+    if (KNOWN_GENERIC_LINKEDIN_AVATAR_HASHES.has(hash)) {
+      throw new Error('Avatar resolver returned a known generic LinkedIn fallback image');
+    }
   }
 
   static async cacheSpeakerAvatar(params: {
@@ -210,6 +256,14 @@ export class SpeakerAvatarCacheService {
         speakerId: speaker.id,
         status: 'skipped',
         reason: 'Missing or invalid LinkedIn URL',
+      };
+    }
+
+    if (this.isManualSpeakerProfilePhotoUrl(speaker.currentPhotoUrl)) {
+      return {
+        speakerId: speaker.id,
+        status: 'skipped',
+        reason: 'Manual speaker profile photo preserved',
       };
     }
 

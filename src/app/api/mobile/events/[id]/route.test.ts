@@ -14,6 +14,14 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
 }));
 
+function createAdminClientMock(speakerRows: unknown[] = []) {
+  const inFilter = vi.fn(async () => ({ data: speakerRows, error: null }));
+  const select = vi.fn(() => ({ in: inFilter }));
+  const from = vi.fn(() => ({ select }));
+
+  return { from };
+}
+
 vi.mock('@/utils/supabase/requestAuth', () => ({
   getAuthenticatedRequestContext: (...args: unknown[]) =>
     mocks.getAuthenticatedRequestContext(...args),
@@ -119,7 +127,7 @@ describe('GET /api/mobile/events/[id]', () => {
     });
     mocks.getEventWithAgenda.mockResolvedValue(eventDetail);
     mocks.getEventById.mockResolvedValue(eventDetail);
-    mocks.createAdminClient.mockResolvedValue({ admin: true });
+    mocks.createAdminClient.mockResolvedValue(createAdminClientMock());
     mocks.loadEngagementMap.mockResolvedValue(
       new Map([
         [
@@ -162,11 +170,134 @@ describe('GET /api/mobile/events/[id]', () => {
 
     const parsed = mobileEventDetailSchema.parse(payload.data);
     expect(parsed.host?.name).toBe('KureCal');
+    expect(parsed.event.imageUrl).toBe('https://example.com/event.png');
     expect(parsed.event.engagement?.status).toBe('attending');
     expect(parsed.agenda?.[0]?.title).toBe('Opening keynote');
     expect(parsed.agenda?.[0]?.isSaved).toBe(true);
     expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
+    expect(parsed.speakerLineup?.[0]?.id).toBe('speaker-1');
     expect(parsed.networkingPulse?.mostSavedSession?.saveCount).toBe(4);
+  });
+
+  it('prefers agenda speaker ids over name-only speaker lineup entries', async () => {
+    mocks.getEventWithAgenda.mockResolvedValueOnce({
+      ...eventDetail,
+      speakerLineup: [
+        {
+          name: 'Ada Lovelace',
+          title: 'Founder',
+          company: 'Analytical Engines',
+          photoUrl: 'https://example.com/ada.png',
+        },
+      ],
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.speakerLineup?.[0]?.name).toBe('Ada Lovelace');
+    expect(parsed.speakerLineup?.[0]?.id).toBe('speaker-1');
+  });
+
+  it('keeps richer speaker lineup metadata when agenda speakers provide the real id', async () => {
+    mocks.getEventWithAgenda.mockResolvedValueOnce({
+      ...eventDetail,
+      speakerLineup: [
+        {
+          name: 'Ada Lovelace',
+          title: 'Founder',
+          company: 'Analytical Engines',
+          photoUrl: 'https://example.com/ada-rich.png',
+        },
+      ],
+      agenda: [
+        {
+          ...eventDetail.agenda[0],
+          speakers: [
+            {
+              id: 'speaker-1',
+              name: 'Ada Lovelace',
+            },
+          ],
+        },
+      ],
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.speakerLineup).toHaveLength(1);
+    expect(parsed.speakerLineup?.[0]).toMatchObject({
+      id: 'speaker-1',
+      name: 'Ada Lovelace',
+      title: 'Founder',
+      company: 'Analytical Engines',
+      photoUrl: 'https://example.com/ada-rich.png',
+    });
+  });
+
+  it('hydrates name-only speaker lineup entries from stored speaker records', async () => {
+    mocks.getEventWithAgenda.mockResolvedValueOnce({
+      ...eventDetail,
+      speakerLineup: [
+        {
+          id: 'Adarsh Divakaran',
+          name: 'Adarsh Divakaran',
+          title: 'Python Developer Advocate',
+          company: 'SerpApi',
+          photoUrl: 'https://example.com/adarsh.png',
+        },
+      ],
+      agenda: [],
+    });
+    mocks.createAdminClient.mockResolvedValueOnce(
+      createAdminClientMock([
+        {
+          id: 'speaker-adarsh',
+          name: 'Adarsh Divakaran',
+          title: 'Python Developer Advocate',
+          company: 'SerpApi',
+          bio: null,
+          photo_url: 'https://example.com/adarsh.png',
+          linkedin_url: null,
+          twitter_url: null,
+          website_url: null,
+        },
+      ])
+    );
+
+    const response = await GET(
+      new Request(`http://localhost/api/mobile/events/${eventDetail.id}`, {
+        headers: { Authorization: 'Bearer mobile-token' },
+      }),
+      {
+        params: Promise.resolve({ id: eventDetail.id }),
+      }
+    );
+    const payload = await response.json();
+    const parsed = mobileEventDetailSchema.parse(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(parsed.speakerLineup?.[0]?.name).toBe('Adarsh Divakaran');
+    expect(parsed.speakerLineup?.[0]?.id).toBe('speaker-adarsh');
   });
 
   it('returns an empty networking pulse when aggregate signal is below threshold', async () => {

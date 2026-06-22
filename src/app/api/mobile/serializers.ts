@@ -392,6 +392,30 @@ function toMobileSpeaker(
   };
 }
 
+function normalizeSpeakerName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function isNameFallbackSpeakerId(speaker: MobileEventDetailSpeaker): boolean {
+  return speaker.id.trim().toLowerCase() === normalizeSpeakerName(speaker.name);
+}
+
+function mergeMobileSpeakers(
+  existing: MobileEventDetailSpeaker,
+  incoming: MobileEventDetailSpeaker
+): MobileEventDetailSpeaker {
+  const existingHasRealId = !isNameFallbackSpeakerId(existing);
+  const incomingHasRealId = !isNameFallbackSpeakerId(incoming);
+
+  return {
+    id: existingHasRealId || !incomingHasRealId ? existing.id : incoming.id,
+    name: existing.name || incoming.name,
+    title: existing.title ?? incoming.title,
+    company: existing.company ?? incoming.company,
+    photoUrl: existing.photoUrl ?? incoming.photoUrl,
+  };
+}
+
 function toAgendaSpeakers(agendaItem: AgendaItem): MobileEventDetailSpeaker[] {
   const speakers = [
     ...(agendaItem.speakers ?? []),
@@ -399,6 +423,7 @@ function toAgendaSpeakers(agendaItem: AgendaItem): MobileEventDetailSpeaker[] {
   ];
 
   const deduped = new Map<string, MobileEventDetailSpeaker>();
+  const seenNames = new Set<string>();
 
   for (const speaker of speakers) {
     const serialized = toMobileSpeaker({
@@ -413,9 +438,11 @@ function toAgendaSpeakers(agendaItem: AgendaItem): MobileEventDetailSpeaker[] {
       continue;
     }
 
-    const key = serialized.id || serialized.name.toLowerCase();
-    if (!deduped.has(key)) {
+    const nameKey = serialized.name.toLowerCase();
+    const key = serialized.id || nameKey;
+    if (!deduped.has(key) && !seenNames.has(nameKey)) {
       deduped.set(key, serialized);
+      seenNames.add(nameKey);
     }
   }
 
@@ -447,7 +474,26 @@ function toAgendaItem(
 }
 
 function collectSpeakerLineup(event: Event): MobileEventDetailSpeaker[] {
-  const deduped = new Map<string, MobileEventDetailSpeaker>();
+  const speakersByName = new Map<string, MobileEventDetailSpeaker>();
+  const speakersById = new Map<string, MobileEventDetailSpeaker>();
+
+  function addSpeaker(speaker: MobileEventDetailSpeaker) {
+    const nameKey = normalizeSpeakerName(speaker.name);
+    const existing = speakersByName.get(nameKey) ?? speakersById.get(speaker.id);
+    const nextSpeaker = existing ? mergeMobileSpeakers(existing, speaker) : speaker;
+
+    speakersByName.set(nameKey, nextSpeaker);
+    speakersById.set(nextSpeaker.id, nextSpeaker);
+    if (existing && existing.id !== nextSpeaker.id) {
+      speakersById.delete(existing.id);
+    }
+  }
+
+  for (const agendaItem of event.agenda ?? []) {
+    for (const speaker of toAgendaSpeakers(agendaItem)) {
+      addSpeaker(speaker);
+    }
+  }
 
   for (const speaker of event.speakerLineup ?? []) {
     const serialized = toMobileSpeaker({
@@ -458,20 +504,12 @@ function collectSpeakerLineup(event: Event): MobileEventDetailSpeaker[] {
       photoUrl: speaker.photoUrl,
     });
 
-    if (serialized && !deduped.has(serialized.id)) {
-      deduped.set(serialized.id, serialized);
+    if (serialized) {
+      addSpeaker(serialized);
     }
   }
 
-  for (const agendaItem of event.agenda ?? []) {
-    for (const speaker of toAgendaSpeakers(agendaItem)) {
-      if (!deduped.has(speaker.id)) {
-        deduped.set(speaker.id, speaker);
-      }
-    }
-  }
-
-  return Array.from(deduped.values());
+  return Array.from(speakersByName.values());
 }
 
 export function toMobileEventCard(

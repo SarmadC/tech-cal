@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLoadingLogo } from '../src/components/brand/BrandLoadingLogo';
 import { BrandLoadingScreen } from '../src/components/brand/BrandLoadingScreen';
@@ -53,6 +53,7 @@ function Field({
 
 export default function SubmitEventScreen() {
   const { loading, session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState<SubmitEventFormState>(() =>
     createInitialSubmitEventState()
   );
@@ -106,7 +107,7 @@ export default function SubmitEventScreen() {
   if (submissionId) {
     return (
       <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.successWrap}>
             <View style={styles.successCard}>
               <Text style={styles.successEyebrow}>Submission received</Text>
@@ -130,14 +131,14 @@ export default function SubmitEventScreen() {
               </Pressable>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
 
   return (
     <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
@@ -361,7 +362,7 @@ export default function SubmitEventScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

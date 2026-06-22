@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 
 import type { NormalizedSubscription } from '@kurecal/domain';
@@ -156,6 +156,7 @@ function getPackageBillingLabel(pkg: RevenueCatPackage): string {
 
 export default function PaywallScreen() {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const {
     hasPaidAccess: isPaidAccessActive,
     refreshSubscription,
@@ -313,7 +314,15 @@ export default function PaywallScreen() {
   if (initialLoading) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -321,7 +330,7 @@ export default function PaywallScreen() {
               description="Checking your KureCal Pro access and live plan catalog."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
@@ -329,7 +338,15 @@ export default function PaywallScreen() {
   if (subscriptionLoadFailed && !subscription) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -340,14 +357,22 @@ export default function PaywallScreen() {
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
 
   return (
     <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <View style={styles.modalHeader}>
           <Pressable
             accessibilityLabel="Close"
@@ -588,7 +613,7 @@ export default function PaywallScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

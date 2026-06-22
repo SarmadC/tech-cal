@@ -89,11 +89,11 @@ describe('SpeakerAvatarCacheService', () => {
 
   it('caches a LinkedIn-derived avatar to storage and persists the public url', async () => {
     mocks.fetchWithSafeRedirects.mockResolvedValue(
-      new Response(new Blob(['avatar-bytes'], { type: 'image/png' }), {
+      new Response('avatar-bytes'.repeat(200), {
         status: 200,
         headers: {
           'content-type': 'image/png',
-          'content-length': '12',
+          'content-length': '2400',
         },
       })
     );
@@ -153,6 +153,27 @@ describe('SpeakerAvatarCacheService', () => {
     expect(mocks.upload).not.toHaveBeenCalled();
   });
 
+  it('preserves manual admin speaker profile photos even when force refreshing', async () => {
+    const result = await SpeakerAvatarCacheService.cacheSpeakerAvatar({
+      speaker: {
+        id: 'speaker-manual',
+        name: 'Manual',
+        linkedinUrl: 'https://www.linkedin.com/in/manual',
+        currentPhotoUrl: 'https://project.supabase.co/storage/v1/object/public/avatars/speaker-profile-photos/manual.jpg',
+      },
+      supabaseClient: createSupabaseClient() as never,
+      forceRefresh: true,
+    });
+
+    expect(result).toEqual({
+      speakerId: 'speaker-manual',
+      status: 'skipped',
+      reason: 'Manual speaker profile photo preserved',
+    });
+    expect(mocks.fetchWithSafeRedirects).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
   it('rejects non-image resolver responses', async () => {
     mocks.fetchWithSafeRedirects.mockResolvedValue(
       new Response('<html>nope</html>', {
@@ -176,6 +197,36 @@ describe('SpeakerAvatarCacheService', () => {
     expect(result.status).toBe('failed');
     expect(result.reason).toContain('Unsupported avatar content type');
     expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it('rejects known generic LinkedIn fallback images before upload', async () => {
+    mocks.fetchWithSafeRedirects.mockResolvedValue(
+      new Response(
+        new Blob(['avatar-bytes'], { type: 'image/png' }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+            'content-length': '12',
+          },
+        }
+      )
+    );
+
+    const result = await SpeakerAvatarCacheService.cacheSpeakerAvatar({
+      speaker: {
+        id: 'speaker-generic',
+        name: 'Generic',
+        linkedinUrl: 'https://www.linkedin.com/in/generic',
+        currentPhotoUrl: null,
+      },
+      supabaseClient: createSupabaseClient() as never,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.reason).toContain('generic or too-small image');
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(mocks.updateEq).not.toHaveBeenCalled();
   });
 
   it('scans past already-populated photos during dry-run backfill', async () => {

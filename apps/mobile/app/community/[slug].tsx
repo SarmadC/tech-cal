@@ -14,7 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   CommunityPostType,
@@ -113,6 +113,7 @@ function createEmptyPublishedMediaSet(): Set<string> {
 
 export default function CommunityCircleScreen() {
   const { slug } = useLocalSearchParams<{ slug: string | string[] }>();
+  const insets = useSafeAreaInsets();
   const circleSlug = Array.isArray(slug) ? slug[0] : slug;
   const [data, setData] = useState<MobileCommunityCirclePage | null>(null);
   const [postTitle, setPostTitle] = useState('');
@@ -506,7 +507,7 @@ export default function CommunityCircleScreen() {
   if (loading && !data) {
     return (
       <View style={styles.screen}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -514,7 +515,7 @@ export default function CommunityCircleScreen() {
               description="Pulling the latest posts, members, and upcoming moments."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -522,7 +523,7 @@ export default function CommunityCircleScreen() {
   if (error && !data) {
     return (
       <View style={styles.screen}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -533,7 +534,7 @@ export default function CommunityCircleScreen() {
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -550,7 +551,7 @@ export default function CommunityCircleScreen() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
@@ -968,7 +969,7 @@ export default function CommunityCircleScreen() {
           </Modal>
 
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
