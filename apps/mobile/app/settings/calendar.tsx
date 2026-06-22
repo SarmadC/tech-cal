@@ -19,7 +19,6 @@ import type {
 import {
   SettingsButton,
   SettingsDetailScaffold,
-  SettingsGroup,
 } from "../../src/components/settings/mobile-settings-ui";
 import { startGoogleCalendarOAuth } from "../../src/lib/googleCalendarOAuth";
 import {
@@ -226,10 +225,10 @@ export default function SettingsCalendarRoute() {
 
     return (
         <SettingsDetailScaffold
-            subtitle="Sync"
             title="Integrations"
         >
-            <SettingsGroup style={styles.googleGroup}>
+            <View>
+                <View style={[styles.sectionDivider, { backgroundColor: tokens.colors.divider }]} />
                 <View style={styles.googleRow}>
                     <View
                         style={[
@@ -367,19 +366,22 @@ export default function SettingsCalendarRoute() {
                         />
           )}
         </View>
-      </SettingsGroup>
+                <View style={[styles.sectionDivider, { backgroundColor: tokens.colors.divider }]} />
+            </View>
     </SettingsDetailScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-    googleGroup: {
-        padding: 12,
+    sectionDivider: {
+        height: StyleSheet.hairlineWidth,
     },
     googleRow: {
         alignItems: "center",
         flexDirection: "row",
         gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
     },
     googleMarkFrame: {
         alignItems: "center",

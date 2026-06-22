@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { submitMobileCommunityReport } from "../../lib/mobileApi";
 import { useAppTheme } from "../../providers/ThemeProvider";
@@ -56,6 +56,7 @@ export function CommunityThreadReportSheet({
   visible,
 }: CommunityThreadReportSheetProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [reason, setReason] = useState<Reason | null>(null);
   const [details, setDetails] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +110,7 @@ export function CommunityThreadReportSheet({
         style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
         onPress={onDismiss}
       />
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
         <View
           style={[
             styles.sheet,
@@ -318,7 +319,7 @@ export function CommunityThreadReportSheet({
             </Pressable>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

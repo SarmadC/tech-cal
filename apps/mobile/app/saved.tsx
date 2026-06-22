@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { MobileSavedEventsFeed } from "@kurecal/domain";
 
@@ -21,6 +21,7 @@ import { haptics } from "../src/lib/haptics";
 
 export default function SavedScreen() {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [feed, setFeed] = useState<MobileSavedEventsFeed | null>(null);
   const [events, setEvents] = useState<MobileSavedEventsFeed["events"]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export default function SavedScreen() {
   if (loading && events.length === 0) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -83,7 +84,7 @@ export default function SavedScreen() {
               description="Pulling the events you bookmarked and tracked."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
@@ -91,7 +92,7 @@ export default function SavedScreen() {
   if (error && events.length === 0) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -102,14 +103,14 @@ export default function SavedScreen() {
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
 
   return (
     <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <FlashList
           data={events}
           keyExtractor={(event) => event.id}
@@ -185,7 +186,7 @@ export default function SavedScreen() {
             </View>
           )}
         />
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

@@ -6,6 +6,15 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import type { SpeakersSectionProps } from '../types';
 
+function getInitials(name: string) {
+    return name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join('');
+}
+
 export function SpeakersSection({
     speakers,
     onAdd,
@@ -70,6 +79,7 @@ export function SpeakersSection({
             <div className="space-y-4">
                 {speakers.map((speaker, index) => {
                     const isExpanded = expandedItems[index];
+                    const speakerInitials = getInitials(speaker.name || 'Speaker') || 'S';
 
                     return (
                         <div key={index} className="rounded-lg border border-default bg-background-tertiary overflow-hidden transition-all duration-200">
@@ -87,6 +97,20 @@ export function SpeakersSection({
                                         size={20}
                                         className="text-foreground-tertiary shrink-0"
                                     />
+                                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-default bg-background-secondary flex items-center justify-center">
+                                        {speaker.photoUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={speaker.photoUrl}
+                                                alt=""
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-xs font-semibold text-foreground-muted">
+                                                {speakerInitials}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex flex-col min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium text-foreground-primary truncate">
@@ -167,6 +191,19 @@ export function SpeakersSection({
                                                         className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                                     />
                                                 </div>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Profile Pic URL</label>
+                                                <input
+                                                    type="url"
+                                                    placeholder="https://example.com/speaker.jpg"
+                                                    value={speaker.photoUrl || ''}
+                                                    onChange={(e) => onUpdate(index, { photoUrl: e.target.value })}
+                                                    className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                                />
+                                                <p className="text-xs text-foreground-muted">
+                                                    Remote image URLs are copied to Supabase Storage when speakers are saved.
+                                                </p>
                                             </div>
                                             <div className="grid gap-2">
                                                 <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Bio</label>

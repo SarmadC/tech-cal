@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../src/context/AuthProvider';
 
@@ -45,6 +45,7 @@ type FocusedField = 'name' | 'email' | 'password' | 'confirmPassword';
 
 export default function SignupScreen() {
   const { loading, signInWithOAuth, signUp } = useAuth();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -140,7 +141,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
@@ -334,7 +335,7 @@ export default function SignupScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

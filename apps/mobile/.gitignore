@@ -10,3 +10,4 @@ ios/**/*.xcuserstate
 dist/
 web-build/
 coverage/
+android/

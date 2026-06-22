@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
   MobileCalendarFeed,
@@ -206,6 +206,7 @@ export function CalendarFilterSheet({
   onReset,
 }: CalendarFilterSheetProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const selectedTags = Array.isArray(value?.tags) ? value.tags : [];
@@ -258,7 +259,7 @@ export function CalendarFilterSheet({
           style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
           onPress={onClose}
         />
-        <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
+        <View style={[styles.sheetSafeArea, { paddingBottom: insets.bottom }]}>
           <View
             style={[
               styles.sheet,
@@ -624,7 +625,7 @@ export function CalendarFilterSheet({
               </Pressable>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         <CalendarQuickDatePicker
           mode="range"

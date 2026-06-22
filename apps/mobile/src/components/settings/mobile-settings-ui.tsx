@@ -11,10 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 import type { AppThemeTokens } from "../../theme/tokens";
@@ -101,8 +98,7 @@ export function SettingsDetailScaffold({
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView
-      edges={["left", "right"]}
+    <View
       style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
     >
       <LinearGradient
@@ -192,7 +188,7 @@ export function SettingsDetailScaffold({
           {footer}
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -201,16 +197,7 @@ export function SettingsGroup({ children, style }: SettingsGroupProps) {
   const palette = themedStyles(tokens);
 
   return (
-    <View
-      style={[
-        styles.group,
-        {
-          backgroundColor: palette.card.backgroundColor,
-          borderColor: palette.card.borderColor,
-        },
-        style,
-      ]}
-    >
+    <View style={[styles.group, style]}>
       {children}
     </View>
   );
@@ -241,12 +228,7 @@ export function SettingsRow({
         disabled ? styles.disabled : null,
       ]}
     >
-      <View
-        style={[
-          styles.rowIcon,
-          { backgroundColor: palette.icon.backgroundColor },
-        ]}
-      >
+      <View style={styles.rowIcon}>
         <SymbolView
           name={icon}
           size={18}
@@ -320,12 +302,7 @@ export function SettingsSwitchRow({
 
   return (
     <View style={styles.row}>
-      <View
-        style={[
-          styles.rowIcon,
-          { backgroundColor: palette.icon.backgroundColor },
-        ]}
-      >
+      <View style={styles.rowIcon}>
         <SymbolView
           name={icon}
           size={18}
@@ -561,11 +538,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
   },
-  group: {
-    borderRadius: 6,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
+  group: {},
   row: {
     alignItems: "center",
     flexDirection: "row",

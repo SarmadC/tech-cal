@@ -1,5 +1,5 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 
@@ -32,6 +32,7 @@ export function CommunityThreadActionMenu({
   visible,
 }: CommunityThreadActionMenuProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
@@ -45,7 +46,7 @@ export function CommunityThreadActionMenu({
         style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
         onPress={onDismiss}
       />
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
         <View
           style={[
             styles.sheet,
@@ -103,7 +104,7 @@ export function CommunityThreadActionMenu({
             </Pressable>
           ))}
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

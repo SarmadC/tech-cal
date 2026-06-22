@@ -13,6 +13,7 @@ import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/Extrac
 import { EventUpdateService } from './EventUpdateService';
 import { EventRepository } from './repositories/EventRepository';
 import { normalizeAgendaTimeRangeForEvent } from './utils/agendaTimeNormalization';
+import { isSupabaseStorageUrl, proxyImageToStorage, urlStorageKey } from '@/services/imageProxyService';
 
 // Type aliases for enum validation
 type EventFormatEnum = Database['public']['Enums']['event_format_enum'];
@@ -100,6 +101,32 @@ export interface SpeakerInput {
     photoUrl?: string;
     twitterUrl?: string;
     websiteUrl?: string;
+}
+
+async function proxyManualSpeakerPhotoUrl(
+    speaker: SpeakerInput,
+    supabaseClient: SupabaseClientType
+): Promise<SpeakerInput> {
+    const photoUrl = speaker.photoUrl?.trim();
+
+    if (!photoUrl || isSupabaseStorageUrl(photoUrl)) {
+        return {
+            ...speaker,
+            photoUrl: photoUrl || undefined,
+        };
+    }
+
+    const proxiedPhotoUrl = await proxyImageToStorage({
+        sourceUrl: photoUrl,
+        bucket: 'avatars',
+        storagePath: urlStorageKey('speaker-profile-photos', photoUrl),
+        supabaseClient,
+    });
+
+    return {
+        ...speaker,
+        photoUrl: proxiedPhotoUrl ?? photoUrl,
+    };
 }
 
 const getErrorMessage = (error: unknown, fallback = 'Unknown error'): string => {
@@ -369,10 +396,18 @@ export class EventEnrichmentService {
 
             const previousSpeakerLineup = existingEvent?.speaker_lineup || null;
 
-            const speakerIds = await EventRepository.upsertSpeakers(supabaseClient, speakers);
+            const speakersWithCachedPhotos = await Promise.all(
+                speakers.map((speaker) => proxyManualSpeakerPhotoUrl(speaker, supabaseClient))
+            );
+
+            const speakerIds = await EventRepository.upsertSpeakers(
+                supabaseClient,
+                speakersWithCachedPhotos
+            );
 
             // Update event's speaker_lineup JSONB
-            const speakerLineup = speakers.map((s) => ({
+            const speakerLineup = speakersWithCachedPhotos.map((s, index) => ({
+                id: speakerIds[index],
                 name: s.name,
                 linkedinUrl: s.linkedinUrl,
                 title: s.title,

@@ -1,6 +1,13 @@
 import type { EmailOtpType, Session } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as ExpoLinking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import type { MobileProfileState } from '@kurecal/domain';
 import {
   createContext,
@@ -18,7 +25,6 @@ import {
   MOBILE_RESET_PASSWORD_PATH,
   getAuthCallbackParams,
   getMobileEmailRedirectUri,
-  getMobileOAuthRedirectUri,
   getMobileRecoveryRedirectUri,
   isMobileAuthCallbackUrl,
 } from '../lib/authRedirect';
@@ -32,6 +38,11 @@ import { supabase } from '../lib/supabase';
 import { AppStartupOverlay } from '../components/brand/AppStartupOverlay';
 
 WebBrowser.maybeCompleteAuthSession();
+
+GoogleSignin.configure({
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+});
 
 type PendingPostAuthRoute = typeof MOBILE_RESET_PASSWORD_PATH | null;
 type OAuthProvider = 'apple' | 'google';
@@ -73,7 +84,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const incomingUrl = ExpoLinking.useURL();
-  const oauthRedirectUrl = useMemo(() => getMobileOAuthRedirectUri(), []);
   const signupRedirectUrl = useMemo(() => getMobileEmailRedirectUri(), []);
   const recoveryRedirectUrl = useMemo(() => getMobileRecoveryRedirectUri(), []);
 
@@ -395,30 +405,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithOAuth: async (provider: OAuthProvider) => {
         clearAuthCompletionState();
 
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider,
-          options: {
-            redirectTo: oauthRedirectUrl,
-            skipBrowserRedirect: true,
-          },
+        if (provider === 'apple') {
+          const rawNonce = Crypto.randomUUID();
+          const hashedNonce = await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            rawNonce
+          );
+
+          let credential: AppleAuthentication.AppleAuthenticationCredential;
+          try {
+            credential = await AppleAuthentication.signInAsync({
+              requestedScopes: [
+                AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                AppleAuthentication.AppleAuthenticationScope.EMAIL,
+              ],
+              nonce: hashedNonce,
+            });
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              'code' in err &&
+              err.code === 'ERR_REQUEST_CANCELED'
+            ) {
+              return;
+            }
+            throw err;
+          }
+
+          const { error } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: credential.identityToken!,
+            nonce: rawNonce,
+          });
+
+          if (error) throw error;
+          return;
+        }
+
+        // Google: native sign-in
+        await GoogleSignin.hasPlayServices();
+        let googleResponse: Awaited<ReturnType<typeof GoogleSignin.signIn>>;
+        try {
+          googleResponse = await GoogleSignin.signIn();
+        } catch (err: unknown) {
+          if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
+            return;
+          }
+          throw err;
+        }
+
+        const idToken = googleResponse.data?.idToken;
+        if (!idToken) throw new Error('No ID token returned from Google Sign In.');
+
+        const { error: googleError } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
         });
 
-        if (error) {
-          throw error;
-        }
-
-        if (!data.url) {
-          throw new Error('Unable to start the mobile OAuth flow.');
-        }
-
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          oauthRedirectUrl
-        );
-
-        if (result.type === 'success' && isMobileAuthCallbackUrl(result.url)) {
-          await completeAuthFromUrl(result.url);
-        }
+        if (googleError) throw googleError;
       },
       signOut: async () => {
         clearAuthCompletionState();
@@ -491,7 +535,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeAuthFromUrl,
       incomingUrl,
       isCompletingAuth,
-      oauthRedirectUrl,
       pendingPostAuthRoute,
       profile,
       profileLoadFailed,

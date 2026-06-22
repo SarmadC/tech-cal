@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { MobileDiscoverCost, MobileDiscoverFeed } from "@kurecal/domain";
 
@@ -167,6 +167,7 @@ export function DiscoverFilterSheet({
   visible,
 }: DiscoverFilterSheetProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const selectedTags = Array.isArray(value?.tags) ? value.tags : [];
@@ -226,7 +227,7 @@ export function DiscoverFilterSheet({
             ]}
           />
         </Pressable>
-        <SafeAreaView edges={["bottom"]} style={styles.sheetSafeArea}>
+        <View style={[styles.sheetSafeArea, { paddingBottom: insets.bottom }]}>
           <View
             style={[
               styles.sheet,
@@ -551,7 +552,7 @@ export function DiscoverFilterSheet({
               </Pressable>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       <DiscoverQuickDatePicker

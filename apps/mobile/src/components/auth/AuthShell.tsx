@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AuthShellProps {
   backHref?: Href;
@@ -29,9 +29,11 @@ export function AuthShell({
   subtitle,
   title,
 }: AuthShellProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <LinearGradient colors={['#08111f', '#05070c', '#030406']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
@@ -68,7 +70,7 @@ export function AuthShell({
             <View style={styles.card}>{children}</View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

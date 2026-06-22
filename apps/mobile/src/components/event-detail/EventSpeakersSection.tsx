@@ -8,9 +8,13 @@ import {
 } from './eventDetailUtils';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
-const CARD_INSET = 18;
-
-export function EventSpeakersSection({ speakers }: { speakers: MobileEventDetailSpeaker[] }) {
+export function EventSpeakersSection({
+  speakers,
+  onOpenSpeaker,
+}: {
+  speakers: MobileEventDetailSpeaker[];
+  onOpenSpeaker?: (speaker: MobileEventDetailSpeaker) => void;
+}) {
   const { tokens } = useAppTheme();
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? speakers : speakers.slice(0, SPEAKER_PREVIEW_COUNT);
@@ -23,24 +27,34 @@ export function EventSpeakersSection({ speakers }: { speakers: MobileEventDetail
         </Text>
       </View>
 
-      <View
-        style={[
-          styles.listPanel,
-          { backgroundColor: tokens.colors.surface, borderColor: tokens.colors.border },
-        ]}
-      >
+      <View style={styles.list}>
         {visible.map((speaker, index) => {
           const secondary = buildSpeakerSecondaryText(speaker);
+          const speakerId = speaker.id?.trim();
+          const isNameFallbackId = speakerId === speaker.name.trim();
+          const canOpenSpeaker = Boolean(speakerId && !isNameFallbackId && onOpenSpeaker);
 
           return (
-            <View
+            <Pressable
               key={speaker.id || speaker.name}
+              accessibilityLabel={
+                canOpenSpeaker ? `Open ${speaker.name} speaker profile` : undefined
+              }
+              accessibilityRole={canOpenSpeaker ? 'button' : undefined}
+              disabled={!canOpenSpeaker}
+              onPress={() => onOpenSpeaker?.(speaker)}
               style={[
                 styles.row,
                 index > 0 && { borderTopColor: tokens.colors.divider, borderTopWidth: StyleSheet.hairlineWidth },
               ]}
             >
-              <View style={styles.rowInner}>
+              {({ pressed }) => (
+                <View
+                  style={[
+                    styles.rowInner,
+                    pressed && { backgroundColor: tokens.colors.surfaceMuted },
+                  ]}
+                >
                 {speaker.photoUrl ? (
                   <Image source={{ uri: speaker.photoUrl }} style={styles.avatar} />
                 ) : (
@@ -60,8 +74,9 @@ export function EventSpeakersSection({ speakers }: { speakers: MobileEventDetail
                     </Text>
                   ) : null}
                 </View>
-              </View>
-            </View>
+                </View>
+              )}
+            </Pressable>
           );
         })}
       </View>
@@ -90,19 +105,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.18,
   },
-  listPanel: {
-    borderRadius: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+  list: {
+    gap: 0,
   },
   row: {
-    paddingHorizontal: CARD_INSET,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    borderRadius: 6,
+    paddingVertical: 4,
   },
   avatar: {
     width: 36,

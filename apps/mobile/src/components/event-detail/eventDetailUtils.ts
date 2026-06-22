@@ -95,15 +95,6 @@ function formatDatePart(value: string, timeZone?: string | null) {
   });
 }
 
-function formatWeekdayPart(value: string, timeZone?: string | null) {
-  return new Date(value).toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: timeZone ?? undefined,
-  });
-}
-
 function formatTimePart(value: string, timeZone?: string | null) {
   return new Date(value).toLocaleTimeString(undefined, {
     hour: 'numeric',
@@ -252,7 +243,6 @@ export function buildAgendaDayGroups(
 
 export function formatAgendaDayLabel(
   group: AgendaDayGroup,
-  totalGroups: number,
   timeZone?: string | null
 ) {
   const firstItem = group.items[0];
@@ -260,36 +250,20 @@ export function formatAgendaDayLabel(
     return `Day ${group.displayDayNumber}`;
   }
 
-  const dateLabel = formatWeekdayPart(firstItem.startTime, timeZone);
-  return totalGroups > 1 ? `Day ${group.displayDayNumber} · ${dateLabel}` : dateLabel;
+  const dateLabel = formatDatePart(firstItem.startTime, timeZone);
+  return `Day ${group.displayDayNumber} · ${dateLabel}`;
 }
 
-export function formatAgendaDayMeta(
-  items: MobileEventDetailAgendaItem[],
-  timeZone?: string | null
-) {
+export function formatAgendaSessionCount(items: MobileEventDetailAgendaItem[]) {
   if (items.length === 0) {
     return 'No sessions';
   }
 
-  const firstItem = items[0];
-  if (!firstItem || !isValidDate(firstItem.startTime)) {
-    return `${items.length} session${items.length === 1 ? '' : 's'}`;
-  }
-
-  const startLabel = formatTimePart(firstItem.startTime, timeZone);
-  const sessionCount = `${items.length} session${items.length === 1 ? '' : 's'}`;
-
-  return `Starts ${startLabel} · ${sessionCount}`;
+  return `${items.length} session${items.length === 1 ? '' : 's'}`;
 }
 
 export function buildAgendaSecondaryText(agendaItem: MobileEventDetailAgendaItem) {
-  const speakerNames = (agendaItem.speakers ?? [])
-    .map((speaker) => speaker.name?.trim())
-    .filter((speakerName): speakerName is string => Boolean(speakerName))
-    .join(', ');
-
-  const parts = [agendaItem.track, agendaItem.location, speakerNames].filter(
+  const parts = [agendaItem.track, agendaItem.location].filter(
     (value): value is string => {
       const trimmed = value?.trim();
       return Boolean(trimmed) && trimmed!.toLowerCase() !== 'no track';

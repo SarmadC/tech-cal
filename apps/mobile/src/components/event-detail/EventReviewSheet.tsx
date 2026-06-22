@@ -12,7 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
 
@@ -32,6 +32,7 @@ export function EventReviewSheet({
   visible: boolean;
 }) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [rating, setRating] = useState<number | null>(null);
   const [connectionsMade, setConnectionsMade] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +81,7 @@ export function EventReviewSheet({
         onPress={onDismiss}
         style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
       />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
         <View
           style={[
             styles.sheet,
@@ -218,7 +219,7 @@ export function EventReviewSheet({
             </Pressable>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

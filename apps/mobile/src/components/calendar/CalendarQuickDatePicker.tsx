@@ -1,7 +1,7 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
   LocalCalendarDateKey,
@@ -57,6 +57,7 @@ export function CalendarQuickDatePicker(props: CalendarQuickDatePickerProps) {
     visible,
   } = props;
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [draftRange, setDraftRange] = useState<MobileDiscoverDateRange>(
     props.mode === "range" ? props.value : { start: null, end: null },
   );
@@ -112,7 +113,7 @@ export function CalendarQuickDatePicker(props: CalendarQuickDatePickerProps) {
         style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
         onPress={onClose}
       />
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
         <View
           style={[
             styles.sheet,
@@ -398,7 +399,7 @@ export function CalendarQuickDatePicker(props: CalendarQuickDatePickerProps) {
             </Pressable>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </>
   );
 

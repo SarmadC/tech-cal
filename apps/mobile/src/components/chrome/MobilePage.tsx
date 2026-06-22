@@ -20,10 +20,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 
 import { useScalePress } from "../../hooks/useAnimation";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
@@ -104,9 +101,8 @@ export function MobilePage<T>({
   });
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
-      edges={["left", "right"]}
     >
       <LinearGradient
         colors={tokens.gradients.page}
@@ -220,7 +216,7 @@ export function MobilePage<T>({
           {children}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

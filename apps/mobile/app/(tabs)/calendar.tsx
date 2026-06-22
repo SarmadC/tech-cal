@@ -9,10 +9,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
   LocalCalendarDateKey,
@@ -386,12 +383,11 @@ export default function CalendarScreen() {
 
   return (
     <>
-      <SafeAreaView
+      <View
         style={[
           styles.safeArea,
           { backgroundColor: tokens.colors.discoverShell },
         ]}
-        edges={["left", "right"]}
       >
         <View
           style={[
@@ -502,7 +498,7 @@ export default function CalendarScreen() {
             onControlsVisibilityChange={setHeaderControlsVisible}
           />
         ) : null}
-      </SafeAreaView>
+      </View>
 
       <CalendarFilterSheet
         visible={isFilterOpen}

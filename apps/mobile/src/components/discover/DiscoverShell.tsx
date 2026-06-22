@@ -22,10 +22,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { useScrollControlsVisibility } from "../../hooks/useScrollControlsVisibility";
@@ -110,8 +107,7 @@ export function DiscoverShell<T>({
   });
 
   return (
-    <SafeAreaView
-      edges={["left", "right"]}
+    <View
       style={[
         styles.safeArea,
         { backgroundColor: tokens.colors.discoverShell },
@@ -209,7 +205,7 @@ export function DiscoverShell<T>({
           <View style={styles.contentInner}>{children}</View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
