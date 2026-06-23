@@ -273,7 +273,7 @@ describe('mobile Google Calendar routes', () => {
 
     expect(response.status).toBe(500);
     expect(payload.success).toBe(false);
-    expect(payload.error).toBe('GOOGLE_OAUTH_CLIENT_ID is not configured.');
+    expect(payload.error).toBe('Failed to start Google Calendar authorization');
   });
 
   it('creates a Google Calendar connection from the OAuth callback', async () => {
