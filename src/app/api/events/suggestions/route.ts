@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextRequest } from 'next/server';
+import { unauthorizedJson, successJson, errorJson } from '@/lib/api/apiResponse';
 import { EventService } from '@/services/eventServices';
-import { requireOnboardedApi } from '@/utils/onboarding';
 import type { SearchSuggestion } from '@/types';
+import { requireOnboardedApi } from '@/utils/onboarding';
+import { createClient } from '@/utils/supabase/server';
 
 interface SuggestionsRequestBody {
   term?: string;
@@ -14,12 +15,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
     const onboardingGuard = await requireOnboardedApi(supabase, user.id);
     if (onboardingGuard) return onboardingGuard;
@@ -29,7 +25,7 @@ export async function POST(request: NextRequest) {
     const limit = Number.isFinite(body.limit) ? Math.min(20, Math.max(1, Number(body.limit))) : 8;
 
     if (term.length < 2) {
-      return NextResponse.json({ success: true, data: { suggestions: [] } });
+      return successJson({ suggestions: [] });
     }
 
     const eventSuggestions = await EventService.searchEvents(term, supabase, limit);
@@ -64,17 +60,11 @@ export async function POST(request: NextRequest) {
       if (organizerSuggestions.length >= organizerLimit) break;
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        suggestions: [...suggestions, ...organizerSuggestions].slice(0, limit)
-      }
+    return successJson({
+      suggestions: [...suggestions, ...organizerSuggestions].slice(0, limit)
     });
   } catch (error) {
     console.error('[API] Event suggestions error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch suggestions' },
-      { status: 500 }
-    );
+    return errorJson('Failed to fetch suggestions', 500);
   }
 }

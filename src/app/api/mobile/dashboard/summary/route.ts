@@ -1,25 +1,16 @@
 import { NextResponse } from 'next/server';
 
+import { unauthorizedJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { buildMobileDashboardSummaryForUser } from '@/services/dashboard/dashboardSummaryService';
-import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
 export async function GET(request: Request) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as never);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const readClient =
-      supabaseUrl && serviceRoleKey
-        ? createServiceClient(supabaseUrl, serviceRoleKey)
-        : authContext.supabase;
+    const readClient = getServiceSupabaseClient() ?? authContext.supabase;
 
     const { summary, legacyMobileFields } =
       await buildMobileDashboardSummaryForUser({
@@ -38,15 +29,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load dashboard summary',
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to load dashboard summary');
   }
 }

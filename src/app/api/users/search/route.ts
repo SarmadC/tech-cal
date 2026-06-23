@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
+import { unauthorizedJson, rateLimitedJson, validationErrorJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { UserSearchService } from '@/services/userSearchService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { createClient } from '@/utils/supabase/server';
 
 const QuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
@@ -19,20 +20,10 @@ export async function GET(request: NextRequest) {
     const viewerSupabase = await createClient();
     const { data: { user }, error: authError } = await viewerSupabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
     const rateLimitResult = await checkRateLimit(userSearchRateLimiter, user.id);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    if (!rateLimitResult.success) return rateLimitedJson();
 
     const parsedQuery = QuerySchema.safeParse({
       q: request.nextUrl.searchParams.get('q') ?? undefined,
@@ -40,29 +31,13 @@ export async function GET(request: NextRequest) {
       limit: request.nextUrl.searchParams.get('limit') ?? undefined,
       cursor: request.nextUrl.searchParams.get('cursor') ?? undefined,
     });
-
     if (!parsedQuery.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid query parameters',
-          details: parsedQuery.error.issues,
-        },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid query parameters', parsedQuery.error.issues);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const readSupabase = getServiceSupabaseClient();
+    if (!readSupabase) return errorJson('User search is not configured.', 500);
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { success: false, error: 'User search is not configured.' },
-        { status: 500 }
-      );
-    }
-
-    const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
     const result = await UserSearchService.searchUsers(
       user.id,
       viewerSupabase,
@@ -70,25 +45,13 @@ export async function GET(request: NextRequest) {
       parsedQuery.data
     );
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return successJson(result);
   } catch (error) {
     if (error instanceof Error && error.message === 'Invalid pagination cursor.') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid pagination cursor.' },
-        { status: 400 }
-      );
+      return errorJson('Invalid pagination cursor.', 400);
     }
 
     console.error('User search API error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to search users',
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to search users');
   }
 }

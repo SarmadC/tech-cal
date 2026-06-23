@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
+import { unauthorizedJson, validationErrorJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { FollowService } from '@/services/followService';
+import { createClient } from '@/utils/supabase/server';
 
 const QuerySchema = z.object({
   userId: z.string().uuid().optional(),
@@ -14,37 +15,20 @@ export async function GET(request: NextRequest) {
   try {
     const userScopedSupabase = await createClient();
     const { data: { user }, error: authError } = await userScopedSupabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
     const parsedQuery = QuerySchema.safeParse({
       userId: request.nextUrl.searchParams.get('userId') ?? undefined,
       limit: request.nextUrl.searchParams.get('limit') ?? undefined,
       cursor: request.nextUrl.searchParams.get('cursor') ?? undefined,
     });
-
     if (!parsedQuery.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid query parameters', details: parsedQuery.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid query parameters', parsedQuery.error.issues);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { success: false, error: 'Following service is not configured.' },
-        { status: 500 }
-      );
-    }
+    const readSupabase = getServiceSupabaseClient();
+    if (!readSupabase) return errorJson('Following service is not configured.', 500);
 
-    const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
     const targetUserId = parsedQuery.data.userId ?? user.id;
 
     const result = await FollowService.getFollowing(
@@ -58,15 +42,9 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return successJson(result);
   } catch (error) {
     console.error('Following API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch following users' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to fetch following users');
   }
 }

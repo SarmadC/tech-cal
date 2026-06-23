@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { EventService } from '@/services/eventServices';
+import { unauthorizedJson, rateLimitedJson, errorJson } from '@/lib/api/apiResponse';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
+import { EventService } from '@/services/eventServices';
 import { normalizeEventType } from '@/utils/eventTypeUtils';
+import { createClient } from '@/utils/supabase/server';
 
 interface ScoreBreakdownResponse {
   success: boolean;
@@ -83,38 +84,14 @@ export async function GET(
 
     // Authenticate user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
+    if (!checkDebugRateLimit(user.id)) return rateLimitedJson();
 
-    // Check rate limit
-    if (!checkDebugRateLimit(user.id)) {
-      return NextResponse.json(
-        { success: false, error: 'Too many debug requests. Please wait a minute.' },
-        { status: 429 }
-      );
-    }
-
-    // Fetch event
     const event = await EventService.getEventById(eventId, supabase);
-    if (!event) {
-      return NextResponse.json(
-        { success: false, error: 'Event not found' },
-        { status: 404 }
-      );
-    }
+    if (!event) return errorJson('Event not found', 404);
 
-    // Fetch user's career profile
     const careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
-    if (!careerProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Career profile not found' },
-        { status: 404 }
-      );
-    }
+    if (!careerProfile) return errorJson('Career profile not found', 404);
 
     // Score through the same enrichment path production uses, so the breakdown
     // reflects what users actually see. The previous AdvancedScorer call here
@@ -126,12 +103,7 @@ export async function GET(
       undefined // no userId: bypass the KV cache for a fresh calculation
     );
     const score = enriched?.careerImpact;
-    if (!score) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to score event' },
-        { status: 500 }
-      );
-    }
+    if (!score) return errorJson('Failed to score event', 500);
 
     // Extract triggers from metadata and cap at 20
     const scoringTriggers = ((score.metadata?.scoringTriggers as string[] | undefined) || []).slice(0, 20);
@@ -180,9 +152,6 @@ export async function GET(
     return NextResponse.json(response);
   } catch (error) {
     console.error('Score breakdown error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate score breakdown' },
-      { status: 500 }
-    );
+    return errorJson('Failed to generate score breakdown', 500);
   }
 }

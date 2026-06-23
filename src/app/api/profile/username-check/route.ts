@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
+import { unauthorizedJson, validationErrorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { SocialProfileService } from '@/services/socialProfileService';
+import { createClient } from '@/utils/supabase/server';
 
 const QuerySchema = z.object({
   q: z.string().trim().min(1).max(30),
@@ -12,22 +13,13 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
     const validation = QuerySchema.safeParse({
       q: request.nextUrl.searchParams.get('q'),
     });
-
     if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid query parameter', details: validation.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid query parameter', validation.error.issues);
     }
 
     const availability = await SocialProfileService.checkUsernameAvailability(
@@ -36,15 +28,9 @@ export async function GET(request: NextRequest) {
       supabase
     );
 
-    return NextResponse.json({
-      success: true,
-      data: availability,
-    });
+    return successJson(availability);
   } catch (error) {
     console.error('Username availability API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to check username availability' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to check username availability');
   }
 }

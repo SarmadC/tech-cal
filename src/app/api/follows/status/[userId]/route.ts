@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { unauthorizedJson, validationErrorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { FollowService } from '@/services/followService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -13,20 +14,10 @@ export async function GET(
 ) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
     const parsedParams = ParamsSchema.safeParse(await params);
-    if (!parsedParams.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
+    if (!parsedParams.success) return validationErrorJson('Invalid user ID');
 
     const status = await FollowService.getFollowStatus(
       authContext.user.id,
@@ -34,15 +25,9 @@ export async function GET(
       authContext.supabase
     );
 
-    return NextResponse.json({
-      success: true,
-      data: status,
-    });
+    return successJson(status);
   } catch (error) {
     console.error('Follow status API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch follow status' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to fetch follow status');
   }
 }

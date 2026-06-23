@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { unauthorizedJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { communityVoteSchema } from '@/lib/communitySchemas';
 import { CommunityMutationsService } from '@/services/communityMutationsService';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
@@ -6,12 +7,7 @@ import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 export async function POST(request: Request) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
     const payload = communityVoteSchema.parse(await request.json());
     await CommunityMutationsService.submitVote(
@@ -19,11 +15,8 @@ export async function POST(request: Request) {
       payload,
       authContext.supabase
     );
-    return NextResponse.json({ success: true, data: { success: true } });
+    return successJson({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to submit vote' },
-      { status: 400 }
-    );
+    return catchErrorJson(error, 'Failed to submit vote', 400);
   }
 }

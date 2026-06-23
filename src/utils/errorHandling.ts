@@ -10,14 +10,14 @@ export interface ErrorDetails {
 /**
  * Safely extract error message from unknown error type
  */
-export function getErrorMessage(error: unknown): string {
+export function getErrorMessage(error: unknown, fallback = 'Unknown error occurred'): string {
     if (error instanceof Error) {
         return error.message;
     }
     if (typeof error === 'string') {
         return error;
     }
-    return 'Unknown error occurred';
+    return fallback;
 }
 
 /**

@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
+import { unauthorizedJson, validationErrorJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import type { SupabaseClientType } from '@/types/database';
 import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 
@@ -26,28 +27,13 @@ export async function POST(
 ) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
     const { id: circleId } = await params;
-    if (!circleId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing circle ID' },
-        { status: 400 }
-      );
-    }
+    if (!circleId) return validationErrorJson('Missing circle ID');
 
     const circle = await resolveCircle(circleId, authContext.supabase);
-    if (!circle) {
-      return NextResponse.json(
-        { success: false, error: 'Circle not found' },
-        { status: 404 }
-      );
-    }
+    if (!circle) return errorJson('Circle not found', 404);
 
     const { error } = await authContext.supabase.from('circle_members').insert({
       circle_id: circleId,
@@ -55,25 +41,12 @@ export async function POST(
     });
 
     if (error && error.code !== '23505') {
-      return NextResponse.json(
-        { success: false, error: error.message ?? 'Failed to join circle' },
-        { status: 500 }
-      );
+      return errorJson(error.message ?? 'Failed to join circle', 500);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: error?.code === '23505' ? 'Already a member' : 'Joined circle',
-    });
+    return successJson({ message: error?.code === '23505' ? 'Already a member' : 'Joined circle' });
   } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to join circle',
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to join circle');
   }
 }
 
@@ -83,28 +56,13 @@ export async function DELETE(
 ) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
     const { id: circleId } = await params;
-    if (!circleId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing circle ID' },
-        { status: 400 }
-      );
-    }
+    if (!circleId) return validationErrorJson('Missing circle ID');
 
     const circle = await resolveCircle(circleId, authContext.supabase);
-    if (!circle) {
-      return NextResponse.json(
-        { success: false, error: 'Circle not found' },
-        { status: 404 }
-      );
-    }
+    if (!circle) return errorJson('Circle not found', 404);
 
     const { error } = await authContext.supabase
       .from('circle_members')
@@ -114,22 +72,10 @@ export async function DELETE(
         user_id: authContext.user.id,
       });
 
-    if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message ?? 'Failed to leave circle' },
-        { status: 500 }
-      );
-    }
+    if (error) return errorJson(error.message ?? 'Failed to leave circle', 500);
 
-    return NextResponse.json({ success: true, message: 'Left circle' });
+    return successJson({ message: 'Left circle' });
   } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to leave circle',
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to leave circle');
   }
 }

@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
+import { unauthorizedJson, errorJson, validationErrorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { isValidUuid } from '@/lib/uuid';
 import { CommunityMutationsService } from '@/services/communityMutationsService';
@@ -12,26 +13,14 @@ interface RouteContext {
 export async function DELETE(request: Request, { params }: RouteContext) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
     if (authContext.authMethod === 'cookie') {
       const sameOriginError = validateSameOriginRequest(request as NextRequest);
-      if (sameOriginError) {
-        return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 });
-      }
+      if (sameOriginError) return errorJson(sameOriginError, 403);
     }
 
     const { postId } = await params;
-    if (!isValidUuid(postId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid thread id' },
-        { status: 400 }
-      );
-    }
+    if (!isValidUuid(postId)) return validationErrorJson('Invalid thread id');
 
     await CommunityMutationsService.deletePost(
       authContext.user.id,
@@ -39,14 +28,8 @@ export async function DELETE(request: Request, { params }: RouteContext) {
       authContext.supabase
     );
 
-    return NextResponse.json({ success: true, data: { id: postId } });
+    return successJson({ id: postId });
   } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to delete thread',
-      },
-      { status: 400 }
-    );
+    return catchErrorJson(error, 'Failed to delete thread', 400);
   }
 }
