@@ -5,6 +5,7 @@
  */
 
 import type { Event, SupabaseClientType } from '@/types';
+import * as Sentry from '@sentry/nextjs';
 
 /**
  * Check if behavioral boost feature is enabled
@@ -22,8 +23,9 @@ export function isBehavioralBoostEnabled(): boolean {
     }
     
     return true; // Enabled by default in development
-  } catch {
-    return false; // Safe fallback
+  } catch (error) {
+    console.warn('[BehavioralBoost] Failed to read env flags for behavioral boost:', error);
+    return false;
   }
 }
 
@@ -96,7 +98,8 @@ export async function getUserInteractedEvents(
         organizer: '' // Default empty organizer
       }));
   } catch (error) {
-    console.warn('Error fetching user interacted events:', error);
+    console.warn('[BehavioralBoost] Error fetching user interacted events:', error);
+    Sentry.captureException(error, { level: 'warning', extra: { function: 'getUserInteractedEvents', userId, daysBack } });
     return [];
   }
 }
@@ -121,8 +124,9 @@ export async function isColdStartUser(
 
     return (count || 0) < 3; // Cold start if less than 3 interactions
   } catch (error) {
-    console.warn('Error checking cold start status:', error);
-    return true; // Assume cold start on error
+    console.warn('[BehavioralBoost] Error checking cold start status:', error);
+    Sentry.captureException(error, { level: 'warning', extra: { function: 'isColdStartUser', userId } });
+    return true;
   }
 }
 

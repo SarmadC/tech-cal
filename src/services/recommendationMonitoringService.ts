@@ -487,7 +487,10 @@ export class RecommendationMonitoringService {
       };
 
     } catch (error) {
-      console.error('Error getting behavioral boost analysis:', error);
+      handleServiceError(error, {
+        function: 'getBehavioralBoostAnalysis',
+        days
+      });
       return null;
     }
   }
@@ -590,7 +593,10 @@ export class RecommendationMonitoringService {
       };
 
     } catch (error) {
-      console.error('Error getting quick metrics:', error);
+      handleServiceError(error, {
+        function: 'getQuickMetrics',
+        days
+      });
       return null;
     }
   }

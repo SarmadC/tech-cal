@@ -49,7 +49,8 @@ export async function rerankWithBehavioral(
     try {
       interactedEvents = await getUserInteractedEvents(userId, supabaseClient, 30);
     } catch (error) {
-      console.warn('[Rerank] Failed to load user interaction history; proceeding without boost', error);
+      console.warn('[Rerank] Failed to load user interaction history; proceeding without boost:', error);
+      // Sentry capture handled inside getUserInteractedEvents
     }
   }
 

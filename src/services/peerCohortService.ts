@@ -73,7 +73,7 @@ export class PeerCohortService {
         recommendation
       };
     } catch (error) {
-      console.warn('Error finding user cohorts:', error);
+      console.error('[PeerCohortService] Error finding user cohorts:', error);
       return this.getEmptyCohort(userProfile);
     }
   }

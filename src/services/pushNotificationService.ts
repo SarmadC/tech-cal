@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/utils/supabase/service';
+import * as Sentry from '@sentry/nextjs';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const EXPO_BATCH_LIMIT = 100;
@@ -100,6 +101,8 @@ export async function sendPushToUsers(
   }
 
   const invalidTokens: string[] = [];
+  let batchFailures = 0;
+  const totalBatches = Math.ceil(messages.length / EXPO_BATCH_LIMIT);
 
   for (const batch of chunk(messages, EXPO_BATCH_LIMIT)) {
     try {
@@ -120,8 +123,16 @@ export async function sendPushToUsers(
         }
       });
     } catch (sendError) {
-      console.warn('[push] Expo push batch failed', sendError);
+      console.error('[push] Expo push batch failed:', sendError);
+      batchFailures++;
     }
+  }
+
+  if (batchFailures > 0) {
+    Sentry.captureMessage(`[push] ${batchFailures}/${totalBatches} Expo push batches failed`, {
+      level: 'error',
+      extra: { batchFailures, totalBatches, totalMessages: messages.length },
+    });
   }
 
   if (invalidTokens.length > 0) {
