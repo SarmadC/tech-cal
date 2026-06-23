@@ -17,12 +17,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: getMobileSubscriptionOfferings(),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to load offerings',
+        error: 'Failed to load offerings',
       },
       { status: 500 }
     );

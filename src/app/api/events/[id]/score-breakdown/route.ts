@@ -69,8 +69,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Dev-only guard (server-side env only)
-  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_SCORE_BREAKDOWN !== 'true') {
+  // Dev-only guard (server-side env only) — never allow in production
+  if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { success: false, error: 'Score breakdown only available in development' },
       { status: 403 }

@@ -23,14 +23,11 @@ export async function GET(request: Request) {
       success: true,
       data: mobileProfileStateSchema.parse(data),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load mobile profile',
+        error: 'Failed to load mobile profile',
       },
       { status: 500 }
     );
@@ -95,9 +92,7 @@ export async function PATCH(request: Request) {
     const message =
       error instanceof ZodError
         ? 'Invalid profile update'
-        : error instanceof Error
-          ? error.message
-          : 'Failed to update mobile profile';
+        : 'Failed to update mobile profile';
 
     return NextResponse.json(
       {

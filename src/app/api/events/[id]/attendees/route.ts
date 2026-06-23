@@ -75,7 +75,7 @@ export async function GET(
   } catch (error) {
     console.error('Event attendees API error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch attendees' },
+      { success: false, error: 'Failed to fetch attendees' },
       { status: 500 }
     );
   }

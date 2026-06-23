@@ -104,8 +104,8 @@ export async function POST(
   } catch (error) {
     console.error('[api/events/threads] POST failed', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to create thread' },
-      { status: 400 },
+      { success: false, error: 'Failed to create thread' },
+      { status: 500 },
     );
   }
 }

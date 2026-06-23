@@ -27,14 +27,11 @@ export async function GET(request: Request) {
       success: true,
       data: mobileCareerOnboardingBootstrapSchema.parse(data),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load onboarding bootstrap',
+        error: 'Failed to load onboarding bootstrap',
       },
       { status: 500 }
     );
@@ -89,9 +86,7 @@ export async function POST(request: Request) {
     const message =
       error instanceof ZodError
         ? 'Invalid onboarding payload'
-        : error instanceof Error
-          ? error.message
-          : 'Failed to update onboarding';
+        : 'Failed to update onboarding';
 
     return NextResponse.json(
       {

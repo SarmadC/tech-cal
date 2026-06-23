@@ -75,10 +75,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to process RevenueCat webhook',
+        error: 'Failed to process RevenueCat webhook',
       },
       { status: 500 }
     );

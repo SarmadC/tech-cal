@@ -29,14 +29,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       supabase
     );
     return mobileDataResponse(result);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to bulk sync Google Calendar events',
+        error: 'Failed to bulk sync Google Calendar events',
       },
       { status: 500 }
     );

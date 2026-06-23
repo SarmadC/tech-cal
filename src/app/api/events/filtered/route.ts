@@ -147,7 +147,6 @@ export async function POST(request: NextRequest) {
         // Attach quick headers and return cached response
         const res = NextResponse.json(cached);
         res.headers.set('X-Cache', 'HIT');
-        res.headers.set('X-Cache-Key', cacheKey);
         return res;
       }
     } catch (cacheErr) {
@@ -210,7 +209,6 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json(response);
     res.headers.set('X-Cache', 'MISS');
-    res.headers.set('X-Cache-Key', cacheKey);
     return res;
 
   } catch (error) {

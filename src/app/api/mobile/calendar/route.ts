@@ -362,8 +362,8 @@ export async function GET(request: Request) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
+          error instanceof ZodError
+            ? 'Invalid calendar request'
             : 'Failed to load calendar feed',
       },
       { status: error instanceof ZodError ? 400 : 500 }
@@ -383,8 +383,8 @@ export async function POST(request: Request) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
+          error instanceof ZodError
+            ? 'Invalid calendar request'
             : 'Failed to load calendar feed',
       },
       { status: error instanceof ZodError ? 400 : 500 }

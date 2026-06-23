@@ -58,18 +58,16 @@ export async function GET(request: Request) {
       }),
     });
   } catch (error) {
+    const isValidationError =
+      error instanceof Error && error.message.startsWith('Invalid');
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to load saved events',
+        error: isValidationError
+          ? 'Invalid request parameters'
+          : 'Failed to load saved events',
       },
-      {
-        status:
-          error instanceof Error && error.message.startsWith('Invalid')
-            ? 400
-            : 500,
-      }
+      { status: isValidationError ? 400 : 500 }
     );
   }
 }

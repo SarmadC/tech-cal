@@ -20,14 +20,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: subscription,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load subscription status',
+        error: 'Failed to load subscription status',
       },
       { status: 500 }
     );

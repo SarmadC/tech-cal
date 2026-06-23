@@ -18,14 +18,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { supabase, user } = auth.authContext;
     await CalendarConnectionService.deleteConnection(user.id, 'google', supabase);
     return mobileDataResponse(buildGoogleCalendarStatus(null));
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to disconnect Google Calendar',
+        error: 'Failed to disconnect Google Calendar',
       },
       { status: 500 }
     );

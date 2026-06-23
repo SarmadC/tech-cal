@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get social profile API error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch social profile' },
+      { success: false, error: 'Failed to fetch social profile' },
       { status: 500 }
     );
   }
@@ -77,7 +77,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update social profile API error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to update social profile' },
+      { success: false, error: 'Failed to update social profile' },
       { status: 500 }
     );
   }
