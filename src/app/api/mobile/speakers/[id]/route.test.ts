@@ -88,6 +88,8 @@ describe('GET /api/mobile/speakers/[id]', () => {
           startTime: '2026-04-02T18:00:00.000Z',
           location: 'Remote',
           format: 'virtual',
+          imageUrl: 'https://example.com/event.png',
+          organizerLogoUrl: 'https://example.com/logo.png',
           isPastEvent: false,
         },
       ],
@@ -106,6 +108,7 @@ describe('GET /api/mobile/speakers/[id]', () => {
     const parsed = mobileSpeakerDetailSchema.parse(payload.data);
     expect(parsed.name).toBe('Dana Scully');
     expect(parsed.events[0]?.title).toBe('Design Review Week');
+    expect(parsed.events[0]?.organizerLogoUrl).toBe('https://example.com/logo.png');
     expect(parsed.networkingState?.status).toBe('requested');
   });
 

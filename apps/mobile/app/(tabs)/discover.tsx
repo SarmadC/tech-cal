@@ -274,11 +274,28 @@ export default function DiscoverScreen() {
 
   const rankingOptions = feed?.controls.rankingModes ?? FALLBACK_RANKING_OPTIONS;
   const activeSheetFeed = previewFeed ?? feed;
-  const topPicks = feed?.topPicks ?? null;
-  const hasTopPicks = (topPicks?.cards.length ?? 0) > 0;
-  const previewResultCount = activeSheetFeed?.results.totalCount ?? feed?.results.totalCount ?? 0;
   const appliedActiveFilterCount = countActiveFilters(searchTerm, filters);
   const draftActiveFilterCount = countActiveFilters(searchTerm, draftFilters);
+  const fallbackTopPicks = useMemo<MobileDiscoverFeed['topPicks']>(() => {
+    if (
+      !feed ||
+      feed.topPicks ||
+      rankingMode !== 'best-match' ||
+      currentPage !== 1 ||
+      appliedActiveFilterCount > 0 ||
+      events.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      title: 'Your Top Picks',
+      cards: events.slice(0, 3),
+    };
+  }, [appliedActiveFilterCount, currentPage, events, feed, rankingMode]);
+  const topPicks = feed?.topPicks ?? fallbackTopPicks;
+  const hasTopPicks = (topPicks?.cards.length ?? 0) > 0;
+  const previewResultCount = activeSheetFeed?.results.totalCount ?? feed?.results.totalCount ?? 0;
   const isInitialLoading = loading && !feed;
   const showEmptyState = !loading && !error && events.length === 0 && !hasTopPicks;
   const hasMore = hasMorePages;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Animated from "react-native-reanimated";
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
@@ -116,6 +116,10 @@ export function DiscoverEventCard({
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
   const metadataLine = buildMetadataLine(event);
   const isSaved = showSavedIndicator && isEventSaved(event);
+
+  useEffect(() => {
+    setImageUri(initialImage);
+  }, [initialImage]);
 
   return (
     <Pressable
