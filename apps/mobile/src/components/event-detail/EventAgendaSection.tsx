@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import {
   buildAgendaSecondaryText,
   formatAgendaDayLabel,
-  formatAgendaDayMeta,
+  formatAgendaSessionCount,
   formatAgendaStartTime,
+  getInitials,
   type AgendaDayGroup,
 } from './eventDetailUtils';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
 const CARD_INSET = 18;
+const MAX_VISIBLE_SPEAKER_AVATARS = 4;
 
 export function EventAgendaSection({
   agendaDayGroups,
@@ -55,12 +57,14 @@ export function EventAgendaSection({
             >
               <Pressable onPress={() => toggleDay(group.key)} style={styles.panelHeader}>
                 <View style={styles.panelHeaderCopy}>
-                  <Text style={[styles.cardTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
-                    {formatAgendaDayLabel(group, agendaDayGroups.length, timezone)}
-                  </Text>
-                  <Text style={[styles.cardMeta, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
-                    {formatAgendaDayMeta(group.items, timezone)}
-                  </Text>
+                  <View style={styles.dayTitleRow}>
+                    <Text style={[styles.cardTitle, styles.dayTitle, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>
+                      {formatAgendaDayLabel(group, timezone)}
+                    </Text>
+                    <Text style={[styles.cardMeta, styles.sessionCount, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+                      {formatAgendaSessionCount(group.items)}
+                    </Text>
+                  </View>
                 </View>
                 <FontAwesome
                   name={expanded ? 'angle-up' : 'angle-down'}
@@ -92,6 +96,73 @@ export function EventAgendaSection({
                           <Text style={[styles.cardMeta, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
                             {secondary}
                           </Text>
+                        ) : null}
+                        {item.speakers && item.speakers.length > 0 ? (
+                          <View style={styles.speakerStack}>
+                            {item.speakers.slice(0, MAX_VISIBLE_SPEAKER_AVATARS).map((speaker, speakerIndex) => (
+                              <View
+                                key={speaker.id || `${item.id}-${speaker.name}-${speakerIndex}`}
+                                style={[
+                                  styles.speakerAvatarFrame,
+                                  speakerIndex > 0 && styles.overlappedAvatar,
+                                  {
+                                    backgroundColor: tokens.colors.surface,
+                                    borderColor: tokens.colors.surface,
+                                  },
+                                ]}
+                              >
+                                {speaker.photoUrl ? (
+                                  <Image
+                                    source={{ uri: speaker.photoUrl }}
+                                    style={styles.speakerAvatarImage}
+                                  />
+                                ) : (
+                                  <View
+                                    style={[
+                                      styles.speakerAvatarFallback,
+                                      { backgroundColor: tokens.colors.accentSoft },
+                                    ]}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.speakerAvatarText,
+                                        {
+                                          color: tokens.colors.accent,
+                                          fontFamily: tokens.typography.sans,
+                                        },
+                                      ]}
+                                    >
+                                      {getInitials(speaker.name)}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            ))}
+                            {item.speakers.length > MAX_VISIBLE_SPEAKER_AVATARS ? (
+                              <View
+                                style={[
+                                  styles.speakerAvatarFrame,
+                                  styles.overlappedAvatar,
+                                  {
+                                    backgroundColor: tokens.colors.surfaceMuted,
+                                    borderColor: tokens.colors.surface,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.speakerAvatarText,
+                                    {
+                                      color: tokens.colors.textSecondary,
+                                      fontFamily: tokens.typography.sans,
+                                    },
+                                  ]}
+                                >
+                                  +{item.speakers.length - MAX_VISIBLE_SPEAKER_AVATARS}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
                         ) : null}
                       </View>
                       {onToggleAgendaSave ? (
@@ -164,6 +235,17 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  dayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dayTitle: {
+    flex: 1,
+  },
+  sessionCount: {
+    flexShrink: 0,
+  },
   item: {
     flexDirection: 'row',
     gap: 10,
@@ -180,6 +262,37 @@ const styles = StyleSheet.create({
   itemCopy: {
     flex: 1,
     gap: 4,
+  },
+  speakerStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 2,
+  },
+  speakerAvatarFrame: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  overlappedAvatar: {
+    marginLeft: -7,
+  },
+  speakerAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  speakerAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speakerAvatarText: {
+    fontSize: 9,
+    fontWeight: '700',
   },
   saveButton: {
     width: 28,

@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import type { MobileProfileUpdate } from "@kurecal/domain";
 
@@ -72,13 +78,15 @@ export default function SettingsProfileRoute() {
   return (
     <SettingsDetailScaffold
       footer={
-        <SettingsButton
-          disabled={saving}
-          label={saving ? "Saving..." : "Save profile"}
-          onPress={() => {
-            void handleSave();
-          }}
-        />
+        <View style={styles.footerButton}>
+          <SettingsButton
+            disabled={saving}
+            label={saving ? "Saving..." : "Save profile"}
+            onPress={() => {
+              void handleSave();
+            }}
+          />
+        </View>
       }
       title="Profile fields"
     >
@@ -197,7 +205,7 @@ function ProfileFieldLabel({
         style={[
           styles.label,
           {
-            color: tokens.colors.textSecondary,
+            color: tokens.colors.textTertiary,
             fontFamily: tokens.typography.sans,
           },
         ]}
@@ -226,22 +234,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   field: {
-    gap: 6,
+    gap: 4,
   },
   input: {
     borderWidth: 1,
     fontWeight: "400",
     minHeight: 40,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   labelWrap: {
     gap: 2,
   },
   label: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
-    lineHeight: 18,
+    lineHeight: 16,
+    letterSpacing: 0,
   },
   helper: {
     fontSize: 12,
@@ -250,5 +259,8 @@ const styles = StyleSheet.create({
   },
   bioInput: {
     minHeight: 96,
+  },
+  footerButton: {
+    marginHorizontal: 16,
   },
 });

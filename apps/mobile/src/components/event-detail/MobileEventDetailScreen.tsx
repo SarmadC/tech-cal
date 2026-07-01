@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { MobileEventDetail, MobileEventEngagement } from '@kurecal/domain';
 
@@ -66,6 +67,7 @@ export function MobileEventDetailScreen({
   onStartThread: () => void;
 }) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [showMenu, setShowMenu] = useState(false);
 
   const event = detail.event;
@@ -88,9 +90,15 @@ export function MobileEventDetailScreen({
   const isLocationInteractive = hasMappableLocation(event.location);
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
-      edges={['left', 'right']}
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: tokens.colors.shell,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
     >
       <View style={styles.root}>
         {showMenu ? (
@@ -103,6 +111,7 @@ export function MobileEventDetailScreen({
 
         <EventDetailHeader
           title={event.title}
+          imageUrl={event.imageUrl}
           formatLabel={event.formatLabel}
           priceLabel={event.priceLabel}
           isBookmarked={isBookmarked}
@@ -155,7 +164,24 @@ export function MobileEventDetailScreen({
           ) : null}
 
           {uniqueSpeakers.length > 0 ? (
-            <EventSpeakersSection speakers={uniqueSpeakers} />
+            <EventSpeakersSection
+              speakers={uniqueSpeakers}
+              onOpenSpeaker={(speaker) => {
+                const speakerId = speaker.id?.trim();
+                if (!speakerId) {
+                  return;
+                }
+
+                router.push({
+                  pathname: '/speaker/[id]',
+                  params: {
+                    id: speakerId,
+                    eventId: event.id,
+                    eventTitle: event.title,
+                  },
+                });
+              }}
+            />
           ) : null}
 
           {agendaDayGroups.length > 0 ? (
@@ -181,7 +207,7 @@ export function MobileEventDetailScreen({
           onToggleAttendance={onToggleAttendance}
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

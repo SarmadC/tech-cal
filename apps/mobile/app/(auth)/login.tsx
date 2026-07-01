@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../src/context/AuthProvider';
 
@@ -44,6 +44,7 @@ const fontSans = Platform.select({
 
 export default function LoginScreen() {
   const { loading, session, signIn, signInWithOAuth } = useAuth();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -115,7 +116,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
@@ -266,7 +267,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

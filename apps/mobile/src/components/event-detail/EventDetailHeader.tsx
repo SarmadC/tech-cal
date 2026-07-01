@@ -1,13 +1,25 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SvgUri } from 'react-native-svg';
 import type { AttendanceCtaState } from './eventDetailUtils';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
 const HORIZONTAL_GUTTER = 24;
 
+function isSvgUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.svg');
+  } catch {
+    return url.toLowerCase().includes('.svg');
+  }
+}
+
 export function EventDetailHeader({
   title,
+  imageUrl,
   formatLabel,
   priceLabel,
   isBookmarked,
@@ -29,6 +41,7 @@ export function EventDetailHeader({
   onAddToCalendar,
 }: {
   title: string;
+  imageUrl?: string | null;
   formatLabel?: string | null;
   priceLabel?: string | null;
   isBookmarked: boolean;
@@ -51,6 +64,24 @@ export function EventDetailHeader({
 }) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const [imageUri, setImageUri] = useState<string | null>(imageUrl?.trim() || null);
+  const hasHeaderImage = Boolean(imageUri);
+  const primaryTextColor = hasHeaderImage ? '#F8FAFC' : tokens.colors.textPrimary;
+  const secondaryTextColor = hasHeaderImage ? '#E5E7EB' : tokens.colors.textSecondary;
+  const iconSurfaceColor = hasHeaderImage ? 'rgba(15, 23, 42, 0.28)' : tokens.colors.surface;
+  const pressedSurfaceColor = hasHeaderImage
+    ? 'rgba(255, 255, 255, 0.16)'
+    : tokens.colors.surfaceStrong;
+  const badgeBackgroundColor = hasHeaderImage
+    ? 'rgba(15, 23, 42, 0.42)'
+    : tokens.colors.surfaceMuted;
+  const badgeBorderColor = hasHeaderImage
+    ? 'rgba(255, 255, 255, 0.18)'
+    : tokens.colors.border;
+
+  useEffect(() => {
+    setImageUri(imageUrl?.trim() || null);
+  }, [imageUrl]);
 
   return (
     <View
@@ -58,22 +89,58 @@ export function EventDetailHeader({
         styles.header,
         {
           backgroundColor: tokens.colors.shellElevated,
-          borderBottomColor: tokens.colors.border,
-          paddingTop: insets.top + 10,
+          borderBottomColor: hasHeaderImage
+            ? 'rgba(255, 255, 255, 0.12)'
+            : tokens.colors.border,
         },
       ]}
     >
-      <View style={styles.headerRow}>
+      {imageUri ? (
+        isSvgUrl(imageUri) ? (
+          <SvgUri
+            uri={imageUri}
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid slice"
+            style={styles.headerImage}
+            onError={() => setImageUri(null)}
+          />
+        ) : (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.headerImage}
+            resizeMode="cover"
+            onError={() => setImageUri(null)}
+          />
+        )
+      ) : null}
+
+      {hasHeaderImage ? (
+        <LinearGradient
+          colors={['rgba(5, 7, 10, 0.18)', 'rgba(5, 7, 10, 0.78)']}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      <View
+        style={[
+          styles.content,
+          {
+            paddingTop: insets.top + 10,
+          },
+        ]}
+      >
         <View style={styles.controls}>
           <Pressable
             accessibilityLabel="Back"
             onPress={onBack}
             style={({ pressed }) => [
               styles.backButton,
-              { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
+              { backgroundColor: pressed ? pressedSurfaceColor : 'transparent' },
             ]}
           >
-            <FontAwesome name="angle-left" size={20} color={tokens.colors.textSecondary} />
+            <FontAwesome name="angle-left" size={20} color={secondaryTextColor} />
           </Pressable>
 
           <View style={styles.actions}>
@@ -88,8 +155,8 @@ export function EventDetailHeader({
                   backgroundColor: isBookmarked
                     ? tokens.colors.warning
                     : pressed
-                      ? tokens.colors.surfaceStrong
-                      : tokens.colors.surface,
+                      ? pressedSurfaceColor
+                      : iconSurfaceColor,
                   borderColor: isBookmarked ? tokens.colors.warning : 'transparent',
                   opacity: isBookmarkPending ? 0.45 : 1,
                 },
@@ -98,7 +165,7 @@ export function EventDetailHeader({
               <FontAwesome
                 name={isBookmarked ? 'bookmark' : 'bookmark-o'}
                 size={15}
-                color={isBookmarked ? tokens.colors.textInverse : tokens.colors.textSecondary}
+                color={isBookmarked ? tokens.colors.textInverse : secondaryTextColor}
               />
             </Pressable>
 
@@ -107,10 +174,10 @@ export function EventDetailHeader({
               onPress={onToggleMenu}
               style={({ pressed }) => [
                 styles.iconButton,
-                { backgroundColor: pressed ? tokens.colors.surfaceStrong : 'transparent' },
+                { backgroundColor: pressed ? pressedSurfaceColor : 'transparent' },
               ]}
             >
-              <FontAwesome name="ellipsis-v" size={16} color={tokens.colors.textSecondary} />
+              <FontAwesome name="ellipsis-v" size={16} color={secondaryTextColor} />
             </Pressable>
 
             {showMenu ? (
@@ -205,7 +272,7 @@ export function EventDetailHeader({
           <Text
             testID="event-detail-title"
             numberOfLines={2}
-            style={[styles.title, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}
+            style={[styles.title, { color: primaryTextColor, fontFamily: tokens.typography.sans }]}
           >
             {title}
           </Text>
@@ -215,10 +282,15 @@ export function EventDetailHeader({
               <View
                 style={[
                   styles.badge,
-                  { backgroundColor: tokens.colors.accentSoft, borderColor: tokens.colors.border },
+                  {
+                    backgroundColor: hasHeaderImage
+                      ? badgeBackgroundColor
+                      : tokens.colors.accentSoft,
+                    borderColor: badgeBorderColor,
+                  },
                 ]}
               >
-                <Text style={[styles.badgeText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
+                <Text style={[styles.badgeText, { color: hasHeaderImage ? primaryTextColor : tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
                   {formatLabel}
                 </Text>
               </View>
@@ -227,10 +299,10 @@ export function EventDetailHeader({
               <View
                 style={[
                   styles.badge,
-                  { backgroundColor: tokens.colors.surfaceMuted, borderColor: tokens.colors.border },
+                  { backgroundColor: badgeBackgroundColor, borderColor: badgeBorderColor },
                 ]}
               >
-                <Text style={[styles.badgeText, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+                <Text style={[styles.badgeText, { color: secondaryTextColor, fontFamily: tokens.typography.sans }]}>
                   {priceLabel}
                 </Text>
               </View>
@@ -245,11 +317,18 @@ export function EventDetailHeader({
 const styles = StyleSheet.create({
   header: {
     borderBottomWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  headerImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  content: {
+    gap: 16,
     paddingBottom: 24,
     paddingHorizontal: HORIZONTAL_GUTTER,
-  },
-  headerRow: {
-    gap: 16,
+    position: 'relative',
+    zIndex: 1,
   },
   controls: {
     flexDirection: 'row',

@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   MobileCommunityComment,
@@ -135,6 +135,7 @@ function sortCommentTree(
 
 export default function CommunityPostScreen() {
   const { postId } = useLocalSearchParams<{ postId: string | string[] }>();
+  const insets = useSafeAreaInsets();
   const resolvedPostId = Array.isArray(postId) ? postId[0] : postId;
   const [data, setData] = useState<MobileCommunityPostPage | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
@@ -496,7 +497,7 @@ export default function CommunityPostScreen() {
   if (loading && !data) {
     return (
       <View style={styles.screen}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -504,7 +505,7 @@ export default function CommunityPostScreen() {
               description="Pulling the full thread and replies."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -512,7 +513,7 @@ export default function CommunityPostScreen() {
   if (error && !data) {
     return (
       <View style={styles.screen}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -523,7 +524,7 @@ export default function CommunityPostScreen() {
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -540,7 +541,7 @@ export default function CommunityPostScreen() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAvoider}
@@ -837,7 +838,7 @@ export default function CommunityPostScreen() {
             </View>
           ) : null}
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

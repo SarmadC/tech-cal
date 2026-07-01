@@ -376,6 +376,8 @@ export const mobileSpeakerDetailEventSchema = z.object({
   startTime: z.string(),
   location: z.string().nullable(),
   format: z.string().nullable(),
+  imageUrl: z.string().nullable().optional(),
+  organizerLogoUrl: z.string().nullable().optional(),
   isPastEvent: z.boolean(),
 });
 

@@ -39,6 +39,12 @@
 				<string>exp+kurecal-mobile</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1092999529211-m987etstd446h7jj2u3q67ka8qq52nog</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
@@ -52,7 +58,13 @@
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_expo._tcp</string>
+	</array>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Allow KureCal Dev to add, update, and remove events in your calendar.</string>
 	<key>NSCalendarsUsageDescription</key>

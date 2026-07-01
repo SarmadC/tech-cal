@@ -9,6 +9,7 @@ import type {
 
 import {
   getRevenueCatApiKey,
+  getRevenueCatProductIds,
   getRevenueCatProEntitlementId,
   type MobilePlatform,
 } from './env';
@@ -17,12 +18,20 @@ import { reconcileMobileRevenueCatSubscription } from './mobileApi';
 type RevenueCatPackage =
   Awaited<ReturnType<typeof Purchases.getOfferings>>['all'][string]['availablePackages'][number];
 type RevenueCatCustomerInfo = Awaited<ReturnType<typeof Purchases.getCustomerInfo>>;
+type RevenueCatEntitlementInfo =
+  RevenueCatCustomerInfo['entitlements']['all'][string];
 
 const PRO_ENTITLEMENTS = {
   calendar_sync: true,
   full_history: true,
   full_recommendations: true,
   unlimited_bookmarks: true,
+} as const;
+const FREE_ENTITLEMENTS = {
+  calendar_sync: false,
+  full_history: false,
+  full_recommendations: false,
+  unlimited_bookmarks: false,
 } as const;
 
 const SUPPORTED_PLATFORMS = new Set<MobilePlatform>(['android', 'ios']);
@@ -55,6 +64,23 @@ function planTypeFromProduct(productId: string): 'annual' | 'monthly' {
 
 function statusFromEntitlementPeriod(periodType: string): SubscriptionStatus {
   return periodType === 'TRIAL' ? 'trialing' : 'active';
+}
+
+function inactiveStatusFromEntitlement(
+  entitlement: RevenueCatEntitlementInfo
+): SubscriptionStatus {
+  if (entitlement.billingIssueDetectedAt) {
+    return 'past_due';
+  }
+
+  if (entitlement.expirationDate) {
+    const expirationTime = new Date(entitlement.expirationDate).getTime();
+    if (!Number.isNaN(expirationTime) && expirationTime <= Date.now()) {
+      return 'expired';
+    }
+  }
+
+  return 'canceled';
 }
 
 function getErrorSummary(error: unknown) {
@@ -110,26 +136,32 @@ async function openPlatformSubscriptionManagement() {
 function toReconcilePayload(
   customerInfo: RevenueCatCustomerInfo
 ): RevenueCatReconcileInput | null {
-  const entitlement = customerInfo.entitlements.active[PRO_ENTITLEMENT_ID];
+  const activeEntitlement = customerInfo.entitlements.active[PRO_ENTITLEMENT_ID];
+  const entitlement =
+    activeEntitlement ?? customerInfo.entitlements.all[PRO_ENTITLEMENT_ID];
   if (!entitlement) {
     return null;
   }
 
   const isTrial = entitlement.periodType === 'TRIAL';
+  const isActive = Boolean(activeEntitlement);
+  const tier = isActive ? 'pro' : 'free';
 
   return {
     currentPeriodEnd: entitlement.expirationDate ?? null,
     currentPeriodStart: entitlement.latestPurchaseDate ?? null,
     customerId: customerInfo.originalAppUserId,
     entitlementId: entitlement.identifier,
-    entitlements: { ...PRO_ENTITLEMENTS },
+    entitlements: isActive ? { ...PRO_ENTITLEMENTS } : { ...FREE_ENTITLEMENTS },
     pastDueAt: entitlement.billingIssueDetectedAt ?? null,
     planType: planTypeFromProduct(entitlement.productIdentifier),
     productId: entitlement.productIdentifier,
-    status: statusFromEntitlementPeriod(entitlement.periodType),
-    tier: 'pro',
-    trialEndsAt: isTrial ? entitlement.expirationDate : null,
-    trialStartedAt: isTrial ? entitlement.originalPurchaseDate : null,
+    status: isActive
+      ? statusFromEntitlementPeriod(entitlement.periodType)
+      : inactiveStatusFromEntitlement(entitlement),
+    tier,
+    trialEndsAt: isActive && isTrial ? entitlement.expirationDate : null,
+    trialStartedAt: isActive && isTrial ? entitlement.originalPurchaseDate : null,
   };
 }
 
@@ -190,22 +222,52 @@ export async function getKureCalOfferingPackages(): Promise<RevenueCatPackage[]>
     throw new Error('No RevenueCat offering is configured for this app.');
   }
 
+  const configuredProductIds = getRevenueCatProductIds();
+  const monthlyPackage =
+    currentOffering.availablePackages.find(
+      (pkg) => pkg.product.identifier === configuredProductIds.monthly
+    ) ?? currentOffering.monthly;
+  const annualPackage =
+    currentOffering.availablePackages.find(
+      (pkg) => pkg.product.identifier === configuredProductIds.annual
+    ) ?? currentOffering.annual;
+
   const prioritized: RevenueCatPackage[] = [];
-  if (currentOffering.monthly) {
-    prioritized.push(currentOffering.monthly);
+  if (monthlyPackage) {
+    prioritized.push(monthlyPackage);
   }
-  if (currentOffering.annual) {
-    prioritized.push(currentOffering.annual);
+  if (annualPackage) {
+    prioritized.push(annualPackage);
   }
 
   const prioritizedIds = new Set(prioritized.map((pkg) => pkg.identifier));
-  const remaining = currentOffering.availablePackages.filter(
-    (pkg) => !prioritizedIds.has(pkg.identifier)
+  const shouldRestrictToConfiguredProducts = Boolean(
+    configuredProductIds.monthly || configuredProductIds.annual
   );
+  const configuredProductIdSet = new Set(
+    [configuredProductIds.monthly, configuredProductIds.annual].filter(
+      (id): id is string => Boolean(id)
+    )
+  );
+  const remaining = shouldRestrictToConfiguredProducts
+    ? []
+    : currentOffering.availablePackages.filter(
+        (pkg) => !prioritizedIds.has(pkg.identifier)
+      );
 
-  const packages = [...prioritized, ...remaining];
+  const packages = [...prioritized, ...remaining].filter((pkg) => {
+    if (!shouldRestrictToConfiguredProducts) {
+      return true;
+    }
+
+    return configuredProductIdSet.has(pkg.product.identifier);
+  });
   if (packages.length === 0) {
-    throw new Error('RevenueCat offering has no purchasable packages.');
+    throw new Error(
+      shouldRestrictToConfiguredProducts
+        ? 'RevenueCat offering does not include the configured KureCal Pro products.'
+        : 'RevenueCat offering has no purchasable packages.'
+    );
   }
 
   return packages;
@@ -245,6 +307,12 @@ export async function reconcileRevenueCatCustomerInfo(
   }
 
   return reconcileMobileRevenueCatSubscription(payload);
+}
+
+export async function syncKureCalSubscriptionFromRevenueCat() {
+  await ensureRevenueCatConfigured(currentUserId);
+  const customerInfo = await Purchases.getCustomerInfo();
+  return reconcileRevenueCatCustomerInfo(customerInfo);
 }
 
 export async function restoreRevenueCatPurchases() {

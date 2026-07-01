@@ -17,7 +17,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   loadMobileCommunityRoom,
@@ -95,6 +95,7 @@ export function CommunityRoomSheet({
   onClose,
 }: CommunityRoomSheetProps) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [detail, setDetail] = useState<MobileCommunityRoomDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -220,7 +221,7 @@ export function CommunityRoomSheet({
         style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}
         onPress={onClose}
       />
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
         <View
           style={[
             styles.sheet,
@@ -598,7 +599,7 @@ export function CommunityRoomSheet({
             </ScrollView>
           ) : null}
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

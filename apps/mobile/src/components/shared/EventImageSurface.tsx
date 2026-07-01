@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState, type PropsWithChildren } from 'react';
+import { useEffect, useState, type PropsWithChildren } from 'react';
 import {
   Image,
   Pressable,
@@ -50,6 +50,10 @@ export function EventImageSurface({
     imageUri && imageUri === event.organizerLogoUrl && imageUri !== event.imageUrl
   );
   const logoFallbackUri = isLogoFallback ? imageUri : null;
+
+  useEffect(() => {
+    setImageUri(initialImage);
+  }, [initialImage]);
 
   return (
     <Pressable

@@ -1,41 +1,50 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   Alert,
-  Image,
   Linking,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SymbolView } from "expo-symbols";
 
 import type {
   MobileCalendarConnectionStatus,
+  MobileProfileUpdate,
   NormalizedSubscription,
 } from "@kurecal/domain";
 
 import {
-  SettingsAvatar,
+  SettingsButton,
   SettingsDivider,
   SettingsGroup,
   SettingsRow,
 } from "../components/settings/mobile-settings-ui";
 import { ScreenStateView } from "../components/ScreenStateView";
-import { buildAvatarInitials } from "../components/community/presentation";
 import { useAuth } from "../context/AuthProvider";
 import { getMobileApiBaseUrl } from "../lib/env";
 import { getDeviceCalendarPermissionStatus } from "../lib/deviceCalendarSync";
 import {
   loadMobileGoogleCalendarStatus,
   loadMobileSubscriptionStatus,
+  updateMobileProfile,
 } from "../lib/mobileApi";
-import { formatSubscriptionSummary, hasPaidAccess } from "../lib/settingsPresentation";
+import {
+  formatCareerSummary,
+  formatSubscriptionSummary,
+  hasPaidAccess,
+} from "../lib/settingsPresentation";
+import {
+  presentKureCalCustomerCenter,
+  syncKureCalSubscriptionFromRevenueCat,
+} from "../lib/revenuecat";
 import { useAppTheme } from "../providers/ThemeProvider";
 import { showActionSheet } from "../lib/actionSheet";
 import { haptics } from "../lib/haptics";
@@ -63,16 +72,13 @@ function getCalendarLabel(
   return "Not connected";
 }
 
-function isSafeAvatarUrl(url: string | null | undefined): url is string {
-  if (!url) return false;
-  return /^https?:\/\//i.test(url);
-}
 
 export default function SettingsScreen({
   headerLeft,
 }: { headerLeft?: ReactNode } = {}) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { panel } = useLocalSearchParams<{ panel?: string }>();
   const {
     hasCompletedOnboarding,
     loading,
@@ -86,21 +92,36 @@ export default function SettingsScreen({
   const [subscription, setSubscription] =
     useState<NormalizedSubscription | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileFocusedField, setProfileFocusedField] = useState<
+    "fullName" | "username" | "headline" | "bio" | null
+  >(null);
+  const [profileDraft, setProfileDraft] = useState<MobileProfileUpdate>({
+    bio: null,
+    fullName: null,
+    headline: null,
+    username: null,
+  });
   const [googleCalendarStatus, setGoogleCalendarStatus] =
     useState<MobileCalendarConnectionStatus | null>(null);
   const [appleCalendarPermission, setAppleCalendarPermission] =
     useState("unknown");
+  const [activePanel, setActivePanel] = useState<"career" | "profile" | null>(() =>
+    panel === "career" || panel === "profile" ? panel : null,
+  );
 
   const loadSettingsStatus = useCallback(async () => {
     setSubscriptionLoading(true);
 
     try {
-      const [nextSubscription, nextGoogleStatus, nextApplePermission] =
+      const [syncedSubscription, nextGoogleStatus, nextApplePermission] =
         await Promise.all([
-          loadMobileSubscriptionStatus().catch(() => null),
+          syncKureCalSubscriptionFromRevenueCat().catch(() => null),
           loadMobileGoogleCalendarStatus().catch(() => null),
           getDeviceCalendarPermissionStatus().catch(() => "unknown"),
         ]);
+      const nextSubscription =
+        syncedSubscription ?? (await loadMobileSubscriptionStatus().catch(() => null));
 
       setSubscription(nextSubscription);
       setGoogleCalendarStatus(nextGoogleStatus);
@@ -116,25 +137,26 @@ export default function SettingsScreen({
     }
   }, [loadSettingsStatus, profile]);
 
-  const identity = useMemo(() => {
-    const fullName =
-      profile?.profile.fullName?.trim() ||
-      profile?.socialProfile.username?.trim() ||
-      session?.user.email ||
-      "Your profile";
-    const username = profile?.socialProfile.username?.trim();
-    const secondary = username
-      ? `@${username}`
-      : (session?.user.email ?? "Profile settings");
+  useEffect(() => {
+    if (panel === "career" || panel === "profile") {
+      setActivePanel(panel);
+    }
+  }, [panel]);
 
-    return {
-      fullName,
-      initials: buildAvatarInitials(fullName),
-      secondary,
-    };
-  }, [profile, session?.user.email]);
+  useEffect(() => {
+    if (!profile) {
+      return;
+    }
 
-  async function handleRefresh() {
+    setProfileDraft({
+      bio: profile.socialProfile.bio ?? null,
+      fullName: profile.profile.fullName ?? null,
+      headline: profile.socialProfile.headline ?? null,
+      username: profile.socialProfile.username ?? null,
+    });
+  }, [profile]);
+
+async function handleRefresh() {
     setRefreshing(true);
     setError(null);
 
@@ -164,10 +186,277 @@ export default function SettingsScreen({
     }
   }
 
+  async function handleSaveProfile() {
+    setProfileSaving(true);
+
+    try {
+      await updateMobileProfile(profileDraft);
+      await refreshProfile();
+      Alert.alert("Profile saved", "Your mobile profile settings are updated.");
+    } catch (nextError) {
+      Alert.alert(
+        "Save failed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to save your profile",
+      );
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  const careerSummary = formatCareerSummary(profile?.careerProfile);
+  const skills = profile?.careerProfile?.primarySkills ?? [];
+
+  function renderProfileFieldLabel({
+    helper,
+    label,
+  }: {
+    helper?: string;
+    label: string;
+  }) {
+    return (
+      <View style={styles.profileFieldLabelWrap}>
+        <Text
+          style={[
+            styles.profileFieldLabel,
+            {
+              color: tokens.colors.textSecondary,
+              fontFamily: tokens.typography.sans,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+        {helper ? (
+          <Text
+            style={[
+              styles.profileFieldHelper,
+              {
+                color: tokens.colors.textTertiary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {helper}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderProfilePanel() {
+    const inputStyle = [
+      styles.profileInput,
+      {
+        backgroundColor: tokens.colors.input,
+        borderColor: tokens.colors.borderStrong,
+        color: tokens.colors.textPrimary,
+        fontFamily: tokens.typography.sans,
+        fontSize: tokens.typography.body,
+        borderRadius: tokens.radius.md,
+      },
+    ];
+
+    return (
+      <>
+        <SettingsGroup style={styles.profileFormGroup}>
+          <View style={styles.profileField}>
+            {renderProfileFieldLabel({ label: "Full name" })}
+            <TextInput
+              onBlur={() => setProfileFocusedField(null)}
+              onChangeText={(value) =>
+                setProfileDraft((current) => ({ ...current, fullName: value || null }))
+              }
+              onFocus={() => setProfileFocusedField("fullName")}
+              placeholder="Full name"
+              placeholderTextColor={tokens.colors.textTertiary}
+              style={[
+                inputStyle,
+                profileFocusedField === "fullName"
+                  ? { borderColor: tokens.colors.accent }
+                  : null,
+              ]}
+              value={profileDraft.fullName ?? ""}
+            />
+          </View>
+
+          <View style={styles.profileField}>
+            {renderProfileFieldLabel({
+              helper: "Shown on your public profile URL.",
+              label: "Username",
+            })}
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              onBlur={() => setProfileFocusedField(null)}
+              onChangeText={(value) =>
+                setProfileDraft((current) => ({ ...current, username: value || null }))
+              }
+              onFocus={() => setProfileFocusedField("username")}
+              placeholder="Username"
+              placeholderTextColor={tokens.colors.textTertiary}
+              style={[
+                inputStyle,
+                profileFocusedField === "username"
+                  ? { borderColor: tokens.colors.accent }
+                  : null,
+              ]}
+              value={profileDraft.username ?? ""}
+            />
+          </View>
+
+          <View style={styles.profileField}>
+            {renderProfileFieldLabel({
+              helper: "Your role, team, or professional label.",
+              label: "Role headline",
+            })}
+            <TextInput
+              onBlur={() => setProfileFocusedField(null)}
+              onChangeText={(value) =>
+                setProfileDraft((current) => ({ ...current, headline: value || null }))
+              }
+              onFocus={() => setProfileFocusedField("headline")}
+              placeholder="Data Analyst at Explore Edmonton"
+              placeholderTextColor={tokens.colors.textTertiary}
+              style={[
+                inputStyle,
+                profileFocusedField === "headline"
+                  ? { borderColor: tokens.colors.accent }
+                  : null,
+              ]}
+              value={profileDraft.headline ?? ""}
+            />
+          </View>
+
+          <View style={styles.profileField}>
+            {renderProfileFieldLabel({
+              helper: "One or two sentences visitors see under your name.",
+              label: "About",
+            })}
+            <TextInput
+              maxLength={220}
+              multiline
+              onBlur={() => setProfileFocusedField(null)}
+              onChangeText={(value) =>
+                setProfileDraft((current) => ({ ...current, bio: value || null }))
+              }
+              onFocus={() => setProfileFocusedField("bio")}
+              placeholder="Unlocking stories through data. Building bridges in the tech ecosystem."
+              placeholderTextColor={tokens.colors.textTertiary}
+              style={[
+                inputStyle,
+                styles.profileBioInput,
+                profileFocusedField === "bio"
+                  ? { borderColor: tokens.colors.accent }
+                  : null,
+              ]}
+              textAlignVertical="top"
+              value={profileDraft.bio ?? ""}
+            />
+          </View>
+        </SettingsGroup>
+        <SettingsButton
+          disabled={profileSaving}
+          label={profileSaving ? "Saving..." : "Save profile"}
+          onPress={() => {
+            void handleSaveProfile();
+          }}
+        />
+      </>
+    );
+  }
+
+  function renderCareerPanel() {
+    return (
+      <>
+        <SettingsGroup style={styles.careerGroup}>
+          <Text
+            style={[
+              styles.sectionLabel,
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            Current inputs
+          </Text>
+          <Text
+            style={[
+              styles.careerTitle,
+              {
+                color: tokens.colors.textPrimary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {hasCompletedOnboarding
+              ? (careerSummary ?? "Career profile completed.")
+              : "Finish onboarding"}
+          </Text>
+          <Text
+            style={[
+              styles.careerDescription,
+              {
+                color: tokens.colors.textSecondary,
+                fontFamily: tokens.typography.sans,
+              },
+            ]}
+          >
+            {hasCompletedOnboarding
+              ? "These inputs tune your event recommendations, networking prompts, and calendar prioritization."
+              : "Complete onboarding to unlock personalized recommendations."}
+          </Text>
+
+          {skills.length ? (
+            <View style={styles.chipRow}>
+              {skills.slice(0, 8).map((skill) => (
+                <View
+                  key={skill}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: tokens.colors.surfaceStrong,
+                      borderColor: tokens.colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      {
+                        color: tokens.colors.textPrimary,
+                        fontFamily: tokens.typography.sans,
+                      },
+                    ]}
+                  >
+                    {skill}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </SettingsGroup>
+        <SettingsButton
+          label={
+            hasCompletedOnboarding ? "Edit career profile" : "Complete onboarding"
+          }
+          onPress={() =>
+            router.push({
+              pathname: "../onboarding",
+              params: { resume: "1" },
+            } as never)
+          }
+        />
+      </>
+    );
+  }
+
   if (loading && !profile) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="loading"
@@ -175,7 +464,7 @@ export default function SettingsScreen({
               description="Pulling your account settings and onboarding state."
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
@@ -183,7 +472,7 @@ export default function SettingsScreen({
   if (!profile) {
     return (
       <LinearGradient colors={tokens.gradients.page} style={styles.gradient}>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
           <View style={styles.stateWrap}>
             <ScreenStateView
               mode="error"
@@ -196,14 +485,13 @@ export default function SettingsScreen({
               }}
             />
           </View>
-        </SafeAreaView>
+        </View>
       </LinearGradient>
     );
   }
 
   return (
-    <SafeAreaView
-      edges={["left", "right"]}
+    <View
       style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
     >
       <LinearGradient
@@ -218,7 +506,27 @@ export default function SettingsScreen({
           },
         ]}
       >
-        {headerLeft ?? <View style={styles.headerSpacer} />}
+        {activePanel ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to settings"
+            hitSlop={12}
+            onPress={() => setActivePanel(null)}
+            style={({ pressed }) => [
+              styles.headerIconButton,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <SymbolView
+              name="chevron.left"
+              size={17}
+              tintColor={tokens.colors.textPrimary}
+              type="monochrome"
+            />
+          </Pressable>
+        ) : (
+          (headerLeft ?? <View style={styles.headerSpacer} />)
+        )}
         <Text
           style={[
             styles.headerTitle,
@@ -228,7 +536,11 @@ export default function SettingsScreen({
             },
           ]}
         >
-          Settings
+          {activePanel === "career"
+            ? "Recommendation inputs"
+            : activePanel === "profile"
+              ? "Profile fields"
+              : "Settings"}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -241,76 +553,30 @@ export default function SettingsScreen({
           },
         ]}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              void handleRefresh();
-            }}
-            tintColor={tokens.colors.accent}
-          />
+          activePanel
+            ? undefined
+            : (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => {
+                  void handleRefresh();
+                }}
+                tintColor={tokens.colors.accent}
+              />
+            )
         }
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/settings/profile" as never)}
-          style={({ pressed }) => [
-            styles.profileCard,
-            {
-              backgroundColor: tokens.colors.surfaceStrong,
-              borderColor: tokens.colors.borderStrong,
-            },
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          {isSafeAvatarUrl(profile.profile.avatarUrl ?? profile.socialProfile.avatarUrl) ? (
-            <Image
-              source={{
-                uri: profile.profile.avatarUrl ?? profile.socialProfile.avatarUrl ?? "",
-              }}
-              style={styles.profileAvatar}
-            />
-          ) : (
-            <SettingsAvatar initials={identity.initials} size={40} />
-          )}
-          <View style={styles.profileCopy}>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.profileName,
-                {
-                  color: tokens.colors.textPrimary,
-                  fontFamily: tokens.typography.sans,
-                },
-              ]}
-            >
-              {identity.fullName}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.profileMeta,
-                {
-                  color: tokens.colors.textTertiary,
-                  fontFamily: tokens.typography.sans,
-                },
-              ]}
-            >
-              {identity.secondary}
-            </Text>
-          </View>
-          <SymbolView
-            name="chevron.right"
-            size={16}
-            tintColor={tokens.colors.textTertiary}
-            type="monochrome"
-          />
-        </Pressable>
-
+        {activePanel === "career" ? (
+          renderCareerPanel()
+        ) : activePanel === "profile" ? (
+          renderProfilePanel()
+        ) : (
+          <>
         <SettingsGroup>
           <SettingsRow
             icon="person.text.rectangle"
-            onPress={() => router.push("/settings/profile" as never)}
+            onPress={() => setActivePanel("profile")}
             subtitle={profile.socialProfile.headline ?? "Full name and username"}
             title="Profile fields"
           />
@@ -347,13 +613,13 @@ export default function SettingsScreen({
           <SettingsDivider />
           <SettingsRow
             icon="crown"
-            onPress={() =>
-              router.push(
-                (hasPaidAccess(subscription)
-                  ? "/settings/subscription"
-                  : "/paywall") as never,
-              )
-            }
+            onPress={() => {
+              if (hasPaidAccess(subscription)) {
+                void presentKureCalCustomerCenter().then(() => loadSettingsStatus());
+              } else {
+                router.push("/paywall" as never);
+              }
+            }}
             rightLabel={
               subscriptionLoading && !subscription
                 ? "Checking"
@@ -374,7 +640,7 @@ export default function SettingsScreen({
           <SettingsDivider />
           <SettingsRow
             icon="sparkles"
-            onPress={() => router.push("/settings/career" as never)}
+            onPress={() => setActivePanel("career")}
             rightLabel={hasCompletedOnboarding ? "Ready" : "Set up"}
             title="Recommendation inputs"
           />
@@ -441,7 +707,8 @@ export default function SettingsScreen({
           style={({ pressed }) => [
             styles.logoutButton,
             {
-              backgroundColor: tokens.colors.textPrimary,
+              backgroundColor: "transparent",
+              borderColor: tokens.colors.borderStrong,
             },
             pressed ? styles.pressed : null,
           ]}
@@ -464,8 +731,10 @@ export default function SettingsScreen({
             Log Out
           </Text>
         </Pressable>
+          </>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -504,44 +773,22 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 32,
   },
+  headerIconButton: {
+    alignItems: "center",
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
   content: {
-    gap: 12,
+    gap: 28,
     paddingHorizontal: 20,
     paddingTop: 10,
-  },
-  profileCard: {
-    alignItems: "center",
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 10,
-    minHeight: 56,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  profileAvatar: {
-    borderRadius: 20,
-    height: 40,
-    width: 40,
-  },
-  profileCopy: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 23,
-  },
-  profileMeta: {
-    fontSize: 13,
-    fontWeight: "400",
-    lineHeight: 18,
   },
   logoutButton: {
     alignItems: "center",
     borderRadius: 6,
+    borderWidth: 1,
     flexDirection: "row",
     gap: 8,
     justifyContent: "center",
@@ -558,6 +805,71 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 18,
     paddingHorizontal: 4,
+  },
+  careerGroup: {
+    gap: 8,
+    padding: 12,
+  },
+  profileFormGroup: {
+    gap: 12,
+    padding: 12,
+  },
+  profileField: {
+    gap: 6,
+  },
+  profileFieldLabelWrap: {
+    gap: 2,
+  },
+  profileFieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  profileFieldHelper: {
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+  },
+  profileInput: {
+    borderWidth: 1,
+    fontWeight: "400",
+    minHeight: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  profileBioInput: {
+    minHeight: 96,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  careerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 24,
+  },
+  careerDescription: {
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 18,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingTop: 4,
+  },
+  chip: {
+    borderRadius: 2,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  chipLabel: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   pressed: {
     opacity: 0.78,

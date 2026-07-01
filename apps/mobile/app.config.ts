@@ -78,6 +78,13 @@ export default function getMobileExpoConfig() {
         ],
         'expo-notifications',
         './plugins/withPrivacyManifest',
+        './plugins/withPodfileModularHeaders',
+        [
+          '@react-native-google-signin/google-signin',
+          {
+            iosUrlScheme: process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ?? '',
+          },
+        ],
       ],
       ios: {
         ...baseConfig.expo.ios,
@@ -116,6 +123,9 @@ export default function getMobileExpoConfig() {
         entitlements: {
           'aps-environment': isProduction ? 'production' : 'development',
         },
+      },
+      android: {
+        package: isProduction ? 'com.kurecal.mobile' : 'com.kurecal.mobile.dev',
       },
       name: isProduction ? 'KureCal' : 'KureCal Dev',
       scheme: isProduction ? 'kurecal' : 'kurecal-dev',
