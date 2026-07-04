@@ -601,7 +601,8 @@ export class EventService {
     static async getEventIdsByTags(
         tags: string[],
         supabaseClient: SupabaseClientType,
-        _filters: EventFilters = {}
+        _filters: EventFilters = {},
+        matchMode: 'all' | 'any' = 'all'
     ): Promise<string[]> {
         try {
             if (!tags || tags.length === 0) {
@@ -629,7 +630,10 @@ export class EventService {
                 
                 // If any requested tag doesn't exist in DB, intersection is empty -> return []
                 if (!tagData || tagData.length === 0) {
-                    return [];
+                    if (matchMode === 'all') {
+                        return [];
+                    }
+                    continue;
                 }
                 
                 tagIdGroups.push(tagData.map(t => t.id));
@@ -637,6 +641,9 @@ export class EventService {
 
             // Flatten all relevant tag IDs to fetch relations in one go
             const uniqueRelevantTagIds = [...new Set(tagIdGroups.flat())];
+            if (uniqueRelevantTagIds.length === 0) {
+                return [];
+            }
             
             // 2. Fetch all event relations for these tags
             const { data: relations, error: relationError } = await supabaseClient
@@ -651,6 +658,10 @@ export class EventService {
 
             if (!relations || relations.length === 0) {
                 return [];
+            }
+
+            if (matchMode === 'any') {
+                return [...new Set(relations.map((rel: { event_id: string }) => rel.event_id))];
             }
 
             // 3. Perform Intersection (AND logic) in memory

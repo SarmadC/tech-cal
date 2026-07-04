@@ -215,9 +215,34 @@ describe('mobile calendar route', () => {
     const loadArgs = mocks.loadFilteredEventsData.mock.calls[0]?.[0];
     expect(loadArgs.request.rawLocations).toEqual(['Calgary']);
     expect(loadArgs.request.tags).toEqual(['ai']);
+    expect(loadArgs.request.tagMatchMode).toBe('any');
     expect(loadArgs.request.cost).toBe('free');
     expect(loadArgs.request.sortBy).toBe('date');
     expect(loadArgs.request.sortDirection).toBe('asc');
+  });
+
+  it('uses any-tag matching for multi-tag calendar filters', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/mobile/calendar', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer mobile-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          monthStart: '2026-05-01',
+          tags: ['ai', 'security'],
+        }),
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+
+    const loadArgs = mocks.loadFilteredEventsData.mock.calls[0]?.[0];
+    expect(loadArgs.request.tags).toEqual(['ai', 'security']);
+    expect(loadArgs.request.tagMatchMode).toBe('any');
   });
 
   it('returns 401 when the request is unauthenticated', async () => {

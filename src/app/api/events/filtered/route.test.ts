@@ -190,6 +190,12 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
 
     expect(res.ok).toBe(true);
     expect(data.success).toBe(true);
+    expect(mockGetEventIdsByTags).toHaveBeenCalledWith(
+      ['frontend'],
+      expect.anything(),
+      expect.anything(),
+      'all'
+    );
     const [filters] = mockGetEventsWithColdStartHandling.mock.calls[0];
     expect(filters.eventIds).toEqual(['tag-2']);
   });
