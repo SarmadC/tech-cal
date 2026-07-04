@@ -42,7 +42,7 @@ import {
   hasPaidAccess,
 } from "../lib/settingsPresentation";
 import {
-  presentKureCalCustomerCenter,
+  openKureCalSubscriptionManagement,
   syncKureCalSubscriptionFromRevenueCat,
 } from "../lib/revenuecat";
 import { useAppTheme } from "../providers/ThemeProvider";
@@ -615,7 +615,14 @@ async function handleRefresh() {
             icon="crown"
             onPress={() => {
               if (hasPaidAccess(subscription)) {
-                void presentKureCalCustomerCenter().then(() => loadSettingsStatus());
+                void openKureCalSubscriptionManagement()
+                  .then(() => loadSettingsStatus())
+                  .catch((error) => {
+                    Alert.alert(
+                      "Unable to open subscription center",
+                      error instanceof Error ? error.message : "Unknown error",
+                    );
+                  });
               } else {
                 router.push("/paywall" as never);
               }

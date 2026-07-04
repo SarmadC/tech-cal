@@ -42,10 +42,11 @@ const SUBSCRIPTION_MANAGEMENT_URLS: Partial<Record<MobilePlatform, string>> = {
   android: 'https://play.google.com/store/account/subscriptions',
   ios: 'https://apps.apple.com/account/subscriptions',
 };
-const CUSTOMER_CENTER_PRESENT_TIMEOUT_MS = 6_000;
+const SUBSCRIPTION_MANAGEMENT_TIMEOUT_MS = 8_000;
 
 let configured = false;
 let currentUserId: string | null = null;
+let revenueCatOperation: Promise<void> = Promise.resolve();
 
 function getPlatformApiKey(platform = CURRENT_PLATFORM): string | null {
   if (!SUPPORTED_PLATFORMS.has(platform)) {
@@ -104,6 +105,15 @@ function getErrorSummary(error: unknown) {
   };
 }
 
+async function openPlatformSubscriptionManagement() {
+  const url = SUBSCRIPTION_MANAGEMENT_URLS[CURRENT_PLATFORM];
+  if (!url) {
+    throw new Error('Subscription management is not available on this platform.');
+  }
+
+  await Linking.openURL(url);
+}
+
 function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -122,15 +132,6 @@ function withTimeout<T>(
       clearTimeout(timeoutId);
     }
   });
-}
-
-async function openPlatformSubscriptionManagement() {
-  const url = SUBSCRIPTION_MANAGEMENT_URLS[CURRENT_PLATFORM];
-  if (!url) {
-    throw new Error('Subscription management is not available on this platform.');
-  }
-
-  await Linking.openURL(url);
 }
 
 function toReconcilePayload(
@@ -165,9 +166,26 @@ function toReconcilePayload(
   };
 }
 
-async function ensureRevenueCatConfigured(
-  userId: string | null = currentUserId
-) {
+async function enqueueRevenueCatOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const previousOperation = revenueCatOperation.catch(() => undefined);
+  let releaseOperation!: () => void;
+  revenueCatOperation = previousOperation.then(
+    () =>
+      new Promise<void>((resolve) => {
+        releaseOperation = resolve;
+      })
+  );
+
+  await previousOperation;
+
+  try {
+    return await operation();
+  } finally {
+    releaseOperation();
+  }
+}
+
+async function configureRevenueCat(userId: string | null) {
   const apiKey = getPlatformApiKey();
   if (!apiKey) {
     throw new Error('RevenueCat is not configured for this build.');
@@ -197,80 +215,93 @@ async function ensureRevenueCatConfigured(
   currentUserId = userId;
 }
 
+async function ensureRevenueCatConfigured(userId?: string | null) {
+  await configureRevenueCat(userId === undefined ? currentUserId : userId);
+}
+
+async function withRevenueCatConfigured<T>(
+  operation: () => Promise<T>,
+  userId?: string | null
+): Promise<T> {
+  return enqueueRevenueCatOperation(async () => {
+    await ensureRevenueCatConfigured(userId);
+    return operation();
+  });
+}
+
 export async function syncRevenueCatIdentity(userId: string | null) {
   const apiKey = getPlatformApiKey();
   if (!apiKey) {
     return;
   }
 
-  await ensureRevenueCatConfigured(userId);
+  await withRevenueCatConfigured(async () => undefined, userId);
 }
 
 export async function getRevenueCatCustomerInfo() {
-  await ensureRevenueCatConfigured(currentUserId);
-  return Purchases.getCustomerInfo();
+  return withRevenueCatConfigured(() => Purchases.getCustomerInfo());
 }
 
 export async function getKureCalOfferingPackages(): Promise<RevenueCatPackage[]> {
-  await ensureRevenueCatConfigured(currentUserId);
+  return withRevenueCatConfigured(async () => {
+    const offerings = await Purchases.getOfferings();
+    const currentOffering =
+      offerings.current ?? offerings.all.default ?? Object.values(offerings.all)[0] ?? null;
 
-  const offerings = await Purchases.getOfferings();
-  const currentOffering =
-    offerings.current ?? offerings.all.default ?? Object.values(offerings.all)[0] ?? null;
-
-  if (!currentOffering) {
-    throw new Error('No RevenueCat offering is configured for this app.');
-  }
-
-  const configuredProductIds = getRevenueCatProductIds();
-  const monthlyPackage =
-    currentOffering.availablePackages.find(
-      (pkg) => pkg.product.identifier === configuredProductIds.monthly
-    ) ?? currentOffering.monthly;
-  const annualPackage =
-    currentOffering.availablePackages.find(
-      (pkg) => pkg.product.identifier === configuredProductIds.annual
-    ) ?? currentOffering.annual;
-
-  const prioritized: RevenueCatPackage[] = [];
-  if (monthlyPackage) {
-    prioritized.push(monthlyPackage);
-  }
-  if (annualPackage) {
-    prioritized.push(annualPackage);
-  }
-
-  const prioritizedIds = new Set(prioritized.map((pkg) => pkg.identifier));
-  const shouldRestrictToConfiguredProducts = Boolean(
-    configuredProductIds.monthly || configuredProductIds.annual
-  );
-  const configuredProductIdSet = new Set(
-    [configuredProductIds.monthly, configuredProductIds.annual].filter(
-      (id): id is string => Boolean(id)
-    )
-  );
-  const remaining = shouldRestrictToConfiguredProducts
-    ? []
-    : currentOffering.availablePackages.filter(
-        (pkg) => !prioritizedIds.has(pkg.identifier)
-      );
-
-  const packages = [...prioritized, ...remaining].filter((pkg) => {
-    if (!shouldRestrictToConfiguredProducts) {
-      return true;
+    if (!currentOffering) {
+      throw new Error('No RevenueCat offering is configured for this app.');
     }
 
-    return configuredProductIdSet.has(pkg.product.identifier);
-  });
-  if (packages.length === 0) {
-    throw new Error(
-      shouldRestrictToConfiguredProducts
-        ? 'RevenueCat offering does not include the configured KureCal Pro products.'
-        : 'RevenueCat offering has no purchasable packages.'
-    );
-  }
+    const configuredProductIds = getRevenueCatProductIds();
+    const monthlyPackage =
+      currentOffering.availablePackages.find(
+        (pkg) => pkg.product.identifier === configuredProductIds.monthly
+      ) ?? currentOffering.monthly;
+    const annualPackage =
+      currentOffering.availablePackages.find(
+        (pkg) => pkg.product.identifier === configuredProductIds.annual
+      ) ?? currentOffering.annual;
 
-  return packages;
+    const prioritized: RevenueCatPackage[] = [];
+    if (monthlyPackage) {
+      prioritized.push(monthlyPackage);
+    }
+    if (annualPackage) {
+      prioritized.push(annualPackage);
+    }
+
+    const prioritizedIds = new Set(prioritized.map((pkg) => pkg.identifier));
+    const shouldRestrictToConfiguredProducts = Boolean(
+      configuredProductIds.monthly || configuredProductIds.annual
+    );
+    const configuredProductIdSet = new Set(
+      [configuredProductIds.monthly, configuredProductIds.annual].filter(
+        (id): id is string => Boolean(id)
+      )
+    );
+    const remaining = shouldRestrictToConfiguredProducts
+      ? []
+      : currentOffering.availablePackages.filter(
+          (pkg) => !prioritizedIds.has(pkg.identifier)
+        );
+
+    const packages = [...prioritized, ...remaining].filter((pkg) => {
+      if (!shouldRestrictToConfiguredProducts) {
+        return true;
+      }
+
+      return configuredProductIdSet.has(pkg.product.identifier);
+    });
+    if (packages.length === 0) {
+      throw new Error(
+        shouldRestrictToConfiguredProducts
+          ? 'RevenueCat offering does not include the configured KureCal Pro products.'
+          : 'RevenueCat offering has no purchasable packages.'
+      );
+    }
+
+    return packages;
+  });
 }
 
 export function hasActiveKureCalProEntitlement(
@@ -280,8 +311,9 @@ export function hasActiveKureCalProEntitlement(
 }
 
 export async function purchaseRevenueCatPackage(pkg: RevenueCatPackage) {
-  await ensureRevenueCatConfigured(currentUserId);
-  const purchaseResult = await Purchases.purchasePackage(pkg);
+  const purchaseResult = await withRevenueCatConfigured(() =>
+    Purchases.purchasePackage(pkg)
+  );
   await reconcileRevenueCatCustomerInfo(purchaseResult.customerInfo);
   return purchaseResult;
 }
@@ -310,14 +342,14 @@ export async function reconcileRevenueCatCustomerInfo(
 }
 
 export async function syncKureCalSubscriptionFromRevenueCat() {
-  await ensureRevenueCatConfigured(currentUserId);
-  const customerInfo = await Purchases.getCustomerInfo();
+  const customerInfo = await getRevenueCatCustomerInfo();
   return reconcileRevenueCatCustomerInfo(customerInfo);
 }
 
 export async function restoreRevenueCatPurchases() {
-  await ensureRevenueCatConfigured(currentUserId);
-  const customerInfo = await Purchases.restorePurchases();
+  const customerInfo = await withRevenueCatConfigured(() =>
+    Purchases.restorePurchases()
+  );
   if (!hasActiveKureCalProEntitlement(customerInfo)) {
     throw new Error('No active KureCal Pro purchase was found to restore.');
   }
@@ -327,20 +359,16 @@ export async function restoreRevenueCatPurchases() {
 }
 
 export async function presentKureCalCustomerCenter() {
-  await ensureRevenueCatConfigured(currentUserId);
-
   try {
-    await withTimeout(
-      RevenueCatUI.presentCustomerCenter(),
-      CUSTOMER_CENTER_PRESENT_TIMEOUT_MS,
-      'RevenueCat Customer Center did not open in time.'
-    );
-    const customerInfo = await Purchases.getCustomerInfo();
+    await withRevenueCatConfigured(async () => undefined);
+    await RevenueCatUI.presentCustomerCenter();
+    const customerInfo = await getRevenueCatCustomerInfo();
     await reconcileRevenueCatCustomerInfo(customerInfo);
+    return;
   } catch (error) {
     const customerCenterError = getErrorSummary(error);
     console.warn(
-      '[revenuecat] Unable to present Customer Center. Opening platform subscription management fallback.',
+      '[revenuecat] Unable to present Customer Center. Opening native subscription management fallback.',
       {
         error: customerCenterError,
         platform: Platform.OS,
@@ -348,22 +376,53 @@ export async function presentKureCalCustomerCenter() {
     );
 
     try {
-      await openPlatformSubscriptionManagement();
-    } catch (fallbackError) {
-      const fallbackSummary = getErrorSummary(fallbackError);
+      await openKureCalSubscriptionManagement();
+      const customerInfo = await getRevenueCatCustomerInfo();
+      await reconcileRevenueCatCustomerInfo(customerInfo);
+      return;
+    } catch (storeKitError) {
+      const storeKitSummary = getErrorSummary(storeKitError);
       console.warn(
-        '[revenuecat] Unable to open platform subscription management fallback.',
+        '[revenuecat] Unable to open native subscription management fallback. Opening platform subscription management fallback.',
         {
-          error: fallbackSummary,
+          error: storeKitSummary,
           platform: Platform.OS,
         }
       );
 
-      throw new Error(
-        `Unable to open subscription management. Customer Center failed: ${customerCenterError.message}. Fallback failed: ${fallbackSummary.message}.`
-      );
+      try {
+        await openPlatformSubscriptionManagement();
+      } catch (fallbackError) {
+        const fallbackSummary = getErrorSummary(fallbackError);
+        console.warn(
+          '[revenuecat] Unable to open platform subscription management fallback.',
+          {
+            error: fallbackSummary,
+            platform: Platform.OS,
+          }
+        );
+
+        throw new Error(
+          `Unable to open subscription management. Customer Center failed: ${customerCenterError.message}. StoreKit fallback failed: ${storeKitSummary.message}. Platform fallback failed: ${fallbackSummary.message}.`
+        );
+      }
     }
   }
+}
+
+export async function openKureCalSubscriptionManagement() {
+  await withRevenueCatConfigured(async () => undefined);
+
+  if (CURRENT_PLATFORM === 'ios') {
+    await withTimeout(
+      Purchases.showManageSubscriptions(),
+      SUBSCRIPTION_MANAGEMENT_TIMEOUT_MS,
+      'Subscription management did not open in time.'
+    );
+    return;
+  }
+
+  await openPlatformSubscriptionManagement();
 }
 
 export type { RevenueCatPackage };
