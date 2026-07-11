@@ -28,12 +28,13 @@ import {
   getMobileRecoveryRedirectUri,
   isMobileAuthCallbackUrl,
 } from '../lib/authRedirect';
-import { loadMobileProfileState } from '../lib/mobileApi';
+import { deleteMobileAccount, loadMobileProfileState } from '../lib/mobileApi';
 import {
   registerForPushNotificationsAsync,
   unregisterPushNotificationsAsync,
 } from '../lib/pushNotifications';
 import { syncRevenueCatIdentity } from '../lib/revenuecat';
+import { clearUserScopedSessionStorage } from '../lib/sessionStorage';
 import { supabase } from '../lib/supabase';
 import { AppStartupOverlay } from '../components/brand/AppStartupOverlay';
 
@@ -62,6 +63,7 @@ interface SignUpInput {
 interface AuthContextValue {
   authCompletionError: string | null;
   clearAuthCompletionState: () => void;
+  deleteAccount: () => Promise<void>;
   hasCompletedOnboarding: boolean;
   hasPendingAuthCallbackUrl: boolean;
   isCompletingAuth: boolean;
@@ -358,6 +360,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       authCompletionError,
       clearAuthCompletionState,
+      deleteAccount: async () => {
+        clearAuthCompletionState();
+        await deleteMobileAccount();
+
+        startTransition(() => {
+          setSession(null);
+          setProfile(null);
+          setProfileLoadFailed(false);
+        });
+
+        await Promise.allSettled([
+          clearUserScopedSessionStorage(),
+          syncRevenueCatIdentity(null),
+          GoogleSignin.signOut(),
+          supabase.auth.signOut({ scope: 'local' }),
+        ]);
+      },
       hasCompletedOnboarding: profile?.onboarding.onboarded ?? false,
       hasPendingAuthCallbackUrl: Boolean(
         incomingUrl && isMobileAuthCallbackUrl(incomingUrl)

@@ -3,6 +3,12 @@ import { Platform } from 'react-native';
 
 const ACCESS_GROUP = 'kurecal-mobile-auth';
 const WEB_PREFIX = 'kurecal-mobile-auth:';
+const USER_SCOPED_KEYS = [
+  'kurecal_push_device_id',
+  'mobile_calendar_oauth_return_url',
+  'mobile_device_calendar_event_mappings',
+  'mobile_pending_networking_follow_up_event_id',
+] as const;
 
 function getWebStorage(): Storage | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -52,3 +58,7 @@ export const sessionStorage = {
     });
   },
 };
+
+export async function clearUserScopedSessionStorage(): Promise<void> {
+  await Promise.all(USER_SCOPED_KEYS.map((key) => sessionStorage.removeItem(key)));
+}

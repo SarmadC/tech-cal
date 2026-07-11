@@ -80,6 +80,7 @@ export default function SettingsScreen({
   const insets = useSafeAreaInsets();
   const { panel } = useLocalSearchParams<{ panel?: string }>();
   const {
+    deleteAccount,
     hasCompletedOnboarding,
     loading,
     profile,
@@ -93,6 +94,7 @@ export default function SettingsScreen({
     useState<NormalizedSubscription | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [accountDeleting, setAccountDeleting] = useState(false);
   const [profileFocusedField, setProfileFocusedField] = useState<
     "fullName" | "username" | "headline" | "bio" | null
   >(null);
@@ -202,6 +204,26 @@ async function handleRefresh() {
       );
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setAccountDeleting(true);
+    setError(null);
+
+    try {
+      await deleteAccount();
+      haptics.success();
+    } catch (nextError) {
+      haptics.warning();
+      Alert.alert(
+        "Account not deleted",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to delete your account. Please try again.",
+      );
+    } finally {
+      setAccountDeleting(false);
     }
   }
 
@@ -676,6 +698,31 @@ async function handleRefresh() {
               void openWebPath("/legal/privacy");
             }}
             title="Privacy policy"
+          />
+          <SettingsDivider />
+          <SettingsRow
+            destructive
+            disabled={accountDeleting}
+            icon="person.crop.circle.badge.xmark"
+            onPress={() => {
+              haptics.warning();
+              showActionSheet({
+                title: "Permanently delete account?",
+                message:
+                  "This deletes your KureCal account and associated data. An App Store subscription must be cancelled separately in Apple Subscriptions.",
+                options: [
+                  {
+                    label: accountDeleting ? "Deleting..." : "Delete Account",
+                    destructive: true,
+                    onPress: () => {
+                      void handleDeleteAccount();
+                    },
+                  },
+                ],
+              });
+            }}
+            subtitle="Permanently remove your account and data"
+            title={accountDeleting ? "Deleting account..." : "Delete account"}
           />
         </SettingsGroup>
 

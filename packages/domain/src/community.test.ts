@@ -50,6 +50,16 @@ describe("community domain contracts", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects clearly objectionable threats before community submission", () => {
+    const result = communityPostDraftSchema.safeParse({
+      circleId: "11111111-1111-4111-8111-111111111111",
+      circleSlug: "ai-builders",
+      content: "kill yourself",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("tokenizes community post urls and known mentions", () => {
     const segments = tokenizeCommunityContent(
       "Meet @ada at https://example.com.",

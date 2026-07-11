@@ -378,6 +378,13 @@ export async function loadMobileSubscriptionStatus(): Promise<NormalizedSubscrip
   );
 }
 
+export async function deleteMobileAccount(): Promise<void> {
+  await fetchMobileEnvelope('/api/mobile/account', {
+    method: 'DELETE',
+    body: JSON.stringify({ confirmation: 'DELETE' }),
+  });
+}
+
 export async function loadMobileSubscriptionOfferings(): Promise<
   SubscriptionOffering[]
 > {

@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -15,9 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AuthLogoMark } from '../../src/components/auth/AuthLogoMark';
 import { useAuth } from '../../src/context/AuthProvider';
-
-const authLogoMark = require('../../assets/images/auth-logo-mark.png');
 
 const palette = {
   accent: '#BDC2FF',
@@ -123,10 +121,7 @@ export default function LoginScreen() {
       >
         <View style={styles.page}>
           <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
-            <Image
-              source={authLogoMark}
-              style={[styles.logoMark, { height: logoSize, width: logoSize }]}
-            />
+            <AuthLogoMark size={logoSize} style={styles.logoMark} />
 
             <View style={styles.oauthStack}>
               <OAuthButton

@@ -25,7 +25,7 @@ export default function TermsOfServicePage() {
     return (
         <main className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
             <h1>Terms of Service</h1>
-            <p>Last updated: September 12, 2025</p>
+            <p>Last updated: July 9, 2026</p>
 
             <h2>1. Acceptance of Terms</h2>
             <p>
@@ -98,9 +98,9 @@ export default function TermsOfServicePage() {
 
             <h2>12. Governing Law and Dispute Resolution</h2>
             <p>
-                These Terms are governed by the laws of [Your Jurisdiction], excluding its conflict of laws principles. Disputes will be resolved in the
-                courts located in [Your Venue], unless otherwise required by applicable law. If you prefer arbitration or a different mechanism,
-                add that here and consult counsel for enforceability.
+                These Terms are governed by the laws of the Province of Alberta and the federal laws of Canada applicable there,
+                excluding conflict-of-law principles. Unless consumer-protection law requires otherwise, disputes will be resolved
+                exclusively by the courts located in Alberta, Canada.
             </p>
 
             <h2>13. Changes</h2>

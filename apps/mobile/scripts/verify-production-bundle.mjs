@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const PLACEHOLDER_ENV = {
   EXPO_PUBLIC_API_URL: 'https://api.example.com',
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 'ios-client.apps.googleusercontent.com',
+  EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: 'com.googleusercontent.apps.ios-client',
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 'web-client.apps.googleusercontent.com',
   EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID: 'android-key',
   EXPO_PUBLIC_REVENUECAT_API_KEY_IOS: 'ios-key',
   EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID: 'annual',

@@ -29,12 +29,5 @@
       },
       "autoIncrement": true
     }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "ascAppId": "YOUR_ASC_APP_ID"
-      }
-    }
   }
 }

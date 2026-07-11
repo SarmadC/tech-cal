@@ -11,7 +11,9 @@
     "ios": "APP_VARIANT=development expo run:ios",
     "prebuild:ios": "APP_VARIANT=development expo prebuild --platform ios --clean",
     "verify:production-bundle": "APP_VARIANT=production node ./scripts/verify-production-bundle.mjs",
-    "release:check": "npm run doctor && npm run verify:production-bundle",
+    "verify:ios-release": "node ./scripts/verify-ios-release.mjs",
+    "configure:ios-submit": "node ./scripts/configure-ios-submit.mjs",
+    "release:check": "npm run doctor && npm run verify:production-bundle && npm run verify:ios-release",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
