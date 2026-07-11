@@ -18,6 +18,8 @@ const DEV_LOCATION_DESCRIPTION =
   'Allow KureCal Dev to detect your location for nearby discovery results.';
 const PROD_LOCATION_DESCRIPTION =
   'Allow KureCal to detect your location for nearby discovery results.';
+const PROD_GOOGLE_IOS_URL_SCHEME =
+  'com.googleusercontent.apps.1092999529211-m987etstd446h7jj2u3q67ka8qq52nog';
 
 function normalizeVariant(value: string | undefined): MobileAppVariant | null {
   const normalized = value?.trim().toLowerCase();
@@ -48,31 +50,9 @@ function resolveMobileAppVariant(): MobileAppVariant {
   );
 }
 
-function requireProductionEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} is required for a production mobile build.`);
-  }
-  return value;
-}
-
 export default function getMobileExpoConfig() {
   const variant = resolveMobileAppVariant();
   const isProduction = variant === 'production';
-  if (isProduction) {
-    [
-      'EXPO_PUBLIC_API_URL',
-      'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
-      'EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME',
-      'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID',
-      'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS',
-      'EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID',
-      'EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID',
-      'EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID',
-      'EXPO_PUBLIC_SUPABASE_ANON_KEY',
-      'EXPO_PUBLIC_SUPABASE_URL',
-    ].forEach(requireProductionEnv);
-  }
 
   return {
     expo: {
@@ -118,8 +98,9 @@ export default function getMobileExpoConfig() {
           '@react-native-google-signin/google-signin',
           {
             iosUrlScheme: isProduction
-              ? requireProductionEnv('EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME')
-              : process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ?? '',
+              ? PROD_GOOGLE_IOS_URL_SCHEME
+              : process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ??
+                PROD_GOOGLE_IOS_URL_SCHEME,
           },
         ],
       ],

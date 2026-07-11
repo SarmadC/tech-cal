@@ -14,8 +14,11 @@ These are required by `/Users/sarmad/tech-cal/apps/mobile/src/lib/env.ts`:
 ## Required iOS authentication variables
 
 - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-- `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+
+The matching production Google iOS URL scheme is public application metadata
+and is pinned in `app.config.ts` so EAS can resolve the project before loading
+its remote environment.
 
 ## Required RevenueCat variables for production
 
