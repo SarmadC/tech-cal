@@ -1,6 +1,7 @@
 import type { MobileSpeakerDetail, MobileSpeakerDetailEvent } from '@kurecal/domain';
 
 import type { SupabaseClientType } from '@/types';
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 const SHOWCASE_SOURCE_DOMAIN = 'showcase.kurecal.local';
 const SPEAKER_EVENT_LIMIT = 8;
@@ -28,15 +29,29 @@ interface EventRow {
   start_time: string;
   location: string | null;
   event_format: string | null;
+  event_image_url: string | null;
   source_domain: string | null;
   source_url: string | null;
   status: string | null;
+  organizer?: { name: string | null; logo_url: string | null } | Array<{ name: string | null; logo_url: string | null }> | null;
 }
 
 function isShowcaseEvent(row: Pick<EventRow, 'source_domain' | 'source_url'>): boolean {
   return (
     row.source_domain === SHOWCASE_SOURCE_DOMAIN ||
     row.source_url?.includes(SHOWCASE_SOURCE_DOMAIN) === true
+  );
+}
+
+function getOrganizerLogoUrl(event: EventRow): string | null {
+  const organizer = Array.isArray(event.organizer)
+    ? event.organizer[0]
+    : event.organizer;
+
+  return (
+    getLogoUrlFromInput(organizer?.logo_url, organizer?.name ?? undefined) ??
+    getLogoUrlFromInput(event.source_domain, organizer?.name ?? undefined) ??
+    null
   );
 }
 
@@ -103,7 +118,7 @@ export class MobileSpeakerService {
       const eventResult = await readClient
         .from('events')
         .select(
-          'id, slug, title, start_time, location, event_format, source_domain, source_url, status'
+          'id, slug, title, start_time, location, event_format, event_image_url, source_domain, source_url, status, organizer:organizers(name, logo_url)'
         )
         .in('id', eventIds)
         .eq('status', 'confirmed');
@@ -121,6 +136,8 @@ export class MobileSpeakerService {
           startTime: event.start_time,
           location: event.location,
           format: event.event_format,
+          imageUrl: event.event_image_url,
+          organizerLogoUrl: getOrganizerLogoUrl(event),
           isPastEvent: new Date(event.start_time).getTime() < now.getTime(),
         }))
         .sort(compareSpeakerEvents)

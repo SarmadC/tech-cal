@@ -47,6 +47,7 @@ export interface FilteredEventsRequest {
   sessionId?: string;
   surface?: 'calendar' | 'discover' | 'default';
   fastSearch?: boolean;
+  tagMatchMode?: 'all' | 'any';
 }
 
 export interface NormalizedFilteredEventsRequest {
@@ -77,6 +78,7 @@ export interface NormalizedFilteredEventsRequest {
   sessionId?: string;
   surface: 'calendar' | 'discover' | 'default';
   fastSearch: boolean;
+  tagMatchMode: 'all' | 'any';
 }
 
 interface LoadFilteredEventsDataOptions {
@@ -236,6 +238,7 @@ export function normalizeFilteredEventsRequest(
     sessionId: rawBody.sessionId,
     surface: rawBody.surface ?? 'default',
     fastSearch: rawBody.fastSearch ?? false,
+    tagMatchMode: rawBody.tagMatchMode ?? (rawBody.surface === 'calendar' ? 'any' : 'all'),
   };
 }
 
@@ -322,7 +325,12 @@ export async function loadFilteredEventsData({
   if (request.tags.length > 0) {
     try {
       logger.debug('[DEBUG] Filtering by tags:', request.tags);
-      const tagFilteredEventIds = await EventService.getEventIdsByTags(request.tags, supabase, eventFilters);
+      const tagFilteredEventIds = await EventService.getEventIdsByTags(
+        request.tags,
+        supabase,
+        eventFilters,
+        request.tagMatchMode
+      );
       logger.debug('[DEBUG] Tag filter results:', tagFilteredEventIds.length, 'events');
 
       if (tagFilteredEventIds.length > 0) {

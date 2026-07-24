@@ -130,6 +130,90 @@ describe('EventService', () => {
     vi.restoreAllMocks();
   });
 
+  describe('getEventIdsByTags', () => {
+    function createTagFilterSupabaseMock({
+      tagIdsByName,
+      relations,
+    }: {
+      tagIdsByName: Record<string, string[]>;
+      relations: Array<{ event_id: string; tag_id: string }>;
+    }) {
+      return {
+        from: vi.fn((table: string) => {
+          if (table === 'event_tags') {
+            return {
+              select: vi.fn(() => ({
+                ilike: vi.fn(async (_column: string, value: string) => ({
+                  data: (tagIdsByName[value] ?? []).map((id) => ({ id })),
+                  error: null,
+                })),
+              })),
+            };
+          }
+
+          if (table === 'event_tag_relations') {
+            return {
+              select: vi.fn(() => ({
+                in: vi.fn(async (_column: string, tagIds: string[]) => ({
+                  data: relations.filter((relation) => tagIds.includes(relation.tag_id)),
+                  error: null,
+                })),
+              })),
+            };
+          }
+
+          throw new Error(`Unexpected table: ${table}`);
+        }),
+      };
+    }
+
+    it('returns events that match any selected tag when match mode is any', async () => {
+      const supabase = createTagFilterSupabaseMock({
+        tagIdsByName: {
+          ai: ['tag-ai'],
+          security: ['tag-security'],
+        },
+        relations: [
+          { event_id: 'event-ai', tag_id: 'tag-ai' },
+          { event_id: 'event-security', tag_id: 'tag-security' },
+          { event_id: 'event-both', tag_id: 'tag-ai' },
+          { event_id: 'event-both', tag_id: 'tag-security' },
+        ],
+      });
+
+      const result = await EventService.getEventIdsByTags(
+        ['AI', 'Security'],
+        supabase as unknown as SupabaseClient,
+        {},
+        'any'
+      );
+
+      expect(result.sort()).toEqual(['event-ai', 'event-both', 'event-security']);
+    });
+
+    it('keeps all-tag matching as the default behavior', async () => {
+      const supabase = createTagFilterSupabaseMock({
+        tagIdsByName: {
+          ai: ['tag-ai'],
+          security: ['tag-security'],
+        },
+        relations: [
+          { event_id: 'event-ai', tag_id: 'tag-ai' },
+          { event_id: 'event-security', tag_id: 'tag-security' },
+          { event_id: 'event-both', tag_id: 'tag-ai' },
+          { event_id: 'event-both', tag_id: 'tag-security' },
+        ],
+      });
+
+      const result = await EventService.getEventIdsByTags(
+        ['AI', 'Security'],
+        supabase as unknown as SupabaseClient
+      );
+
+      expect(result).toEqual(['event-both']);
+    });
+  });
+
   describe('getEvents', () => {
     it('should fetch events with basic filters', async () => {
       const mockEvents = [
@@ -473,4 +557,3 @@ describe('EventService', () => {
     });
   });
 });
-

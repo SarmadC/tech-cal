@@ -1,5 +1,5 @@
 import { FontAwesome } from '@expo/vector-icons';
-import type { MobileSpeakerDetail } from '@kurecal/domain';
+import type { MobileEventCard, MobileSpeakerDetail } from '@kurecal/domain';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -15,6 +15,7 @@ import {
 
 import { HeaderActionButton, MobilePage } from '../../src/components/chrome/MobilePage';
 import { ScreenState } from '../../src/components/chrome/ScreenState';
+import { DiscoverEventCard } from '../../src/components/discover/DiscoverEventCard';
 import {
   formatCommunityTabCount,
   getSafeExternalUrl,
@@ -28,21 +29,6 @@ import {
 function getSpeakerHeadline(title: string | null, company: string | null): string {
   const parts = [title, company].filter(Boolean);
   return parts.join(' · ') || 'Speaker';
-}
-
-function getSpeakerEventMeta(
-  location: string | null,
-  format: string | null,
-  isPastEvent: boolean
-): string {
-  const locationLine =
-    format === 'virtual'
-      ? 'Virtual'
-      : format === 'hybrid' && location
-        ? `${location} · Hybrid`
-        : location || 'Location TBA';
-
-  return isPastEvent ? `Past appearance · ${locationLine}` : locationLine;
 }
 
 function getSocialLinks(speaker: MobileSpeakerDetail) {
@@ -79,20 +65,6 @@ function buildSpeakerInitials(name: string | null | undefined): string {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
-function formatAppearanceDate(value: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(value));
-}
-
-function formatAppearanceTime(value: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
 function getNetworkingSectionCopy(
   networkingState: NonNullable<MobileSpeakerDetail['networkingState']>
 ): string {
@@ -107,6 +79,46 @@ function getNetworkingSectionCopy(
   return 'Track LinkedIn request status.';
 }
 
+function normalizeSpeakerEventFormat(
+  format: string | null
+): MobileEventCard['format'] {
+  const normalized = format?.trim().toLowerCase();
+
+  if (normalized === 'online' || normalized === 'virtual') {
+    return 'virtual';
+  }
+
+  if (normalized === 'in-person' || normalized === 'in person') {
+    return 'in-person';
+  }
+
+  if (normalized === 'hybrid') {
+    return 'hybrid';
+  }
+
+  return null;
+}
+
+function toSpeakerDiscoverEventCard(
+  event: MobileSpeakerDetail['events'][number]
+): MobileEventCard {
+  const format = normalizeSpeakerEventFormat(event.format);
+
+  return {
+    id: event.id,
+    title: event.title,
+    slug: event.slug,
+    startTime: event.startTime,
+    location: event.location,
+    imageUrl: event.imageUrl ?? null,
+    organizerLogoUrl: event.organizerLogoUrl ?? null,
+    format,
+    formatLabel: format
+      ? undefined
+      : event.format?.trim() || undefined,
+  };
+}
+
 function getPrimaryNetworkingAction(
   networkingState: NonNullable<MobileSpeakerDetail['networkingState']>
 ): {
@@ -118,7 +130,7 @@ function getPrimaryNetworkingAction(
   if (networkingState.status === 'none') {
     return {
       action: 'mark_request_sent',
-      label: 'Mark request sent',
+      label: 'Mark LinkedIn request sent',
       pendingLabel: 'Saving...',
       pendingState: 'request',
     };
@@ -512,8 +524,22 @@ export default function SpeakerScreen() {
               )}
 
               <View style={styles.heroTopRow}>
-                <View />
-                <HeaderActionButton label="Back" onPress={() => router.back()} />
+                <Pressable
+                  accessibilityLabel="Back"
+                  accessibilityRole="button"
+                  hitSlop={12}
+                  onPress={() => router.back()}
+                  style={({ pressed }) => [
+                    styles.heroBackButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <FontAwesome
+                    name="angle-left"
+                    size={20}
+                    color={speaker.photoUrl ? '#FFFFFF' : tokens.colors.textPrimary}
+                  />
+                </Pressable>
               </View>
 
               <View style={styles.heroOverlay}>
@@ -607,68 +633,54 @@ export default function SpeakerScreen() {
 
             <View
               style={[
-                styles.networkingCard,
-                {
-                  backgroundColor: tokens.colors.surface,
-                  borderColor: tokens.colors.divider,
-                  borderRadius: tokens.radius.lg,
-                },
+                styles.openSection,
+                styles.connectionSection,
+                { borderColor: tokens.colors.divider },
               ]}
             >
-              <View style={styles.networkingHeader}>
+              <View style={styles.connectionTitleBlock}>
                 <Text
                   style={{
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
-                    fontSize: 21,
-                    lineHeight: 25,
-                    fontWeight: '700',
-                    letterSpacing: -0.4,
+                    fontSize: 15,
+                    lineHeight: 20,
+                    fontWeight: '600',
                   }}
                 >
-                  Networking
+                  Connection
                 </Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: networkingStatusTone.background,
-                      borderColor: networkingStatusTone.border,
-                      borderRadius: tokens.radius.pill,
-                    },
-                  ]}
+                <Text
+                  style={{
+                    color: tokens.colors.textTertiary,
+                    fontFamily: tokens.typography.sans,
+                    fontSize: 12,
+                    lineHeight: 16,
+                    fontWeight: '400',
+                  }}
                 >
-                  <Text
-                    style={{
-                      color: networkingStatusTone.text,
-                      fontFamily: tokens.typography.sans,
-                      fontSize: 14,
-                      lineHeight: 18,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {networkingState.status === 'connected'
-                      ? 'Connected'
-                      : networkingState.status === 'requested'
-                        ? 'Request sent'
-                        : 'Not contacted'}
-                  </Text>
-                </View>
+                  Status: {networkingState.status === 'connected'
+                    ? 'Connected'
+                    : networkingState.status === 'requested'
+                      ? 'Request sent'
+                      : 'Not contacted'}
+                </Text>
               </View>
 
+              <Text
+                style={{
+                  color: tokens.colors.textSecondary,
+                  fontFamily: tokens.typography.sans,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  fontWeight: '400',
+                }}
+              >
+                {getNetworkingSectionCopy(networkingState)}
+              </Text>
+
               {networkingState.status === 'connected' ? (
-                <View style={styles.networkingResolvedRow}>
-                  <Text
-                    style={{
-                      color: tokens.colors.textSecondary,
-                      fontFamily: tokens.typography.sans,
-                      fontSize: 15,
-                      lineHeight: 20,
-                      fontWeight: '500',
-                    }}
-                  >
-                    {getNetworkingSectionCopy(networkingState)}
-                  </Text>
+                <View style={styles.connectionResolvedRow}>
                   <Pressable
                     accessibilityRole="button"
                     disabled={Boolean(networkingActionPending)}
@@ -685,7 +697,7 @@ export default function SpeakerScreen() {
                       style={{
                         color: tokens.colors.textSecondary,
                         fontFamily: tokens.typography.sans,
-                        fontSize: 14,
+                        fontSize: 13,
                         lineHeight: 18,
                         fontWeight: '600',
                       }}
@@ -700,27 +712,14 @@ export default function SpeakerScreen() {
 
               <View
                 style={[
-                  styles.networkingActions,
+                  styles.connectionActions,
                   networkingState.status === 'connected'
-                    ? styles.networkingActionsCompact
+                    ? styles.connectionActionsCompact
                     : null,
                 ]}
               >
-                {networkingState.status !== 'connected' ? (
-                  <Text
-                    style={{
-                      color: tokens.colors.textSecondary,
-                      fontFamily: tokens.typography.sans,
-                      fontSize: 15,
-                      lineHeight: 20,
-                      fontWeight: '500',
-                    }}
-                  >
-                    {getNetworkingSectionCopy(networkingState)}
-                  </Text>
-                ) : null}
                 {primaryNetworkingAction ? (
-                  <View style={styles.networkingPrimaryAction}>
+                  <View style={styles.connectionPrimaryAction}>
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => {
@@ -732,7 +731,7 @@ export default function SpeakerScreen() {
                         {
                           backgroundColor: tokens.colors.pillActive,
                           borderColor: tokens.colors.pillActive,
-                          borderRadius: tokens.radius.pill,
+                          borderRadius: tokens.radius.sm,
                         },
                         pressed && styles.pressed,
                         networkingActionPending && styles.disabledAction,
@@ -742,9 +741,9 @@ export default function SpeakerScreen() {
                         style={{
                           color: tokens.colors.pillActiveText,
                           fontFamily: tokens.typography.sans,
-                          fontSize: 15,
-                          lineHeight: 18,
-                          fontWeight: '700',
+                          fontSize: 13,
+                          lineHeight: 16,
+                          fontWeight: '600',
                         }}
                       >
                         {networkingActionPending ===
@@ -793,17 +792,9 @@ export default function SpeakerScreen() {
 
             <View
               style={[
+                styles.openSection,
                 styles.eventsSection,
-                {
-                  backgroundColor: tokens.colors.surface,
-                  borderColor: tokens.colors.divider,
-                  borderRadius: tokens.radius.lg,
-                  shadowColor: tokens.shadow.shadowColor,
-                  shadowOpacity: tokens.mode === 'dark' ? 0.08 : 0.03,
-                  shadowRadius: 18,
-                  shadowOffset: { width: 0, height: 10 },
-                  elevation: 2,
-                },
+                { borderColor: tokens.colors.divider },
               ]}
             >
               <View style={styles.eventsHeader}>
@@ -811,13 +802,12 @@ export default function SpeakerScreen() {
                   style={{
                     color: tokens.colors.textPrimary,
                     fontFamily: tokens.typography.sans,
-                    fontSize: 16,
-                    lineHeight: 20,
-                    fontWeight: '800',
-                    letterSpacing: -0.2,
+                    fontSize: 18,
+                    lineHeight: 24,
+                    fontWeight: '600',
                   }}
                 >
-                  Speaking events
+                  {speaker.events.length > 1 ? 'Speaking sessions' : 'Upcoming session'}
                 </Text>
                 {speaker.events.length > 1 ? (
                   <Text
@@ -826,7 +816,7 @@ export default function SpeakerScreen() {
                       fontFamily: tokens.typography.sans,
                       fontSize: 12,
                       lineHeight: 16,
-                      fontWeight: '600',
+                      fontWeight: '400',
                     }}
                   >
                     {formatCommunityTabCount(speaker.events.length)}
@@ -837,86 +827,14 @@ export default function SpeakerScreen() {
               <View style={styles.eventsBody}>
                 {speaker.events.length > 0 ? (
                   speaker.events.map((event, index) => (
-                    <Pressable
+                    <DiscoverEventCard
                       key={event.id}
-                      accessibilityRole="button"
                       accessibilityLabel={`Open event ${event.title}`}
+                      event={toSpeakerDiscoverEventCard(event)}
                       onPress={() => router.push(`/event/${event.id}`)}
-                      style={({ pressed }) => [
-                        styles.eventRow,
-                        index < speaker.events.length - 1 && {
-                          borderBottomWidth: StyleSheet.hairlineWidth,
-                          borderBottomColor: tokens.colors.divider,
-                        },
-                        pressed && styles.eventRowPressed,
-                      ]}
-                    >
-                      <View style={styles.eventDateBlock}>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            color: tokens.colors.textTertiary,
-                            fontFamily: tokens.typography.sans,
-                            fontSize: 14,
-                            lineHeight: 18,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {formatAppearanceDate(event.startTime)}
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            color: tokens.colors.textPrimary,
-                            fontFamily: tokens.typography.sans,
-                            fontSize: 14,
-                            lineHeight: 18,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {formatAppearanceTime(event.startTime)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.eventCopy}>
-                        <Text
-                          numberOfLines={2}
-                          style={{
-                            color: tokens.colors.textPrimary,
-                            fontFamily: tokens.typography.sans,
-                            fontSize: 17,
-                            lineHeight: 22,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {event.title}
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            color: tokens.colors.textSecondary,
-                            fontFamily: tokens.typography.sans,
-                            fontSize: 14,
-                            lineHeight: 18,
-                            fontWeight: '400',
-                          }}
-                        >
-                          {getSpeakerEventMeta(
-                            event.location,
-                            event.format,
-                            event.isPastEvent
-                          )}
-                        </Text>
-                      </View>
-
-                      <View style={styles.eventChevron}>
-                        <FontAwesome
-                          name="chevron-right"
-                          size={14}
-                          color={tokens.colors.textTertiary}
-                        />
-                      </View>
-                    </Pressable>
+                      showDivider={index < speaker.events.length - 1}
+                      showSavedIndicator={false}
+                    />
                   ))
                 ) : (
                   <ScreenState
@@ -940,49 +858,21 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 430,
     alignSelf: 'center',
-    gap: 18,
-  },
-  eventChevron: {
-    width: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 2,
-  },
-  eventCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  eventDateBlock: {
-    width: 78,
-    gap: 2,
-  },
-  eventRow: {
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-  },
-  eventRowPressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.995 }],
+    gap: 12,
   },
   eventsBody: {
     gap: 0,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 0,
   },
   eventsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   eventsSection: {
-    borderWidth: 1,
+    paddingBottom: 4,
   },
   fallbackMonogram: {
     position: 'absolute',
@@ -1065,50 +955,45 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 12,
   },
-  networkingActions: {
-    gap: 12,
+  heroBackButton: {
+    alignItems: 'center',
+    borderRadius: 4,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
   },
-  networkingActionsCompact: {
+  connectionActions: {
+    gap: 8,
+    marginTop: 4,
+  },
+  connectionActionsCompact: {
     gap: 0,
     minHeight: 0,
   },
-  networkingCard: {
-    borderWidth: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 10,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.03,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  networkingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  networkingPrimaryAction: {
+  connectionPrimaryAction: {
     width: '100%',
-    flexGrow: 1,
   },
-  networkingResolvedRow: {
+  connectionResolvedRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 12,
   },
+  connectionSection: {
+    gap: 6,
+  },
+  connectionTitleBlock: {
+    gap: 1,
+  },
   primaryActionButton: {
-    minHeight: 44,
+    minHeight: 36,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   disabledAction: {
     opacity: 0.45,
@@ -1116,11 +1001,9 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.86,
   },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  openSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
   },
   undoAction: {
     alignSelf: 'flex-start',
