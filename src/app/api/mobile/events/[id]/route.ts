@@ -162,7 +162,7 @@ async function hydrateSpeakerLineupIds(
         title: speaker.title ?? match.title ?? undefined,
         company: speaker.company ?? match.company ?? undefined,
         bio: speaker.bio ?? match.bio ?? undefined,
-        photoUrl: speaker.photoUrl ?? match.photo_url ?? undefined,
+        photoUrl: match.photo_url ?? speaker.photoUrl ?? undefined,
         linkedinUrl: speaker.linkedinUrl ?? match.linkedin_url ?? undefined,
         socialLinks: {
           ...speaker.socialLinks,

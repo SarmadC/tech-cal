@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import type { SpeakersSectionProps } from '../types';
+import { SpeakerPortraitReview } from './SpeakerPortraitReview';
 
 function getInitials(name: string) {
     return name
@@ -16,6 +17,7 @@ function getInitials(name: string) {
 }
 
 export function SpeakersSection({
+    eventSourceUrl,
     speakers,
     onAdd,
     onUpdate,
@@ -205,6 +207,7 @@ export function SpeakersSection({
                                                     Remote image URLs are copied to Supabase Storage when speakers are saved.
                                                 </p>
                                             </div>
+                                            <SpeakerPortraitReview speaker={speaker} sourcePageUrl={eventSourceUrl} />
                                             <div className="grid gap-2">
                                                 <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Bio</label>
                                                 <textarea

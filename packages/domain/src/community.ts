@@ -403,9 +403,11 @@ export const mobileSpeakerDetailSchema = z.object({
   company: z.string().nullable(),
   bio: z.string().nullable(),
   photoUrl: z.string().nullable(),
+  portraitUrl: z.string().nullable().default(null),
   linkedinUrl: z.string().nullable(),
   twitterUrl: z.string().nullable(),
   websiteUrl: z.string().nullable(),
+  appearanceCount: z.number().int().nonnegative().default(0),
   events: z.array(mobileSpeakerDetailEventSchema),
   networkingState: mobileNetworkingStateSchema.optional(),
 });

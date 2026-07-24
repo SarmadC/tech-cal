@@ -5,6 +5,10 @@ import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 const SHOWCASE_SOURCE_DOMAIN = 'showcase.kurecal.local';
 const SPEAKER_EVENT_LIMIT = 8;
+const SPEAKER_FIELDS =
+  'id, name, title, company, bio, photo_url, portrait_url, linkedin_url, twitter_url, website_url';
+const LEGACY_SPEAKER_FIELDS =
+  'id, name, title, company, bio, photo_url, linkedin_url, twitter_url, website_url';
 
 interface SpeakerRow {
   id: string;
@@ -13,6 +17,7 @@ interface SpeakerRow {
   company: string | null;
   bio: string | null;
   photo_url: string | null;
+  portrait_url?: string | null;
   linkedin_url: string | null;
   twitter_url: string | null;
   website_url: string | null;
@@ -69,6 +74,17 @@ function compareSpeakerEvents(
   return left.isPastEvent ? rightTime - leftTime : leftTime - rightTime;
 }
 
+function isMissingPortraitColumnError(error: {
+  code?: string;
+  message?: string;
+} | null): boolean {
+  if (!error?.message?.includes('portrait_url')) {
+    return false;
+  }
+
+  return error.code === '42703' || error.code === 'PGRST204';
+}
+
 export class MobileSpeakerService {
   static async getSpeakerDetail({
     speakerId,
@@ -81,17 +97,34 @@ export class MobileSpeakerService {
   }): Promise<MobileSpeakerDetail | null> {
     const speakerResult = await readClient
       .from('speakers')
-      .select(
-        'id, name, title, company, bio, photo_url, linkedin_url, twitter_url, website_url'
-      )
+      .select(SPEAKER_FIELDS)
       .eq('id', speakerId)
       .maybeSingle();
 
-    if (speakerResult.error) {
+    let speaker: SpeakerRow | null;
+    if (isMissingPortraitColumnError(speakerResult.error)) {
+      const legacySpeakerResult = await readClient
+        .from('speakers')
+        .select(LEGACY_SPEAKER_FIELDS)
+        .eq('id', speakerId)
+        .maybeSingle();
+
+      if (legacySpeakerResult.error) {
+        throw new Error('Failed to load speaker details.');
+      }
+
+      speaker = legacySpeakerResult.data
+        ? {
+            ...(legacySpeakerResult.data as Omit<SpeakerRow, 'portrait_url'>),
+            portrait_url: null,
+          }
+        : null;
+    } else if (speakerResult.error) {
       throw new Error('Failed to load speaker details.');
+    } else {
+      speaker = speakerResult.data as SpeakerRow | null;
     }
 
-    const speaker = speakerResult.data as SpeakerRow | null;
     if (!speaker) {
       return null;
     }
@@ -113,6 +146,7 @@ export class MobileSpeakerService {
       )
     );
 
+    let appearanceCount = 0;
     let events: MobileSpeakerDetailEvent[] = [];
     if (eventIds.length > 0) {
       const eventResult = await readClient
@@ -127,7 +161,7 @@ export class MobileSpeakerService {
         throw new Error('Failed to load speaker events.');
       }
 
-      events = ((eventResult.data ?? []) as EventRow[])
+      const confirmedAppearances = ((eventResult.data ?? []) as EventRow[])
         .filter((event) => !isShowcaseEvent(event))
         .map((event) => ({
           id: event.id,
@@ -140,8 +174,10 @@ export class MobileSpeakerService {
           organizerLogoUrl: getOrganizerLogoUrl(event),
           isPastEvent: new Date(event.start_time).getTime() < now.getTime(),
         }))
-        .sort(compareSpeakerEvents)
-        .slice(0, SPEAKER_EVENT_LIMIT);
+        .sort(compareSpeakerEvents);
+
+      appearanceCount = confirmedAppearances.length;
+      events = confirmedAppearances.slice(0, SPEAKER_EVENT_LIMIT);
     }
 
     return {
@@ -151,9 +187,11 @@ export class MobileSpeakerService {
       company: speaker.company,
       bio: speaker.bio,
       photoUrl: speaker.photo_url,
+      portraitUrl: speaker.portrait_url ?? null,
       linkedinUrl: speaker.linkedin_url,
       twitterUrl: speaker.twitter_url,
       websiteUrl: speaker.website_url,
+      appearanceCount,
       events,
     };
   }

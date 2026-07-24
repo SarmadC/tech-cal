@@ -25,7 +25,7 @@ export default function PrivacyPage() {
     return (
         <main className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
             <h1>Privacy Policy</h1>
-            <p>Last updated: July 9, 2026</p>
+                <p>Last updated: July 9, 2026</p>
 
             <h2>1. Who We Are</h2>
             <p>

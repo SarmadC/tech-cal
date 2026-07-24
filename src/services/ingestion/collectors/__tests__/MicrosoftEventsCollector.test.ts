@@ -5,6 +5,12 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 function makeCard(overrides: Record<string, unknown> = {}) {
+    const futureStart = new Date();
+    futureStart.setUTCFullYear(futureStart.getUTCFullYear() + 1);
+    futureStart.setUTCHours(9, 0, 0, 0);
+    const futureEnd = new Date(futureStart);
+    futureEnd.setUTCHours(17, 0, 0, 0);
+
     return {
         content: {
             id: crypto.randomUUID(),
@@ -23,8 +29,8 @@ function makeCard(overrides: Record<string, unknown> = {}) {
                 country: 'United Kingdom',
             },
             eventDates: {
-                startDate: '2026-06-15T09:00:00.0000000Z',
-                endDate: '2026-06-15T17:00:00.0000000Z',
+                startDate: futureStart.toISOString(),
+                endDate: futureEnd.toISOString(),
             },
             ...overrides,
         },

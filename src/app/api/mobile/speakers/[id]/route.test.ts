@@ -77,9 +77,11 @@ describe('GET /api/mobile/speakers/[id]', () => {
       company: 'Signal Labs',
       bio: 'Leads applied AI research.',
       photoUrl: 'https://example.com/dana.jpg',
+      portraitUrl: 'https://example.com/dana-portrait.jpg',
       linkedinUrl: 'https://linkedin.com/in/dana',
       twitterUrl: null,
       websiteUrl: 'https://signals.example/dana',
+      appearanceCount: 1,
       events: [
         {
           id: '11111111-1111-4111-8111-111111111111',
@@ -107,6 +109,9 @@ describe('GET /api/mobile/speakers/[id]', () => {
     expect(payload.success).toBe(true);
     const parsed = mobileSpeakerDetailSchema.parse(payload.data);
     expect(parsed.name).toBe('Dana Scully');
+    expect(parsed.photoUrl).toBe('https://example.com/dana.jpg');
+    expect(parsed.portraitUrl).toBe('https://example.com/dana-portrait.jpg');
+    expect(parsed.appearanceCount).toBe(1);
     expect(parsed.events[0]?.title).toBe('Design Review Week');
     expect(parsed.events[0]?.organizerLogoUrl).toBe('https://example.com/logo.png');
     expect(parsed.networkingState?.status).toBe('requested');

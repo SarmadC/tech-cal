@@ -1,13 +1,9 @@
-import type { EmailOtpType, Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as ExpoLinking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { MobileProfileState } from '@kurecal/domain';
 import {
   createContext,
@@ -23,11 +19,13 @@ import {
 
 import {
   MOBILE_RESET_PASSWORD_PATH,
-  getAuthCallbackParams,
   getMobileEmailRedirectUri,
+  getMobileOAuthRedirectUri,
   getMobileRecoveryRedirectUri,
   isMobileAuthCallbackUrl,
 } from '../lib/authRedirect';
+import { getMobileApiBaseUrl } from '../lib/env';
+import { completeMobileAuthCallback } from '../lib/mobileAuthCompletion';
 import { deleteMobileAccount, loadMobileProfileState } from '../lib/mobileApi';
 import {
   registerForPushNotificationsAsync,
@@ -196,16 +194,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeAuthFromUrl = useCallback(
     async (url: string) => {
       lastAuthCallbackUrlRef.current = url;
-      const params = getAuthCallbackParams(url);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const code = params.get('code');
-      const tokenHash = params.get('token_hash');
-      const authType = params.get('type');
-      const authError =
-        params.get('error_description') ??
-        params.get('error') ??
-        params.get('error_code');
 
       startTransition(() => {
         setIsCompletingAuth(true);
@@ -214,67 +202,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       try {
-        if (authError) {
-          throw new Error(authError);
-        }
-
-        if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) {
-            throw error;
-          }
-
-          await syncSessionFromSupabase();
-          startTransition(() => {
-            setPendingPostAuthRoute(
-              authType === 'recovery' ? MOBILE_RESET_PASSWORD_PATH : null
-            );
-          });
-          return;
-        }
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-          if (error) {
-            throw error;
-          }
-
-          await syncSessionFromSupabase();
-          startTransition(() => {
-            setPendingPostAuthRoute(
-              authType === 'recovery' ? MOBILE_RESET_PASSWORD_PATH : null
-            );
-          });
-          return;
-        }
-
-        if (tokenHash && isSupportedOtpType(authType)) {
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: authType,
-          });
-
-          if (error) {
-            throw error;
-          }
-
-          await syncSessionFromSupabase();
-          startTransition(() => {
-            setPendingPostAuthRoute(
-              authType === 'recovery' ? MOBILE_RESET_PASSWORD_PATH : null
-            );
-          });
-          return;
-        }
-
-        throw new Error(
-          'This mobile auth link is missing the data needed to complete sign in.'
-        );
+        const result = await completeMobileAuthCallback(supabase.auth, url);
+        await syncSessionFromSupabase();
+        startTransition(() => {
+          setPendingPostAuthRoute(
+            result.isRecovery ? MOBILE_RESET_PASSWORD_PATH : null
+          );
+        });
       } catch (error) {
         const message = getErrorMessage(error);
         startTransition(() => {
@@ -461,27 +395,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Google: native sign-in
-        await GoogleSignin.hasPlayServices();
-        let googleResponse: Awaited<ReturnType<typeof GoogleSignin.signIn>>;
-        try {
-          googleResponse = await GoogleSignin.signIn();
-        } catch (err: unknown) {
-          if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
-            return;
-          }
-          throw err;
+        // Google: browser-based OAuth via Supabase.
+        // GIDSignIn v9 (used by @react-native-google-signin v16) auto-embeds
+        // nonces in id_tokens that the JS layer cannot access, making native
+        // signInWithIdToken impossible. The browser OAuth flow avoids this.
+        const redirectTo = getMobileOAuthRedirectUri();
+
+        const { data: oauthData, error: oauthError } =
+          await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo, skipBrowserRedirect: true },
+          });
+
+        if (oauthError) throw oauthError;
+        if (!oauthData.url) throw new Error('Unable to start Google sign in.');
+
+        const proxyUrl = new URL(
+          `${getMobileApiBaseUrl()}/api/mobile/auth/google/start`
+        );
+        proxyUrl.searchParams.set('url', oauthData.url);
+
+        const browserResult = await WebBrowser.openAuthSessionAsync(
+          proxyUrl.toString(),
+          redirectTo
+        );
+
+        if (browserResult.type !== 'success') return;
+
+        // Guard against double-processing if the deep-link useEffect fires first.
+        if (lastHandledIncomingUrlRef.current !== browserResult.url) {
+          lastHandledIncomingUrlRef.current = browserResult.url;
+          await completeAuthFromUrl(browserResult.url);
         }
-
-        const idToken = googleResponse.data?.idToken;
-        if (!idToken) throw new Error('No ID token returned from Google Sign In.');
-
-        const { error: googleError } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: idToken,
-        });
-
-        if (googleError) throw googleError;
       },
       signOut: async () => {
         clearAuthCompletionState();
@@ -580,17 +525,6 @@ function getErrorMessage(error: unknown) {
   }
 
   return 'Unable to complete authentication.';
-}
-
-function isSupportedOtpType(type: string | null): type is EmailOtpType {
-  return (
-    type === 'signup' ||
-    type === 'recovery' ||
-    type === 'magiclink' ||
-    type === 'invite' ||
-    type === 'email' ||
-    type === 'email_change'
-  );
 }
 
 export function useAuth() {

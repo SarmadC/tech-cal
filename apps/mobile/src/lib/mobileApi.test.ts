@@ -1143,9 +1143,11 @@ describe('mobile api helpers', () => {
               company: 'Signal Labs',
               bio: 'Leads applied AI research.',
               photoUrl: null,
+              portraitUrl: 'https://example.com/dana-portrait.jpg',
               linkedinUrl: 'https://linkedin.com/in/dana',
               twitterUrl: null,
               websiteUrl: null,
+              appearanceCount: 0,
               events: [],
             },
           }),
@@ -1203,6 +1205,7 @@ describe('mobile api helpers', () => {
     expect(post.post.id).toBe('post-1');
     expect(publicProfile.username).toBe('ada');
     expect(followStatus.isFollowing).toBe(true);
+    expect(speaker.portraitUrl).toBe('https://example.com/dana-portrait.jpg');
     expect(speaker.name).toBe('Dana Scully');
     expect(fetchSpy.mock.calls[0]?.[0]).toBe(
       'https://mobile.kurecal.test/api/mobile/community'

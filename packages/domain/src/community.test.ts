@@ -388,14 +388,18 @@ describe("community domain contracts", () => {
       company: "Signal Labs",
       bio: "Leads applied AI research.",
       photoUrl: null,
+      portraitUrl: "https://example.com/dana-portrait.jpg",
       linkedinUrl: "https://linkedin.com/in/dana",
       twitterUrl: null,
       websiteUrl: null,
+      appearanceCount: 0,
       events: [],
     });
 
     expect(profile.username).toBe("ada");
     expect(speaker.name).toBe("Dana Scully");
+    expect(speaker.portraitUrl).toBe("https://example.com/dana-portrait.jpg");
+    expect(speaker.appearanceCount).toBe(0);
   });
 
   it("parses circle and post page contracts with nested comments", () => {

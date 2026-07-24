@@ -207,6 +207,7 @@ export interface AgendaSectionProps {
 }
 
 export interface SpeakersSectionProps {
+    eventSourceUrl?: string | null;
     speakers: Speaker[];
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<Speaker>) => void;
