@@ -2,10 +2,6 @@ import baseConfig from './app.base.json';
 
 type MobileAppVariant = 'development' | 'production';
 
-const DEV_FACE_ID_DESCRIPTION =
-  'Allow KureCal Dev to securely unlock saved sessions.';
-const PROD_FACE_ID_DESCRIPTION =
-  'Allow KureCal to securely unlock saved sessions.';
 const DEV_CALENDAR_DESCRIPTION =
   'Allow KureCal Dev to add, update, and remove events in your calendar.';
 const PROD_CALENDAR_DESCRIPTION =
@@ -18,6 +14,12 @@ const DEV_PHOTOS_DESCRIPTION =
   'Allow KureCal Dev to attach photos to community posts.';
 const PROD_PHOTOS_DESCRIPTION =
   'Allow KureCal to attach photos to community posts.';
+const DEV_LOCATION_DESCRIPTION =
+  'Allow KureCal Dev to detect your location for nearby discovery results.';
+const PROD_LOCATION_DESCRIPTION =
+  'Allow KureCal to detect your location for nearby discovery results.';
+const PROD_GOOGLE_IOS_URL_SCHEME =
+  'com.googleusercontent.apps.1092999529211-m987etstd446h7jj2u3q67ka8qq52nog';
 
 function normalizeVariant(value: string | undefined): MobileAppVariant | null {
   const normalized = value?.trim().toLowerCase();
@@ -58,6 +60,17 @@ export default function getMobileExpoConfig() {
       plugins: [
         ...(baseConfig.expo.plugins ?? []),
         [
+          'expo-location',
+          {
+            isIosBackgroundLocationEnabled: false,
+            locationAlwaysAndWhenInUsePermission: false,
+            locationAlwaysPermission: false,
+            locationWhenInUsePermission: isProduction
+              ? PROD_LOCATION_DESCRIPTION
+              : DEV_LOCATION_DESCRIPTION,
+          },
+        ],
+        [
           'expo-calendar',
           {
             calendarPermission: isProduction
@@ -71,6 +84,8 @@ export default function getMobileExpoConfig() {
         [
           'expo-image-picker',
           {
+            cameraPermission: false,
+            microphonePermission: false,
             photosPermission: isProduction
               ? PROD_PHOTOS_DESCRIPTION
               : DEV_PHOTOS_DESCRIPTION,
@@ -82,7 +97,10 @@ export default function getMobileExpoConfig() {
         [
           '@react-native-google-signin/google-signin',
           {
-            iosUrlScheme: process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ?? '',
+            iosUrlScheme: isProduction
+              ? PROD_GOOGLE_IOS_URL_SCHEME
+              : process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ??
+                PROD_GOOGLE_IOS_URL_SCHEME,
           },
         ],
       ],
@@ -105,12 +123,12 @@ export default function getMobileExpoConfig() {
           NSRemindersUsageDescription: isProduction
             ? PROD_REMINDERS_DESCRIPTION
             : DEV_REMINDERS_DESCRIPTION,
-          NSFaceIDUsageDescription: isProduction
-            ? PROD_FACE_ID_DESCRIPTION
-            : DEV_FACE_ID_DESCRIPTION,
           NSPhotoLibraryUsageDescription: isProduction
             ? PROD_PHOTOS_DESCRIPTION
             : DEV_PHOTOS_DESCRIPTION,
+          NSLocationWhenInUseUsageDescription: isProduction
+            ? PROD_LOCATION_DESCRIPTION
+            : DEV_LOCATION_DESCRIPTION,
           ITSAppUsesNonExemptEncryption: false,
           UIBackgroundModes: Array.from(
             new Set([
@@ -121,6 +139,7 @@ export default function getMobileExpoConfig() {
           ),
         },
         entitlements: {
+          'com.apple.developer.applesignin': ['Default'],
           'aps-environment': isProduction ? 'production' : 'development',
         },
       },

@@ -1,6 +1,21 @@
 import { z } from "zod";
 
 import { mobileSurfaceHeaderSchema } from "./surface";
+import { containsObjectionableCommunityContent } from "./communityContent";
+
+const SAFE_CONTENT_MESSAGE =
+  "This content cannot be posted. Revise threats, exploitation, or targeted abuse.";
+
+function communityTextSchema(maxLength: number, minLength = 0) {
+  return z
+    .string()
+    .trim()
+    .min(minLength)
+    .max(maxLength)
+    .refine((value) => !containsObjectionableCommunityContent(value), {
+      message: SAFE_CONTENT_MESSAGE,
+    });
+}
 
 export const voteValueSchema = z.union([
   z.literal(-1),
@@ -22,8 +37,8 @@ export const membershipStateSchema = z.enum(['none', 'following', 'joined']);
 export const communityPostDraftSchema = z.object({
   circleId: z.string().uuid(),
   circleSlug: z.string().min(1),
-  title: z.string().trim().max(200).optional(),
-  content: z.string().trim().max(10_000),
+  title: communityTextSchema(200).optional(),
+  content: communityTextSchema(10_000),
   postType: communityPostTypeSchema.optional(),
   eventId: z.string().uuid().optional(),
   mentions: z.array(z.object({ userId: z.string().uuid() })).max(20).optional(),
@@ -50,7 +65,7 @@ export const communityPostDraftSchema = z.object({
 export const communityCommentDraftSchema = z.object({
   postId: z.string().uuid(),
   circleSlug: z.string().min(1),
-  content: z.string().trim().min(1).max(5_000),
+  content: communityTextSchema(5_000, 1),
   parentId: z.string().uuid().optional(),
 });
 
@@ -388,9 +403,11 @@ export const mobileSpeakerDetailSchema = z.object({
   company: z.string().nullable(),
   bio: z.string().nullable(),
   photoUrl: z.string().nullable(),
+  portraitUrl: z.string().nullable().default(null),
   linkedinUrl: z.string().nullable(),
   twitterUrl: z.string().nullable(),
   websiteUrl: z.string().nullable(),
+  appearanceCount: z.number().int().nonnegative().default(0),
   events: z.array(mobileSpeakerDetailEventSchema),
   networkingState: mobileNetworkingStateSchema.optional(),
 });
@@ -969,14 +986,14 @@ export const mobileCommunityRoomThreadSchema = z.object({
 });
 
 export const mobileCommunityRoomThreadDraftSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  body: z.string().trim().min(1).max(5000),
+  title: communityTextSchema(200, 1),
+  body: communityTextSchema(5000, 1),
   media: z.array(communityMediaDraftSchema).max(4).optional(),
 });
 
 export const mobileCommunityRoomThreadEditDraftSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  body: z.string().trim().min(1).max(5000),
+  title: communityTextSchema(200, 1),
+  body: communityTextSchema(5000, 1),
 });
 
 export const mobileCommunityRoomThreadListSchema = z.object({
@@ -1029,12 +1046,12 @@ export const mobileCommunityRoomThreadCommentPageSchema = z.object({
 });
 
 export const mobileCommunityRoomThreadCommentDraftSchema = z.object({
-  body: z.string().trim().min(1).max(2000),
+  body: communityTextSchema(2000, 1),
   parentCommentId: z.string().uuid().nullable().optional(),
 });
 
 export const mobileCommunityRoomThreadCommentEditDraftSchema = z.object({
-  body: z.string().trim().min(1).max(2000),
+  body: communityTextSchema(2000, 1),
 });
 
 export const mobileCommunityRoomCommentSortSchema = z.enum([

@@ -4288,6 +4288,9 @@ export type Database = {
           linkedin_url: string | null
           name: string
           photo_url: string | null
+          portrait_height: number | null
+          portrait_url: string | null
+          portrait_width: number | null
           title: string | null
           twitter_url: string | null
           website_url: string | null
@@ -4301,6 +4304,9 @@ export type Database = {
           linkedin_url?: string | null
           name: string
           photo_url?: string | null
+          portrait_height?: number | null
+          portrait_url?: string | null
+          portrait_width?: number | null
           title?: string | null
           twitter_url?: string | null
           website_url?: string | null
@@ -4314,6 +4320,9 @@ export type Database = {
           linkedin_url?: string | null
           name?: string
           photo_url?: string | null
+          portrait_height?: number | null
+          portrait_url?: string | null
+          portrait_width?: number | null
           title?: string | null
           twitter_url?: string | null
           website_url?: string | null

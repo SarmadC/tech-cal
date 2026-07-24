@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Image,
+  InteractionManager,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,13 +14,11 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import Animated, { SlideInLeft } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { buildAvatarInitials } from "../community/presentation";
 import { useAuth } from "../../context/AuthProvider";
 import { useSubscription } from "../../context/SubscriptionContext";
-import { useReduceMotion } from "../../hooks/useAnimation";
 import { showActionSheet } from "../../lib/actionSheet";
 import { haptics } from "../../lib/haptics";
 import { useAppTheme } from "../../providers/ThemeProvider";
@@ -53,11 +53,11 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
   const { profile, session, signOut } = useAuth();
   const { hasPaidAccess } = useSubscription();
   const insets = useSafeAreaInsets();
-  const reduceMotion = useReduceMotion();
   const { width } = useWindowDimensions();
   const isDark = tokens.mode === "dark";
   const panelWidth = Math.min(340, Math.max(288, width * 0.86));
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRouteRef = useRef<string | null>(null);
+  const pendingSignOutRef = useRef(false);
 
   const close = useCallback(() => {
     onClose();
@@ -65,11 +65,36 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
 
   useEffect(() => {
     return () => {
-      if (navigationTimerRef.current) {
-        clearTimeout(navigationTimerRef.current);
-      }
+      pendingRouteRef.current = null;
+      pendingSignOutRef.current = false;
     };
   }, []);
+
+  const handleDismiss = useCallback(() => {
+    const pendingRoute = pendingRouteRef.current;
+    const shouldSignOut = pendingSignOutRef.current;
+    pendingRouteRef.current = null;
+    pendingSignOutRef.current = false;
+
+    if (pendingRoute) {
+      router.push(pendingRoute as never);
+      return;
+    }
+
+    if (shouldSignOut) {
+      void signOut();
+    }
+  }, [signOut]);
+
+  const runPendingActionAfterClose = useCallback(() => {
+    if (Platform.OS === "ios") {
+      return;
+    }
+
+    InteractionManager.runAfterInteractions(() => {
+      handleDismiss();
+    });
+  }, [handleDismiss]);
 
   const username = profile?.socialProfile.username?.trim();
   const profileRoute = username
@@ -158,11 +183,9 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
                     label: "Sign out",
                     destructive: true,
                     onPress: () => {
+                      pendingSignOutRef.current = true;
                       close();
-                      navigationTimerRef.current = setTimeout(() => {
-                        navigationTimerRef.current = null;
-                        void signOut();
-                      }, 250);
+                      runPendingActionAfterClose();
                     },
                   },
                 ],
@@ -172,7 +195,7 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
         ],
       },
     ],
-    [close, signOut],
+    [close, runPendingActionAfterClose],
   );
 
   useEffect(() => {
@@ -183,16 +206,10 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
 
   const go = useCallback((route: string) => {
     haptics.selection();
+    pendingRouteRef.current = route;
     close();
-    if (navigationTimerRef.current) {
-      clearTimeout(navigationTimerRef.current);
-    }
-
-    navigationTimerRef.current = setTimeout(() => {
-      navigationTimerRef.current = null;
-      router.push(route as never);
-    }, 250);
-  }, [close]);
+    runPendingActionAfterClose();
+  }, [close, runPendingActionAfterClose]);
 
   function handleRowPress(row: MenuRow) {
     if (row.onPress) {
@@ -210,6 +227,7 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
       visible={visible}
       transparent
       animationType="fade"
+      onDismiss={handleDismiss}
       onRequestClose={close}
     >
       <Pressable style={StyleSheet.absoluteFill} onPress={close}>
@@ -220,8 +238,7 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
         />
         <View style={styles.backdropDim} />
       </Pressable>
-      <Animated.View
-        entering={reduceMotion ? undefined : SlideInLeft.duration(220)}
+      <View
         style={[
           styles.panel,
           {
@@ -449,7 +466,7 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
             </View>
           ))}
         </ScrollView>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }

@@ -662,6 +662,7 @@ export default function EnrichmentEditorClient({
                 {/* Speakers Section */}
                 <div id="speakers" className="scroll-mt-6">
                     <SpeakersSection
+                        eventSourceUrl={event.source_url}
                         speakers={speakers}
                         onAdd={handleAddSpeaker}
                         onUpdate={handleUpdateSpeaker}

@@ -11,7 +11,16 @@ These are required by `/Users/sarmad/tech-cal/apps/mobile/src/lib/env.ts`:
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-## Optional RevenueCat variables
+## Required iOS authentication variables
+
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+
+The matching production Google iOS URL scheme is public application metadata
+and is pinned in `app.config.ts` so EAS can resolve the project before loading
+its remote environment.
+
+## Required RevenueCat variables for production
 
 Set these for paid subscriptions:
 
@@ -20,6 +29,12 @@ Set these for paid subscriptions:
 - `EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID`
 - `EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID`
 - `EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID`
+
+The API deployment also requires these server-only values so account deletion
+can remove the RevenueCat customer record:
+
+- `REVENUECAT_V2_SECRET_API_KEY`
+- `REVENUECAT_PROJECT_ID`
 
 ## RevenueCat webhook
 
@@ -93,10 +108,10 @@ npx eas-cli env:list --environment production
 npm run release:check
 ```
 
-5. Replace `YOUR_ASC_APP_ID` in `/Users/sarmad/tech-cal/apps/mobile/eas.json`
-   with the real App Store Connect app id before submitting a production build.
-   This value was not present in the repo during the launch audit and remains a
-   release blocker.
+5. For App Store submission, run `npm run configure:ios-submit` with
+   `APP_STORE_CONNECT_APP_ID` set to the numeric Apple ID from App Store Connect.
+   The release workflow performs this step on its ephemeral checkout when
+   `submit_to_store` is selected.
 
 ## RevenueCat launch checklist
 
@@ -133,13 +148,13 @@ The mobile app now uses an explicit app variant split:
 Local scripts default to the development variant. Production release commands set
 `APP_VARIANT=production` automatically.
 
-Before archiving or submitting the first iOS App Store build from Xcode, sync the
-native iOS project to the production variant:
+The repository uses Expo Continuous Native Generation and intentionally does not
+track `apps/mobile/ios`. To inspect a generated production project locally:
 
 ```bash
 cd /Users/sarmad/tech-cal/apps/mobile
 APP_VARIANT=production npx expo prebuild --platform ios --clean
 ```
 
-That generated Xcode project is the one whose bundle identifier must match the
-App Store Connect app.
+Do not commit that generated directory. EAS regenerates it for every build so the
+production identifier and entitlements come from `app.config.ts`.

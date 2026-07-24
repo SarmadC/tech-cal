@@ -23,7 +23,7 @@ import { getMobileApiBaseUrl } from '../src/lib/env';
 import {
   getKureCalOfferingPackages,
   isRevenueCatPurchaseCancelled,
-  presentKureCalCustomerCenter,
+  openKureCalSubscriptionManagement,
   purchaseRevenueCatPackage,
   restoreRevenueCatPurchases,
   type RevenueCatPackage,
@@ -293,7 +293,7 @@ export default function PaywallScreen() {
 
     setWorkingAction('manage');
     try {
-      await presentKureCalCustomerCenter();
+      await openKureCalSubscriptionManagement();
       await refreshSubscription();
     } catch (error) {
       Alert.alert(

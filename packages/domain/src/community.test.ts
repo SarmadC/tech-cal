@@ -50,6 +50,16 @@ describe("community domain contracts", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects clearly objectionable threats before community submission", () => {
+    const result = communityPostDraftSchema.safeParse({
+      circleId: "11111111-1111-4111-8111-111111111111",
+      circleSlug: "ai-builders",
+      content: "kill yourself",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("tokenizes community post urls and known mentions", () => {
     const segments = tokenizeCommunityContent(
       "Meet @ada at https://example.com.",
@@ -378,14 +388,18 @@ describe("community domain contracts", () => {
       company: "Signal Labs",
       bio: "Leads applied AI research.",
       photoUrl: null,
+      portraitUrl: "https://example.com/dana-portrait.jpg",
       linkedinUrl: "https://linkedin.com/in/dana",
       twitterUrl: null,
       websiteUrl: null,
+      appearanceCount: 0,
       events: [],
     });
 
     expect(profile.username).toBe("ada");
     expect(speaker.name).toBe("Dana Scully");
+    expect(speaker.portraitUrl).toBe("https://example.com/dana-portrait.jpg");
+    expect(speaker.appearanceCount).toBe(0);
   });
 
   it("parses circle and post page contracts with nested comments", () => {

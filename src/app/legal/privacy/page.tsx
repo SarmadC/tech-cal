@@ -25,7 +25,7 @@ export default function PrivacyPage() {
     return (
         <main className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">
             <h1>Privacy Policy</h1>
-            <p>Last updated: September 12, 2025</p>
+                <p>Last updated: July 9, 2026</p>
 
             <h2>1. Who We Are</h2>
             <p>
@@ -37,19 +37,22 @@ export default function PrivacyPage() {
             <h2>2. Information We Collect</h2>
             <ul>
                 <li>
-                    <strong>Account data</strong>: name, email address, password hash, profile preferences, time zone.
+                    <strong>Account data</strong>: name, email address, authentication provider, profile preferences, time zone, and account identifiers. Password credentials are handled by our authentication provider.
                 </li>
                 <li>
                     <strong>Usage data</strong>: device/browser type, IP address, pages viewed, features used, timestamps, referral URLs.
                 </li>
                 <li>
-                    <strong>Calendar and content</strong>: events you add or import, categories/tags, and related metadata you choose to store in the app.
+                    <strong>Calendar and content</strong>: events you add or import, calendar connection credentials, community posts, comments, reports, images, categories/tags, and related metadata you choose to store in the app.
                 </li>
                 <li>
                     <strong>Cookies and similar technologies</strong>: essential cookies to operate the Service and optional analytics cookies.
                 </li>
                 <li>
-                    <strong>Payment data</strong>: processed by our payment provider (e.g., card brand, last 4 digits, billing address). We do not store full card numbers.
+                    <strong>Mobile device data</strong>: push-notification token, app version, a locally generated device identifier, and approximate location when you ask for nearby results. Device calendar access is used only when you choose to save or remove an event.
+                </li>
+                <li>
+                    <strong>Payment data</strong>: subscription product, purchase status, renewal and expiration information processed by Apple and RevenueCat. We do not receive or store full payment-card numbers.
                 </li>
             </ul>
 
@@ -80,6 +83,9 @@ export default function PrivacyPage() {
                 <li><strong>Legal and safety</strong>: to comply with laws, enforce our terms, or protect rights, property, or safety.</li>
                 <li><strong>Business transfers</strong>: in connection with a merger, acquisition, or asset sale, with appropriate safeguards.</li>
             </ul>
+            <p>
+                Our principal service providers include Supabase for authentication, database, and file storage; Apple and Google for sign-in and optional calendar connections; RevenueCat and Apple for in-app subscriptions; and Expo for push-notification delivery. Their processing is limited to providing these functions and is governed by their applicable terms and privacy commitments.
+            </p>
 
             <h2>6. Cookies and Tracking</h2>
             <p>
@@ -108,6 +114,9 @@ export default function PrivacyPage() {
             </ul>
             <p>
                 To exercise rights, submit a request through our <Link href="/contact">contact form</Link>. We may verify your identity to process requests.
+            </p>
+            <p>
+                Mobile users can initiate permanent account deletion from Settings → Delete account. Deletion removes the Kure-Cal account and associated personal data unless retention is legally required. Deleting Kure-Cal does not cancel an Apple subscription; subscriptions can be cancelled in Apple Account subscription settings.
             </p>
 
             <h2>10. International Transfers</h2>

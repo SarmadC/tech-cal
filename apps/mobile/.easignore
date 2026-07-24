@@ -1,0 +1,20 @@
+# Dependencies and local Expo state
+node_modules/
+.expo/
+dist/
+coverage/
+
+# Local secrets; production values come from the EAS environment
+.env
+.env.*
+!.env.example
+
+# Continuous Native Generation outputs
+ios/
+android/
+
+# Local build and IDE output
+build/
+web-build/
+*.log
+.DS_Store

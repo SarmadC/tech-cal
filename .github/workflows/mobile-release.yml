@@ -20,6 +20,15 @@ on:
           - all
           - ios
           - android
+      submit_to_store:
+        description: 'Submit the latest production iOS build to App Store Connect'
+        required: true
+        default: false
+        type: boolean
+      asc_app_id:
+        description: 'App Store Connect numeric Apple ID (required when submitting iOS)'
+        required: false
+        type: string
 
 jobs:
   verify:
@@ -46,7 +55,7 @@ jobs:
         run: npm --prefix apps/mobile ci
 
       - name: Run mobile release checks
-        run: npm run mobile:ci
+        run: npm run mobile:ci && npm run mobile:release:check
 
   preview-build:
     name: EAS Preview Build
@@ -111,3 +120,15 @@ jobs:
         env:
           MOBILE_PLATFORM: ${{ github.event.inputs.platform }}
         run: npm run build:production -- --platform "$MOBILE_PLATFORM"
+
+      - name: Configure App Store Connect submission
+        if: github.event.inputs.submit_to_store == 'true' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')
+        working-directory: apps/mobile
+        env:
+          APP_STORE_CONNECT_APP_ID: ${{ github.event.inputs.asc_app_id }}
+        run: npm run configure:ios-submit
+
+      - name: Submit latest iOS build to App Store Connect
+        if: github.event.inputs.submit_to_store == 'true' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')
+        working-directory: apps/mobile
+        run: npx eas-cli submit --platform ios --profile production --latest --non-interactive --wait

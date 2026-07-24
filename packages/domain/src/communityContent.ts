@@ -8,6 +8,31 @@ export type CommunityContentSegment =
 const CONTENT_TOKEN_PATTERN =
   /(https?:\/\/[^\s<>()]+|@[a-zA-Z0-9_][a-zA-Z0-9_.-]*)/g;
 const TRAILING_URL_PUNCTUATION = /[.,!?;:]+$/;
+const OBJECTIONABLE_CONTENT_PATTERNS = [
+  /\bkill\s+(?:yourself|urself|u)\b/i,
+  /\b(?:i(?:'| a)?m going to|i will|we will)\s+(?:kill|hurt|shoot)\s+(?:you|them|him|her)\b/i,
+  /\b(?:child|minor|underage)\s+(?:porn|sexual|nudes?)\b/i,
+  /\b(?:rape|lynch)\s+(?:you|them|him|her)\b/i,
+] as const;
+
+function normalizeModerationText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[@4]/g, "a")
+    .replace(/[3]/g, "e")
+    .replace(/[1!|]/g, "i")
+    .replace(/[0]/g, "o")
+    .replace(/[5$]/g, "s")
+    .replace(/[^a-z0-9\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function containsObjectionableCommunityContent(value: string): boolean {
+  const normalized = normalizeModerationText(value);
+  return OBJECTIONABLE_CONTENT_PATTERNS.some((pattern) => pattern.test(normalized));
+}
 
 export function tokenizeCommunityContent(
   content: string,
