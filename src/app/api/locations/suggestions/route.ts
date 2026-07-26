@@ -19,6 +19,15 @@ interface LocationSuggestion {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
 
@@ -30,7 +39,6 @@ export async function GET(request: NextRequest) {
     }
 
     const term = query.trim();
-    const supabase = await createClient();
 
     // Query distinct location combinations with event counts
     // Note: Using raw location field since normalized fields may not be in all schemas

@@ -95,14 +95,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to start Google Calendar authorization',
+        error: 'Failed to start Google Calendar authorization',
       },
       { status: 500 }
     );

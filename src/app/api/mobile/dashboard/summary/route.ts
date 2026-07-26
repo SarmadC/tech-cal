@@ -37,14 +37,11 @@ export async function GET(request: Request) {
         ...legacyMobileFields,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load dashboard summary',
+        error: 'Failed to load dashboard summary',
       },
       { status: 500 }
     );

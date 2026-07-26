@@ -22,14 +22,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     ]);
 
     return mobileDataResponse(buildGoogleCalendarStatus(connection, !canSync));
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load Google Calendar status',
+        error: 'Failed to load Google Calendar status',
       },
       { status: 500 }
     );

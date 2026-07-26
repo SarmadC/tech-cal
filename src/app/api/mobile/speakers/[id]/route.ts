@@ -72,11 +72,11 @@ export async function GET(
         ),
       }),
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to load mobile speaker',
+        error: 'Failed to load mobile speaker',
       },
       { status: 500 }
     );

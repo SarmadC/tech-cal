@@ -198,15 +198,13 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const signature = request.headers.get('paddle-signature');
 
-    // Verify signature in production
-    if (process.env.NODE_ENV === 'production') {
-      if (!verifySignature(rawBody, signature)) {
-        logger.warn('Invalid webhook signature');
-        await sendSlackAlert('Invalid webhook signature', {
-          signature: signature?.substring(0, 20) + '...',
-        });
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
+    // Always verify webhook signature to prevent forged events
+    if (!verifySignature(rawBody, signature)) {
+      logger.warn('Invalid webhook signature');
+      await sendSlackAlert('Invalid webhook signature', {
+        signature: signature?.substring(0, 20) + '...',
+      });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Parse event

@@ -76,8 +76,8 @@ export async function POST(request: Request) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
+          error instanceof ZodError
+            ? 'Invalid push token payload'
             : 'Failed to register push token',
       },
       { status }
@@ -117,8 +117,8 @@ export async function DELETE(request: Request) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
+          error instanceof ZodError
+            ? 'Invalid unregister payload'
             : 'Failed to unregister push token',
       },
       { status }

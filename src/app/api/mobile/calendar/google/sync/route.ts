@@ -59,9 +59,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         success: false,
         error: isValidationError
           ? 'Invalid Google Calendar sync payload'
-          : error instanceof Error
-            ? error.message
-            : 'Failed to sync Google Calendar event',
+          : 'Failed to sync Google Calendar event',
         details: isValidationError ? error.issues : undefined,
       },
       { status: isValidationError ? 400 : 500 }

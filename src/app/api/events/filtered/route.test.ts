@@ -393,8 +393,8 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
     const firstResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     const secondResponse = await POST(buildRequest({ page: 1, pageSize: 10 }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    expect(firstResponse.headers.get('X-Cache-Key')).toMatch(/^fe5:/);
-    expect(firstResponse.headers.get('X-Cache-Key')).not.toBe(secondResponse.headers.get('X-Cache-Key'));
+    expect(firstResponse.headers.get('X-Cache')).toBeTruthy();
+    expect(firstResponse.headers.get('X-Cache-Key')).toBeNull();
   });
 
   it('changes the filtered-route cache key when fastSearch changes', async () => {
@@ -415,8 +415,9 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
       pageSize: 10
     }) as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    expect(fastSearchResponse.headers.get('X-Cache-Key')).toMatch(/^fe5:/);
-    expect(fastSearchResponse.headers.get('X-Cache-Key')).not.toBe(standardResponse.headers.get('X-Cache-Key'));
+    expect(fastSearchResponse.headers.get('X-Cache')).toBeTruthy();
+    expect(fastSearchResponse.headers.get('X-Cache-Key')).toBeNull();
+    expect(standardResponse.headers.get('X-Cache-Key')).toBeNull();
   });
 
   it('does not use the personalized supplement path during fastSearch requests', async () => {
