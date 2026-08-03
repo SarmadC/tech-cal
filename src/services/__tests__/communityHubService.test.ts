@@ -286,4 +286,115 @@ describe('CommunityHubService', () => {
       }),
     ]);
   });
+
+  it('loads a bounded recent post list for a public profile', async () => {
+    const postsChain = createPostsChain([
+      {
+        id: 'post-1',
+        title: 'A useful update',
+        content: 'What I learned this week.',
+        created_at: '2026-07-30T18:00:00.000Z',
+        author_id: 'profile-1',
+        circle_id: 'circle-1',
+        event_id: 'event-1',
+        post_type: 'update',
+        moderation_status: 'active',
+      },
+    ]);
+    const profileChain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          id: 'profile-1',
+          full_name: 'Ada Lovelace',
+          avatar_url: null,
+        },
+        error: null,
+      })),
+    };
+    profileChain.select.mockReturnValue(profileChain);
+    profileChain.eq.mockReturnValue(profileChain);
+    const circlesChain = {
+      select: vi.fn(),
+      eq: vi.fn(async () => ({
+        data: [{ id: 'circle-1', slug: 'ai-builders', name: 'AI Builders' }],
+        error: null,
+      })),
+    };
+    circlesChain.select.mockReturnValue(circlesChain);
+    const commentsChain = {
+      select: vi.fn(),
+      in: vi.fn(),
+      eq: vi.fn(async () => ({ data: [{ post_id: 'post-1' }], error: null })),
+    };
+    commentsChain.select.mockReturnValue(commentsChain);
+    commentsChain.in.mockReturnValue(commentsChain);
+    const mentionsChain = createMentionsChain([]);
+    const mediaChain = createOrderedAttachmentChain([]);
+    const linksChain = createOrderedAttachmentChain([]);
+    const eventsChain = {
+      select: vi.fn(),
+      in: vi.fn(async () => ({
+        data: [
+          {
+            id: 'event-1',
+            slug: 'applied-ai-night',
+            title: 'Applied AI Night',
+            description: null,
+            start_time: '2026-08-10T18:00:00.000Z',
+            end_time: null,
+            location: 'Edmonton',
+            event_image_url: null,
+            event_format: 'in-person',
+            organizer: { name: 'AI Builders', logo_url: null },
+          },
+        ],
+        error: null,
+      })),
+    };
+    eventsChain.select.mockReturnValue(eventsChain);
+    const readClient = {
+      from: vi.fn((table: string) => {
+        if (table === 'circle_posts') return postsChain;
+        if (table === 'profiles') return profileChain;
+        if (table === 'circles') return circlesChain;
+        if (table === 'circle_comments') return commentsChain;
+        if (table === 'circle_post_mentions') return mentionsChain;
+        if (table === 'circle_post_media') return mediaChain;
+        if (table === 'circle_post_links') return linksChain;
+        if (table === 'events') return eventsChain;
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      storage: {
+        from: vi.fn(() => ({
+          getPublicUrl: vi.fn((path: string) => ({
+            data: { publicUrl: `https://cdn.example.com/${path}` },
+          })),
+        })),
+      },
+    } as any;
+
+    const posts = await CommunityHubService.getProfilePosts({
+      profileUserId: 'profile-1',
+      readClient,
+      limit: 3,
+    });
+
+    expect(postsChain.eq).toHaveBeenCalledWith('author_id', 'profile-1');
+    expect(circlesChain.eq).toHaveBeenCalledWith('visibility', 'public');
+    expect(postsChain.in).toHaveBeenCalledWith('circle_id', ['circle-1']);
+    expect(postsChain.limit).toHaveBeenCalledWith(3);
+    expect(posts).toEqual([
+      expect.objectContaining({
+        id: 'post-1',
+        commentCount: 1,
+        circle: { slug: 'ai-builders', name: 'AI Builders' },
+        event: expect.objectContaining({
+          id: 'event-1',
+          title: 'Applied AI Night',
+        }),
+      }),
+    ]);
+  });
 });

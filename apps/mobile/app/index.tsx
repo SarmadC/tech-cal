@@ -6,7 +6,7 @@ import { useAuth } from '../src/context/AuthProvider';
 import { getLastTab } from '../src/lib/lastTab';
 
 export default function IndexScreen() {
-  const { hasCompletedOnboarding, loading, profileLoadFailed, session } = useAuth();
+  const { hasCompletedOnboarding, loading, needsUsername, profileLoadFailed, session } = useAuth();
 
   useEffect(() => {
     if (loading) return;
@@ -14,7 +14,7 @@ export default function IndexScreen() {
       router.replace('/login');
       return;
     }
-    if (!hasCompletedOnboarding && !profileLoadFailed) {
+    if ((needsUsername || !hasCompletedOnboarding) && !profileLoadFailed) {
       router.replace('./onboarding');
       return;
     }
@@ -25,7 +25,7 @@ export default function IndexScreen() {
       .catch(() => {
         router.replace('/(tabs)/discover' as Href);
       });
-  }, [loading, profileLoadFailed, session, hasCompletedOnboarding]);
+  }, [loading, needsUsername, profileLoadFailed, session, hasCompletedOnboarding]);
 
   return <BrandLoadingScreen backgroundColor="#05070c" color="#7dd3fc" />;
 }

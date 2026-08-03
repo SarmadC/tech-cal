@@ -459,6 +459,7 @@ export function toMobilePublicProfile(
   profile: PublicProfileResult,
   relationship: FollowStatus | null,
   networkingState?: MobileNetworkingState,
+  communityPosts: CommunityFeedPost[] = [],
 ): MobilePublicProfile {
   return mobilePublicProfileSchema.parse({
     id: profile.id,
@@ -481,6 +482,7 @@ export function toMobilePublicProfile(
           hasBlockedUser: relationship.hasBlockedUser,
         }
       : null,
+    communityPosts,
     recentAttendingEvents: profile.recentAttendingEvents.map((event) => ({
       id: event.id,
       slug: event.slug,
@@ -497,8 +499,7 @@ export function toMobilePublicProfile(
     careerProfile: profile.careerProfile
       ? {
           currentRole: profile.careerProfile.currentRole,
-          seniority: profile.careerProfile.seniority,
-          industry: profile.careerProfile.industry,
+          companyName: profile.careerProfile.companyName,
           primarySkills: profile.careerProfile.primarySkills,
           skillsToLearn: profile.careerProfile.skillsToLearn,
           interests: profile.careerProfile.interests,

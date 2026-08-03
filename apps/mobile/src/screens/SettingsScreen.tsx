@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,7 +16,6 @@ import { SymbolView } from "expo-symbols";
 
 import type {
   MobileCalendarConnectionStatus,
-  MobileProfileUpdate,
   NormalizedSubscription,
 } from "@kurecal/domain";
 
@@ -34,7 +32,6 @@ import { getDeviceCalendarPermissionStatus } from "../lib/deviceCalendarSync";
 import {
   loadMobileGoogleCalendarStatus,
   loadMobileSubscriptionStatus,
-  updateMobileProfile,
 } from "../lib/mobileApi";
 import {
   formatCareerSummary,
@@ -93,23 +90,13 @@ export default function SettingsScreen({
   const [subscription, setSubscription] =
     useState<NormalizedSubscription | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [profileSaving, setProfileSaving] = useState(false);
   const [accountDeleting, setAccountDeleting] = useState(false);
-  const [profileFocusedField, setProfileFocusedField] = useState<
-    "fullName" | "username" | "headline" | "bio" | null
-  >(null);
-  const [profileDraft, setProfileDraft] = useState<MobileProfileUpdate>({
-    bio: null,
-    fullName: null,
-    headline: null,
-    username: null,
-  });
   const [googleCalendarStatus, setGoogleCalendarStatus] =
     useState<MobileCalendarConnectionStatus | null>(null);
   const [appleCalendarPermission, setAppleCalendarPermission] =
     useState("unknown");
-  const [activePanel, setActivePanel] = useState<"career" | "profile" | null>(() =>
-    panel === "career" || panel === "profile" ? panel : null,
+  const [activePanel, setActivePanel] = useState<"career" | null>(() =>
+    panel === "career" ? panel : null,
   );
 
   const loadSettingsStatus = useCallback(async () => {
@@ -140,23 +127,10 @@ export default function SettingsScreen({
   }, [loadSettingsStatus, profile]);
 
   useEffect(() => {
-    if (panel === "career" || panel === "profile") {
+    if (panel === "career") {
       setActivePanel(panel);
     }
   }, [panel]);
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
-    setProfileDraft({
-      bio: profile.socialProfile.bio ?? null,
-      fullName: profile.profile.fullName ?? null,
-      headline: profile.socialProfile.headline ?? null,
-      username: profile.socialProfile.username ?? null,
-    });
-  }, [profile]);
 
 async function handleRefresh() {
     setRefreshing(true);
@@ -188,25 +162,6 @@ async function handleRefresh() {
     }
   }
 
-  async function handleSaveProfile() {
-    setProfileSaving(true);
-
-    try {
-      await updateMobileProfile(profileDraft);
-      await refreshProfile();
-      Alert.alert("Profile saved", "Your mobile profile settings are updated.");
-    } catch (nextError) {
-      Alert.alert(
-        "Save failed",
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to save your profile",
-      );
-    } finally {
-      setProfileSaving(false);
-    }
-  }
-
   async function handleDeleteAccount() {
     setAccountDeleting(true);
     setError(null);
@@ -229,165 +184,6 @@ async function handleRefresh() {
 
   const careerSummary = formatCareerSummary(profile?.careerProfile);
   const skills = profile?.careerProfile?.primarySkills ?? [];
-
-  function renderProfileFieldLabel({
-    helper,
-    label,
-  }: {
-    helper?: string;
-    label: string;
-  }) {
-    return (
-      <View style={styles.profileFieldLabelWrap}>
-        <Text
-          style={[
-            styles.profileFieldLabel,
-            {
-              color: tokens.colors.textSecondary,
-              fontFamily: tokens.typography.sans,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-        {helper ? (
-          <Text
-            style={[
-              styles.profileFieldHelper,
-              {
-                color: tokens.colors.textTertiary,
-                fontFamily: tokens.typography.sans,
-              },
-            ]}
-          >
-            {helper}
-          </Text>
-        ) : null}
-      </View>
-    );
-  }
-
-  function renderProfilePanel() {
-    const inputStyle = [
-      styles.profileInput,
-      {
-        backgroundColor: tokens.colors.input,
-        borderColor: tokens.colors.borderStrong,
-        color: tokens.colors.textPrimary,
-        fontFamily: tokens.typography.sans,
-        fontSize: tokens.typography.body,
-        borderRadius: tokens.radius.md,
-      },
-    ];
-
-    return (
-      <>
-        <SettingsGroup style={styles.profileFormGroup}>
-          <View style={styles.profileField}>
-            {renderProfileFieldLabel({ label: "Full name" })}
-            <TextInput
-              onBlur={() => setProfileFocusedField(null)}
-              onChangeText={(value) =>
-                setProfileDraft((current) => ({ ...current, fullName: value || null }))
-              }
-              onFocus={() => setProfileFocusedField("fullName")}
-              placeholder="Full name"
-              placeholderTextColor={tokens.colors.textTertiary}
-              style={[
-                inputStyle,
-                profileFocusedField === "fullName"
-                  ? { borderColor: tokens.colors.accent }
-                  : null,
-              ]}
-              value={profileDraft.fullName ?? ""}
-            />
-          </View>
-
-          <View style={styles.profileField}>
-            {renderProfileFieldLabel({
-              helper: "Shown on your public profile URL.",
-              label: "Username",
-            })}
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              onBlur={() => setProfileFocusedField(null)}
-              onChangeText={(value) =>
-                setProfileDraft((current) => ({ ...current, username: value || null }))
-              }
-              onFocus={() => setProfileFocusedField("username")}
-              placeholder="Username"
-              placeholderTextColor={tokens.colors.textTertiary}
-              style={[
-                inputStyle,
-                profileFocusedField === "username"
-                  ? { borderColor: tokens.colors.accent }
-                  : null,
-              ]}
-              value={profileDraft.username ?? ""}
-            />
-          </View>
-
-          <View style={styles.profileField}>
-            {renderProfileFieldLabel({
-              helper: "Your role, team, or professional label.",
-              label: "Role headline",
-            })}
-            <TextInput
-              onBlur={() => setProfileFocusedField(null)}
-              onChangeText={(value) =>
-                setProfileDraft((current) => ({ ...current, headline: value || null }))
-              }
-              onFocus={() => setProfileFocusedField("headline")}
-              placeholder="Data Analyst at Explore Edmonton"
-              placeholderTextColor={tokens.colors.textTertiary}
-              style={[
-                inputStyle,
-                profileFocusedField === "headline"
-                  ? { borderColor: tokens.colors.accent }
-                  : null,
-              ]}
-              value={profileDraft.headline ?? ""}
-            />
-          </View>
-
-          <View style={styles.profileField}>
-            {renderProfileFieldLabel({
-              helper: "One or two sentences visitors see under your name.",
-              label: "About",
-            })}
-            <TextInput
-              maxLength={220}
-              multiline
-              onBlur={() => setProfileFocusedField(null)}
-              onChangeText={(value) =>
-                setProfileDraft((current) => ({ ...current, bio: value || null }))
-              }
-              onFocus={() => setProfileFocusedField("bio")}
-              placeholder="Unlocking stories through data. Building bridges in the tech ecosystem."
-              placeholderTextColor={tokens.colors.textTertiary}
-              style={[
-                inputStyle,
-                styles.profileBioInput,
-                profileFocusedField === "bio"
-                  ? { borderColor: tokens.colors.accent }
-                  : null,
-              ]}
-              textAlignVertical="top"
-              value={profileDraft.bio ?? ""}
-            />
-          </View>
-        </SettingsGroup>
-        <SettingsButton
-          disabled={profileSaving}
-          label={profileSaving ? "Saving..." : "Save profile"}
-          onPress={() => {
-            void handleSaveProfile();
-          }}
-        />
-      </>
-    );
-  }
 
   function renderCareerPanel() {
     return (
@@ -558,11 +354,7 @@ async function handleRefresh() {
             },
           ]}
         >
-          {activePanel === "career"
-            ? "Recommendation inputs"
-            : activePanel === "profile"
-              ? "Profile fields"
-              : "Settings"}
+          {activePanel === "career" ? "Recommendation inputs" : "Settings"}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -591,18 +383,9 @@ async function handleRefresh() {
       >
         {activePanel === "career" ? (
           renderCareerPanel()
-        ) : activePanel === "profile" ? (
-          renderProfilePanel()
         ) : (
           <>
         <SettingsGroup>
-          <SettingsRow
-            icon="person.text.rectangle"
-            onPress={() => setActivePanel("profile")}
-            subtitle={profile.socialProfile.headline ?? "Full name and username"}
-            title="Profile fields"
-          />
-          <SettingsDivider />
           <SettingsRow
             icon="eye"
             onPress={() => router.push("/settings/privacy" as never)}
@@ -669,7 +452,9 @@ async function handleRefresh() {
           <SettingsDivider />
           <SettingsRow
             icon="sparkles"
-            onPress={() => setActivePanel("career")}
+            onPress={() =>
+              router.push({ pathname: "/onboarding", params: { resume: "1" } } as never)
+            }
             rightLabel={hasCompletedOnboarding ? "Ready" : "Set up"}
             title="Recommendation inputs"
           />
@@ -863,36 +648,6 @@ const styles = StyleSheet.create({
   careerGroup: {
     gap: 8,
     padding: 12,
-  },
-  profileFormGroup: {
-    gap: 12,
-    padding: 12,
-  },
-  profileField: {
-    gap: 6,
-  },
-  profileFieldLabelWrap: {
-    gap: 2,
-  },
-  profileFieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-  profileFieldHelper: {
-    fontSize: 12,
-    fontWeight: "400",
-    lineHeight: 16,
-  },
-  profileInput: {
-    borderWidth: 1,
-    fontWeight: "400",
-    minHeight: 40,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  profileBioInput: {
-    minHeight: 96,
   },
   sectionLabel: {
     fontSize: 13,

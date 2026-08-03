@@ -172,7 +172,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
         const currentFullName = fullNameRef.current?.value || '';
         const currentTimezone = timezoneRef.current?.value || '';
-        const currentUsername = usernameRef.current?.value || '';
+        const currentUsername = usernameRef.current?.value || socialData.username || '';
         const currentHeadline = headlineRef.current?.value || '';
 
         const isProfileDirty =
@@ -274,10 +274,10 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
         if (state.success) {
             showSuccess(state.message);
             // Update socialData baseline to match new values so dirty check passes
-            if (usernameRef.current && headlineRef.current) {
+            if (headlineRef.current) {
                 setSocialData(prev => prev ? ({
                     ...prev,
-                    username: usernameRef.current?.value || null,
+                    username: usernameRef.current?.value || prev.username,
                     headline: headlineRef.current?.value || null,
                     profileVisibility: visibility,
                     showAttendance: showAttendance
@@ -349,7 +349,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                     </div>
                 </SettingsControl>
 
-                <SettingsControl label="Username">
+                {!socialData?.username ? <SettingsControl label="Username">
                     <div className="w-full sm:w-[320px]">
                         <SettingsInput
                             name="username"
@@ -376,7 +376,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                             </div>
                         )}
                     </div>
-                </SettingsControl>
+                </SettingsControl> : null}
 
                 <SettingsControl label="Timezone">
                     <div className="relative w-full sm:w-[320px]">

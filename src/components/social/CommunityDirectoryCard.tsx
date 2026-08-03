@@ -28,9 +28,7 @@ export default function CommunityDirectoryCard({
   profile,
 }: CommunityDirectoryCardProps) {
   const displayName = profile.fullName || `@${profile.username}`;
-  const roleLine = [formatLabel(profile.currentRole), formatLabel(profile.seniority)]
-    .filter(Boolean)
-    .join(' · ');
+  const roleLine = formatLabel(profile.currentRole);
 
   return (
     <article className="group relative overflow-hidden rounded-[28px] border border-[var(--border-default)] bg-[var(--background-secondary)] shadow-[0_20px_80px_rgba(0,0,0,0.08)] transition-transform duration-200 hover:-translate-y-1">
@@ -72,9 +70,9 @@ export default function CommunityDirectoryCard({
               {roleLine}
             </span>
           )}
-          {profile.industry && (
+          {profile.companyName && (
             <span className="rounded-full border border-[var(--border-default)] bg-[var(--background-secondary)] px-2.5 py-1 text-xs font-medium text-[var(--foreground-primary)]">
-              {profile.industry}
+              {profile.companyName}
             </span>
           )}
         </div>

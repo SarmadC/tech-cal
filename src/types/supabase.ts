@@ -547,6 +547,7 @@ export type Database = {
             | null
           budget: Database["public"]["Enums"]["budget_range_enum"] | null
           career_goals: Database["public"]["Enums"]["career_goal_enum"][]
+          company_name: string | null
           company_size: Database["public"]["Enums"]["company_size_enum"] | null
           created_at: string
           current_role: string
@@ -570,6 +571,7 @@ export type Database = {
             | null
           budget?: Database["public"]["Enums"]["budget_range_enum"] | null
           career_goals?: Database["public"]["Enums"]["career_goal_enum"][]
+          company_name?: string | null
           company_size?: Database["public"]["Enums"]["company_size_enum"] | null
           created_at?: string
           current_role: string
@@ -595,6 +597,7 @@ export type Database = {
             | null
           budget?: Database["public"]["Enums"]["budget_range_enum"] | null
           career_goals?: Database["public"]["Enums"]["career_goal_enum"][]
+          company_name?: string | null
           company_size?: Database["public"]["Enums"]["company_size_enum"] | null
           created_at?: string
           current_role?: string

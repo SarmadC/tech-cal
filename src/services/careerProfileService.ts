@@ -18,6 +18,7 @@ import {
   CareerOptionalSectionTimestamps
 } from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';
+import type { MobileCareerOnboardingDraft } from '@kurecal/domain';
 import { deriveOptionalSectionStatus } from '@/utils/onboardingUtils';
 import * as Sentry from '@sentry/nextjs';
 import { CareerImpactService } from './careerImpactService';
@@ -30,6 +31,7 @@ interface CareerProfileRow {
   "current_role": string;
   seniority: string;
   industry: string;
+  company_name: string | null;
   company_size: string | null;
   primary_skills: string[];
   skills_to_learn: string[];
@@ -103,6 +105,7 @@ export class CareerProfileService {
       currentRole: row["current_role"],
       seniority,
       industry: row.industry,
+      companyName: row.company_name,
       companySize,
       primarySkills: Array.isArray(row.primary_skills) ? row.primary_skills : [],
       skillsToLearn: Array.isArray(row.skills_to_learn) ? row.skills_to_learn : [],
@@ -127,6 +130,7 @@ export class CareerProfileService {
       "current_role": careerProfile.currentRole,
       seniority: careerProfile.seniority,
       industry: careerProfile.industry,
+      company_name: careerProfile.companyName?.trim() || null,
       company_size: (careerProfile.companySize ?? 'small') as 'startup' | 'small' | 'medium' | 'large' | 'enterprise' | 'freelance',
       primary_skills: careerProfile.primarySkills ?? [],
       skills_to_learn: careerProfile.skillsToLearn ?? [],
@@ -368,6 +372,55 @@ export class CareerProfileService {
     return (preferences?.careerProfile as CareerProfile) || null;
   }
 
+  static async saveMobileOnboardingDraft(
+    userId: string,
+    draft: MobileCareerOnboardingDraft,
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('preferences')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    const preferences = (data?.preferences as Record<string, unknown> | null) ?? {};
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({
+        preferences: {
+          ...preferences,
+          careerOnboardingDraft: draft,
+          careerOnboardingDraftUpdatedAt: new Date().toISOString(),
+        } as Json,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+  }
+
+  static async getMobileOnboardingDraft(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<MobileCareerOnboardingDraft | null> {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('preferences')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error || !data?.preferences || typeof data.preferences !== 'object') {
+      return null;
+    }
+
+    const draft = (data.preferences as Record<string, unknown>).careerOnboardingDraft;
+    return draft && typeof draft === 'object'
+      ? (draft as MobileCareerOnboardingDraft)
+      : null;
+  }
+
   /**
    * Save career profile to the career_profiles table
    */
@@ -501,6 +554,7 @@ export class CareerProfileService {
       currentRole: data.step1_role.currentRole,
       seniority: data.step1_role.seniority,
       industry: data.step1_role.industry || 'technology',
+      companyName: data.step1_role.companyName?.trim() || null,
       companySize: data.step1_role.companySize,
       
       primarySkills: data.step2_skills.primarySkills,

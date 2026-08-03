@@ -30,7 +30,7 @@ const tabTintColor: ColorValue =
     : lightTint;
 
 export default function TabsLayout() {
-  const { hasCompletedOnboarding, loading, session } = useAuth();
+  const { hasCompletedOnboarding, loading, needsUsername, session } = useAuth();
   const { tokens } = useAppTheme();
   const { count: unreadCount } = useUnreadNotifications();
   const pathname = usePathname();
@@ -57,7 +57,7 @@ export default function TabsLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (!hasCompletedOnboarding) {
+  if (needsUsername || !hasCompletedOnboarding) {
     return <Redirect href="../onboarding" />;
   }
 

@@ -1,4 +1,8 @@
-import { mobileProfileStateSchema, mobileProfileUpdateSchema } from '@kurecal/domain';
+import {
+  mobileProfileStateSchema,
+  mobileProfileUpdateSchema,
+  type SocialProfileUpdateInput,
+} from '@kurecal/domain';
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
@@ -72,15 +76,25 @@ export async function PATCH(request: Request) {
       Object.prototype.hasOwnProperty.call(payload, 'profileVisibility') ||
       Object.prototype.hasOwnProperty.call(payload, 'showAttendance')
     ) {
+      const socialUpdates: SocialProfileUpdateInput = {};
+      if (Object.prototype.hasOwnProperty.call(payload, 'username')) {
+        socialUpdates.username = payload.username;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'headline')) {
+        socialUpdates.headline = payload.headline;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'bio')) {
+        socialUpdates.bio = payload.bio;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'profileVisibility')) {
+        socialUpdates.profileVisibility = payload.profileVisibility;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, 'showAttendance')) {
+        socialUpdates.showAttendance = payload.showAttendance;
+      }
       await SocialProfileService.updateSocialProfile(
         authContext.user.id,
-        {
-          username: payload.username,
-          headline: payload.headline,
-          bio: payload.bio,
-          profileVisibility: payload.profileVisibility,
-          showAttendance: payload.showAttendance,
-        },
+        socialUpdates,
         authContext.supabase
       );
     }

@@ -102,13 +102,6 @@ function RootNavigation() {
         }}
       >
         <Stack.Screen
-          name="settings"
-          options={{
-            animation: 'none',
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
           name="paywall"
           options={{
             animation: 'slide_from_bottom',

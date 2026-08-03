@@ -4,9 +4,7 @@ import { Briefcase, Building, Target, Clock } from '@phosphor-icons/react';
 
 interface ProfileCareerGoalsProps {
   currentRole: string | null;
-  seniority: string | null;
-  industry: string | null;
-  companySize: string | null;
+  companyName: string | null;
   careerGoals: string[];
   timeframe: string | null;
 }
@@ -16,19 +14,6 @@ function formatLabel(value: string | null): string {
   return value
     .replace(/-/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatCompanySize(size: string | null): string {
-  if (!size) return '';
-  const labels: Record<string, string> = {
-    startup: 'Startup (< 50)',
-    small: 'Small (50-200)',
-    medium: 'Medium (200-1000)',
-    large: 'Large (1000-10000)',
-    enterprise: 'Enterprise (10000+)',
-    freelance: 'Freelance/Independent',
-  };
-  return labels[size] || formatLabel(size);
 }
 
 function formatTimeframe(timeframe: string | null): string {
@@ -44,13 +29,11 @@ function formatTimeframe(timeframe: string | null): string {
 
 export default function ProfileCareerGoals({
   currentRole,
-  seniority,
-  industry,
-  companySize,
+  companyName,
   careerGoals,
   timeframe,
 }: ProfileCareerGoalsProps) {
-  const hasCareerInfo = currentRole || seniority || industry || companySize;
+  const hasCareerInfo = currentRole || companyName;
   const hasGoals = careerGoals.length > 0;
 
   if (!hasCareerInfo && !hasGoals) {
@@ -75,34 +58,17 @@ export default function ProfileCareerGoals({
               <Briefcase className="w-4 h-4 text-[var(--foreground-tertiary)] mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-[var(--foreground-tertiary)] uppercase tracking-wide">Current Role</p>
-                <p className="text-sm text-[var(--foreground-primary)]">
-                  {formatLabel(currentRole)}
-                  {seniority && (
-                    <span className="text-[var(--foreground-secondary)]">
-                      {' '}· {formatLabel(seniority)}
-                    </span>
-                  )}
-                </p>
+                <p className="text-sm text-[var(--foreground-primary)]">{formatLabel(currentRole)}</p>
               </div>
             </div>
           )}
 
-          {industry && (
+          {companyName && (
             <div className="flex items-start gap-3">
               <Building className="w-4 h-4 text-[var(--foreground-tertiary)] mt-0.5 shrink-0" />
               <div>
-                <p className="text-xs text-[var(--foreground-tertiary)] uppercase tracking-wide">Industry</p>
-                <p className="text-sm text-[var(--foreground-primary)]">{industry}</p>
-              </div>
-            </div>
-          )}
-
-          {companySize && (
-            <div className="flex items-start gap-3">
-              <Building className="w-4 h-4 text-[var(--foreground-tertiary)] mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-[var(--foreground-tertiary)] uppercase tracking-wide">Company Size</p>
-                <p className="text-sm text-[var(--foreground-primary)]">{formatCompanySize(companySize)}</p>
+                <p className="text-xs text-[var(--foreground-tertiary)] uppercase tracking-wide">Company</p>
+                <p className="text-sm text-[var(--foreground-primary)]">{companyName}</p>
               </div>
             </div>
           )}

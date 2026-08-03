@@ -100,9 +100,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
               <>
                 <ProfileCareerGoals
                   currentRole={publicProfile.careerProfile!.currentRole}
-                  seniority={publicProfile.careerProfile!.seniority}
-                  industry={publicProfile.careerProfile!.industry}
-                  companySize={publicProfile.careerProfile!.companySize}
+                  companyName={publicProfile.careerProfile!.companyName}
                   careerGoals={publicProfile.careerProfile!.careerGoals}
                   timeframe={publicProfile.careerProfile!.timeframe}
                 />

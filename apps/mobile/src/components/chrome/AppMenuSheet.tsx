@@ -48,9 +48,13 @@ function isSafeAvatarUrl(url: string | null | undefined): url is string {
   return /^https?:\/\//i.test(url);
 }
 
+function isEmailAddress(value: string | null | undefined): boolean {
+  return Boolean(value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()));
+}
+
 export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
   const { tokens } = useAppTheme();
-  const { profile, session, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const { hasPaidAccess } = useSubscription();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -99,15 +103,15 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
   const username = profile?.socialProfile.username?.trim();
   const profileRoute = username
     ? `/profile/${encodeURIComponent(username)}`
-    : "/settings/all?panel=profile";
+    : "/profile/__current__";
+  const configuredName = profile?.profile.fullName?.trim();
   const fullName =
-    profile?.profile.fullName?.trim() ||
+    (configuredName && !isEmailAddress(configuredName) ? configuredName : null) ||
     username ||
-    session?.user.email ||
     "Your profile";
   const secondary =
     profile?.socialProfile.headline?.trim() ||
-    (username ? `@${username}` : session?.user.email) ||
+    (username ? `@${username}` : null) ||
     "Profile settings";
   const initials = buildAvatarInitials(fullName);
   const avatarUrl = profile?.profile.avatarUrl ?? profile?.socialProfile.avatarUrl;
@@ -119,16 +123,10 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
         title: "Account",
         rows: [
           {
-            key: "profile-settings",
-            label: "Profile settings",
-            icon: "user",
-            route: "/settings/all?panel=profile",
-          },
-          {
             key: "career-profile",
-            label: "Career profile",
+            label: "Career setup",
             icon: "briefcase",
-            route: "/settings/all?panel=career",
+            route: "/onboarding?resume=1",
           },
           { key: "privacy", label: "Privacy", icon: "lock", route: "/settings/privacy" },
           {
@@ -268,11 +266,15 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <View
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View profile"
+            onPress={() => go(profileRoute)}
+            style={({ pressed }) => [
               styles.profileBlock,
               {
                 borderBottomColor: tokens.colors.divider,
+                opacity: pressed ? 0.72 : 1,
               },
             ]}
           >
@@ -318,18 +320,10 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
                 {secondary}
               </Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={username ? "View profile" : "Edit profile"}
-              onPress={() => go(profileRoute)}
-              style={({ pressed }) => [
-                styles.profileAction,
-                pressed ? styles.profileActionPressed : null,
-              ]}
-            >
+            <View style={styles.profileAction} pointerEvents="none">
               <FontAwesome name="chevron-right" size={10} color={tokens.colors.accent} />
-            </Pressable>
-          </View>
+            </View>
+          </Pressable>
 
           {!hasPaidAccess ? (
             <Pressable
@@ -533,9 +527,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 30,
     minWidth: 30,
-  },
-  profileActionPressed: {
-    opacity: 0.72,
   },
   upgradeBanner: {
     alignItems: "center",

@@ -677,6 +677,7 @@ export const mobileCareerProfileSummarySchema = z.object({
   currentRole: z.string(),
   seniority: z.string(),
   industry: z.string(),
+  companyName: z.string().nullable().optional(),
   primarySkills: z.array(z.string()),
   skillsToLearn: z.array(z.string()),
   interests: z.array(z.string()),
@@ -708,6 +709,7 @@ export const mobileOnboardingTaxonomyOptionSchema = z.object({
   label: z.string(),
   category: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
+  keywords: z.array(z.string()).optional(),
 });
 
 export const mobileOnboardingRoleGroupSchema = z.object({
@@ -725,6 +727,7 @@ export const mobileCareerOnboardingRoleStepSchema = z.object({
   currentRole: z.string().trim().min(1),
   seniority: z.string().trim().min(1),
   industry: z.string().trim(),
+  companyName: z.string().trim().max(120).optional(),
   companySize: z.string().trim(),
 });
 
@@ -771,6 +774,28 @@ export const mobileCareerOnboardingDataSchema = z.object({
   step6_teamBuilding: mobileCareerOnboardingTeamStepSchema,
 });
 
+export const mobileCareerOnboardingDraftSchema = z.object({
+  step1_role: z.object({
+    currentRole: z.string().trim().max(120),
+    seniority: z.string().trim(),
+    industry: z.string().trim(),
+    companyName: z.string().trim().max(120).optional(),
+    companySize: z.string().trim(),
+  }),
+  step2_skills: z.object({
+    primarySkills: z.array(z.string().trim().min(1)),
+    skillsToLearn: z.array(z.string().trim().min(1)),
+    interests: z.array(z.string().trim().min(1)),
+  }),
+  step3_goals: z.object({
+    careerGoals: z.array(z.string().trim().min(1)).max(2),
+    timeframe: z.string().trim(),
+  }),
+  step4_preferences: mobileCareerOnboardingPreferencesStepSchema,
+  step5_networking: mobileCareerOnboardingNetworkingStepSchema,
+  step6_teamBuilding: mobileCareerOnboardingTeamStepSchema,
+});
+
 export const mobileOnboardingTaxonomySchema = z.object({
   roleGroups: z.array(mobileOnboardingRoleGroupSchema),
   skillOptions: z.array(mobileOnboardingTaxonomyOptionSchema),
@@ -790,6 +815,10 @@ export const mobileCareerOnboardingRequestSchema = z.discriminatedUnion(
     z.object({
       action: z.literal('complete'),
       data: mobileCareerOnboardingDataSchema,
+    }),
+    z.object({
+      action: z.literal('save-draft'),
+      data: mobileCareerOnboardingDraftSchema,
     }),
     z.object({
       action: z.literal('skip'),
@@ -959,6 +988,9 @@ export type MobileOnboardingRoleGroup = z.infer<
 >;
 export type MobileCareerOnboardingData = z.infer<
   typeof mobileCareerOnboardingDataSchema
+>;
+export type MobileCareerOnboardingDraft = z.infer<
+  typeof mobileCareerOnboardingDraftSchema
 >;
 export type MobileOnboardingTaxonomy = z.infer<
   typeof mobileOnboardingTaxonomySchema

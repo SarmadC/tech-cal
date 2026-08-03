@@ -8,6 +8,7 @@ import { useAuth } from '../../src/context/AuthProvider';
 export default function ResetPasswordScreen() {
   const {
     hasCompletedOnboarding,
+    needsUsername,
     loading,
     session,
     updatePassword,
@@ -32,7 +33,7 @@ export default function ResetPasswordScreen() {
     try {
       await updatePassword(password);
       Alert.alert('Password updated', 'Your password has been updated inside the app.');
-      router.replace(hasCompletedOnboarding ? '/(tabs)/dashboard' : '/onboarding');
+      router.replace(!needsUsername && hasCompletedOnboarding ? '/(tabs)/dashboard' : '/onboarding');
     } catch (nextError) {
       const message =
         nextError instanceof Error ? nextError.message : 'Unable to update your password.';

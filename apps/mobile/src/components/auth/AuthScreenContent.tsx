@@ -117,6 +117,7 @@ const providerHero = {
 export default function AuthScreenContent() {
   const {
     hasCompletedOnboarding,
+    needsUsername,
     loading,
     session,
     signIn,
@@ -168,7 +169,7 @@ export default function AuthScreenContent() {
     }
 
     return (
-      <Redirect href={hasCompletedOnboarding ? '../(tabs)/dashboard' : '/onboarding'} />
+      <Redirect href={!needsUsername && hasCompletedOnboarding ? '../(tabs)/dashboard' : '/onboarding'} />
     );
   }
 

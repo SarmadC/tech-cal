@@ -60,6 +60,14 @@ export default function getMobileExpoConfig() {
       plugins: [
         ...(baseConfig.expo.plugins ?? []),
         [
+          'expo-build-properties',
+          {
+            ios: {
+              reactNativeReleaseLevel: 'experimental',
+            },
+          },
+        ],
+        [
           'expo-location',
           {
             isIosBackgroundLocationEnabled: false,

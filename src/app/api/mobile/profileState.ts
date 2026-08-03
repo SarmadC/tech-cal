@@ -101,6 +101,7 @@ export function toMobileCareerProfileSummary(
     currentRole: careerProfile.currentRole,
     seniority: careerProfile.seniority,
     industry: careerProfile.industry,
+    companyName: careerProfile.companyName ?? null,
     primarySkills: careerProfile.primarySkills ?? [],
     skillsToLearn: careerProfile.skillsToLearn ?? [],
     interests: careerProfile.interests ?? [],
@@ -120,6 +121,7 @@ export function toMobileCareerOnboardingData(
       currentRole: careerProfile.currentRole,
       seniority: careerProfile.seniority,
       industry: careerProfile.industry ?? '',
+      companyName: careerProfile.companyName ?? '',
       companySize: careerProfile.companySize ?? 'medium',
     },
     step2_skills: {
@@ -188,17 +190,18 @@ export async function buildMobileCareerOnboardingBootstrap(
 ) {
   await ensureMobileProfile(authContext, request);
 
-  const [careerProfile, onboardingStatus, taxonomy] = await Promise.all([
+  const [careerProfile, onboardingStatus, taxonomy, onboardingDraft] = await Promise.all([
     CareerProfileService.getCareerProfile(authContext.user.id, authContext.supabase),
     getOnboardingStatus(authContext.supabase, authContext.user.id),
     fetchOnboardingTaxonomy(authContext.supabase),
+    CareerProfileService.getMobileOnboardingDraft(authContext.user.id, authContext.supabase),
   ]);
 
   return {
     status: onboardingStatus,
     initialData: careerProfile
       ? toMobileCareerOnboardingData(careerProfile)
-      : null,
+      : onboardingDraft,
     taxonomy: {
       roleGroups: Object.entries(ROLE_TAXONOMY).map(([label, roles]) => ({
         key: label.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -210,6 +213,7 @@ export async function buildMobileCareerOnboardingBootstrap(
         label: option.label,
         category: option.category ?? null,
         description: null,
+        keywords: option.keywords ?? [],
       })),
       interestOptions: taxonomy.interestOptions.map((option) => ({
         value: option.value,

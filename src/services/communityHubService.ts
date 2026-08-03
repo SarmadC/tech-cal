@@ -13,7 +13,7 @@ export interface CommunityDiscoveryCard {
   name: string;
   description: string;
   memberCount: number;
-  membershipState: 'none' | 'following' | 'joined';
+  membershipState: "none" | "following" | "joined";
   tagline: string | null;
   coverImageUrl: string | null;
   iconUrl: string | null;
@@ -30,7 +30,7 @@ export interface CommunityRecentActivity {
   id: string;
   circleSlug: string;
   circleName: string;
-  kind: 'post' | 'event' | 'member';
+  kind: "post" | "event" | "member";
   summary: string;
   createdAt: string;
 }
@@ -54,12 +54,12 @@ interface FeedPostRow {
   circle_id: string;
   event_id: string | null;
   post_type:
-    | 'update'
-    | 'question'
-    | 'intro'
-    | 'showcase'
-    | 'event_note'
-    | 'announcement'
+    | "update"
+    | "question"
+    | "intro"
+    | "showcase"
+    | "event_note"
+    | "announcement"
     | null;
   moderation_status: "active" | "removed";
 }
@@ -118,7 +118,10 @@ const FEED_COMMENT_PREVIEW_LIMIT = 2;
 const TRENDING_THRESHOLD = 8; // ≥8 comments = trending
 const UPCOMING_EVENTS_LIMIT = 5;
 
-function getPostDisplayTitle(post: { title?: string | null; content?: string | null }): string {
+function getPostDisplayTitle(post: {
+  title?: string | null;
+  content?: string | null;
+}): string {
   const explicitTitle = post.title?.trim();
   if (explicitTitle) {
     return explicitTitle;
@@ -137,27 +140,27 @@ function getPostTitleAndBody(post: {
   content?: string | null;
 }): { title: string; content: string } {
   const explicitTitle = post.title?.trim();
-  const content = post.content?.trim() ?? '';
+  const content = post.content?.trim() ?? "";
 
   if (explicitTitle) {
     return { title: explicitTitle, content };
   }
 
   const segments = content
-    .split('\n')
+    .split("\n")
     .map((segment) => segment.trim())
     .filter(Boolean);
 
   if (segments.length > 1) {
     return {
       title: segments[0],
-      content: segments.slice(1).join('\n'),
+      content: segments.slice(1).join("\n"),
     };
   }
 
   return {
     title: getPostDisplayTitle(post),
-    content: segments.length === 1 ? '' : content,
+    content: segments.length === 1 ? "" : content,
   };
 }
 
@@ -174,9 +177,9 @@ interface ExtendedCircleRow extends CircleRow {
 const DISCOVERY_PER_SECTION = 12;
 
 interface FeedAttachmentBundle {
-  mentions: Map<string, NonNullable<CommunityFeedPost['mentions']>>;
-  media: Map<string, NonNullable<CommunityFeedPost['media']>>;
-  linkPreviews: Map<string, NonNullable<CommunityFeedPost['linkPreviews']>>;
+  mentions: Map<string, NonNullable<CommunityFeedPost["mentions"]>>;
+  media: Map<string, NonNullable<CommunityFeedPost["media"]>>;
+  linkPreviews: Map<string, NonNullable<CommunityFeedPost["linkPreviews"]>>;
 }
 
 // ── Service ──────────────────────────────────────────────────────
@@ -194,52 +197,51 @@ export class CommunityHubService {
         select: (cols: string) => {
           order?: (
             col: string,
-            opts?: { ascending: boolean }
+            opts?: { ascending: boolean },
           ) => {
             limit: (n: number) => Promise<{ data: unknown[] | null }>;
           };
           eq?: (
             col: string,
-            val: string
+            val: string,
           ) => Promise<{ data: unknown[] | null }>;
           gte?: (
             col: string,
-            val: string
+            val: string,
           ) => Promise<{ data: unknown[] | null }>;
           in?: (
             col: string,
-            vals: string[]
+            vals: string[],
           ) => Promise<{ data: unknown[] | null }>;
         };
       };
     };
 
     const circlesQuery = await readClient
-      .from('circles')
+      .from("circles")
       .select(
-        'id, slug, name, description, member_count, tagline, cover_image_url, icon_url, theme, topic_tags, location_scope, active_member_count_30d'
+        "id, slug, name, description, member_count, tagline, cover_image_url, icon_url, theme, topic_tags, location_scope, active_member_count_30d",
       )
-      .order('member_count', { ascending: false });
+      .order("member_count", { ascending: false });
 
     const allCircles = ((circlesQuery.data as unknown as ExtendedCircleRow[]) ??
       []) as ExtendedCircleRow[];
 
     const memberships = viewerId
-      ? (
+      ? ((
           (await client
-            .from('circle_members')
-            .select('circle_id, membership_state')
-            .eq?.('user_id', viewerId)) ?? { data: [] }
-        ).data ?? []
+            .from("circle_members")
+            .select("circle_id, membership_state")
+            .eq?.("user_id", viewerId)) ?? { data: [] }
+        ).data ?? [])
       : [];
 
-    const membershipMap = new Map<string, 'following' | 'joined'>();
+    const membershipMap = new Map<string, "following" | "joined">();
     for (const m of memberships as Array<{
       circle_id: string;
       membership_state?: string | null;
     }>) {
-      const state =
-        m.membership_state === 'following' ? 'following' : 'joined';
+      const state = m.membership_state === "following" ? "following" : "joined";
       membershipMap.set(m.circle_id, state);
     }
 
@@ -247,24 +249,24 @@ export class CommunityHubService {
     const linkRows =
       (
         await readClient
-          .from('circle_event_links')
-          .select('circle_id, event_id')
+          .from("circle_event_links")
+          .select("circle_id, event_id")
       ).data ?? [];
 
     const upcomingEventCountByCircle = new Map<string, number>();
     const nextEventTitleByCircle = new Map<string, string>();
     const linkedEventIds = Array.from(
       new Set(
-        (linkRows as Array<{ event_id: string }>).map((row) => row.event_id)
-      )
+        (linkRows as Array<{ event_id: string }>).map((row) => row.event_id),
+      ),
     );
 
     if (linkedEventIds.length > 0) {
       const nowIso = new Date().toISOString();
       const eventsResult = await readClient
-        .from('events')
-        .select('id, title, start_time, status')
-        .in('id', linkedEventIds);
+        .from("events")
+        .select("id, title, start_time, status")
+        .in("id", linkedEventIds);
       const events = (eventsResult.data ?? []) as Array<{
         id: string;
         title: string | null;
@@ -273,8 +275,8 @@ export class CommunityHubService {
       }>;
       const upcomingEventsById = new Map(
         events
-          .filter((e) => e.start_time >= nowIso && e.status !== 'cancelled')
-          .map((e) => [e.id, e])
+          .filter((e) => e.start_time >= nowIso && e.status !== "cancelled")
+          .map((e) => [e.id, e]),
       );
 
       for (const link of linkRows as Array<{
@@ -285,13 +287,13 @@ export class CommunityHubService {
         if (!event) continue;
         upcomingEventCountByCircle.set(
           link.circle_id,
-          (upcomingEventCountByCircle.get(link.circle_id) ?? 0) + 1
+          (upcomingEventCountByCircle.get(link.circle_id) ?? 0) + 1,
         );
         const existing = nextEventTitleByCircle.get(link.circle_id);
         if (!existing) {
           nextEventTitleByCircle.set(
             link.circle_id,
-            event.title ?? 'Upcoming event'
+            event.title ?? "Upcoming event",
           );
         }
       }
@@ -299,14 +301,14 @@ export class CommunityHubService {
 
     const toCard = (
       row: ExtendedCircleRow,
-      contextSignals: string[] = []
+      contextSignals: string[] = [],
     ): CommunityDiscoveryCard => ({
       id: row.id,
       slug: row.slug,
       name: row.name,
-      description: row.description ?? '',
+      description: row.description ?? "",
       memberCount: row.member_count,
-      membershipState: membershipMap.get(row.id) ?? 'none',
+      membershipState: membershipMap.get(row.id) ?? "none",
       tagline: row.tagline,
       coverImageUrl: row.cover_image_url,
       iconUrl: row.icon_url,
@@ -328,18 +330,20 @@ export class CommunityHubService {
     let viewerLocation: string | null = null;
     if (viewerId) {
       const profileResult = await readClient
-        .from('profiles')
-        .select('preferences, location')
-        .eq('id', viewerId)
+        .from("profiles")
+        .select("preferences, location")
+        .eq("id", viewerId)
         .maybeSingle();
-      const prof = profileResult.data as
-        | { preferences?: unknown; location?: string | null }
-        | null;
+      const prof = profileResult.data as {
+        preferences?: unknown;
+        location?: string | null;
+      } | null;
       if (prof) {
         viewerLocation = prof.location ?? null;
-        const prefs = (prof.preferences ?? null) as
-          | { interests?: string[]; topics?: string[] }
-          | null;
+        const prefs = (prof.preferences ?? null) as {
+          interests?: string[];
+          topics?: string[];
+        } | null;
         viewerTopicTags = [
           ...(prefs?.interests ?? []),
           ...(prefs?.topics ?? []),
@@ -349,13 +353,13 @@ export class CommunityHubService {
 
     for (const row of allCircles) {
       const state = membershipMap.get(row.id);
-      if (state === 'joined' || state === 'following') {
+      if (state === "joined" || state === "following") {
         joined.push(toCard(row));
       } else {
         const signals: string[] = [];
         const tags = (row.topic_tags ?? []).map((t) => t.toLowerCase());
         if (viewerTopicTags.some((t) => tags.includes(t))) {
-          signals.push('Matches your interests');
+          signals.push("Matches your interests");
         }
         if (
           viewerLocation &&
@@ -382,10 +386,10 @@ export class CommunityHubService {
     const recentActivity: CommunityRecentActivity[] = [];
     if (joinedIds.length > 0) {
       const postsResult = await readClient
-        .from('circle_posts')
-        .select('id, circle_id, content, created_at, moderation_status')
-        .in('circle_id', joinedIds)
-        .order('created_at', { ascending: false })
+        .from("circle_posts")
+        .select("id, circle_id, content, created_at, moderation_status")
+        .in("circle_id", joinedIds)
+        .order("created_at", { ascending: false })
         .limit(10);
       const posts = (postsResult.data ?? []) as Array<{
         id: string;
@@ -396,14 +400,14 @@ export class CommunityHubService {
       }>;
       const circleById = new Map(joined.map((c) => [c.id, c]));
       for (const post of posts) {
-        if (post.moderation_status !== 'active') continue;
+        if (post.moderation_status !== "active") continue;
         const circle = circleById.get(post.circle_id);
         if (!circle) continue;
         recentActivity.push({
           id: post.id,
           circleSlug: circle.slug,
           circleName: circle.name,
-          kind: 'post',
+          kind: "post",
           summary: post.content.slice(0, 140),
           createdAt: post.created_at,
         });
@@ -455,7 +459,9 @@ export class CommunityHubService {
   }): Promise<CommunityFeedPost[]> {
     const { data: postRows } = await readClient
       .from("circle_posts")
-      .select("id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status")
+      .select(
+        "id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status",
+      )
       .eq("event_id", eventId)
       .eq("moderation_status", "active")
       .order("created_at", { ascending: false })
@@ -471,15 +477,19 @@ export class CommunityHubService {
     const postIds = posts.map((p) => p.id);
     const circleIds = [...new Set(posts.map((p) => p.circle_id))];
 
-    const [profilesResult, circlesResult, commentCountResult] = await Promise.all([
-      readClient.from("profiles").select("id, full_name, avatar_url").in("id", authorIds),
-      readClient.from("circles").select("id, slug, name").in("id", circleIds),
-      readClient
-        .from("circle_comments")
-        .select("post_id")
-        .in("post_id", postIds)
-        .eq("moderation_status", "active"),
-    ]);
+    const [profilesResult, circlesResult, commentCountResult] =
+      await Promise.all([
+        readClient
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", authorIds),
+        readClient.from("circles").select("id, slug, name").in("id", circleIds),
+        readClient
+          .from("circle_comments")
+          .select("post_id")
+          .in("post_id", postIds)
+          .eq("moderation_status", "active"),
+      ]);
 
     const profileMap = new Map(
       ((profilesResult.data ?? []) as ProfileRow[]).map((p) => [
@@ -494,7 +504,9 @@ export class CommunityHubService {
       ]),
     );
     const countMap = new Map<string, number>();
-    for (const row of (commentCountResult.data ?? []) as Array<{ post_id: string }>) {
+    for (const row of (commentCountResult.data ?? []) as Array<{
+      post_id: string;
+    }>) {
       countMap.set(row.post_id, (countMap.get(row.post_id) ?? 0) + 1);
     }
 
@@ -505,8 +517,15 @@ export class CommunityHubService {
         title: normalized.title,
         content: normalized.content,
         createdAt: p.created_at,
-        author: profileMap.get(p.author_id) ?? { id: p.author_id, fullName: null, avatarUrl: null },
-        circle: circleMap.get(p.circle_id) ?? { slug: "unknown", name: "Unknown Circle" },
+        author: profileMap.get(p.author_id) ?? {
+          id: p.author_id,
+          fullName: null,
+          avatarUrl: null,
+        },
+        circle: circleMap.get(p.circle_id) ?? {
+          slug: "unknown",
+          name: "Unknown Circle",
+        },
         commentCount: countMap.get(p.id) ?? 0,
         isTrending: false,
         recentComments: [],
@@ -516,6 +535,126 @@ export class CommunityHubService {
         mentions: [],
         media: [],
         linkPreviews: [],
+      };
+    });
+  }
+
+  static async getProfilePosts({
+    profileUserId,
+    readClient,
+    limit = 3,
+  }: {
+    profileUserId: string;
+    readClient: SupabaseClientType;
+    limit?: number;
+  }): Promise<CommunityFeedPost[]> {
+    const userId = profileUserId.trim();
+    if (!userId) return [];
+
+    const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), 10);
+    const { data: publicCircleRows, error: circlesError } = await readClient
+      .from("circles")
+      .select("id, slug, name")
+      .eq("visibility", "public");
+
+    if (circlesError) {
+      throw new Error("Failed to resolve public circles for profile posts.");
+    }
+
+    const publicCircles = (publicCircleRows ?? []) as CircleRow[];
+    if (publicCircles.length === 0) return [];
+
+    const publicCircleIds = publicCircles.map((circle) => circle.id);
+    const { data: postRows, error: postsError } = await readClient
+      .from("circle_posts")
+      .select(
+        "id, title, content, created_at, author_id, circle_id, event_id, post_type, moderation_status",
+      )
+      .eq("author_id", userId)
+      .eq("moderation_status", "active")
+      .in("circle_id", publicCircleIds)
+      .order("created_at", { ascending: false })
+      .limit(boundedLimit);
+
+    if (postsError) {
+      throw new Error("Failed to fetch profile community posts.");
+    }
+
+    const posts = ((postRows ?? []) as FeedPostRow[]).filter(
+      (post) => post.moderation_status === "active",
+    );
+    if (posts.length === 0) return [];
+
+    const postIds = posts.map((post) => post.id);
+    const eventIds = [
+      ...new Set(posts.map((post) => post.event_id).filter(Boolean)),
+    ] as string[];
+
+    const [
+      profileResult,
+      commentsResult,
+      attachments,
+      eventsById,
+    ] = await Promise.all([
+      readClient
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .eq("id", userId)
+        .maybeSingle(),
+      readClient
+        .from("circle_comments")
+        .select("post_id")
+        .in("post_id", postIds)
+        .eq("moderation_status", "active"),
+      this.getFeedAttachments({ postIds, readClient }),
+      this.getFeedEventsById({ eventIds, readClient }),
+    ]);
+
+    const authorRow = profileResult.data as ProfileRow | null;
+    const author = authorRow
+      ? {
+          id: authorRow.id,
+          fullName: authorRow.full_name,
+          avatarUrl: authorRow.avatar_url,
+        }
+      : { id: userId, fullName: null, avatarUrl: null };
+    const circleMap = new Map(
+      publicCircles.map((circle) => [
+        circle.id,
+        { slug: circle.slug, name: circle.name },
+      ]),
+    );
+    const commentCountByPost = new Map<string, number>();
+    for (const row of (commentsResult.data ?? []) as Array<{
+      post_id: string;
+    }>) {
+      commentCountByPost.set(
+        row.post_id,
+        (commentCountByPost.get(row.post_id) ?? 0) + 1,
+      );
+    }
+
+    return posts.map((post) => {
+      const normalized = getPostTitleAndBody(post);
+      return {
+        id: post.id,
+        title: normalized.title,
+        content: normalized.content,
+        createdAt: post.created_at,
+        author,
+        circle: circleMap.get(post.circle_id) ?? {
+          slug: "unknown",
+          name: "Community",
+        },
+        commentCount: commentCountByPost.get(post.id) ?? 0,
+        isTrending: false,
+        recentComments: [],
+        postType: post.post_type ?? "update",
+        eventId: post.event_id,
+        event: post.event_id ? (eventsById.get(post.event_id) ?? null) : null,
+        mentions: attachments.mentions.get(post.id) ?? [],
+        media: attachments.media.get(post.id) ?? [],
+        linkPreviews: attachments.linkPreviews.get(post.id) ?? [],
       };
     });
   }
@@ -725,9 +864,9 @@ export class CommunityHubService {
           commentCount: countMap.get(p.id) || 0,
           isTrending: (countMap.get(p.id) || 0) >= TRENDING_THRESHOLD,
           recentComments: recentCommentsMap.get(p.id) ?? [],
-          postType: p.post_type ?? 'update',
+          postType: p.post_type ?? "update",
           eventId: p.event_id,
-          event: p.event_id ? eventsById.get(p.event_id) ?? null : null,
+          event: p.event_id ? (eventsById.get(p.event_id) ?? null) : null,
           mentions: attachments.mentions.get(p.id) ?? [],
           media: attachments.media.get(p.id) ?? [],
           linkPreviews: attachments.linkPreviews.get(p.id) ?? [],
@@ -745,7 +884,7 @@ export class CommunityHubService {
   }: {
     eventIds: string[];
     readClient: SupabaseClientType;
-  }): Promise<Map<string, NonNullable<CommunityFeedPost['event']>>> {
+  }): Promise<Map<string, NonNullable<CommunityFeedPost["event"]>>> {
     if (eventIds.length === 0) {
       return new Map();
     }
@@ -805,40 +944,47 @@ export class CommunityHubService {
     const attachmentClient = readClient as any;
     const [mentionsResult, mediaResult, linksResult] = await Promise.all([
       attachmentClient
-        .from('circle_post_mentions')
-        .select('post_id, mentioned_profile_id, profile:profiles!circle_post_mentions_mentioned_profile_id_fkey(id, username, full_name, avatar_url)')
-        .in('post_id', postIds),
+        .from("circle_post_mentions")
+        .select(
+          "post_id, mentioned_profile_id, profile:profiles!circle_post_mentions_mentioned_profile_id_fkey(id, username, full_name, avatar_url)",
+        )
+        .in("post_id", postIds),
       attachmentClient
-        .from('circle_post_media')
-        .select('id, post_id, storage_path, width, height, position')
-        .in('post_id', postIds)
-        .order('position', { ascending: true }),
+        .from("circle_post_media")
+        .select("id, post_id, storage_path, width, height, position")
+        .in("post_id", postIds)
+        .order("position", { ascending: true }),
       attachmentClient
-        .from('circle_post_links')
-        .select('id, post_id, url, title, description, image_url, site_name')
-        .in('post_id', postIds)
-        .order('created_at', { ascending: true }),
+        .from("circle_post_links")
+        .select("id, post_id, url, title, description, image_url, site_name")
+        .in("post_id", postIds)
+        .order("created_at", { ascending: true }),
     ]);
 
-    const mentions = new Map<string, NonNullable<CommunityFeedPost['mentions']>>();
-    ((mentionsResult.data ?? []) as Array<{
-      post_id: string;
-      mentioned_profile_id: string;
-      profile:
-        | {
-            id: string;
-            username: string | null;
-            full_name: string | null;
-            avatar_url: string | null;
-          }
-        | Array<{
-            id: string;
-            username: string | null;
-            full_name: string | null;
-            avatar_url: string | null;
-          }>
-        | null;
-    }>).forEach((row) => {
+    const mentions = new Map<
+      string,
+      NonNullable<CommunityFeedPost["mentions"]>
+    >();
+    (
+      (mentionsResult.data ?? []) as Array<{
+        post_id: string;
+        mentioned_profile_id: string;
+        profile:
+          | {
+              id: string;
+              username: string | null;
+              full_name: string | null;
+              avatar_url: string | null;
+            }
+          | Array<{
+              id: string;
+              username: string | null;
+              full_name: string | null;
+              avatar_url: string | null;
+            }>
+          | null;
+      }>
+    ).forEach((row) => {
       const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
       const postMentions = mentions.get(row.post_id) ?? [];
       postMentions.push({
@@ -850,17 +996,19 @@ export class CommunityHubService {
       mentions.set(row.post_id, postMentions);
     });
 
-    const media = new Map<string, NonNullable<CommunityFeedPost['media']>>();
-    ((mediaResult.data ?? []) as Array<{
-      id: string;
-      post_id: string;
-      storage_path: string;
-      width: number;
-      height: number;
-      position: number;
-    }>).forEach((row) => {
+    const media = new Map<string, NonNullable<CommunityFeedPost["media"]>>();
+    (
+      (mediaResult.data ?? []) as Array<{
+        id: string;
+        post_id: string;
+        storage_path: string;
+        width: number;
+        height: number;
+        position: number;
+      }>
+    ).forEach((row) => {
       const publicUrl = readClient.storage
-        .from('community-media')
+        .from("community-media")
         .getPublicUrl(row.storage_path).data.publicUrl;
       const postMedia = media.get(row.post_id) ?? [];
       postMedia.push({
@@ -874,16 +1022,21 @@ export class CommunityHubService {
       media.set(row.post_id, postMedia);
     });
 
-    const linkPreviews = new Map<string, NonNullable<CommunityFeedPost['linkPreviews']>>();
-    ((linksResult.data ?? []) as Array<{
-      id: string;
-      post_id: string;
-      url: string;
-      title: string | null;
-      description: string | null;
-      image_url: string | null;
-      site_name: string | null;
-    }>).forEach((row) => {
+    const linkPreviews = new Map<
+      string,
+      NonNullable<CommunityFeedPost["linkPreviews"]>
+    >();
+    (
+      (linksResult.data ?? []) as Array<{
+        id: string;
+        post_id: string;
+        url: string;
+        title: string | null;
+        description: string | null;
+        image_url: string | null;
+        site_name: string | null;
+      }>
+    ).forEach((row) => {
       const postLinks = linkPreviews.get(row.post_id) ?? [];
       postLinks.push({
         id: row.id,

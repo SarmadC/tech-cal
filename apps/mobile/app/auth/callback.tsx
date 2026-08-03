@@ -11,6 +11,7 @@ export default function AuthCallbackScreen() {
     authCompletionError,
     clearAuthCompletionState,
     hasCompletedOnboarding,
+    needsUsername,
     hasPendingAuthCallbackUrl,
     isCompletingAuth,
     loading,
@@ -48,13 +49,14 @@ export default function AuthCallbackScreen() {
       return;
     }
 
-    router.replace(hasCompletedOnboarding ? '/(tabs)/dashboard' : '/onboarding');
+    router.replace(!needsUsername && hasCompletedOnboarding ? '/(tabs)/dashboard' : '/onboarding');
   }, [
     authCompletionError,
     hasCompletedOnboarding,
     hasPendingAuthCallbackUrl,
     isCompletingAuth,
     loading,
+    needsUsername,
     pendingPostAuthRoute,
     session,
   ]);

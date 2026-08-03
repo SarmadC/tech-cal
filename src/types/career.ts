@@ -524,6 +524,7 @@ export interface CareerProfile {
   currentRole: string;
   seniority: SeniorityLevel;
   industry: string;
+  companyName?: string | null;
   companySize: CompanySize;
   
   // Skills and Interests
@@ -987,6 +988,7 @@ export interface CareerOnboardingData {
     currentRole: string;
     seniority: SeniorityLevel;
     industry: string;
+    companyName?: string;
     companySize: CompanySize;
   };
   step2_skills: {

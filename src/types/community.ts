@@ -259,7 +259,6 @@ export interface NetworkingPersonCard {
   bio?: string | null;
   location: string | null;
   currentRole: string | null;
-  industry: string | null;
   companySize: string | null;
   mutualConnectionsCount: number;
   isInNetwork: boolean;
@@ -280,7 +279,6 @@ export interface NetworkingFollowUpCard {
   bio?: string | null;
   location: string | null;
   currentRole: string | null;
-  industry: string | null;
   companySize: string | null;
   mutualConnectionsCount: number;
   isInNetwork: boolean;
@@ -299,7 +297,6 @@ export interface NetworkingStarterProfile {
   headline: string | null;
   location: string | null;
   currentRole: string | null;
-  industry: string | null;
   followerCount: number;
   followingCount: number;
 }

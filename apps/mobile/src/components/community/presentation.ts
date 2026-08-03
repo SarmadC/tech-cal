@@ -278,7 +278,6 @@ export function getNetworkingProfileSnippet(value: {
   currentRole?: string | null;
   headline?: string | null;
   company?: string | null;
-  industry?: string | null;
   whyNow: string;
 }): string {
   const bio = value.bio?.trim();
@@ -288,14 +287,9 @@ export function getNetworkingProfileSnippet(value: {
 
   const role = value.currentRole?.trim() || value.headline?.trim() || null;
   const company = value.company?.trim() || null;
-  const industry = value.industry?.trim() || null;
 
   if (role && company) {
     return `${role} at ${company}.`;
-  }
-
-  if (role && industry) {
-    return `${role} in ${industry}.`;
   }
 
   if (role) {
@@ -390,7 +384,7 @@ function normalizeKeywordTokens(value: string | null | undefined): string[] {
 export function getNetworkingProfileTone(value: {
   mode: ThemeMode;
   currentRole?: string | null;
-  industry?: string | null;
+  company?: string | null;
   seed?: string | null;
   isMutualFollow?: boolean;
   followsViewer?: boolean;
@@ -405,7 +399,7 @@ export function getNetworkingProfileTone(value: {
   } else if (value.isInNetwork) {
     paletteIndex = 1;
   } else {
-    const normalized = [value.currentRole, value.industry, value.seed]
+    const normalized = [value.currentRole, value.company, value.seed]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
@@ -450,17 +444,14 @@ export function getPublicProfileCareerSummary(
     return headlineValue;
   }
 
-  const parts = [
-    careerProfile?.currentRole?.trim(),
-    careerProfile?.seniority?.trim(),
-    careerProfile?.industry?.trim(),
-  ].filter(Boolean);
+  const role = careerProfile?.currentRole?.trim();
+  const companyName = careerProfile?.companyName?.trim();
 
-  if (parts.length === 0) {
+  if (!role) {
     return null;
   }
 
-  return parts.join(' · ');
+  return companyName ? `${role} at ${companyName}` : role;
 }
 
 export function getCommunityCircleTone(name: string, mode: ThemeMode) {

@@ -56,7 +56,7 @@ interface ProfileRow {
 interface CareerProfileRow {
   user_id: string;
   current_role: string | null;
-  industry: string | null;
+  company_name: string | null;
   company_size: string | null;
 }
 
@@ -114,7 +114,7 @@ export interface CommunityNetworkingAttendeeInput {
   headline: string | null;
   location: string | null;
   currentRole: string | null;
-  industry: string | null;
+  company: string | null;
   companySize: string | null;
   mutualConnectionsCount: number;
   isInNetwork: boolean;
@@ -141,7 +141,7 @@ interface PersonAggregate {
   headline: string | null;
   location: string | null;
   currentRole: string | null;
-  industry: string | null;
+  company: string | null;
   companySize: string | null;
   mutualConnectionsCount: number;
   isInNetwork: boolean;
@@ -668,7 +668,7 @@ export function buildCommunityNetworkingHomeData({
       headline: attendee.headline,
       location: attendee.location,
       currentRole: attendee.currentRole,
-      industry: attendee.industry,
+      company: attendee.company,
       companySize: attendee.companySize,
       mutualConnectionsCount: attendee.mutualConnectionsCount,
       isInNetwork: attendee.isInNetwork,
@@ -682,7 +682,7 @@ export function buildCommunityNetworkingHomeData({
     existing.isMutualFollow = existing.isMutualFollow || attendee.isMutualFollow;
     existing.location = existing.location || attendee.location;
     existing.currentRole = existing.currentRole || attendee.currentRole;
-    existing.industry = existing.industry || attendee.industry;
+    existing.company = existing.company || attendee.company;
     existing.companySize = existing.companySize || attendee.companySize;
     existing.mutualConnectionsCount = Math.max(
       existing.mutualConnectionsCount,
@@ -710,7 +710,7 @@ export function buildCommunityNetworkingHomeData({
         headline: person.headline,
         location: person.location,
         currentRole: person.currentRole,
-        industry: person.industry,
+        company: person.company,
         companySize: person.companySize,
         mutualConnectionsCount: person.mutualConnectionsCount,
         isInNetwork: person.isInNetwork,
@@ -741,7 +741,7 @@ export function buildCommunityNetworkingHomeData({
       headline: attendee.headline,
       location: attendee.location,
       currentRole: attendee.currentRole,
-      industry: attendee.industry,
+      company: attendee.company,
       companySize: attendee.companySize,
       mutualConnectionsCount: attendee.mutualConnectionsCount,
       isInNetwork: attendee.isInNetwork,
@@ -755,7 +755,7 @@ export function buildCommunityNetworkingHomeData({
     existing.isMutualFollow = existing.isMutualFollow || attendee.isMutualFollow;
     existing.location = existing.location || attendee.location;
     existing.currentRole = existing.currentRole || attendee.currentRole;
-    existing.industry = existing.industry || attendee.industry;
+    existing.company = existing.company || attendee.company;
     existing.companySize = existing.companySize || attendee.companySize;
     existing.mutualConnectionsCount = Math.max(
       existing.mutualConnectionsCount,
@@ -783,7 +783,7 @@ export function buildCommunityNetworkingHomeData({
         headline: person.headline,
         location: person.location,
         currentRole: person.currentRole,
-        industry: person.industry,
+        company: person.company,
         companySize: person.companySize,
         mutualConnectionsCount: person.mutualConnectionsCount,
         isInNetwork: person.isInNetwork,
@@ -1309,7 +1309,6 @@ export class CommunityNetworkingHomeService {
         headline: profile.headline,
         location: null,
         currentRole: profile.currentRole,
-        industry: profile.industry,
         followerCount: profile.followerCount,
         followingCount: profile.followingCount,
       })
@@ -1405,7 +1404,7 @@ export class CommunityNetworkingHomeService {
         .in('id', visibleCandidateIds),
       readClient
         .from('career_profiles')
-        .select('user_id, current_role, industry, company_size')
+        .select('user_id, current_role, company_name, company_size')
         .in('user_id', visibleCandidateIds),
       readClient.from('follows').select('following_id').eq('follower_id', viewerId),
       readClient
@@ -1547,7 +1546,7 @@ export class CommunityNetworkingHomeService {
         headline: profile.headline,
         location: profile.location,
         currentRole: careerProfile?.current_role ?? null,
-        industry: careerProfile?.industry ?? null,
+        company: careerProfile?.company_name ?? null,
         companySize: careerProfile?.company_size ?? null,
         mutualConnectionsCount: mutualConnectionsCountByUserId.get(row.user_id) ?? 0,
         isInNetwork: followingIds.has(row.user_id),

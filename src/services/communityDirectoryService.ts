@@ -14,8 +14,7 @@ interface DirectoryProfileRow {
 interface DirectoryCareerRow {
   user_id: string;
   current_role: string | null;
-  seniority: string | null;
-  industry: string | null;
+  company_name: string | null;
 }
 
 interface DirectoryStatsRow {
@@ -39,8 +38,7 @@ export interface CommunityDirectoryProfile {
   followerCount: number;
   followingCount: number;
   currentRole: string | null;
-  seniority: string | null;
-  industry: string | null;
+  companyName: string | null;
 }
 
 export interface CommunityDirectoryResult {
@@ -172,7 +170,7 @@ export class CommunityDirectoryService {
       userIds.length > 0
         ? readClient
             .from('career_profiles')
-            .select('user_id, current_role, seniority, industry')
+            .select('user_id, current_role, company_name')
             .in('user_id', userIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
@@ -214,8 +212,7 @@ export class CommunityDirectoryService {
           followerCount: stats?.follower_count ?? 0,
           followingCount: stats?.following_count ?? 0,
           currentRole: career?.current_role ?? null,
-          seniority: career?.seniority ?? null,
-          industry: career?.industry ?? null,
+          companyName: career?.company_name ?? null,
         };
       }),
       nextCursor,

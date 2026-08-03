@@ -23,9 +23,7 @@ export default function MobileCommunityProfileCell({
   profile,
 }: MobileCommunityProfileCellProps) {
   const displayName = profile.fullName || `@${profile.username}`;
-  const roleLine = [formatLabel(profile.currentRole), formatLabel(profile.seniority)]
-    .filter(Boolean)
-    .join(' · ');
+  const roleLine = formatLabel(profile.currentRole);
 
   return (
     <article className="px-4 py-4">
@@ -67,9 +65,9 @@ export default function MobileCommunityProfileCell({
                   {roleLine}
                 </span>
               ) : null}
-              {profile.industry ? (
+              {profile.companyName ? (
                 <span className="rounded-full border border-[var(--border-default)] bg-[var(--background-main)]/65 px-2.5 py-1 text-[11px] font-medium text-[var(--foreground-secondary)]">
-                  {profile.industry}
+                  {profile.companyName}
                 </span>
               ) : null}
             </div>

@@ -151,6 +151,19 @@ describe('/api/mobile/profile', () => {
     expect(mocks.updateSocialProfile).not.toHaveBeenCalled();
   });
 
+  it('does not send an absent username while updating the full name', async () => {
+    const response = await PATCH(
+      new Request('http://localhost/api/mobile/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: 'Grace Hopper' }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.updateSocialProfile).not.toHaveBeenCalled();
+  });
+
   it('returns 401 when unauthenticated', async () => {
     mocks.getAuthenticatedRequestContext.mockResolvedValueOnce(null);
 

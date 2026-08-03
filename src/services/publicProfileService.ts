@@ -20,6 +20,7 @@ interface CareerProfileRow {
   current_role: string;
   seniority: string;
   industry: string;
+  company_name: string | null;
   company_size: string | null;
   primary_skills: string[];
   skills_to_learn: string[];
@@ -69,9 +70,7 @@ export interface PublicProfileEvent {
 
 export interface PublicCareerProfile {
   currentRole: string | null;
-  seniority: string | null;
-  industry: string | null;
-  companySize: string | null;
+  companyName: string | null;
   primarySkills: string[];
   skillsToLearn: string[];
   interests: string[];
@@ -207,12 +206,11 @@ export class PublicProfileService {
     }
 
     const typedProfile = profile as ProfileRow;
-    const usernameValue = typedProfile.username;
-    if (!usernameValue) {
+    const usernameValue = typedProfile.username ?? '';
+    const isViewerOwner = Boolean(viewerId && viewerId === typedProfile.id);
+    if (!usernameValue && !isViewerOwner) {
       return null;
     }
-
-    const isViewerOwner = Boolean(viewerId && viewerId === typedProfile.id);
 
     if (viewerId && !isViewerOwner) {
       const { data: blockRows, error: blockError } = await readClient
@@ -601,25 +599,35 @@ export class PublicProfileService {
     readClient: SupabaseClientType,
     userId: string
   ): Promise<PublicCareerProfile | null> {
-    const { data, error } = await readClient
-      .from('career_profiles')
-      .select(
-        'user_id, current_role, seniority, industry, company_size, primary_skills, skills_to_learn, interests, career_goals, timeframe, target_path, learning_style, networking_goals, preferred_event_types, updated_at'
-      )
-      .eq('user_id', userId)
-      .maybeSingle();
+    const [careerResult, onboardingDraft] = await Promise.all([
+      readClient
+        .from('career_profiles')
+        .select(
+          'user_id, current_role, company_name, primary_skills, skills_to_learn, interests, career_goals, timeframe, target_path, learning_style, networking_goals, preferred_event_types, updated_at'
+        )
+        .eq('user_id', userId)
+        .maybeSingle(),
+      this.getCareerOnboardingDraft(readClient, userId),
+    ]);
 
-    if (error || !data) {
-      return null;
+    if (careerResult.error || !careerResult.data) {
+      return onboardingDraft;
     }
 
-    const row = data as CareerProfileRow;
+    const row = careerResult.data as CareerProfileRow;
+    const careerProfile = this.toPublicCareerProfile(row);
 
+    if (!onboardingDraft || !this.isNewerCareerContext(onboardingDraft.lastUpdated, careerProfile.lastUpdated)) {
+      return careerProfile;
+    }
+
+    return this.mergeCareerContext(careerProfile, onboardingDraft);
+  }
+
+  private static toPublicCareerProfile(row: CareerProfileRow): PublicCareerProfile {
     return {
       currentRole: row.current_role,
-      seniority: row.seniority,
-      industry: row.industry,
-      companySize: row.company_size,
+      companyName: row.company_name,
       primarySkills: Array.isArray(row.primary_skills) ? row.primary_skills : [],
       skillsToLearn: Array.isArray(row.skills_to_learn) ? row.skills_to_learn : [],
       interests: Array.isArray(row.interests) ? row.interests : [],
@@ -631,6 +639,94 @@ export class PublicProfileService {
       preferredEventTypes: Array.isArray(row.preferred_event_types) ? row.preferred_event_types : [],
       lastUpdated: row.updated_at,
     };
+  }
+
+  private static isNewerCareerContext(candidateTimestamp: string, existingTimestamp: string): boolean {
+    const candidate = Date.parse(candidateTimestamp);
+    const existing = Date.parse(existingTimestamp);
+
+    return Number.isFinite(candidate) && (!Number.isFinite(existing) || candidate > existing);
+  }
+
+  private static mergeCareerContext(
+    careerProfile: PublicCareerProfile,
+    onboardingDraft: PublicCareerProfile
+  ): PublicCareerProfile {
+    const preferDraftList = (draftValues: string[], persistedValues: string[]) =>
+      draftValues.length > 0 ? draftValues : persistedValues;
+
+    return {
+      currentRole: onboardingDraft.currentRole ?? careerProfile.currentRole,
+      companyName: onboardingDraft.companyName ?? careerProfile.companyName,
+      primarySkills: preferDraftList(onboardingDraft.primarySkills, careerProfile.primarySkills),
+      skillsToLearn: preferDraftList(onboardingDraft.skillsToLearn, careerProfile.skillsToLearn),
+      interests: preferDraftList(onboardingDraft.interests, careerProfile.interests),
+      careerGoals: preferDraftList(onboardingDraft.careerGoals, careerProfile.careerGoals),
+      timeframe: onboardingDraft.timeframe ?? careerProfile.timeframe,
+      targetPath: onboardingDraft.targetPath ?? careerProfile.targetPath,
+      learningStyle: preferDraftList(onboardingDraft.learningStyle, careerProfile.learningStyle),
+      networkingGoals: preferDraftList(onboardingDraft.networkingGoals, careerProfile.networkingGoals),
+      preferredEventTypes: preferDraftList(onboardingDraft.preferredEventTypes, careerProfile.preferredEventTypes),
+      lastUpdated: onboardingDraft.lastUpdated,
+    };
+  }
+
+  private static async getCareerOnboardingDraft(
+    readClient: SupabaseClientType,
+    userId: string
+  ): Promise<PublicCareerProfile | null> {
+    const { data, error } = await readClient
+      .from('profiles')
+      .select('preferences')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error || !data?.preferences || typeof data.preferences !== 'object') {
+      return null;
+    }
+
+    const preferences = data.preferences as Record<string, unknown>;
+    const draft = preferences.careerOnboardingDraft as Record<string, unknown> | undefined;
+    const role = draft?.step1_role as Record<string, unknown> | undefined;
+    const skills = draft?.step2_skills as Record<string, unknown> | undefined;
+    const goals = draft?.step3_goals as Record<string, unknown> | undefined;
+    const networking = draft?.step5_networking as Record<string, unknown> | undefined;
+
+    const list = (value: unknown): string[] =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+    const text = (value: unknown): string | null =>
+      typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+
+    const careerProfile: PublicCareerProfile = {
+      currentRole: text(role?.currentRole),
+      companyName: text(role?.companyName),
+      primarySkills: list(skills?.primarySkills),
+      skillsToLearn: list(skills?.skillsToLearn),
+      interests: list(skills?.interests),
+      careerGoals: list(goals?.careerGoals),
+      timeframe: text(goals?.timeframe),
+      targetPath: null,
+      learningStyle: [],
+      networkingGoals: list(networking?.networkingGoals),
+      preferredEventTypes: list(networking?.preferredEventTypes),
+      lastUpdated:
+        text(preferences.careerOnboardingDraftUpdatedAt) ?? '',
+    };
+
+    const hasVisibleContext = Boolean(
+      careerProfile.currentRole ||
+        careerProfile.companyName ||
+        careerProfile.primarySkills.length ||
+        careerProfile.skillsToLearn.length ||
+        careerProfile.interests.length ||
+        careerProfile.careerGoals.length ||
+        careerProfile.networkingGoals.length ||
+        careerProfile.preferredEventTypes.length
+    );
+
+    return hasVisibleContext ? careerProfile : null;
   }
 
   private static async getMutualConnections(

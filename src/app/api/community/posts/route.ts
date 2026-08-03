@@ -20,10 +20,16 @@ export async function POST(request: Request) {
       }
     }
 
-    const payload = communityPostDraftSchema.parse(await request.json());
+    const parsedPayload = communityPostDraftSchema.safeParse(await request.json());
+    if (!parsedPayload.success) {
+      return NextResponse.json(
+        { success: false, error: 'Post details are invalid.' },
+        { status: 400 }
+      );
+    }
     const post = await CommunityMutationsService.createPost(
       authContext.user.id,
-      payload,
+      parsedPayload.data,
       authContext.supabase
     );
     return NextResponse.json({ success: true, data: post });

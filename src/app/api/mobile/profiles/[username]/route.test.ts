@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   getAuthenticatedRequestContext: vi.fn(),
   getContactForTarget: vi.fn(),
   getFollowStatus: vi.fn(),
+  getProfilePosts: vi.fn(),
+  getPublicProfileById: vi.fn(),
   getPublicProfileByUsername: vi.fn(),
 }));
 
@@ -18,11 +20,14 @@ vi.mock('@/utils/supabase/requestAuth', () => ({
 }));
 
 vi.mock('@/utils/supabase/service', () => ({
-  createServiceClient: (...args: unknown[]) => mocks.createServiceClient(...args),
+  createServiceClient: (...args: unknown[]) =>
+    mocks.createServiceClient(...args),
 }));
 
 vi.mock('@/services/publicProfileService', () => ({
   PublicProfileService: {
+    getPublicProfileById: (...args: unknown[]) =>
+      mocks.getPublicProfileById(...args),
     getPublicProfileByUsername: (...args: unknown[]) =>
       mocks.getPublicProfileByUsername(...args),
   },
@@ -34,13 +39,22 @@ vi.mock('@/services/followService', () => ({
   },
 }));
 
+vi.mock('@/services/communityHubService', () => ({
+  CommunityHubService: {
+    getProfilePosts: (...args: unknown[]) => mocks.getProfilePosts(...args),
+  },
+}));
+
 vi.mock('@/services/userNetworkingContactService', () => ({
   UserNetworkingContactService: {
-    getContactForTarget: (...args: unknown[]) => mocks.getContactForTarget(...args),
-    toNetworkingState: (contact: {
-      linkedinRequestedAt?: string | null;
-      confirmedConnectedAt?: string | null;
-    } | null) => ({
+    getContactForTarget: (...args: unknown[]) =>
+      mocks.getContactForTarget(...args),
+    toNetworkingState: (
+      contact: {
+        linkedinRequestedAt?: string | null;
+        confirmedConnectedAt?: string | null;
+      } | null,
+    ) => ({
       status: contact?.confirmedConnectedAt
         ? 'connected'
         : contact?.linkedinRequestedAt
@@ -59,6 +73,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
     mocks.createServiceClient.mockReturnValue({ kind: 'read-supabase' });
     mocks.getContactForTarget.mockResolvedValue(null);
+    mocks.getProfilePosts.mockResolvedValue([]);
   });
 
   it('returns the mobile public profile payload', async () => {
@@ -93,9 +108,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
       ],
       careerProfile: {
         currentRole: 'Engineer',
-        seniority: 'staff',
-        industry: 'Developer tools',
-        companySize: null,
+        companyName: 'KureCal',
         primarySkills: [],
         skillsToLearn: [],
         interests: [],
@@ -149,7 +162,7 @@ describe('GET /api/mobile/profiles/[username]', () => {
       new Request('http://localhost/api/mobile/profiles/ada') as never,
       {
         params: Promise.resolve({ username: 'ada' }),
-      }
+      },
     );
     const payload = await response.json();
 
@@ -158,7 +171,15 @@ describe('GET /api/mobile/profiles/[username]', () => {
     const parsed = mobilePublicProfileSchema.parse(payload.data);
     expect(parsed.username).toBe('ada');
     expect(parsed.bio).toBe('Leads applied AI research.');
+    expect(parsed.careerProfile?.companyName).toBe('KureCal');
+    expect(parsed.communityPosts).toEqual([]);
+    expect(parsed.careerProfile).not.toHaveProperty('industry');
+    expect(parsed.careerProfile).not.toHaveProperty('seniority');
     expect(parsed.networkingState?.status).toBe('requested');
+    expect(mocks.getProfilePosts).toHaveBeenCalledWith({
+      profileUserId: '22222222-2222-4222-8222-222222222222',
+      readClient: { kind: 'read-supabase' },
+    });
   });
 
   it('returns 401 when the mobile user is not authenticated', async () => {
@@ -168,11 +189,35 @@ describe('GET /api/mobile/profiles/[username]', () => {
       new Request('http://localhost/api/mobile/profiles/ada') as never,
       {
         params: Promise.resolve({ username: 'ada' }),
-      }
+      },
     );
     const payload = await response.json();
 
     expect(response.status).toBe(401);
     expect(payload.success).toBe(false);
+  });
+
+  it('resolves the current user profile without requiring a public username', async () => {
+    const viewerId = '11111111-1111-4111-8111-111111111111';
+    mocks.getAuthenticatedRequestContext.mockResolvedValue({
+      supabase: { kind: 'viewer-supabase' },
+      user: { id: viewerId },
+    });
+    mocks.getPublicProfileById.mockResolvedValue(null);
+
+    const response = await GET(
+      new Request('http://localhost/api/mobile/profiles/__current__') as never,
+      {
+        params: Promise.resolve({ username: '__current__' }),
+      },
+    );
+
+    expect(mocks.getPublicProfileById).toHaveBeenCalledWith(
+      viewerId,
+      viewerId,
+      { kind: 'read-supabase' },
+    );
+    expect(mocks.getPublicProfileByUsername).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
   });
 });

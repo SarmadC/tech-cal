@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as Device from 'expo-device';
 import * as ExpoLinking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -63,6 +64,7 @@ interface AuthContextValue {
   clearAuthCompletionState: () => void;
   deleteAccount: () => Promise<void>;
   hasCompletedOnboarding: boolean;
+  needsUsername: boolean;
   hasPendingAuthCallbackUrl: boolean;
   isCompletingAuth: boolean;
   loading: boolean;
@@ -312,6 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]);
       },
       hasCompletedOnboarding: profile?.onboarding.onboarded ?? false,
+      needsUsername: Boolean(profile && !profile.socialProfile.username?.trim()),
       hasPendingAuthCallbackUrl: Boolean(
         incomingUrl && isMobileAuthCallbackUrl(incomingUrl)
       ),
@@ -359,6 +362,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAuthCompletionState();
 
         if (provider === 'apple') {
+          if (!Device.isDevice) {
+            throw new Error(
+              "Continue with Apple isn't available in the iOS Simulator. Use a physical iPhone, or continue with Google or email."
+            );
+          }
+
           const rawNonce = Crypto.randomUUID();
           const hashedNonce = await Crypto.digestStringAsync(
             Crypto.CryptoDigestAlgorithm.SHA256,
@@ -385,9 +394,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw err;
           }
 
+          if (!credential.identityToken) {
+            throw new Error(
+              'Apple did not return an identity token. Please try again.'
+            );
+          }
+
           const { error } = await supabase.auth.signInWithIdToken({
             provider: 'apple',
-            token: credential.identityToken!,
+            token: credential.identityToken,
             nonce: rawNonce,
           });
 

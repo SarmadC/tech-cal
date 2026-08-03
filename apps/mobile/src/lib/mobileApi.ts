@@ -10,6 +10,7 @@ import {
   mobileCalendarFeedSchema,
   mobileCareerOnboardingBootstrapSchema,
   mobileCareerOnboardingDataSchema,
+  mobileCareerOnboardingDraftSchema,
   mobileCommunityCirclePageSchema,
   mobileCommunityDirectorySchema,
   mobileCommunityEventsSchema,
@@ -33,6 +34,7 @@ import {
   mobileOnboardingStatusSchema,
   mobileProfileStateSchema,
   mobileProfileUpdateSchema,
+  usernameAvailabilityResultSchema,
   mobilePublicProfileSchema,
   mobileSavedEventsFeedSchema,
   mobileSpeakerDetailSchema,
@@ -48,6 +50,7 @@ import {
   type MobileCalendarFeedRequest,
   type MobileCareerOnboardingBootstrap,
   type MobileCareerOnboardingData,
+  type MobileCareerOnboardingDraft,
   type MobileCommunityCirclePage,
   type MobileCommunityDirectory,
   type MobileCommunityEvents,
@@ -77,6 +80,7 @@ import {
   type NormalizedSubscription,
   type RevenueCatReconcileInput,
   type SubscriptionOffering,
+  type UsernameAvailabilityResult,
   mobileCommunityFeedPostSchema,
   mobileCommunityRoomDetailSchema,
   mobileCommunityRoomThreadCommentDraftSchema,
@@ -816,11 +820,14 @@ export async function searchMobileCommunityDirectory(
 export async function createMobileCommunityPost(
   input: CommunityPostDraft
 ): Promise<void> {
-  const payload = communityPostDraftSchema.parse(input);
+  const parsed = communityPostDraftSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error('Check the selected circle and post details, then try again.');
+  }
 
   await fetchMobileEnvelope('/api/community/posts', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(parsed.data),
   });
 }
 
@@ -902,6 +909,16 @@ export async function updateMobileProfile(
   });
 }
 
+export async function checkMobileUsernameAvailability(
+  username: string
+): Promise<UsernameAvailabilityResult> {
+  const query = encodeURIComponent(username.trim());
+  return fetchMobileContract(
+    `/api/mobile/profile/username-check?q=${query}`,
+    usernameAvailabilityResultSchema
+  );
+}
+
 export async function loadMobileCareerOnboardingBootstrap(): Promise<MobileCareerOnboardingBootstrap> {
   return fetchMobileContract(
     '/api/mobile/onboarding/career',
@@ -921,6 +938,24 @@ export async function completeMobileCareerOnboarding(
       method: 'POST',
       body: JSON.stringify({
         action: 'complete',
+        data: payload,
+      }),
+    }
+  );
+}
+
+export async function saveMobileCareerOnboardingDraft(
+  data: MobileCareerOnboardingDraft
+): Promise<MobileOnboardingStatus> {
+  const payload = mobileCareerOnboardingDraftSchema.parse(data);
+
+  return fetchMobileContract(
+    '/api/mobile/onboarding/career',
+    mobileOnboardingStatusSchema,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save-draft',
         data: payload,
       }),
     }

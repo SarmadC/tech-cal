@@ -72,6 +72,22 @@ export async function POST(request: Request) {
       });
     }
 
+    if (payload.action === 'save-draft') {
+      await CareerProfileService.saveMobileOnboardingDraft(
+        authContext.user.id,
+        payload.data,
+        authContext.supabase
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: mobileOnboardingStatusSchema.parse({
+          onboarded: false,
+          source: 'none',
+        }),
+      });
+    }
+
     await CareerProfileService.completeCareerOnboarding(
       authContext.user.id,
       payload.data as unknown as CareerOnboardingData,

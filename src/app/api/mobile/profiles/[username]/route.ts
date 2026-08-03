@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { toMobilePublicProfile } from '@/app/api/mobile/communitySerializers';
+import { CommunityHubService } from '@/services/communityHubService';
 import { FollowService } from '@/services/followService';
 import { PublicProfileService } from '@/services/publicProfileService';
 import { UserNetworkingContactService } from '@/services/userNetworkingContactService';
@@ -14,14 +15,14 @@ const ParamsSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<unknown> }
+  { params }: { params: Promise<unknown> },
 ) {
   try {
     const authContext = await getAuthenticatedRequestContext(request);
     if (!authContext) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -29,7 +30,7 @@ export async function GET(
     if (!parsedParams.success) {
       return NextResponse.json(
         { success: false, error: 'Invalid username' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -38,57 +39,76 @@ export async function GET(
     if (!supabaseUrl || !serviceRoleKey) {
       return NextResponse.json(
         { success: false, error: 'Profile service is not configured.' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
-    const profile = await PublicProfileService.getPublicProfileByUsername(
-      parsedParams.data.username,
-      authContext.user.id,
-      readSupabase
-    );
+    const profile =
+      parsedParams.data.username === '__current__'
+        ? await PublicProfileService.getPublicProfileById(
+            authContext.user.id,
+            authContext.user.id,
+            readSupabase,
+          )
+        : await PublicProfileService.getPublicProfileByUsername(
+            parsedParams.data.username,
+            authContext.user.id,
+            readSupabase,
+          );
 
     if (!profile) {
       return NextResponse.json(
         { success: false, error: 'Profile not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    const relationship = profile.isViewerOwner
-      ? null
-      : await FollowService.getFollowStatus(
-          authContext.user.id,
-          profile.id,
-          authContext.supabase
-        );
-    const networkingContact = profile.isViewerOwner
-      ? null
-      : await UserNetworkingContactService.getContactForTarget(
-          {
-            viewerUserId: authContext.user.id,
-            targetKind: 'profile',
-            targetId: profile.id,
-          },
-          authContext.supabase
-        );
+    const [relationship, networkingContact, communityPosts] = await Promise.all(
+      [
+        profile.isViewerOwner
+          ? Promise.resolve(null)
+          : FollowService.getFollowStatus(
+              authContext.user.id,
+              profile.id,
+              authContext.supabase,
+            ),
+        profile.isViewerOwner
+          ? Promise.resolve(null)
+          : UserNetworkingContactService.getContactForTarget(
+              {
+                viewerUserId: authContext.user.id,
+                targetKind: 'profile',
+                targetId: profile.id,
+              },
+              authContext.supabase,
+            ),
+        CommunityHubService.getProfilePosts({
+          profileUserId: profile.id,
+          readClient: readSupabase,
+        }).catch(() => []),
+      ],
+    );
 
     return NextResponse.json({
       success: true,
       data: toMobilePublicProfile(
         profile,
         relationship,
-        UserNetworkingContactService.toNetworkingState(networkingContact)
+        UserNetworkingContactService.toNetworkingState(networkingContact),
+        communityPosts,
       ),
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to load mobile profile',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to load mobile profile',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

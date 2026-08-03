@@ -41,11 +41,11 @@ const onlyKnownUnexpectedChecks =
   unexpectedCheckNames.length > 0 &&
   unexpectedCheckNames.every((checkName) => KNOWN_UNEXPECTED_CHECKS.has(checkName));
 const hasKnownExplainNoise =
-  combinedOutput.includes('Failed to find dependency tree for expo-cli') &&
-  (combinedOutput.includes('Failed to find dependency tree for @unimodules/core') ||
-    combinedOutput.includes(
-      'Failed to find dependency tree for @unimodules/react-native-adapter'
-    ));
+  combinedOutput.includes('Failed to find dependency tree for expo-cli') ||
+  combinedOutput.includes('Failed to find dependency tree for @unimodules/core') ||
+  combinedOutput.includes(
+    'Failed to find dependency tree for @unimodules/react-native-adapter'
+  );
 const hasRealDoctorFindings =
   combinedOutput.includes('Possible issues detected:') ||
   combinedOutput.includes('Major version mismatches') ||

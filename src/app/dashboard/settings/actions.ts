@@ -60,12 +60,15 @@ export async function updateUserProfileAction(
         }, supabase);
 
         // Update social profile data
-        await SocialProfileService.updateSocialProfile(user.id, {
-            username: validatedFields.data.username || null,
+        const socialUpdates = {
             headline: validatedFields.data.headline || null,
             profileVisibility: validatedFields.data.profileVisibility as any, // Cast if necessary, or ensure schema matches
             showAttendance: validatedFields.data.showAttendance,
-        }, supabase);
+        };
+        if (validatedFields.data.username?.trim()) {
+            Object.assign(socialUpdates, { username: validatedFields.data.username.trim() });
+        }
+        await SocialProfileService.updateSocialProfile(user.id, socialUpdates, supabase);
 
     } catch (error) {
         // This block catches any errors thrown from the service layer (e.g., database failures).

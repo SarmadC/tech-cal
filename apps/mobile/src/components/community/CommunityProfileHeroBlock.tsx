@@ -28,7 +28,7 @@ interface CommunityProfileHeroBlockProps {
   size?: 'card' | 'profile';
   toneInput: {
     currentRole?: string | null;
-    industry?: string | null;
+    company?: string | null;
     seed?: string | null;
     isMutualFollow?: boolean;
     followsViewer?: boolean;

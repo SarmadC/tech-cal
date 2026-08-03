@@ -36,8 +36,7 @@ describe('MobileCommunityProfileCell', () => {
           followerCount: 12,
           followingCount: 8,
           currentRole: 'founder',
-          seniority: 'senior',
-          industry: 'developer tools',
+          companyName: 'Kurecal',
         }}
       />
     );
@@ -45,8 +44,8 @@ describe('MobileCommunityProfileCell', () => {
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByText('@ada')).toBeInTheDocument();
     expect(screen.getByText('Founding engineer')).toBeInTheDocument();
-    expect(screen.getByText('Founder · Senior')).toBeInTheDocument();
-    expect(screen.getByText('developer tools')).toBeInTheDocument();
+    expect(screen.getByText('Founder')).toBeInTheDocument();
+    expect(screen.getByText('Kurecal')).toBeInTheDocument();
     expect(screen.getByText('12 followers')).toBeInTheDocument();
     expect(screen.getByText('8 following')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Follow' })).toBeInTheDocument();

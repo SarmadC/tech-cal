@@ -14,6 +14,7 @@ vi.mock('./supabase', () => ({
 
 import {
   blockMobileUser,
+  checkMobileUsernameAvailability,
   bulkSyncMobileGoogleCalendar,
   createMobileCommunityComment,
   createMobileCommunityPost,
@@ -1083,8 +1084,7 @@ describe('mobile api helpers', () => {
               recentAttendingEvents: [],
               careerProfile: {
                 currentRole: 'Engineer',
-                seniority: 'staff',
-                industry: 'Developer tools',
+                companyName: 'KureCal',
                 primarySkills: [],
                 skillsToLearn: [],
                 interests: [],
@@ -1179,7 +1179,7 @@ describe('mobile api helpers', () => {
     await joinMobileCommunityCircle('circle-1');
     await leaveMobileCommunityCircle('circle-1');
     await createMobileCommunityPost({
-      circleId: '11111111-1111-4111-8111-111111111111',
+      circleId: '11111111-1111-1111-1111-111111111111',
       circleSlug: 'ai-builders',
       content: 'Launching a new thread',
     });
@@ -1455,6 +1455,32 @@ describe('mobile api helpers', () => {
     fetchSpy.mockRestore();
   });
 
+  it('checks username availability with bearer authentication', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            username: 'ada',
+            available: true,
+            message: 'Username is available.',
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+
+    const result = await checkMobileUsernameAvailability('ada');
+
+    expect(result.available).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/profile/username-check?q=ada',
+      expect.objectContaining({ headers: expect.any(Headers) })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
   it('loads and submits mobile onboarding payloads', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -1510,6 +1536,7 @@ describe('mobile api helpers', () => {
         currentRole: 'Software Engineer',
         seniority: 'mid-level',
         industry: 'Technology',
+        companyName: 'KureCal',
         companySize: 'medium',
       },
       step2_skills: {

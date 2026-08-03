@@ -88,6 +88,9 @@ export class SocialProfileService {
     updates: SocialProfileUpdateInput,
     supabaseClient: SupabaseClientType
   ): Promise<SocialProfile> {
+    const existingProfile = await this.getSocialProfile(userId, supabaseClient);
+    const existingUsername = existingProfile.username?.trim() || null;
+    let isInitialUsernameClaim = false;
     const payload: {
       username?: string | null;
       headline?: string | null;
@@ -103,19 +106,28 @@ export class SocialProfileService {
       const rawUsername = updates.username;
 
       if (rawUsername === null || rawUsername === undefined || rawUsername.trim() === '') {
-        payload.username = null;
+        if (existingUsername) {
+          throw new Error('Usernames cannot be changed once claimed.');
+        }
       } else {
         const username = this.normalizeUsername(rawUsername);
 
-        if (!this.isValidUsernameFormat(username)) {
-          throw new Error('Username must be 3-30 chars, start with a letter, and use only letters, numbers, "_" or "-".');
-        }
+        if (existingUsername) {
+          if (username.toLocaleLowerCase() !== existingUsername.toLocaleLowerCase()) {
+            throw new Error('Usernames cannot be changed once claimed.');
+          }
+        } else {
+          if (!this.isValidUsernameFormat(username)) {
+            throw new Error('Username must be 3-30 chars, start with a letter, and use only letters, numbers, "_" or "-".');
+          }
 
-        if (this.isReservedUsername(username)) {
-          throw new Error('That username is reserved.');
-        }
+          if (this.isReservedUsername(username)) {
+            throw new Error('That username is reserved.');
+          }
 
-        payload.username = username;
+          payload.username = username;
+          isInitialUsernameClaim = true;
+        }
       }
     }
 
@@ -135,10 +147,16 @@ export class SocialProfileService {
       payload.show_attendance = updates.showAttendance;
     }
 
-    const { data, error } = await supabaseClient
+    let updateQuery = supabaseClient
       .from('profiles')
       .update(payload)
-      .eq('id', userId)
+      .eq('id', userId);
+
+    if (isInitialUsernameClaim) {
+      updateQuery = updateQuery.is('username', null);
+    }
+
+    const { data, error } = await updateQuery
       .select('id, full_name, avatar_url, username, headline, bio, profile_visibility, show_attendance')
       .single();
 
@@ -150,6 +168,9 @@ export class SocialProfileService {
     }
 
     if (!data) {
+      if (isInitialUsernameClaim) {
+        throw new Error('Username was just claimed. Choose a different username.');
+      }
       throw new Error('Failed to update social profile.');
     }
 

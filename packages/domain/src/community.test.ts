@@ -17,12 +17,13 @@ import { tokenizeCommunityContent } from "./communityContent";
 describe("community domain contracts", () => {
   it("parses community drafts used by the shared mutation routes", () => {
     const parsed = communityPostDraftSchema.parse({
-      circleId: "11111111-1111-4111-8111-111111111111",
+      circleId: "11111111-1111-1111-1111-111111111111",
       circleSlug: "ai-builders",
       content: "Launching a new thread for AI Builders",
     });
 
     expect(parsed.circleSlug).toBe("ai-builders");
+    expect(parsed.circleId).toBe("11111111-1111-1111-1111-111111111111");
   });
 
   it("allows structured-only community drafts", () => {
@@ -367,8 +368,7 @@ describe("community domain contracts", () => {
       recentAttendingEvents: [],
       careerProfile: {
         currentRole: "Engineer",
-        seniority: "staff",
-        industry: "Developer tools",
+        companyName: null,
         primarySkills: [],
         skillsToLearn: [],
         interests: [],

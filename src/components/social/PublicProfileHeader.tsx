@@ -84,7 +84,7 @@ export default function PublicProfileHeader({
     };
   }, [profileUserId]);
 
-  const hasCareerContext = careerProfile?.currentRole || careerProfile?.seniority || careerProfile?.industry;
+  const hasCareerContext = careerProfile?.currentRole || careerProfile?.companyName;
 
   return (
     <section className="rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)] overflow-hidden">
@@ -168,18 +168,13 @@ export default function PublicProfileHeader({
                 <Briefcase className="w-4 h-4" />
                 <span>
                   {formatLabel(careerProfile.currentRole)}
-                  {careerProfile.seniority && (
-                    <span className="text-[var(--foreground-tertiary)]">
-                      {' '}· {formatLabel(careerProfile.seniority)}
-                    </span>
-                  )}
                 </span>
               </div>
             )}
-            {careerProfile?.industry && (
+            {careerProfile?.companyName && (
               <div className="flex items-center gap-1.5">
                 <Building className="w-4 h-4" />
-                <span>{careerProfile.industry}</span>
+                <span>{careerProfile.companyName}</span>
               </div>
             )}
           </div>

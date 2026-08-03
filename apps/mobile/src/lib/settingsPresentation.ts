@@ -42,8 +42,7 @@ export function formatCareerSummary(
   careerProfile:
     | {
         currentRole?: string | null;
-        industry?: string | null;
-        seniority?: string | null;
+        companyName?: string | null;
       }
     | null
     | undefined,
@@ -52,11 +51,12 @@ export function formatCareerSummary(
     return null;
   }
 
-  return [
-    careerProfile.currentRole,
-    careerProfile.seniority,
-    careerProfile.industry,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const role = careerProfile.currentRole?.trim();
+  const companyName = careerProfile.companyName?.trim();
+
+  if (!role) {
+    return companyName ?? null;
+  }
+
+  return companyName ? `${role} at ${companyName}` : role;
 }

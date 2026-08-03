@@ -118,7 +118,6 @@ export function CommunityNetworkingPersonCard({
     currentRole: person.currentRole,
     headline: person.headline,
     company: person.company,
-    industry: person.industry,
     whyNow: person.whyNow,
   });
   const badges = getHeroBadges(person, mode);
@@ -171,7 +170,7 @@ export function CommunityNetworkingPersonCard({
         summary={profileSnippet}
         toneInput={{
           currentRole: person.currentRole,
-          industry: person.industry,
+          company: person.company,
           seed: person.username,
           isMutualFollow: person.isMutualFollow,
           followsViewer: person.followsViewer,

@@ -235,7 +235,7 @@ export class CommunityRoomService {
         .in("id", visibleCandidateIds),
       readClient
         .from("career_profiles")
-        .select("user_id, current_role, industry, company_size")
+        .select("user_id, current_role")
         .in("user_id", visibleCandidateIds),
       readClient
         .from("follows")
@@ -332,7 +332,6 @@ export class CommunityRoomService {
         avatarUrl: profile.avatar_url,
         headline: profile.headline,
         currentRole: career?.current_role ?? null,
-        industry: career?.industry ?? null,
         location: profile.location,
         isInNetwork,
         followsViewer,
