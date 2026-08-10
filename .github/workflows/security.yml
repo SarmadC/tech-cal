@@ -33,7 +33,7 @@ jobs:
       - name: TruffleHog Scan for Pull Requests
         # This step only runs on pull requests to 'main'
         if: github.event_name == 'pull_request'
-        uses: trufflesecurity/trufflehog@9b6b5326bfe25dbd856eccc8a8275eb5dea7bd52 # main
+        uses: trufflesecurity/trufflehog@a7082b69f5bc6167bbe27ebab82bf6707f267bf6 # main
         with:
           # Compare the PR's head commit against the base commit
           base: ${{ github.event.pull_request.base.sha }}
@@ -43,7 +43,7 @@ jobs:
       - name: TruffleHog Scan for Pushes
         # This step only runs on pushes to 'main'
         if: github.event_name == 'push'
-        uses: trufflesecurity/trufflehog@9b6b5326bfe25dbd856eccc8a8275eb5dea7bd52 # main
+        uses: trufflesecurity/trufflehog@a7082b69f5bc6167bbe27ebab82bf6707f267bf6 # main
         with:
           # Compare the last two commits in the push
           base: ${{ github.event.before }}
