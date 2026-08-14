@@ -123,10 +123,20 @@ interface MobileApiEnvelope<T> {
   error?: string;
 }
 
+interface MobileRequestInit extends RequestInit {
+  timeoutMs?: number;
+}
+
 const PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY =
   'mobile_pending_networking_follow_up_event_id';
 const COMMUNITY_MEDIA_BUCKET = 'community-media';
 const MAX_COMMUNITY_IMAGE_BYTES = 8 * 1024 * 1024;
+
+export interface MobileAvatarUploadInput {
+  fileName?: string | null;
+  mimeType?: string | null;
+  uri: string;
+}
 
 export interface CommunityPostImageUploadInput {
   fileName?: string | null;
@@ -167,7 +177,7 @@ async function getAccessToken(): Promise<string> {
 async function fetchMobileContract<T>(
   path: string,
   schema: ZodType<T>,
-  init?: RequestInit
+  init?: MobileRequestInit
 ): Promise<T> {
   const payload = await fetchMobileEnvelope(path, init);
   return schema.parse(payload);
@@ -175,27 +185,32 @@ async function fetchMobileContract<T>(
 
 async function fetchMobileEnvelope(
   path: string,
-  init?: RequestInit
+  init?: MobileRequestInit
 ): Promise<unknown> {
+  const { timeoutMs = 15_000, ...requestInit } = init ?? {};
   const accessToken = await getAccessToken();
-  const headers = new Headers(init?.headers);
+  const headers = new Headers(requestInit.headers);
 
   headers.set('Authorization', `Bearer ${accessToken}`);
   const timezone = getDeviceTimezone();
   if (timezone && !headers.has('x-timezone')) {
     headers.set('x-timezone', timezone);
   }
-  if (init?.body && !headers.has('Content-Type')) {
+  if (
+    requestInit.body &&
+    !(requestInit.body instanceof FormData) &&
+    !headers.has('Content-Type')
+  ) {
     headers.set('Content-Type', 'application/json');
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
   try {
     response = await fetch(`${getMobileApiBaseUrl()}${path}`, {
-      ...init,
+      ...requestInit,
       headers,
       signal: controller.signal,
     });
@@ -907,6 +922,40 @@ export async function updateMobileProfile(
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadMobileAvatar(
+  input: MobileAvatarUploadInput
+): Promise<MobileProfileState> {
+  const mimeType = contentTypeForUpload(input.mimeType);
+  const extension = extensionForMimeType(mimeType);
+  const fileName = input.fileName?.trim() || `profile-photo.${extension}`;
+  const formData = new FormData();
+  formData.append('avatar', {
+    name: fileName,
+    type: mimeType,
+    uri: input.uri,
+  } as unknown as Blob);
+
+  return fetchMobileContract(
+    '/api/mobile/profile/avatar',
+    mobileProfileStateSchema,
+    {
+      method: 'POST',
+      body: formData,
+      timeoutMs: 30_000,
+    }
+  );
+}
+
+export async function removeMobileAvatar(): Promise<MobileProfileState> {
+  return fetchMobileContract(
+    '/api/mobile/profile/avatar',
+    mobileProfileStateSchema,
+    {
+      method: 'DELETE',
+    }
+  );
 }
 
 export async function checkMobileUsernameAvailability(

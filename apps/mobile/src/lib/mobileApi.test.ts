@@ -42,6 +42,7 @@ import {
   loadMobileSubscriptionStatus,
   followMobileUser,
   reconcileMobileRevenueCatSubscription,
+  removeMobileAvatar,
   searchMobileCommunityDirectory,
   skipMobileCareerOnboarding,
   submitMobileCommunityReport,
@@ -53,6 +54,7 @@ import {
   updateMobileEventAgendaSave,
   updateMobileEventEngagement,
   updateMobileEventNetworkingFeedback,
+  uploadMobileAvatar,
   updateMobileProfile,
 } from './mobileApi';
 
@@ -1476,6 +1478,79 @@ describe('mobile api helpers', () => {
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://mobile.kurecal.test/api/mobile/profile/username-check?q=ada',
       expect.objectContaining({ headers: expect.any(Headers) })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('uploads and removes a mobile profile avatar', async () => {
+    const avatarProfileState = {
+      profile: {
+        id: 'user-1',
+        email: 'user@example.com',
+        fullName: 'Ada Lovelace',
+        avatarUrl: 'https://example.com/avatar.webp',
+        timezone: 'America/Edmonton',
+      },
+      socialProfile: {
+        id: 'user-1',
+        fullName: 'Ada Lovelace',
+        avatarUrl: 'https://example.com/avatar.webp',
+        username: 'ada',
+        headline: 'Builder',
+        bio: null,
+        profileVisibility: 'public',
+        showAttendance: true,
+      },
+      onboarding: { onboarded: true, source: 'career_profiles' },
+      careerProfile: null,
+    };
+    const removedProfileState = {
+      ...avatarProfileState,
+      profile: { ...avatarProfileState.profile, avatarUrl: null },
+      socialProfile: { ...avatarProfileState.socialProfile, avatarUrl: null },
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: avatarProfileState }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: removedProfileState }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      );
+
+    const uploaded = await uploadMobileAvatar({
+      fileName: 'portrait.jpg',
+      mimeType: 'image/jpeg',
+      uri: 'file:///portrait.jpg',
+    });
+    const removed = await removeMobileAvatar();
+
+    expect(uploaded.profile.avatarUrl).toBe('https://example.com/avatar.webp');
+    expect(removed.profile.avatarUrl).toBeNull();
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'https://mobile.kurecal.test/api/mobile/profile/avatar'
+    );
+    expect(fetchSpy.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'POST', body: expect.any(FormData) })
+    );
+    expect(
+      (fetchSpy.mock.calls[0]?.[1]?.headers as Headers).has('Content-Type')
+    ).toBe(false);
+    expect(fetchSpy.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ method: 'DELETE' })
     );
 
     fetchSpy.mockRestore();

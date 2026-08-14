@@ -11,9 +11,9 @@ const DEV_REMINDERS_DESCRIPTION =
 const PROD_REMINDERS_DESCRIPTION =
   'Allow KureCal to add reminders for saved calendar events.';
 const DEV_PHOTOS_DESCRIPTION =
-  'Allow KureCal Dev to attach photos to community posts.';
+  'Allow KureCal Dev to choose a profile photo or attach images to community posts.';
 const PROD_PHOTOS_DESCRIPTION =
-  'Allow KureCal to attach photos to community posts.';
+  'Allow KureCal to choose a profile photo or attach images to community posts.';
 const DEV_LOCATION_DESCRIPTION =
   'Allow KureCal Dev to detect your location for nearby discovery results.';
 const PROD_LOCATION_DESCRIPTION =

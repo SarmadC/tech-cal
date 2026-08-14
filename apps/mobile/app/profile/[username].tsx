@@ -1,9 +1,12 @@
 import type { MobilePublicProfile } from "@kurecal/domain";
 import type { ComponentProps, ReactNode } from "react";
 import { FontAwesome } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
+  ActivityIndicator,
   Alert,
   Linking,
   Pressable,
@@ -26,12 +29,17 @@ import { CommunityAvatar } from "../../src/components/community/CommunityAvatar"
 import { CommunityAttachedEventRow } from "../../src/components/community/CommunityAttachedEventRow";
 import { ProfileCompactHeader } from "../../src/components/profile/ProfileCompactHeader";
 import { ProfileMutualGround } from "../../src/components/profile/ProfileMutualGround";
+import { useAuth } from "../../src/context/AuthProvider";
+import { showActionSheet } from "../../src/lib/actionSheet";
 import { getMobileApiBaseUrl } from "../../src/lib/env";
+import { haptics } from "../../src/lib/haptics";
 import { formatCommunityRelativeTime } from "../../src/lib/communityPresentation";
 import {
   followMobileUser,
   loadMobilePublicProfile,
+  removeMobileAvatar,
   unfollowMobileUser,
+  uploadMobileAvatar,
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 
@@ -44,6 +52,7 @@ const PROFILE_TABS: Array<{ key: ProfileTab; label: string }> = [
   { key: "about", label: "About" },
   { key: "events", label: "Events" },
 ];
+const MAX_AVATAR_IMAGE_BYTES = 8 * 1024 * 1024;
 
 const NETWORKING_GOAL_LABELS: Record<string, string> = {
   "find-mentors": "Mentorship",
@@ -243,6 +252,7 @@ export function PublicProfileView({
   username: string | undefined;
 }) {
   const { tokens } = useAppTheme();
+  const { refreshProfile } = useAuth();
   const resolvedUsername = username;
   const requestSequenceRef = useRef(0);
   const requestedUsernameRef = useRef<string | null>(null);
@@ -254,6 +264,7 @@ export function PublicProfileView({
   const [following, setFollowing] = useState(false);
   const [followPending, setFollowPending] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
+  const [avatarPending, setAvatarPending] = useState(false);
 
   const loadProfile = useCallback(async () => {
     const trimmed = resolvedUsername?.trim();
@@ -363,6 +374,135 @@ export function PublicProfileView({
     }
   }
 
+  function setVisibleAvatarUrl(avatarUrl: string | null) {
+    setProfile((current) => (current ? { ...current, avatarUrl } : current));
+  }
+
+  async function handleChooseAvatar() {
+    if (!profile?.isViewerOwner || avatarPending) return;
+
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        mediaTypes: ["images"],
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.84,
+        selectionLimit: 1,
+      });
+    } catch (nextError) {
+      Alert.alert(
+        "Photos unavailable",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to open your photo library.",
+      );
+      return;
+    }
+
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > MAX_AVATAR_IMAGE_BYTES) {
+      Alert.alert("Photo too large", "Choose an image smaller than 8 MB.");
+      return;
+    }
+
+    const previousAvatarUrl = profile.avatarUrl;
+    setAvatarPending(true);
+    setVisibleAvatarUrl(asset.uri);
+    try {
+      const nextState = await uploadMobileAvatar({
+        fileName: asset.fileName,
+        mimeType: asset.mimeType,
+        uri: asset.uri,
+      });
+      setVisibleAvatarUrl(nextState.profile.avatarUrl);
+      haptics.success();
+      void AccessibilityInfo.announceForAccessibility("Profile photo updated");
+      void refreshProfile();
+    } catch (nextError) {
+      setVisibleAvatarUrl(previousAvatarUrl);
+      haptics.warning();
+      Alert.alert(
+        "Photo not updated",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to update your profile photo. Please try again.",
+      );
+    } finally {
+      setAvatarPending(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    if (!profile?.isViewerOwner || avatarPending) return;
+    const previousAvatarUrl = profile.avatarUrl;
+    setAvatarPending(true);
+    setVisibleAvatarUrl(null);
+    try {
+      const nextState = await removeMobileAvatar();
+      setVisibleAvatarUrl(nextState.profile.avatarUrl);
+      haptics.success();
+      void AccessibilityInfo.announceForAccessibility("Profile photo removed");
+      void refreshProfile();
+    } catch (nextError) {
+      setVisibleAvatarUrl(previousAvatarUrl);
+      haptics.warning();
+      Alert.alert(
+        "Photo not removed",
+        nextError instanceof Error
+          ? nextError.message
+          : "Unable to remove your profile photo. Please try again.",
+      );
+    } finally {
+      setAvatarPending(false);
+    }
+  }
+
+  function confirmRemoveAvatar() {
+    Alert.alert(
+      "Remove profile photo?",
+      "Your initials will be shown instead.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove photo",
+          style: "destructive",
+          onPress: () => {
+            void handleRemoveAvatar();
+          },
+        },
+      ],
+    );
+  }
+
+  function openAvatarActions() {
+    if (!profile?.isViewerOwner || avatarPending) return;
+    haptics.selection();
+    showActionSheet({
+      title: "Profile photo",
+      options: [
+        {
+          label: profile.avatarUrl ? "Choose new photo" : "Choose photo",
+          onPress: () => {
+            void handleChooseAvatar();
+          },
+        },
+        ...(profile.avatarUrl
+          ? [
+              {
+                label: "Remove photo",
+                destructive: true,
+                onPress: confirmRemoveAvatar,
+              },
+            ]
+          : []),
+      ],
+    });
+  }
+
   return (
     <MobilePage headerHidden title="Profile">
       {loading && !profile ? (
@@ -425,7 +565,9 @@ export function PublicProfileView({
           >
             <View style={styles.profileIntro}>
               <ProfileHero
+                avatarPending={avatarPending}
                 profile={profile}
+                onAvatarPress={openAvatarActions}
                 onShare={() => {
                   void shareProfile(
                     getProfileDisplayName(profile),
@@ -525,11 +667,15 @@ export function PublicProfileView({
 }
 
 function ProfileHero({
+  avatarPending,
   profile,
+  onAvatarPress,
   onShare,
   onSettings,
 }: {
+  avatarPending: boolean;
   profile: MobilePublicProfile;
+  onAvatarPress: () => void;
   onShare: () => void;
   onSettings: () => void;
 }) {
@@ -586,11 +732,59 @@ function ProfileHero({
       </View>
 
       <View style={styles.heroHeader}>
-        <CommunityAvatar
-          avatarUrl={profile.avatarUrl}
-          name={displayName}
-          size={68}
-        />
+        {profile.isViewerOwner ? (
+          <Pressable
+            accessibilityHint="Opens profile photo options"
+            accessibilityLabel={
+              profile.avatarUrl ? "Change profile photo" : "Add profile photo"
+            }
+            accessibilityRole="button"
+            accessibilityState={{
+              busy: avatarPending,
+              disabled: avatarPending,
+            }}
+            disabled={avatarPending}
+            onPress={onAvatarPress}
+            style={({ pressed }) => [
+              styles.avatarEditor,
+              { opacity: pressed || avatarPending ? 0.74 : 1 },
+            ]}
+          >
+            <CommunityAvatar
+              avatarUrl={profile.avatarUrl}
+              name={displayName}
+              size={68}
+            />
+            <View
+              style={[
+                styles.avatarEditBadge,
+                {
+                  backgroundColor: tokens.colors.accent,
+                  borderColor: tokens.colors.shell,
+                },
+              ]}
+            >
+              {avatarPending ? (
+                <ActivityIndicator
+                  color={tokens.colors.textInverse}
+                  size="small"
+                />
+              ) : (
+                <FontAwesome
+                  color={tokens.colors.textInverse}
+                  name="camera"
+                  size={10}
+                />
+              )}
+            </View>
+          </Pressable>
+        ) : (
+          <CommunityAvatar
+            avatarUrl={profile.avatarUrl}
+            name={displayName}
+            size={68}
+          />
+        )}
         <View style={styles.identityCopy}>
           {!nameMatchesHandle ? (
             <Text
@@ -1533,6 +1727,22 @@ function ProfileZone({
 }
 
 const styles = StyleSheet.create({
+  avatarEditBadge: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 2,
+    bottom: -1,
+    height: 23,
+    justifyContent: "center",
+    position: "absolute",
+    right: -1,
+    width: 23,
+  },
+  avatarEditor: {
+    height: 68,
+    position: "relative",
+    width: 68,
+  },
   activityAttachment: {
     gap: 6,
   },
