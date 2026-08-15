@@ -33,6 +33,8 @@ interface MobilePageProps<T> extends PropsWithChildren {
   action?: ReactNode;
   headerHidden?: boolean;
   showAccentGlow?: boolean;
+  showPageGradient?: boolean;
+  scrollable?: boolean;
   footerInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
   onControlsVisibilityChange?: (visible: boolean) => void;
@@ -54,6 +56,8 @@ export function MobilePage<T>({
   action,
   headerHidden = false,
   showAccentGlow = false,
+  showPageGradient = true,
+  scrollable = true,
   children,
   footerInset,
   contentStyle,
@@ -104,10 +108,12 @@ export function MobilePage<T>({
     <View
       style={[styles.safeArea, { backgroundColor: tokens.colors.shell }]}
     >
-      <LinearGradient
-        colors={tokens.gradients.page}
-        style={StyleSheet.absoluteFill}
-      />
+      {showPageGradient ? (
+        <LinearGradient
+          colors={tokens.gradients.page}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       {showAccentGlow ? (
         <LinearGradient
           colors={tokens.gradients.accent}
@@ -176,7 +182,22 @@ export function MobilePage<T>({
           </View>
         </View>
       ) : null}
-      {data && renderItem ? (
+      {!scrollable ? (
+        <View
+          style={[
+            styles.content,
+            styles.staticContent,
+            {
+              paddingTop: headerOffset,
+              paddingBottom: bottomInset,
+              paddingHorizontal: tokens.spacing.page,
+            },
+            contentStyle,
+          ]}
+        >
+          {children}
+        </View>
+      ) : data && renderItem ? (
         <FlashList
           data={data}
           keyExtractor={keyExtractor}
@@ -311,6 +332,9 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 8,
+  },
+  staticContent: {
+    flex: 1,
   },
   actionButton: {
     minHeight: 32,

@@ -4,6 +4,12 @@ import { FontAwesome } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+} from "react-native-reanimated";
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -53,6 +59,13 @@ const PROFILE_TABS: Array<{ key: ProfileTab; label: string }> = [
   { key: "events", label: "Events" },
 ];
 const MAX_AVATAR_IMAGE_BYTES = 8 * 1024 * 1024;
+const TAB_CROSSFADE_EASING = Easing.bezier(0.4, 0, 0.2, 1);
+const TAB_FADE_IN = FadeIn.duration(150)
+  .easing(TAB_CROSSFADE_EASING)
+  .reduceMotion(ReduceMotion.System);
+const TAB_FADE_OUT = FadeOut.duration(150)
+  .easing(TAB_CROSSFADE_EASING)
+  .reduceMotion(ReduceMotion.System);
 
 const NETWORKING_GOAL_LABELS: Record<string, string> = {
   "find-mentors": "Mentorship",
@@ -265,6 +278,16 @@ export function PublicProfileView({
   const [followPending, setFollowPending] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
   const [avatarPending, setAvatarPending] = useState(false);
+  const [hasChangedTab, setHasChangedTab] = useState(false);
+
+  const handleTabChange = useCallback(
+    (tab: ProfileTab) => {
+      if (tab === activeTab) return;
+      setHasChangedTab(true);
+      setActiveTab(tab);
+    },
+    [activeTab],
+  );
 
   const loadProfile = useCallback(async () => {
     const trimmed = resolvedUsername?.trim();
@@ -504,7 +527,13 @@ export function PublicProfileView({
   }
 
   return (
-    <MobilePage headerHidden title="Profile">
+    <MobilePage
+      contentStyle={styles.pageContent}
+      headerHidden
+      scrollable={false}
+      showPageGradient={false}
+      title="Profile"
+    >
       {loading && !profile ? (
         <ScreenState
           mode="loading"
@@ -561,6 +590,7 @@ export function PublicProfileView({
             onScroll={handleScroll}
             scrollEventThrottle={32}
             showsVerticalScrollIndicator={false}
+            style={{ backgroundColor: tokens.colors.shell }}
             stickyHeaderIndices={[1]}
           >
             <View style={styles.profileIntro}>
@@ -614,9 +644,14 @@ export function PublicProfileView({
               ) : null}
             </View>
 
-            <ProfileTabs activeTab={activeTab} onChange={setActiveTab} />
+            <ProfileTabs activeTab={activeTab} onChange={handleTabChange} />
 
-            <View style={styles.tabContent}>
+            <Animated.View
+              entering={hasChangedTab ? TAB_FADE_IN : undefined}
+              exiting={TAB_FADE_OUT}
+              key={activeTab}
+              style={styles.tabContent}
+            >
               {activeTab === "activity" ? (
                 <>
                   {nextEvent &&
@@ -658,7 +693,7 @@ export function PublicProfileView({
                   onPress={(eventId) => router.push(`/event/${eventId}`)}
                 />
               ) : null}
-            </View>
+            </Animated.View>
           </ScrollView>
         </>
       ) : null}
@@ -1825,6 +1860,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingHorizontal: 20,
     paddingTop: 10,
+  },
+  pageContent: {
+    paddingBottom: 0,
+    paddingHorizontal: 0,
   },
   eventActivity: {
     borderBottomWidth: StyleSheet.hairlineWidth,
