@@ -1,4 +1,5 @@
 import type { MobileDashboardSummary } from '@kurecal/domain';
+import * as Sentry from '@sentry/nextjs';
 
 import {
   engagementFromTrackedEvent,
@@ -90,13 +91,29 @@ export async function buildMobileDashboardSummaryForUser({
   ] = await Promise.all([
     UserEventService.getTrackedEvents(userId, supabase),
     CareerProfileService.getCareerProfile(userId, supabase),
-    ProfileService.getProfile(userId, supabase).catch(() => null),
-    EventFeedbackService.getAllFeedbackForUser(userId, supabase).catch(() => []),
+    ProfileService.getProfile(userId, supabase).catch((error) => {
+      console.warn('[DashboardSummary] Failed to load profile, proceeding without it:', error);
+      Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'getProfile' } });
+      return null;
+    }),
+    EventFeedbackService.getAllFeedbackForUser(userId, supabase).catch((error) => {
+      console.warn('[DashboardSummary] Failed to load feedback:', error);
+      Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'getAllFeedback' } });
+      return [];
+    }),
     EventNetworkingSummaryService.getAllSummariesForUser(userId, supabase).catch(
-      () => []
+      (error) => {
+        console.warn('[DashboardSummary] Failed to load networking summaries:', error);
+        Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'getAllSummaries' } });
+        return [];
+      }
     ),
     UserNetworkingContactService.getAllContactsForViewer(userId, supabase).catch(
-      () => []
+      (error) => {
+        console.warn('[DashboardSummary] Failed to load networking contacts:', error);
+        Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'getAllContacts' } });
+        return [];
+      }
     ),
   ]);
 
@@ -105,7 +122,11 @@ export async function buildMobileDashboardSummaryForUser({
     await UserNetworkingContactService.hydrateContacts(
       userNetworkingContacts,
       readClient
-    ).catch(() => []);
+    ).catch((error) => {
+      console.warn('[DashboardSummary] Failed to hydrate networking contacts:', error);
+      Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'hydrateContacts' } });
+      return [];
+    });
   const feedbackByEventId = new Map(
     feedbackList.map((item) => [item.eventId, item] as const)
   );
@@ -267,7 +288,11 @@ export async function buildMobileDashboardSummaryForUser({
           userId,
           careerProfile,
           readClient
-        ).catch(() => [])
+        ).catch((error) => {
+          console.warn('[DashboardSummary] Failed to load peer profiles for comparison:', error);
+          Sentry.captureException(error, { level: 'warning', extra: { function: 'buildMobileDashboardSummaryForUser', userId, step: 'getPeerProfiles' } });
+          return [];
+        })
       )
     : null;
 

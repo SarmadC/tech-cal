@@ -65,8 +65,8 @@ export class ScoringStrategyFactory {
         (v230 as any).version = 'v2.3.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
         this.register(v230);
       }
-    } catch {
-      // no-op if env access fails in some contexts
+    } catch (error) {
+      console.warn('[ScoringStrategyFactory] Failed to register env-gated scoring variants:', error);
     }
 
     // Future strategies can be added here:
@@ -80,8 +80,8 @@ export class ScoringStrategyFactory {
         this.defaultStrategyVersion = desiredDefault;
         console.log(`Default scoring strategy set from env: ${desiredDefault}`);
       }
-    } catch {
-      // no-op
+    } catch (error) {
+      console.warn('[ScoringStrategyFactory] Failed to read NEXT_PUBLIC_SCORING_DEFAULT_VERSION:', error);
     }
 
     this.initialized = true;

@@ -7,6 +7,7 @@
 import type { Event, RecommendationMetadata, SupabaseClientType, RecommendationTelemetryContext } from '@/types';
 import type { Database } from '@/types/supabase';
 import type { CareerProfile } from '@/types/career';
+import * as Sentry from '@sentry/nextjs';
 import { isColdStartUser } from '@/utils/behavioralBoostUtils';
 import { eventDetailedTransformer } from '@/utils/transformers';
 import { DiversityEnhancementService } from '@/services/diversityEnhancementService';
@@ -145,7 +146,8 @@ export class LookalikeUserService {
 
       return finalEvents;
     } catch (error) {
-      console.warn('Error getting lookalike recommendations:', error);
+      console.warn('[LookalikeUserService] Error getting lookalike recommendations:', error);
+      Sentry.captureException(error, { level: 'warning', extra: { function: 'getRecommendations', userId } });
       return await this.getPopularFallback(supabaseClient, limit, telemetry, 'lookalike_exception');
     }
   }
@@ -207,7 +209,8 @@ export class LookalikeUserService {
       }));
 
     } catch (error) {
-      console.warn('Error getting trending events:', error);
+      console.warn('[LookalikeUserService] Error getting trending events:', error);
+      Sentry.captureException(error, { level: 'warning', extra: { function: 'getTrendingEvents', limit } });
       return [];
     }
   }

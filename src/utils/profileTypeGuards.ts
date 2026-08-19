@@ -1,5 +1,6 @@
 // Type guards for safe profile data access
 import { AppProfile } from '@/types';
+import * as Sentry from '@sentry/nextjs';
 
 export interface CareerProfile {
   industry?: string;
@@ -63,7 +64,8 @@ export function extractCareerProfile(userProfile: AppProfile | null): CareerProf
       preferredEventTypes: Array.isArray(career.preferredEventTypes) ? career.preferredEventTypes.filter(t => typeof t === 'string') : [],
     };
   } catch (error) {
-    console.error('Error extracting career profile:', error);
+    console.error('[ProfileTypeGuards] Error extracting career profile:', error);
+    Sentry.captureException(error, { level: 'warning', extra: { function: 'extractCareerProfile' } });
     return null;
   }
 }
@@ -82,7 +84,8 @@ export function extractRecommendationPreferences(userProfile: AppProfile | null)
 
     return recPrefs as Record<string, unknown>;
   } catch (error) {
-    console.error('Error extracting recommendation preferences:', error);
+    console.error('[ProfileTypeGuards] Error extracting recommendation preferences:', error);
+    Sentry.captureException(error, { level: 'warning', extra: { function: 'extractRecommendationPreferences' } });
     return null;
   }
 }

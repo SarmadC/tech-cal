@@ -273,9 +273,7 @@ async function hydrateScorableEvents(
       return hydrated ? mergeHydratedEvent(event, hydrated) : event;
     });
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[RecommendationPipeline] Failed to hydrate scorable events, using original candidate payloads', error);
-    }
+    console.warn('[RecommendationPipeline] Failed to hydrate scorable events, using original candidate payloads:', error);
     return events;
   }
 }
