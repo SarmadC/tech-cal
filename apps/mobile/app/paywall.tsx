@@ -460,15 +460,10 @@ export default function PaywallScreen() {
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
                 <View key={item.title} style={styles.featureRow}>
-                  <View
-                    style={[
-                      styles.featureIconWrap,
-                      { backgroundColor: t.accentSoft, borderRadius: r.pill },
-                    ]}
-                  >
+                  <View style={styles.featureIconWrap}>
                     <SymbolView
                       name={item.icon}
-                      size={13}
+                      size={16}
                       tintColor={t.accent}
                       type="monochrome"
                     />
