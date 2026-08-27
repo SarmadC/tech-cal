@@ -30,11 +30,12 @@ import {
 } from '../src/lib/revenuecat';
 import { useScalePress } from '../src/hooks/useAnimation';
 import { useAppTheme } from '../src/providers/ThemeProvider';
+import { haptics } from '../src/lib/haptics';
 
 const FEATURE_ITEMS = [
-  { title: 'More saved events' },
-  { title: 'Google Calendar sync' },
-  { title: 'Personalized recommendations' },
+  { icon: 'bookmark.fill', title: 'Save more events' },
+  { icon: 'calendar.badge.checkmark', title: 'One-tap Google Calendar sync' },
+  { icon: 'sparkles', title: 'Personalized event recommendations' },
 ] as const;
 
 
@@ -93,7 +94,7 @@ function getPackageTitle(pkg: RevenueCatPackage): string {
   return 'Monthly';
 }
 
-function getAnnualSavingsLabel(packages: RevenueCatPackage[]): string | null {
+function getAnnualSavingsPercentLabel(packages: RevenueCatPackage[]): string | null {
   const monthly =
     packages.find((pkg) => pkg.packageType === 'MONTHLY') ??
     packages.find((pkg) => pkg.identifier.toLowerCase().includes('month'));
@@ -119,12 +120,26 @@ function getAnnualSavingsLabel(packages: RevenueCatPackage[]): string | null {
     return null;
   }
 
-  const savings = monthly.product.price * 12 - annual.product.price;
-  if (savings <= 0) {
+  const monthlyCost = monthly.product.price * 12;
+  const savings = monthlyCost - annual.product.price;
+  if (monthlyCost <= 0 || savings <= 0) {
     return null;
   }
 
-  return `Save ${formatCurrency(savings, annualCurrencyCode)}`;
+  return `Save ${Math.round((savings / monthlyCost) * 100)}%`;
+}
+
+function getMonthlyEquivalent(pkg: RevenueCatPackage): string | null {
+  if (!hasUsablePrice(pkg)) {
+    return null;
+  }
+
+  const currencyCode = getProductCurrencyCode(pkg);
+  if (!currencyCode) {
+    return null;
+  }
+
+  return formatCurrency(pkg.product.price / 12, currencyCode);
 }
 
 function getSubscriptionHeadline(subscription: NormalizedSubscription | null): string {
@@ -143,6 +158,28 @@ function getSubscriptionHeadline(subscription: NormalizedSubscription | null): s
 
 function getPackageBillingLabel(pkg: RevenueCatPackage): string {
   return getPackageTitle(pkg) === 'Yearly' ? 'Billed annually' : 'Billed monthly';
+}
+
+function getPrimaryCtaLabel(
+  selectedPackage: RevenueCatPackage | null,
+  isPaidAccessActive: boolean,
+  workingAction: 'manage' | 'purchase' | 'restore' | null
+): string {
+  if (workingAction === 'purchase') {
+    return 'Subscribing...';
+  }
+  if (workingAction === 'manage') {
+    return 'Opening...';
+  }
+  if (isPaidAccessActive) {
+    return 'Manage subscription';
+  }
+  if (!selectedPackage) {
+    return 'Subscribe now';
+  }
+
+  const unit = getPackageTitle(selectedPackage) === 'Yearly' ? 'year' : 'month';
+  return `Start Pro — ${selectedPackage.product.priceString}/${unit}`;
 }
 
 export default function PaywallScreen() {
@@ -184,7 +221,7 @@ export default function PaywallScreen() {
           return current;
         }
         return (
-          result.find((pkg) => pkg.packageType === 'MONTHLY')?.identifier ??
+          result.find((pkg) => getPackageTitle(pkg) === 'Yearly')?.identifier ??
           result[0]?.identifier ??
           null
         );
@@ -220,7 +257,15 @@ export default function PaywallScreen() {
   );
 
   const annualSavingsLabel = useMemo(
-    () => getAnnualSavingsLabel(packages),
+    () => getAnnualSavingsPercentLabel(packages),
+    [packages]
+  );
+  const orderedPackages = useMemo(
+    () =>
+      [...packages].sort((a, b) => {
+        const rank = (pkg: RevenueCatPackage) => (getPackageTitle(pkg) === 'Yearly' ? 0 : 1);
+        return rank(a) - rank(b);
+      }),
     [packages]
   );
   const isAnyActionWorking = workingAction !== null;
@@ -364,13 +409,16 @@ export default function PaywallScreen() {
           },
         ]}
       >
+        <View style={styles.dragHandleRow}>
+          <View style={[styles.dragHandle, { backgroundColor: t.borderStrong }]} />
+        </View>
         <View style={styles.modalHeader}>
           <Pressable
             accessibilityLabel="Close"
             accessibilityRole="button"
-            hitSlop={12}
+            hitSlop={8}
             onPress={() => router.back()}
-            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            style={({ pressed }) => [styles.closeButton, { opacity: pressed ? 0.5 : 1 }]}
           >
             <SymbolView
               name="xmark"
@@ -393,28 +441,18 @@ export default function PaywallScreen() {
           }
         >
           <View style={styles.hero}>
-            <View style={styles.heroHeader}>
-              <Text style={[styles.eyebrow, { color: t.textTertiary, fontFamily: sans }]}>
-                Subscription
-              </Text>
-              <View
-                accessibilityLabel={`Current access: ${getSubscriptionHeadline(subscription)}`}
-                style={[
-                  styles.statusChip,
-                  {
-                    backgroundColor: t.accentSoft,
-                    borderColor: t.borderStrong,
-                    borderRadius: r.sm,
-                  },
-                ]}
-              >
-                <Text style={[styles.statusChipLabel, { color: t.textSecondary, fontFamily: sans }]}>
-                  {getSubscriptionHeadline(subscription)}
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.title, { color: t.textPrimary, fontFamily: sans }]}>
+            <Text style={[styles.eyebrow, { color: t.textTertiary, fontFamily: sans }]}>
               KureCal Pro
+            </Text>
+            <Text style={[styles.headline, { color: t.textPrimary, fontFamily: sans }]}>
+              Never miss the events worth attending.
+            </Text>
+            <Text style={[styles.subhead, { color: t.textSecondary, fontFamily: sans }]}>
+              Save the conferences you care about, sync them to Google Calendar, and
+              discover more events tailored to your interests.
+            </Text>
+            <Text style={[styles.statusLine, { color: t.textTertiary, fontFamily: sans }]}>
+              {getSubscriptionHeadline(subscription)}
             </Text>
           </View>
 
@@ -422,6 +460,19 @@ export default function PaywallScreen() {
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
                 <View key={item.title} style={styles.featureRow}>
+                  <View
+                    style={[
+                      styles.featureIconWrap,
+                      { backgroundColor: t.accentSoft, borderRadius: r.pill },
+                    ]}
+                  >
+                    <SymbolView
+                      name={item.icon}
+                      size={13}
+                      tintColor={t.accent}
+                      type="monochrome"
+                    />
+                  </View>
                   <Text style={[styles.featureTitle, { color: t.textPrimary, fontFamily: sans }]}>
                     {item.title}
                   </Text>
@@ -432,19 +483,16 @@ export default function PaywallScreen() {
 
           <View style={[styles.section, { borderTopColor: t.border }]}>
             <Text style={[styles.cardTitle, { color: t.textPrimary, fontFamily: sans }]}>
-              Plan
+              Choose your plan
             </Text>
-            {annualSavingsLabel ? (
-              <Text style={[styles.cardBody, { color: t.textSecondary, fontFamily: sans }]}>
-                {annualSavingsLabel} with yearly billing
-              </Text>
-            ) : null}
 
-            {packages.length ? (
+            {orderedPackages.length ? (
               <View style={styles.planStack}>
-                {packages.map((pkg) => {
+                {orderedPackages.map((pkg) => {
                   const selected = selectedPackage?.identifier === pkg.identifier;
                   const trialLabel = getTrialLabel(pkg);
+                  const isYearly = getPackageTitle(pkg) === 'Yearly';
+                  const monthlyEquivalent = isYearly ? getMonthlyEquivalent(pkg) : null;
 
                   return (
                     <Pressable
@@ -455,7 +503,10 @@ export default function PaywallScreen() {
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
                       key={pkg.identifier}
-                      onPress={() => setSelectedPackageIdentifier(pkg.identifier)}
+                      onPress={() => {
+                        haptics.selection();
+                        setSelectedPackageIdentifier(pkg.identifier);
+                      }}
                       style={[
                         styles.planCard,
                         {
@@ -466,28 +517,51 @@ export default function PaywallScreen() {
                       ]}
                     >
                       <View style={styles.planHeader}>
-                        <Text style={[styles.planTitle, { color: t.textPrimary, fontFamily: sans }]}>
-                          {getPackageTitle(pkg)}
-                        </Text>
-                        {selected ? (
-                          <View
-                            style={[
-                              styles.selectedBadge,
-                              { backgroundColor: t.pillActive, borderRadius: r.sm },
-                            ]}
-                          >
-                            <Text style={[styles.selectedBadgeLabel, { color: t.pillActiveText, fontFamily: sans }]}>
-                              Selected
-                            </Text>
-                          </View>
-                        ) : null}
+                        <View style={styles.planTitleRow}>
+                          <Text style={[styles.planTitle, { color: t.textPrimary, fontFamily: sans }]}>
+                            {getPackageTitle(pkg)}
+                          </Text>
+                          {isYearly ? (
+                            <View
+                              style={[
+                                styles.bestValueBadge,
+                                { backgroundColor: t.accentSoft, borderRadius: r.sm },
+                              ]}
+                            >
+                              <Text style={[styles.bestValueBadgeLabel, { color: t.accent, fontFamily: sans }]}>
+                                Best value
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <View style={[styles.radioOuter, { borderColor: selected ? t.accent : t.border }]}>
+                          {selected ? (
+                            <View style={[styles.radioInner, { backgroundColor: t.accent }]} />
+                          ) : null}
+                        </View>
                       </View>
                       <Text style={[styles.planPrice, { color: t.textPrimary, fontFamily: sans }]}>
                         {pkg.product.priceString}
+                        <Text style={[styles.planPriceUnit, { color: t.textTertiary, fontFamily: sans }]}>
+                          {isYearly ? '/year' : '/month'}
+                        </Text>
                       </Text>
-                      <Text style={[styles.planMeta, { color: t.textTertiary, fontFamily: sans }]}>
-                        {trialLabel ?? getPackageBillingLabel(pkg)}
-                      </Text>
+                      {isYearly && monthlyEquivalent ? (
+                        <View style={styles.planSubRow}>
+                          <Text style={[styles.planMeta, { color: t.textTertiary, fontFamily: sans }]}>
+                            {monthlyEquivalent}/month
+                          </Text>
+                          {annualSavingsLabel ? (
+                            <Text style={[styles.planSavings, { color: t.success, fontFamily: sans }]}>
+                              {annualSavingsLabel}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <Text style={[styles.planMeta, { color: t.textTertiary, fontFamily: sans }]}>
+                          {trialLabel ?? 'Cancel anytime'}
+                        </Text>
+                      )}
                     </Pressable>
                   );
                 })}
@@ -506,7 +580,7 @@ export default function PaywallScreen() {
 
           <View style={styles.actionRow}>
             <Pressable
-              accessibilityLabel={isPaidAccessActive ? 'Manage subscription' : 'Subscribe now'}
+              accessibilityLabel={getPrimaryCtaLabel(selectedPackage, isPaidAccessActive, null)}
               accessibilityRole="button"
               accessibilityState={{
                 disabled: isPaidAccessActive
@@ -543,13 +617,7 @@ export default function PaywallScreen() {
                 ]}
               >
                 <Text style={[styles.primaryButtonLabel, { color: t.pillActiveText, fontFamily: sans }]}>
-                  {workingAction === 'purchase'
-                    ? 'Subscribing...'
-                    : workingAction === 'manage'
-                      ? 'Opening...'
-                      : isPaidAccessActive
-                        ? 'Manage subscription'
-                        : 'Subscribe now'}
+                  {getPrimaryCtaLabel(selectedPackage, isPaidAccessActive, workingAction)}
                 </Text>
               </Animated.View>
             </Pressable>
@@ -575,6 +643,12 @@ export default function PaywallScreen() {
                 {workingAction === 'restore' ? 'Restoring...' : 'Restore purchases'}
               </Text>
             </Pressable>
+
+            {!isPaidAccessActive ? (
+              <Text style={[styles.reassurance, { color: t.textTertiary, fontFamily: sans }]}>
+                Cancel anytime in the App Store.
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.legalRow}>
@@ -612,10 +686,14 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 16,
   },
-  cardBody: {
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18,
+  bestValueBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  bestValueBadgeLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   cardTitle: {
     fontSize: 18,
@@ -623,25 +701,47 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     letterSpacing: -0.18,
   },
+  closeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
+  },
   content: {
     gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 20,
+  },
+  dragHandle: {
+    borderRadius: 2,
+    height: 4,
+    width: 36,
+  },
+  dragHandleRow: {
+    alignItems: 'center',
+    paddingTop: 8,
   },
   eyebrow: {
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0,
   },
+  featureIconWrap: {
+    alignItems: 'center',
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
   featureList: {
-    gap: 8,
+    gap: 12,
   },
   featureRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   featureTitle: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 18,
@@ -649,15 +749,15 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  hero: {
-    gap: 8,
-    paddingBottom: 4,
+  headline: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.24,
+    lineHeight: 30,
   },
-  heroHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
+  hero: {
+    gap: 6,
+    paddingBottom: 4,
   },
   legalLink: {
     fontSize: 12,
@@ -673,7 +773,7 @@ const styles = StyleSheet.create({
   },
   planCard: {
     borderWidth: 1,
-    gap: 8,
+    gap: 6,
     padding: 12,
   },
   planHeader: {
@@ -693,13 +793,31 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     lineHeight: 30,
   },
+  planPriceUnit: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  planSavings: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   planStack: {
+    gap: 8,
+  },
+  planSubRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: 8,
   },
   planTitle: {
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
+  },
+  planTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   primaryButton: {
     alignItems: 'center',
@@ -711,6 +829,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  radioInner: {
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  radioOuter: {
+    alignItems: 'center',
+    borderRadius: 9,
+    borderWidth: 1.5,
+    height: 18,
+    justifyContent: 'center',
+    width: 18,
+  },
+  reassurance: {
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
   safeArea: {
     flex: 1,
   },
@@ -718,8 +855,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   secondaryButton: {
     alignItems: 'center',
@@ -732,35 +869,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  selectedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  selectedBadgeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
   stateWrap: {
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
-  statusChip: {
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  statusLine: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
   },
-  statusChipLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0,
-  },
-
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.24,
-    lineHeight: 30,
+  subhead: {
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 20,
   },
 });
