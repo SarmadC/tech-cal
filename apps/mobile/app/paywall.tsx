@@ -32,18 +32,9 @@ import { useScalePress } from '../src/hooks/useAnimation';
 import { useAppTheme } from '../src/providers/ThemeProvider';
 
 const FEATURE_ITEMS = [
-  {
-    description: 'Save beyond the free bookmark limit.',
-    title: 'More saved events',
-  },
-  {
-    description: 'Sync saved and attending events with Google Calendar.',
-    title: 'Google Calendar sync',
-  },
-  {
-    description: 'Use your profile to rank events around your goals.',
-    title: 'Personalized recommendations',
-  },
+  { title: 'More saved events' },
+  { title: 'Google Calendar sync' },
+  { title: 'Personalized recommendations' },
 ] as const;
 
 
@@ -431,14 +422,9 @@ export default function PaywallScreen() {
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
                 <View key={item.title} style={styles.featureRow}>
-                  <View style={styles.featureCopy}>
-                    <Text style={[styles.featureTitle, { color: t.textPrimary, fontFamily: sans }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.featureText, { color: t.textSecondary, fontFamily: sans }]}>
-                      {item.description}
-                    </Text>
-                  </View>
+                  <Text style={[styles.featureTitle, { color: t.textPrimary, fontFamily: sans }]}>
+                    {item.title}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -647,10 +633,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0,
   },
-  featureCopy: {
-    flex: 1,
-    gap: 2,
-  },
   featureList: {
     gap: 8,
   },
@@ -658,11 +640,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-  },
-  featureText: {
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18,
   },
   featureTitle: {
     fontSize: 13,
