@@ -431,7 +431,6 @@ export default function PaywallScreen() {
             <View style={styles.featureList}>
               {FEATURE_ITEMS.map((item) => (
                 <View key={item.title} style={styles.featureRow}>
-                  <View style={[styles.featureBar, { backgroundColor: t.accent }]} />
                   <View style={styles.featureCopy}>
                     <Text style={[styles.featureTitle, { color: t.textPrimary, fontFamily: sans }]}>
                       {item.title}
@@ -647,11 +646,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0,
-  },
-  featureBar: {
-    borderRadius: 1,
-    height: 14,
-    width: 2,
   },
   featureCopy: {
     flex: 1,
