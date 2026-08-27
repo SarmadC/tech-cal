@@ -447,10 +447,6 @@ export default function PaywallScreen() {
             <Text style={[styles.headline, { color: t.textPrimary, fontFamily: sans }]}>
               Never miss the events worth attending.
             </Text>
-            <Text style={[styles.subhead, { color: t.textSecondary, fontFamily: sans }]}>
-              Save the conferences you care about, sync them to Google Calendar, and
-              discover more events tailored to your interests.
-            </Text>
             <Text style={[styles.statusLine, { color: t.textTertiary, fontFamily: sans }]}>
               {getSubscriptionHeadline(subscription)}
             </Text>
@@ -873,10 +869,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 16,
-  },
-  subhead: {
-    fontSize: 14,
-    fontWeight: '400',
-    lineHeight: 20,
   },
 });
