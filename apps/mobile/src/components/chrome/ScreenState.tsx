@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { BrandLoadingLogo } from "../brand/BrandLoadingLogo";
 import { useAppTheme } from "../../providers/ThemeProvider";
 import { KureCard } from "./KureCard";
+import { useDelayedLoading } from "../../hooks/useDelayedLoading";
 
 type ScreenStateMode = "loading" | "empty" | "error";
 type ScreenStateVariant = "default" | "discover" | "plain";
@@ -27,6 +28,7 @@ export function ScreenState({
 }: ScreenStateProps) {
   const { tokens } = useAppTheme();
   const showSpinner = mode === "loading";
+  const isDelayed = useDelayedLoading(showSpinner);
   const useCard = variant === "default";
   const surfaceStyle =
     variant === "discover"
@@ -42,9 +44,13 @@ export function ScreenState({
   if (showSpinner) {
     return (
       <View
+        accessibilityLiveRegion="polite"
         style={[styles.loadingSurface, fullHeight && styles.fullHeightSurface]}
       >
         <BrandLoadingLogo color={tokens.colors.textPrimary} size={68} />
+        {isDelayed ? (
+          <Text style={[styles.delayedCopy, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>Still loading. Check your connection or try again shortly.</Text>
+        ) : null}
       </View>
     );
   }
@@ -129,6 +135,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 240,
     paddingVertical: 28,
+    gap: 12,
+  },
+  delayedCopy: {
+    fontSize: 13,
+    lineHeight: 18,
+    maxWidth: 280,
+    textAlign: "center",
   },
   plainSurface: {
     borderWidth: 0,

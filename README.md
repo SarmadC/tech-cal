@@ -204,6 +204,11 @@ Protected routes require Supabase auth and completion of the onboarding flow.
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...        # Required for server-side RPCs/automation (never expose publicly)
+APPLE_TEAM_ID=...                    # Serves the iOS Universal Links association file
+APPLE_CLIENT_ID=com.kurecal.mobile   # Native Sign in with Apple client
+APPLE_SIGN_IN_KEY_ID=...             # Sign in with Apple key identifier
+APPLE_SIGN_IN_PRIVATE_KEY=...        # Server-only .p8 private key contents
+TOKEN_ENCRYPTION_KEY=...             # 64 hex chars; encrypts retained OAuth tokens
 CRON_SECRET=...                      # Required for ingestion cron jobs (generate with: openssl rand -hex 32)
 INGESTION_VERIFY_SPEAKERS=true      # Optional: Set to 'false' to disable speaker URL verification
 

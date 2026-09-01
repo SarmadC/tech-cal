@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import { registerPushToken, unregisterPushToken } from './mobileApi';
 import { sessionStorage } from './sessionStorage';
@@ -27,10 +27,24 @@ interface NotificationsModule {
     projectId: string;
   }) => Promise<{ data?: string }>;
   getLastNotificationResponseAsync: () => Promise<NotificationResponseLike | null>;
-  getPermissionsAsync: () => Promise<{ status: string }>;
-  requestPermissionsAsync: () => Promise<{ status: string }>;
+  getPermissionsAsync: () => Promise<NotificationPermissionLike>;
+  requestPermissionsAsync: (input?: unknown) => Promise<NotificationPermissionLike>;
+  setBadgeCountAsync: (count: number) => Promise<boolean>;
   setNotificationHandler: (handler: unknown) => void;
 }
+
+interface NotificationPermissionLike {
+  granted?: boolean;
+  status: string;
+  ios?: { status?: number };
+}
+
+export type PushPermissionState =
+  | 'authorized'
+  | 'denied'
+  | 'not-determined'
+  | 'provisional'
+  | 'unavailable';
 
 function logMissingNativeModule() {
   if (nativeModuleWarningLogged) {
@@ -44,6 +58,11 @@ function logMissingNativeModule() {
 }
 
 function getNotificationsModule(): NotificationsModule | null {
+  // Push tokens and notification registration are unavailable in Simulator.
+  // Avoid loading the native module there because unsigned local builds do
+  // not have the Keychain entitlement used by its persisted registration.
+  if (!isPhysicalDevice()) return null;
+
   try {
     return require('expo-notifications') as NotificationsModule;
   } catch {
@@ -133,7 +152,47 @@ export function addNotificationResponseListener(
   });
 }
 
-export async function registerForPushNotificationsAsync(): Promise<void> {
+function resolvePermissionState(
+  permission: NotificationPermissionLike,
+): PushPermissionState {
+  if (permission.ios?.status === 3) return 'provisional';
+  if (
+    permission.granted ||
+    permission.status === 'granted' ||
+    permission.ios?.status === 2 ||
+    permission.ios?.status === 4
+  ) {
+    return 'authorized';
+  }
+  if (permission.status === 'denied' || permission.ios?.status === 1) {
+    return 'denied';
+  }
+  return 'not-determined';
+}
+
+export async function getPushPermissionState(): Promise<PushPermissionState> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications || !isPhysicalDevice()) return 'unavailable';
+  try {
+    return resolvePermissionState(await Notifications.getPermissionsAsync());
+  } catch {
+    return 'unavailable';
+  }
+}
+
+export async function openNotificationSettings(): Promise<void> {
+  await Linking.openSettings();
+}
+
+export async function setApplicationBadgeCount(count: number): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+  await Notifications.setBadgeCountAsync(Math.max(0, count)).catch(() => false);
+}
+
+export async function registerForPushNotificationsAsync(
+  options: { requestPermission?: boolean } = {},
+): Promise<void> {
   const Notifications = getNotificationsModule();
   if (!Notifications || !isPhysicalDevice()) {
     return;
@@ -144,14 +203,16 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
   }
 
   try {
-    const existing = await Notifications.getPermissionsAsync();
-    let status = existing.status;
-    if (status !== 'granted') {
-      const requested = await Notifications.requestPermissionsAsync();
-      status = requested.status;
+    let permission = await Notifications.getPermissionsAsync();
+    let state = resolvePermissionState(permission);
+    if (state === 'not-determined' && options.requestPermission) {
+      permission = await Notifications.requestPermissionsAsync({
+        ios: { allowAlert: true, allowBadge: true, allowSound: true },
+      });
+      state = resolvePermissionState(permission);
     }
 
-    if (status !== 'granted') {
+    if (state !== 'authorized' && state !== 'provisional') {
       return;
     }
 

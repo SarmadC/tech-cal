@@ -6,6 +6,7 @@ const REQUIRED_PRODUCTION_ENV = [
   'EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID',
   'EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID',
   'EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID',
+  'EXPO_PUBLIC_SENTRY_DSN',
   'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   'EXPO_PUBLIC_SUPABASE_URL',
 ];
@@ -23,6 +24,13 @@ const missing = REQUIRED_PRODUCTION_ENV.filter(
 if (missing.length > 0) {
   throw new Error(
     `Production mobile environment is missing: ${missing.join(', ')}`
+  );
+}
+
+const revenueCatIosKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS.trim();
+if (!revenueCatIosKey.startsWith('appl_')) {
+  throw new Error(
+    'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS must be a production iOS public key (appl_...), not a Test Store key.'
   );
 }
 

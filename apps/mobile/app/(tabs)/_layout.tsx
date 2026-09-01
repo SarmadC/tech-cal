@@ -67,29 +67,29 @@ export default function TabsLayout() {
       hidden={!visible}
       screenListeners={{ focus: () => setVisible(true) }}
     >
-      <NativeTabs.Trigger name="discover">
+      <NativeTabs.Trigger name="discover" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon
           sf={{ default: "safari", selected: "safari.fill" }}
           md="explore"
         />
         <NativeTabs.Trigger.Label>Discover</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="calendar">
+      <NativeTabs.Trigger name="calendar" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="community">
+      <NativeTabs.Trigger name="community" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon
           sf={{ default: "person.2", selected: "person.2.fill" }}
           md="group"
         />
         <NativeTabs.Trigger.Label>Community</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="dashboard">
+      <NativeTabs.Trigger name="dashboard" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon sf="chart.bar.xaxis" md="bar_chart" />
         <NativeTabs.Trigger.Label>Dashboard</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="notifications">
+      <NativeTabs.Trigger name="notifications" disableTransparentOnScrollEdge>
         <NativeTabs.Trigger.Icon
           sf={{ default: "bell", selected: "bell.fill" }}
           md="notifications"

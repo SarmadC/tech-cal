@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { router } from 'expo-router';
+import { Image as ExpoImage } from 'expo-image';
 import {
   RefreshControl,
   StyleSheet,
@@ -36,6 +37,7 @@ import { mergeDiscoverFeedPage } from '../../src/lib/discoverState';
 import { loadMobileDiscoverFeed } from '../../src/lib/mobileApi';
 import { useAppTheme } from '../../src/providers/ThemeProvider';
 import { haptics } from '../../src/lib/haptics';
+import { readMobileSnapshot, writeMobileSnapshot } from '../../src/lib/mobileSnapshotCache';
 
 const DEFAULT_RANKING_MODE: MobileDiscoverRankingMode = 'best-match';
 
@@ -135,6 +137,16 @@ export default function DiscoverScreen() {
   const requestSequenceRef = useRef(0);
 
   useEffect(() => {
+    const urls = events
+      .slice(0, 8)
+      .flatMap((event) => [event.imageUrl, event.organizerLogoUrl])
+      .filter((url): url is string => Boolean(url && !url.toLowerCase().includes('.svg')));
+    if (urls.length > 0) {
+      void ExpoImage.prefetch(Array.from(new Set(urls)), 'memory-disk').catch(() => false);
+    }
+  }, [events]);
+
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       setSearchTerm(deferredSearchText.trim());
     }, 220);
@@ -181,16 +193,35 @@ export default function DiscoverScreen() {
       setCurrentPage(request.page ?? 1);
       setHasMorePages(mergedFeed.hasMorePages);
       setError(null);
+      void writeMobileSnapshot(
+        profile?.profile.id ?? 'signed-out',
+        `discover:${JSON.stringify(request)}`,
+        nextFeed,
+      );
     } catch (nextError) {
       if (requestSequence !== requestSequenceRef.current) {
         return;
       }
 
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : 'Unable to load discovery'
-      );
+      const cached = mode !== 'more'
+        ? await readMobileSnapshot<MobileDiscoverFeed>(
+            profile?.profile.id ?? 'signed-out',
+            `discover:${JSON.stringify(request)}`,
+          )
+        : null;
+      if (cached) {
+        setFeed(cached.value);
+        setEvents(cached.value.events);
+        setCurrentPage(request.page ?? 1);
+        setHasMorePages(cached.value.results.hasMore);
+        setError(`Showing saved results from ${new Date(cached.cachedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}. Pull to refresh when connected.`);
+      } else {
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : 'Unable to load discovery'
+        );
+      }
     } finally {
       if (requestSequence !== requestSequenceRef.current) {
         return;
@@ -378,7 +409,7 @@ export default function DiscoverScreen() {
             {error && feed ? (
               <Text
                 style={{
-                  color: tokens.colors.danger,
+                  color: error.startsWith('Showing saved') ? tokens.colors.warning : tokens.colors.danger,
                   fontFamily: tokens.typography.sans,
                   fontSize: 13,
                   lineHeight: 18,

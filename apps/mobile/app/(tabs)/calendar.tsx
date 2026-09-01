@@ -42,6 +42,7 @@ import {
 } from "../../src/lib/calendarState";
 import { loadMobileCalendarFeed } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
+import { readMobileSnapshot, writeMobileSnapshot } from "../../src/lib/mobileSnapshotCache";
 
 const DEFAULT_FILTERS: CalendarDraftFilters = {
   tags: [],
@@ -169,16 +170,33 @@ export default function CalendarScreen() {
         resolvePreferredSelectedDate(nextFeed, current),
       );
       setError(null);
+      void writeMobileSnapshot(
+        profile?.profile.id ?? "signed-out",
+        `calendar:${JSON.stringify(request)}`,
+        nextFeed,
+      );
     } catch (nextError) {
       if (requestSequence !== requestSequenceRef.current) {
         return;
       }
 
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to load calendar",
+      const cached = await readMobileSnapshot<MobileCalendarFeed>(
+        profile?.profile.id ?? "signed-out",
+        `calendar:${JSON.stringify(request)}`,
       );
+      if (cached) {
+        setFeed(cached.value);
+        setSelectedDate((current) =>
+          resolvePreferredSelectedDate(cached.value, current),
+        );
+        setError(`Showing a saved calendar from ${new Date(cached.cachedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}.`);
+      } else {
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : "Unable to load calendar",
+        );
+      }
     } finally {
       if (requestSequence !== requestSequenceRef.current) {
         return;

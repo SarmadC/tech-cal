@@ -18,9 +18,12 @@ import { ScreenStateView } from "../src/components/ScreenStateView";
 import { loadMobileSavedEvents } from "../src/lib/mobileApi";
 import { useAppTheme } from "../src/providers/ThemeProvider";
 import { haptics } from "../src/lib/haptics";
+import { useAuth } from "../src/context/AuthProvider";
+import { readMobileSnapshot, writeMobileSnapshot } from "../src/lib/mobileSnapshotCache";
 
 export default function SavedScreen() {
   const { tokens } = useAppTheme();
+  const { profile } = useAuth();
   const insets = useSafeAreaInsets();
   const [feed, setFeed] = useState<MobileSavedEventsFeed | null>(null);
   const [events, setEvents] = useState<MobileSavedEventsFeed["events"]>([]);
@@ -46,19 +49,31 @@ export default function SavedScreen() {
           mode === "more" ? [...current, ...nextFeed.events] : nextFeed.events,
         );
         setError(null);
+        if (page === 1) {
+          void writeMobileSnapshot(profile?.profile.id ?? "signed-out", "saved", nextFeed);
+        }
       } catch (nextError) {
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : "Unable to load saved events",
-        );
+        const cached = page === 1
+          ? await readMobileSnapshot<MobileSavedEventsFeed>(profile?.profile.id ?? "signed-out", "saved")
+          : null;
+        if (cached) {
+          setFeed(cached.value);
+          setEvents(cached.value.events);
+          setError("Showing your last saved shortlist.");
+        } else {
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "Unable to load saved events",
+          );
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
         setRefreshing(false);
       }
     },
-    [],
+    [profile?.profile.id],
   );
 
   useFocusEffect(
@@ -136,17 +151,17 @@ export default function SavedScreen() {
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <View style={styles.hero}>
-                <Text style={styles.eyebrow}>{header.eyebrow}</Text>
-                <Text style={styles.title}>{header.title}</Text>
+                <Text style={[styles.eyebrow, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>{header.eyebrow}</Text>
+                <Text style={[styles.title, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>{header.title}</Text>
                 {header.subtitle ? (
-                  <Text style={styles.subtitle}>{header.subtitle}</Text>
+                  <Text style={[styles.subtitle, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>{header.subtitle}</Text>
                 ) : null}
-                <Text style={styles.meta}>
+                <Text style={[styles.meta, { color: tokens.colors.textTertiary, fontFamily: tokens.typography.sans }]}>
                   {feed?.totalCount ?? events.length} saved event
                   {(feed?.totalCount ?? events.length) === 1 ? "" : "s"}
                 </Text>
               </View>
-              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+              {error ? <Text style={[styles.inlineError, { color: tokens.colors.warning, fontFamily: tokens.typography.sans }]}>{error}</Text> : null}
             </View>
           }
           ListEmptyComponent={
@@ -157,13 +172,15 @@ export default function SavedScreen() {
                 description="Open an event from Discover and save it to build your shortlist."
               />
               <Pressable
+                accessibilityRole="button"
                 onPress={() => router.push("./discover")}
                 style={({ pressed }) => [
                   styles.primaryAction,
+                  { backgroundColor: tokens.colors.pillActive },
                   pressed ? styles.primaryActionPressed : null,
                 ]}
               >
-                <Text style={styles.primaryActionLabel}>Browse discover</Text>
+                <Text style={[styles.primaryActionLabel, { color: tokens.colors.pillActiveText, fontFamily: tokens.typography.sans }]}>Browse discover</Text>
               </Pressable>
             </View>
           }
@@ -233,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#5e6ad2",
     borderRadius: 4,
     justifyContent: "center",
-    minHeight: 32,
+    minHeight: 44,
     paddingHorizontal: 12,
   },
   primaryActionLabel: {
@@ -254,7 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 32,
+    minHeight: 44,
     paddingHorizontal: 12,
   },
   secondaryActionLabel: {

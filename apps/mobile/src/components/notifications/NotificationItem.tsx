@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
 import type { MobileNotificationItem } from '@kurecal/domain';
@@ -33,6 +34,7 @@ function timeAgo(iso: string): string {
 
 export function NotificationItem({ item, onPress }: NotificationItemProps) {
   const { tokens } = useAppTheme();
+  const { fontScale } = useWindowDimensions();
   const unread = item.readAt == null;
   const avatar = item.actor?.avatarUrl;
   const initial = (item.actor?.displayName?.trim()?.[0] ?? '?').toUpperCase();
@@ -60,7 +62,14 @@ export function NotificationItem({ item, onPress }: NotificationItemProps) {
     >
       <View style={styles.avatarWrap}>
         {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.avatar} />
+          <ExpoImage
+            source={{ uri: avatar }}
+            style={styles.avatar}
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            recyclingKey={avatar}
+            transition={120}
+          />
         ) : (
           <View
             style={[
@@ -90,13 +99,13 @@ export function NotificationItem({ item, onPress }: NotificationItemProps) {
               fontWeight: unread ? '700' : '500',
             },
           ]}
-          numberOfLines={2}
+          numberOfLines={fontScale >= 1.8 ? 4 : 2}
         >
           {verbFor(item)}
         </Text>
         {previewText ? (
           <Text
-            numberOfLines={2}
+            numberOfLines={fontScale >= 1.8 ? 4 : 2}
             style={[
               styles.preview,
               {

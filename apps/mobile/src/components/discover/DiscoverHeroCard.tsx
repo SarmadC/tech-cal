@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -32,6 +33,8 @@ export function DiscoverHeroCard({
   style,
 }: DiscoverHeroCardProps) {
   const { tokens } = useAppTheme();
+  const { fontScale } = useWindowDimensions();
+  const usesAccessibilityLayout = fontScale >= 1.8;
   const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   const isSaved = isEventSaved(event);
   const eyebrow = useMemo(() => formatEventEyebrow(event.startTime, event.location), [event]);
@@ -55,6 +58,7 @@ export function DiscoverHeroCard({
       onPressOut={onPressOut}
       style={[
         styles.card,
+        { minHeight: 224 + Math.max(0, fontScale - 1) * 88 },
         style,
         {
           backgroundColor: tokens.colors.discoverToolbarStrong,
@@ -86,7 +90,7 @@ export function DiscoverHeroCard({
 
       <View style={styles.content}>
         <Text
-          numberOfLines={1}
+          numberOfLines={usesAccessibilityLayout ? 2 : 1}
           style={{
             color: "rgba(248, 250, 252, 0.56)",
             fontFamily: tokens.typography.sans,
@@ -98,7 +102,7 @@ export function DiscoverHeroCard({
           {eyebrow}
         </Text>
         <Text
-          numberOfLines={3}
+          numberOfLines={usesAccessibilityLayout ? 5 : 3}
           style={{
             color: "#F8FAFC",
             fontFamily: tokens.typography.sans,

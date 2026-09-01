@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import * as Application from 'expo-application';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
@@ -25,9 +26,13 @@ import {
   getMobileRecoveryRedirectUri,
   isMobileAuthCallbackUrl,
 } from '../lib/authRedirect';
-import { getMobileApiBaseUrl } from '../lib/env';
 import { completeMobileAuthCallback } from '../lib/mobileAuthCompletion';
-import { deleteMobileAccount, loadMobileProfileState } from '../lib/mobileApi';
+import {
+  completeMobileAppleAuthorization,
+  deleteMobileAccount,
+  loadMobileProfileState,
+  type MobileAccountDeletionResult,
+} from '../lib/mobileApi';
 import {
   registerForPushNotificationsAsync,
   unregisterPushNotificationsAsync,
@@ -62,7 +67,7 @@ interface SignUpInput {
 interface AuthContextValue {
   authCompletionError: string | null;
   clearAuthCompletionState: () => void;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: () => Promise<MobileAccountDeletionResult>;
   hasCompletedOnboarding: boolean;
   needsUsername: boolean;
   hasPendingAuthCallbackUrl: boolean;
@@ -178,6 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Failed to sync RevenueCat identity.', error);
       });
 
+      // Refresh an existing granted token without presenting a system prompt.
+      // Permission requests happen only after a contextual signature action.
       void registerForPushNotificationsAsync().catch((error) => {
         console.warn('Failed to register push notifications.', error);
       });
@@ -298,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearAuthCompletionState,
       deleteAccount: async () => {
         clearAuthCompletionState();
-        await deleteMobileAccount();
+        const deletionResult = await deleteMobileAccount();
 
         startTransition(() => {
           setSession(null);
@@ -312,6 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           GoogleSignin.signOut(),
           supabase.auth.signOut({ scope: 'local' }),
         ]);
+        return deletionResult;
       },
       hasCompletedOnboarding: profile?.onboarding.onboarded ?? false,
       needsUsername: Boolean(profile && !profile.socialProfile.username?.trim()),
@@ -394,9 +402,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw err;
           }
 
-          if (!credential.identityToken) {
+          if (!credential.identityToken || !credential.authorizationCode) {
             throw new Error(
-              'Apple did not return an identity token. Please try again.'
+              'Apple did not return the credentials needed to complete sign in. Please try again.'
             );
           }
 
@@ -407,6 +415,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
           if (error) throw error;
+          try {
+            await completeMobileAppleAuthorization(
+              credential.authorizationCode,
+              Application.applicationId ?? 'com.kurecal.mobile',
+            );
+          } catch (retentionError) {
+            await supabase.auth.signOut({ scope: 'local' });
+            throw retentionError;
+          }
           return;
         }
 
@@ -425,13 +442,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (oauthError) throw oauthError;
         if (!oauthData.url) throw new Error('Unable to start Google sign in.');
 
-        const proxyUrl = new URL(
-          `${getMobileApiBaseUrl()}/api/mobile/auth/google/start`
-        );
-        proxyUrl.searchParams.set('url', oauthData.url);
-
         const browserResult = await WebBrowser.openAuthSessionAsync(
-          proxyUrl.toString(),
+          oauthData.url,
           redirectTo
         );
 

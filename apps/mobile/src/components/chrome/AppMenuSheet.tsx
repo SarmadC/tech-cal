@@ -525,8 +525,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 4,
     justifyContent: "center",
-    minHeight: 30,
-    minWidth: 30,
+    minHeight: 44,
+    minWidth: 44,
   },
   upgradeBanner: {
     alignItems: "center",
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     justifyContent: "center",
-    minHeight: 42,
+    minHeight: 44,
     paddingHorizontal: 12,
   },
   primaryActionLabel: {
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    minHeight: 42,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },

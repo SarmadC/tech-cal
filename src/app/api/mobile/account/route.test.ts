@@ -25,10 +25,13 @@ describe('DELETE /api/mobile/account', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role');
     mocks.getAuthenticatedRequestContext.mockResolvedValue({
-      user: { id: '11111111-1111-4111-8111-111111111111' },
+      user: { id: '11111111-1111-4111-8111-111111111111', identities: [] },
     });
     mocks.createServiceClient.mockReturnValue({ service: true });
-    mocks.deleteUserAccount.mockResolvedValue(undefined);
+    mocks.deleteUserAccount.mockResolvedValue({
+      appleAuthorizationRevoked: false,
+      appleManualRevocationRequired: false,
+    });
   });
 
   it('requires authentication', async () => {
@@ -49,15 +52,23 @@ describe('DELETE /api/mobile/account', () => {
     expect(mocks.deleteUserAccount).not.toHaveBeenCalled();
   });
 
-  it('deletes the authenticated account and returns no content', async () => {
+  it('deletes the authenticated account and returns revocation status', async () => {
     const response = await DELETE(new Request('http://localhost/api/mobile/account', {
       method: 'DELETE',
       body: JSON.stringify({ confirmation: 'DELETE' }),
     }) as never);
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: {
+        appleAuthorizationRevoked: false,
+        appleManualRevocationRequired: false,
+      },
+    });
     expect(mocks.deleteUserAccount).toHaveBeenCalledWith(
       { service: true },
-      '11111111-1111-4111-8111-111111111111'
+      '11111111-1111-4111-8111-111111111111',
+      { usesAppleSignIn: false },
     );
   });
 });

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "^20.20.0 || >=22.22.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -49,7 +49,7 @@
     "repair:pycon-speaker-avatars": "tsx scripts/repair-pycon-australia-speaker-avatars.ts",
     "scrape:linkedin-photos": "tsx scripts/scrape-linkedin-photos-playwright.ts",
     "test:domain:contracts": "npm exec vitest run packages/domain/src/community.test.ts packages/domain/src/eventSubmission.test.ts packages/domain/src/mobile.test.ts packages/domain/src/socialProfile.test.ts",
-    "test:mobile:contracts": "npm exec vitest run apps/mobile/src/lib/env.test.ts apps/mobile/src/lib/authRedirect.test.ts apps/mobile/src/lib/mobileAuthCompletion.test.ts apps/mobile/src/lib/eventSubmission.test.ts apps/mobile/src/lib/mobileApi.test.ts apps/mobile/src/lib/discoverState.test.ts apps/mobile/src/lib/calendarDateUtils.test.ts apps/mobile/src/lib/calendarState.test.ts src/lib/mobileSubscriptions.test.ts src/services/accountDeletionService.test.ts src/app/api/events/submit/route.test.ts src/app/api/profile/social/route.test.ts src/app/api/blocks/route.test.ts src/app/api/community/circles/[id]/join/route.test.ts src/app/api/mobile/account/route.test.ts src/app/api/mobile/auth/google/start/route.test.ts src/app/api/mobile/calendar/route.test.ts src/app/api/mobile/community/route.test.ts 'src/app/api/mobile/community/circles/[slug]/route.test.ts' 'src/app/api/mobile/community/posts/[postId]/route.test.ts' src/app/api/mobile/discover/route.test.ts src/app/api/mobile/dashboard/summary/route.test.ts src/app/api/mobile/profile/route.test.ts src/app/api/mobile/profile/username-check/route.test.ts 'src/app/api/mobile/profiles/[username]/route.test.ts' src/app/api/mobile/saved/route.test.ts 'src/app/api/mobile/speakers/[id]/route.test.ts' src/app/api/mobile/onboarding/career/route.test.ts 'src/app/api/mobile/events/[id]/route.test.ts' 'src/app/api/mobile/events/[id]/engagement/route.test.ts' src/app/api/mobile/subscription/offerings/route.test.ts src/app/api/mobile/subscription/reconcile/route.test.ts src/app/api/mobile/subscription/status/route.test.ts src/app/api/revenuecat/webhook/route.test.ts",
+    "test:mobile:contracts": "npm exec vitest run apps/mobile/src/lib/env.test.ts apps/mobile/src/lib/authRedirect.test.ts apps/mobile/src/lib/mobileAuthCompletion.test.ts apps/mobile/src/lib/eventSubmission.test.ts apps/mobile/src/lib/mobileApi.test.ts apps/mobile/src/lib/discoverState.test.ts apps/mobile/src/lib/calendarDateUtils.test.ts apps/mobile/src/lib/calendarState.test.ts src/lib/mobileSubscriptions.test.ts src/services/accountDeletionService.test.ts src/services/appleAuthorizationService.test.ts src/app/.well-known/apple-app-site-association/route.test.ts src/app/api/events/submit/route.test.ts src/app/api/profile/social/route.test.ts src/app/api/blocks/route.test.ts src/app/api/community/circles/[id]/join/route.test.ts src/app/api/mobile/account/route.test.ts src/app/api/mobile/auth/apple/complete/route.test.ts src/app/api/mobile/auth/google/start/route.test.ts src/app/api/mobile/calendar/route.test.ts src/app/api/mobile/community/route.test.ts 'src/app/api/mobile/community/circles/[slug]/route.test.ts' 'src/app/api/mobile/community/posts/[postId]/route.test.ts' src/app/api/mobile/discover/route.test.ts src/app/api/mobile/dashboard/summary/route.test.ts src/app/api/mobile/profile/route.test.ts src/app/api/mobile/profile/username-check/route.test.ts 'src/app/api/mobile/profiles/[username]/route.test.ts' src/app/api/mobile/saved/route.test.ts 'src/app/api/mobile/speakers/[id]/route.test.ts' src/app/api/mobile/onboarding/career/route.test.ts 'src/app/api/mobile/events/[id]/route.test.ts' 'src/app/api/mobile/events/[id]/engagement/route.test.ts' src/app/api/mobile/subscription/offerings/route.test.ts src/app/api/mobile/subscription/reconcile/route.test.ts src/app/api/mobile/subscription/status/route.test.ts src/app/api/revenuecat/webhook/route.test.ts",
     "mobile:ci": "npm run type-check:src && npm run test:domain:contracts && npm run test:mobile:contracts && npm run type-check:mobile && npm --prefix apps/mobile run doctor",
     "mobile:release:check": "npm --prefix apps/mobile run release:check"
   },
@@ -167,7 +167,6 @@
     "eslint-config-next": "^16.2.3",
     "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
-    "puppeteer": "^24.35.0",
     "supabase": "^2.34.3",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",

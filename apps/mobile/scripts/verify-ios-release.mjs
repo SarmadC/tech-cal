@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,7 +22,14 @@ function fail(message) {
   throw new Error(`[verify-ios-release] ${message}`);
 }
 
-if (existsSync(path.join(projectRoot, 'ios'))) {
+const trackedIos = spawnSync('git', ['ls-files', '--', 'apps/mobile/ios'], {
+  cwd: path.resolve(projectRoot, '../..'),
+  encoding: 'utf8',
+});
+if (trackedIos.status !== 0) {
+  fail('Unable to verify whether generated iOS files are tracked.');
+}
+if (trackedIos.stdout.trim()) {
   fail('apps/mobile/ios must not be checked in; EAS must generate it from Expo config.');
 }
 
@@ -67,6 +74,24 @@ if (config.name !== 'KureCal' || config.ios?.bundleIdentifier !== 'com.kurecal.m
 }
 if (config.ios?.supportsTablet !== false) {
   fail('The v1 release must be configured for iPhone only.');
+}
+if (!config.ios?.associatedDomains?.includes('applinks:www.kure-cal.com')) {
+  fail('Production Universal Links entitlement is missing.');
+}
+const buildPropertiesPlugin = config.plugins?.find(
+  (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties'
+);
+if (buildPropertiesPlugin?.[1]?.ios?.reactNativeReleaseLevel === 'experimental') {
+  fail('Production must use the stable React Native release level.');
+}
+if (!config.plugins?.some((plugin) =>
+  plugin === 'expo-sqlite' || (Array.isArray(plugin) && plugin[0] === 'expo-sqlite')
+)) {
+  fail('expo-sqlite config plugin is missing.');
+}
+if (config.runtimeVersion?.policy !== 'appVersion' ||
+    config.updates?.url !== 'https://u.expo.dev/788fd018-fbcd-4809-9760-9fed5af7d221') {
+  fail('EAS Update runtime compatibility is not configured.');
 }
 if (config.ios?.entitlements?.['aps-environment'] !== 'production') {
   fail('Production APNs entitlement is missing.');

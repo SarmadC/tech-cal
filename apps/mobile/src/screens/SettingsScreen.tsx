@@ -167,8 +167,21 @@ async function handleRefresh() {
     setError(null);
 
     try {
-      await deleteAccount();
+      const result = await deleteAccount();
       haptics.success();
+      if (result.appleManualRevocationRequired) {
+        Alert.alert(
+          "Account deleted",
+          "Your KureCal data was deleted. To finish disconnecting this legacy Sign in with Apple authorization, remove KureCal from your Apple Account settings.",
+          [
+            { text: "Later", style: "cancel" },
+            {
+              text: "Open Apple Account",
+              onPress: () => void Linking.openURL("https://account.apple.com/"),
+            },
+          ],
+        );
+      }
     } catch (nextError) {
       haptics.warning();
       Alert.alert(

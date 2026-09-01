@@ -41,6 +41,7 @@ import { getMobileApiBaseUrl } from "../../src/lib/env";
 import { haptics } from "../../src/lib/haptics";
 import { formatCommunityRelativeTime } from "../../src/lib/communityPresentation";
 import {
+  blockMobileUser,
   followMobileUser,
   loadMobilePublicProfile,
   removeMobileAvatar,
@@ -278,6 +279,7 @@ export function PublicProfileView({
   const [followPending, setFollowPending] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
   const [avatarPending, setAvatarPending] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
   const [hasChangedTab, setHasChangedTab] = useState(false);
 
   const handleTabChange = useCallback(
@@ -526,6 +528,60 @@ export function PublicProfileView({
     });
   }
 
+  async function handleBlockProfile() {
+    if (!profile || profile.isViewerOwner || blockPending) return;
+    setBlockPending(true);
+    try {
+      await blockMobileUser(profile.id);
+      haptics.success();
+      void AccessibilityInfo.announceForAccessibility(
+        `${getProfileDisplayName(profile)} blocked`,
+      );
+      if (router.canGoBack()) router.back();
+      else router.replace('/community');
+    } catch (nextError) {
+      haptics.warning();
+      Alert.alert(
+        'Unable to block user',
+        nextError instanceof Error ? nextError.message : 'Please try again.',
+      );
+    } finally {
+      setBlockPending(false);
+    }
+  }
+
+  function openPublicProfileActions() {
+    if (!profile || profile.isViewerOwner) return;
+    const displayName = getProfileDisplayName(profile);
+    showActionSheet({
+      title: displayName,
+      options: [
+        {
+          label: 'Share profile',
+          onPress: () => void shareProfile(displayName, profile.username),
+        },
+        {
+          label: blockPending ? 'Blocking...' : 'Block user',
+          destructive: true,
+          onPress: () => {
+            Alert.alert(
+              `Block ${displayName}?`,
+              'Their profile and community content will be hidden. You can unblock them in Settings.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: () => void handleBlockProfile(),
+                },
+              ],
+            );
+          },
+        },
+      ],
+    });
+  }
+
   return (
     <MobilePage
       contentStyle={styles.pageContent}
@@ -598,12 +654,7 @@ export function PublicProfileView({
                 avatarPending={avatarPending}
                 profile={profile}
                 onAvatarPress={openAvatarActions}
-                onShare={() => {
-                  void shareProfile(
-                    getProfileDisplayName(profile),
-                    profile.username,
-                  );
-                }}
+                onShare={openPublicProfileActions}
                 onSettings={() => router.push("/settings/all")}
               />
 
@@ -759,8 +810,8 @@ function ProfileHero({
           />
         ) : (
           <IconHeaderButton
-            accessibilityLabel="Share profile"
-            iconName="share-alt"
+            accessibilityLabel="Profile actions"
+            iconName="ellipsis-h"
             onPress={onShare}
           />
         )}
@@ -1255,7 +1306,7 @@ function ProfileActivityItem({
     });
   const sharePost = async () => {
     const base = getMobileApiBaseUrl().replace(/\/+$/, "");
-    const url = `${base}/community/${encodeURIComponent(post.circle.slug)}/post/${encodeURIComponent(post.id)}`;
+    const url = `${base}/circle/${encodeURIComponent(post.circle.slug)}/posts/${encodeURIComponent(post.id)}`;
     try {
       await Share.share({ message: url, url });
     } catch (error) {

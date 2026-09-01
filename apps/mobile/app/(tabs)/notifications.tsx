@@ -28,11 +28,14 @@ import {
   setLocalUnreadCount,
   useUnreadNotifications,
 } from "../../src/hooks/useUnreadNotifications";
-import type { MobileNotificationItem } from "@kurecal/domain";
+import type { MobileNotificationItem, MobileNotificationListResponse } from "@kurecal/domain";
 import { haptics } from "../../src/lib/haptics";
+import { useAuth } from "../../src/context/AuthProvider";
+import { readMobileSnapshot, writeMobileSnapshot } from "../../src/lib/mobileSnapshotCache";
 
 export default function NotificationsScreen() {
   const { tokens } = useAppTheme();
+  const { profile } = useAuth();
   const insets = useSafeAreaInsets();
   const { count, refresh: refreshUnread } = useUnreadNotifications();
 
@@ -56,10 +59,21 @@ export default function NotificationsScreen() {
         if (item.readAt == null) visibleUnreadIds.current.add(item.id);
       });
       setMode("ready");
+      void writeMobileSnapshot(profile?.profile.id ?? "signed-out", "notifications", page);
     } catch {
-      setMode("error");
+      const cached = await readMobileSnapshot<MobileNotificationListResponse>(
+        profile?.profile.id ?? "signed-out",
+        "notifications",
+      );
+      if (cached) {
+        setItems(cached.value.items);
+        setCursor(cached.value.nextCursor);
+        setMode("ready");
+      } else {
+        setMode("error");
+      }
     }
-  }, []);
+  }, [profile?.profile.id]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -290,8 +304,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -307,12 +321,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
   markAll: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingHorizontal: 8,
     paddingVertical: 6,
   },

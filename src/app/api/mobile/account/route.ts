@@ -34,11 +34,15 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    await deleteUserAccount(
+    const usesAppleSignIn = authContext.user.identities?.some(
+      (identity) => identity.provider === 'apple',
+    ) ?? false;
+    const result = await deleteUserAccount(
       createServiceClient(supabaseUrl, serviceRoleKey),
-      authContext.user.id
+      authContext.user.id,
+      { usesAppleSignIn },
     );
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     if (error instanceof SyntaxError) {
       return NextResponse.json(

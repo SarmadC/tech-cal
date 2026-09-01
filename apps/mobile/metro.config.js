@@ -1,10 +1,15 @@
 const path = require('path');
-const { getDefaultConfig } = require('expo/metro-config');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
-const config = getDefaultConfig(projectRoot);
+// Expo's serializer supports bundle splitting and bytecode. Starting with that
+// serializer lets Sentry inject debug IDs without wrapping the final result.
+const config = getSentryExpoConfig(projectRoot, {
+  annotateReactComponents: false,
+  includeWebReplay: false,
+});
 
 config.watchFolders = [workspaceRoot];
 config.resolver.alias = {

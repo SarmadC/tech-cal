@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,6 +65,7 @@ export function EventDetailHeader({
 }) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const [imageUri, setImageUri] = useState<string | null>(imageUrl?.trim() || null);
   const hasHeaderImage = Boolean(imageUri);
   const primaryTextColor = hasHeaderImage ? '#F8FAFC' : tokens.colors.textPrimary;
@@ -106,10 +108,13 @@ export function EventDetailHeader({
             onError={() => setImageUri(null)}
           />
         ) : (
-          <Image
+          <ExpoImage
             source={{ uri: imageUri }}
             style={styles.headerImage}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={imageUri}
+            transition={150}
             onError={() => setImageUri(null)}
           />
         )
@@ -134,6 +139,7 @@ export function EventDetailHeader({
         <View style={styles.controls}>
           <Pressable
             accessibilityLabel="Back"
+            accessibilityRole="button"
             onPress={onBack}
             style={({ pressed }) => [
               styles.backButton,
@@ -146,6 +152,8 @@ export function EventDetailHeader({
           <View style={styles.actions}>
             <Pressable
               accessibilityLabel={isBookmarked ? 'Remove saved event' : 'Save event'}
+              accessibilityRole="button"
+              accessibilityState={{ checked: isBookmarked, disabled: isBookmarkPending }}
               disabled={isBookmarkPending}
               onPress={onToggleBookmark}
               style={({ pressed }) => [
@@ -171,6 +179,7 @@ export function EventDetailHeader({
 
             <Pressable
               accessibilityLabel="More actions"
+              accessibilityRole="button"
               onPress={onToggleMenu}
               style={({ pressed }) => [
                 styles.iconButton,
@@ -271,7 +280,7 @@ export function EventDetailHeader({
         <View style={styles.copy}>
           <Text
             testID="event-detail-title"
-            numberOfLines={2}
+            numberOfLines={fontScale >= 1.8 ? 5 : 2}
             style={[styles.title, { color: primaryTextColor, fontFamily: tokens.typography.sans }]}
           >
             {title}
@@ -336,8 +345,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -348,8 +357,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -359,7 +368,7 @@ const styles = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    top: 40,
+    top: 50,
     right: 0,
     width: 188,
     borderRadius: 6,
@@ -373,6 +382,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    minHeight: 44,
   },
   menuLabel: {
     fontSize: 13,

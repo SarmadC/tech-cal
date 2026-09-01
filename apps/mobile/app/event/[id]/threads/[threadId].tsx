@@ -39,6 +39,7 @@ import {
 import { CommunityThreadReportSheet } from "../../../../src/components/community/CommunityThreadReportSheet";
 import {
   createMobileEventThreadComment,
+  blockMobileUser,
   deleteMobileEventThread,
   deleteMobileEventThreadComment,
   loadMobileEventThreadComment,
@@ -53,10 +54,11 @@ import { supabase } from "../../../../src/lib/supabase";
 import { useAppTheme } from "../../../../src/providers/ThemeProvider";
 
 type MenuTarget =
-  | { kind: "thread"; id: string; authorName: string; isAuthor: boolean }
+  | { kind: "thread"; id: string; authorId: string; authorName: string; isAuthor: boolean }
   | {
       kind: "comment";
       id: string;
+      authorId: string;
       authorName: string;
       isAuthor: boolean;
       parentId: string | null;
@@ -282,6 +284,7 @@ function buildMenuOptions(target: MenuTarget): ThreadActionOption[] {
     options.push({ key: "delete", label: "Delete", destructive: true });
   } else {
     options.push({ key: "report", label: "Report" });
+    options.push({ key: "block", label: "Block user", destructive: true });
   }
   options.push({ key: "copyLink", label: "Copy link" });
   options.push({ key: "cancel", label: "Cancel" });
@@ -683,6 +686,7 @@ export default function EventThreadDetailScreen() {
     setMenuTarget({
       kind: "thread",
       id: detail.thread.id,
+      authorId: detail.thread.author.id,
       authorName:
         detail.thread.author.fullName || `@${detail.thread.author.username}`,
       isAuthor: detail.thread.isAuthor,
@@ -695,6 +699,7 @@ export default function EventThreadDetailScreen() {
     setMenuTarget({
       kind: "comment",
       id: comment.id,
+      authorId: comment.author.id,
       authorName: comment.author.fullName || `@${comment.author.username}`,
       isAuthor: comment.isAuthor,
       parentId: comment.parentId,
@@ -828,6 +833,32 @@ export default function EventThreadDetailScreen() {
         return;
       case "report":
         setReportTarget({ kind: target.kind, id: target.id });
+        return;
+      case "block":
+        Alert.alert(
+          `Block ${target.authorName}?`,
+          "Their profile and community content will be hidden. You can unblock them in Settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Block",
+              style: "destructive",
+              onPress: () => {
+                void blockMobileUser(target.authorId)
+                  .then(() => {
+                    haptics.success();
+                    router.back();
+                  })
+                  .catch((nextError) => {
+                    Alert.alert(
+                      "Unable to block user",
+                      nextError instanceof Error ? nextError.message : "Please try again.",
+                    );
+                  });
+              },
+            },
+          ],
+        );
         return;
       case "cancel":
       default:

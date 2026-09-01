@@ -24,6 +24,8 @@ export function KureButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => {
         void onPress?.();
@@ -82,7 +84,7 @@ export function KureButton({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 32,
+    minHeight: 44,
     borderWidth: 1,
     justifyContent: "center",
     paddingHorizontal: 12,

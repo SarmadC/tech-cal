@@ -7,6 +7,7 @@ export type ThreadActionKey =
   | "edit"
   | "delete"
   | "report"
+  | "block"
   | "copyLink"
   | "cancel";
 

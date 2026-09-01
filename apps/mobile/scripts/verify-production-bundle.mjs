@@ -14,6 +14,7 @@ const PLACEHOLDER_ENV = {
   EXPO_PUBLIC_REVENUECAT_PRO_ANNUAL_PRODUCT_ID: 'annual',
   EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID: 'kure_cal_pro',
   EXPO_PUBLIC_REVENUECAT_PRO_MONTHLY_PRODUCT_ID: 'monthly',
+  EXPO_PUBLIC_SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'expo-public-anon-key',
   EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
 };

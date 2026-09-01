@@ -220,7 +220,7 @@ export function formatMonthLabel(value: LocalCalendarDateKey | Date): string {
   const date = typeof value === 'string' ? parseLocalDateKey(value) : value;
   const resolved = date ?? new Date();
 
-  return resolved.toLocaleDateString('en-US', {
+  return resolved.toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
   });
@@ -229,13 +229,13 @@ export function formatMonthLabel(value: LocalCalendarDateKey | Date): string {
 export function formatMonthButtonLabel(monthStartKey: LocalCalendarDateKey) {
   const date = parseLocalDateKey(monthStartKey) ?? new Date();
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(undefined, {
     month: 'long',
   });
 }
 
 export function formatAccessibilityLabel(date: Date) {
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(undefined, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -289,10 +289,12 @@ export function resolveInitialMonthFromDate(value: string | null | undefined) {
   return parseLocalDateKey(value) ?? new Date();
 }
 
-export function buildCalendarWeeks(month: Date): CalendarDay[][] {
+export function buildCalendarWeeks(month: Date, firstWeekday = 1): CalendarDay[][] {
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
   const start = new Date(firstDay);
-  start.setDate(firstDay.getDate() - firstDay.getDay());
+  const normalizedFirstWeekday = Math.max(1, Math.min(7, firstWeekday));
+  const offset = (firstDay.getDay() - (normalizedFirstWeekday - 1) + 7) % 7;
+  start.setDate(firstDay.getDate() - offset);
   const todayKey = formatLocalDateKey(new Date());
 
   return Array.from({ length: 6 }, (_, weekIndex) =>

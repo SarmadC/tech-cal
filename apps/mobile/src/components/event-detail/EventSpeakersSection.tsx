@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventDetailSpeaker } from '@kurecal/domain';
 import {
   buildSpeakerSecondaryText,
@@ -56,7 +57,14 @@ export function EventSpeakersSection({
                   ]}
                 >
                 {speaker.photoUrl ? (
-                  <Image source={{ uri: speaker.photoUrl }} style={styles.avatar} />
+                  <ExpoImage
+                    source={{ uri: speaker.photoUrl }}
+                    style={styles.avatar}
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    recyclingKey={speaker.photoUrl}
+                    transition={120}
+                  />
                 ) : (
                   <View style={[styles.fallback, { backgroundColor: tokens.colors.accentSoft }]}>
                     <Text style={[styles.fallbackText, { color: tokens.colors.accent, fontFamily: tokens.typography.sans }]}>
@@ -82,7 +90,11 @@ export function EventSpeakersSection({
       </View>
 
       {speakers.length > SPEAKER_PREVIEW_COUNT ? (
-        <Pressable onPress={() => setShowAll((v) => !v)}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowAll((v) => !v)}
+          style={styles.showAllButton}
+        >
           <Text style={[styles.link, { color: tokens.colors.link, fontFamily: tokens.typography.sans }]}>
             {showAll ? 'Show fewer speakers' : `Show all ${speakers.length} speakers`}
           </Text>
@@ -150,5 +162,9 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  showAllButton: {
+    justifyContent: 'center',
+    minHeight: 44,
   },
 });

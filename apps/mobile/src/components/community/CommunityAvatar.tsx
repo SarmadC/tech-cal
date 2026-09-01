@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { buildAvatarInitials } from './presentation';
@@ -27,8 +28,12 @@ export function CommunityAvatar({
 
   if (resolvedAvatarUrl) {
     return (
-      <Image
+      <ExpoImage
         source={{ uri: resolvedAvatarUrl }}
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        recyclingKey={resolvedAvatarUrl}
+        transition={120}
         onError={() => {
           setResolvedAvatarUrl(null);
         }}

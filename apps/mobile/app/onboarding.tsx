@@ -21,6 +21,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    useWindowDimensions,
     View,
     type StyleProp,
     type ViewStyle,
@@ -352,6 +353,8 @@ export default function OnboardingScreen() {
     const { needsUsername, refreshProfile } = useAuth();
     const { tokens } = useAppTheme();
     const insets = useSafeAreaInsets();
+    const { fontScale } = useWindowDimensions();
+    const usesAccessibilityLayout = fontScale >= 1.6;
     const [bootstrap, setBootstrap] = useState<MobileCareerOnboardingBootstrap | null>(null);
     const [draft, setDraft] = useState<MobileCareerOnboardingData>(buildEmptyDraft());
     const [currentStep, setCurrentStep] = useState(0);
@@ -615,7 +618,7 @@ export default function OnboardingScreen() {
                         </View> : null}
                     </Animated.View>
                 </ScrollView>
-                <View style={[styles.footer, { backgroundColor: tokens.colors.shellElevated, borderTopColor: tokens.colors.divider, paddingBottom: insets.bottom + 10 }]}>{needsUsername ? <View style={styles.usernameFooter}><OnboardingButton accessibilityLabel="Continue with selected username" disabled={submitting || usernameAvailability.kind !== 'available'} onPress={() => { void handleUsernameContinue(); }} variant="primary">{submitting ? 'Saving…' : 'Continue'}</OnboardingButton></View> : <><OnboardingButton accessibilityLabel={currentStep === 0 ? 'Skip onboarding for now' : 'Go to previous onboarding step'} onPress={() => { if (currentStep === 0) { void handleSkip(); } else { setStepDirection('backward'); setCurrentStep((step) => step - 1); } }} style={currentStep === 0 ? styles.skipButton : undefined} variant={currentStep === 0 ? 'tertiary' : 'secondary'}>{currentStep === 0 ? 'Skip' : 'Back'}</OnboardingButton><OnboardingButton accessibilityLabel={currentStep === 3 ? 'Complete career setup' : 'Continue to next onboarding step'} disabled={submitting || Boolean(currentStepError)} onPress={() => { void handleContinue(); }} style={styles.primaryButton} variant="primary">{completionReady ? 'Workspace ready' : submitting && currentStep === 3 ? 'Preparing your workspace…' : submitting ? 'Saving…' : primaryLabel}</OnboardingButton></>}</View>
+                <View style={[styles.footer, usesAccessibilityLayout && styles.footerAccessibility, { backgroundColor: tokens.colors.shellElevated, borderTopColor: tokens.colors.divider, paddingBottom: insets.bottom + 10 }]}>{needsUsername ? <View style={styles.usernameFooter}><OnboardingButton accessibilityLabel="Continue with selected username" disabled={submitting || usernameAvailability.kind !== 'available'} onPress={() => { void handleUsernameContinue(); }} variant="primary">{submitting ? 'Saving…' : 'Continue'}</OnboardingButton></View> : <><OnboardingButton accessibilityLabel={currentStep === 0 ? 'Skip onboarding for now' : 'Go to previous onboarding step'} onPress={() => { if (currentStep === 0) { void handleSkip(); } else { setStepDirection('backward'); setCurrentStep((step) => step - 1); } }} style={currentStep === 0 ? styles.skipButton : undefined} variant={currentStep === 0 ? 'tertiary' : 'secondary'}>{currentStep === 0 ? 'Skip' : 'Back'}</OnboardingButton><OnboardingButton accessibilityLabel={currentStep === 3 ? 'Complete career setup' : 'Continue to next onboarding step'} disabled={submitting || Boolean(currentStepError)} onPress={() => { void handleContinue(); }} style={[styles.primaryButton, usesAccessibilityLayout && styles.primaryButtonAccessibility]} variant="primary">{completionReady ? 'Workspace ready' : submitting && currentStep === 3 ? 'Preparing your workspace…' : submitting ? 'Saving…' : primaryLabel}</OnboardingButton></>}</View>
             </KeyboardAvoidingView>
             <SelectionSheet allowAdd onAdd={addSkill} onClose={() => setSheet(null)} onToggle={toggleSkill} options={allSkillOptions} selectedValues={draft.step2_skills.primarySkills} title="Skills" visible={sheet === 'skills'} />
             <SelectionSheet autoFocus={false} onClose={() => setSheet(null)} onToggle={(topic) => setDraft((current) => ({ ...current, step2_skills: { ...current.step2_skills, interests: toggleValue(current.step2_skills.interests, topic) } }))} options={topicOptions} selectedValues={draft.step2_skills.interests} title="Topics" visible={sheet === 'topics'} />
@@ -648,12 +651,12 @@ const styles = StyleSheet.create({
     countLabel: { fontSize: 13, fontWeight: '400', lineHeight: 18, marginTop: -8 },
     stepDescription: { fontSize: 14, lineHeight: 20, marginTop: -8 },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { borderWidth: 1, minHeight: 32, justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 6 },
+    chip: { borderWidth: 1, minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 6 },
     chipLabel: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
-    skillChip: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', gap: 6, minHeight: 32, paddingHorizontal: 10, paddingVertical: 6 },
+    skillChip: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', gap: 6, minHeight: 44, paddingHorizontal: 10, paddingVertical: 6 },
     skillChipLabel: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
     skillChipAction: { fontSize: 15, fontWeight: '600', lineHeight: 18 },
-    selectionRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderLeftWidth: 2, minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+    selectionRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderLeftWidth: 2, minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 8 },
     selectionContent: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
     selectionLabel: { flex: 1, fontSize: 14, fontWeight: '600', lineHeight: 20 },
     selectedMark: { fontSize: 16, fontWeight: '600', lineHeight: 20, width: 20 },
@@ -665,11 +668,11 @@ const styles = StyleSheet.create({
     optionalLabel: { fontSize: 11, fontWeight: '400', lineHeight: 16 },
     fieldValue: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
     fieldChevron: { fontSize: 22, lineHeight: 20 },
-    companyInputWrap: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', minHeight: 42, paddingLeft: 12 },
-    companyInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 40, paddingHorizontal: 10, paddingVertical: 9 },
+    companyInputWrap: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', minHeight: 44, paddingLeft: 12 },
+    companyInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 44, paddingHorizontal: 10, paddingVertical: 9 },
     topicsHeader: { gap: 4 },
     topicHelper: { fontSize: 12, lineHeight: 16 },
-    addTopicsButton: { alignSelf: 'flex-start', borderWidth: 1, justifyContent: 'center', minHeight: 32, paddingHorizontal: 10 },
+    addTopicsButton: { alignSelf: 'flex-start', borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 10 },
     addTopicsLabel: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
     roleSelector: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', minHeight: 60, paddingHorizontal: 12 },
     roleIcon: { alignItems: 'center', borderWidth: 1, height: 28, justifyContent: 'center', width: 28 },
@@ -702,10 +705,12 @@ const styles = StyleSheet.create({
     searchButtonCopy: { alignItems: 'center', flexDirection: 'row', gap: 9 },
     searchButtonLabel: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
     footer: { borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingTop: 10 },
+    footerAccessibility: { flexDirection: 'column-reverse' },
     usernameFooter: { flex: 1 },
-    button: { alignItems: 'center', borderWidth: 1, justifyContent: 'center', minHeight: 36, paddingHorizontal: 14 },
+    button: { alignItems: 'center', borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 14, paddingVertical: 8 },
     skipButton: { minWidth: 56 },
     primaryButton: { flex: 1 },
+    primaryButtonAccessibility: { flex: 0 },
     buttonLabel: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
     buttonDisabled: { opacity: 0.45 },
     modalRoot: { flex: 1, justifyContent: 'flex-end' },
@@ -717,10 +722,10 @@ const styles = StyleSheet.create({
     sheetHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
     sheetTitle: { fontSize: 18, fontWeight: '600', lineHeight: 24 },
     closeLabel: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
-    sheetSearch: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', minHeight: 42, paddingHorizontal: 12 },
-    sheetSearchInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 40, paddingHorizontal: 9, paddingVertical: 9 },
-    roleSearch: { alignItems: 'center', flexDirection: 'row', minHeight: 42, paddingHorizontal: 12 },
-    roleSearchInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 42, paddingHorizontal: 10, paddingVertical: 9 },
+    sheetSearch: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', minHeight: 44, paddingHorizontal: 12 },
+    sheetSearchInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 44, paddingHorizontal: 9, paddingVertical: 9 },
+    roleSearch: { alignItems: 'center', flexDirection: 'row', minHeight: 44, paddingHorizontal: 12 },
+    roleSearchInput: { flex: 1, fontSize: 14, lineHeight: 20, minHeight: 44, paddingHorizontal: 10, paddingVertical: 9 },
     sheetList: { flex: 1 },
     sheetSection: { marginBottom: 14 },
     sheetSectionLabel: { fontSize: 12, fontWeight: '600', lineHeight: 16, paddingBottom: 6, paddingTop: 10 },
@@ -733,12 +738,12 @@ const styles = StyleSheet.create({
     roleOptionCopy: { flex: 1, marginLeft: 10 },
     roleOptionLabel: { fontSize: 14, fontWeight: '600', lineHeight: 19 },
     roleOptionDescription: { fontSize: 12, lineHeight: 16, marginTop: 1 },
-    disciplineRow: { alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 42, paddingHorizontal: 4 },
+    disciplineRow: { alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 44, paddingHorizontal: 4 },
     disciplineLabel: { flex: 1, fontSize: 14, fontWeight: '600', lineHeight: 20 },
     disciplineEntry: { alignItems: 'center', borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', minHeight: 44, paddingHorizontal: 12 },
     disciplineEntryLabel: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
     disciplineChevron: { fontSize: 22, lineHeight: 22 },
-    sheetBackLink: { alignSelf: 'flex-start', minHeight: 28, justifyContent: 'center', marginTop: 2 },
+    sheetBackLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 2 },
     sheetBackLabel: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
     emptyLabel: { fontSize: 13, lineHeight: 18, paddingVertical: 16, textAlign: 'center' },
 });

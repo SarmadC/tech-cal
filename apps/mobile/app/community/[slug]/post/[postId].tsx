@@ -35,6 +35,7 @@ import {
   formatCommunityRelativeTime,
 } from '../../../../src/lib/communityPresentation';
 import {
+  blockMobileUser,
   createMobileCommunityComment,
   deleteMobileCommunityComment,
   deleteMobileCommunityPost,
@@ -94,7 +95,7 @@ function getAuthorDisplayName(author: { fullName: string | null; id: string }): 
 function buildThreadShareUrl(circleSlug: string, postId: string, commentId?: string): string {
   const base = getMobileApiBaseUrl().replace(/\/+$/, '');
   const query = commentId ? `?comment=${commentId}` : '';
-  return `${base}/community/${encodeURIComponent(circleSlug)}/post/${encodeURIComponent(postId)}${query}`;
+  return `${base}/circle/${encodeURIComponent(circleSlug)}/posts/${encodeURIComponent(postId)}${query}`;
 }
 
 function compareCommentsBySortMode(
@@ -312,6 +313,37 @@ export default function CommunityPostScreen() {
         { label: 'Other', onPress: () => void submitReport('other') },
       ],
     });
+  }
+
+  function handleBlockPostAuthor() {
+    if (!data || working || data.currentUser?.id === data.post.author.id) return;
+    const displayName = getAuthorDisplayName(data.post.author);
+    Alert.alert(
+      `Block ${displayName}?`,
+      'Their profile and community content will be hidden. You can unblock them in Settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => {
+            setWorking(true);
+            void blockMobileUser(data.post.author.id)
+              .then(() => {
+                haptics.success();
+                handleBack();
+              })
+              .catch((nextError) => {
+                Alert.alert(
+                  'Unable to block user',
+                  nextError instanceof Error ? nextError.message : 'Please try again.',
+                );
+              })
+              .finally(() => setWorking(false));
+          },
+        },
+      ],
+    );
   }
 
   function handleDeletePost() {
@@ -665,6 +697,21 @@ export default function CommunityPostScreen() {
                 <FontAwesome name="flag-o" size={15} color={design.textVariant} />
                 <Text style={styles.metaActionLabel}>Report</Text>
               </Pressable>
+              {data.currentUser?.id !== data.post.author.id ? (
+                <Pressable
+                  accessibilityLabel="Block thread author"
+                  onPress={handleBlockPostAuthor}
+                  style={({ pressed }) => [
+                    styles.metaAction,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                >
+                  <FontAwesome name="ban" size={15} color={design.danger} />
+                  <Text style={[styles.metaActionLabel, styles.dangerActionLabel]}>
+                    Block
+                  </Text>
+                </Pressable>
+              ) : null}
               {canDeletePost ? (
                 <Pressable
                   onPress={handleDeletePost}

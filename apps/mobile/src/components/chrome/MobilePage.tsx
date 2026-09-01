@@ -13,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
@@ -71,6 +72,8 @@ export function MobilePage<T>({
 }: MobilePageProps<T>) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const usesAccessibilityLayout = fontScale >= 1.6;
   const [compact, setCompact] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number | null>(null);
   const bottomInset = footerInset ?? tokens.spacing.tabBarBottom;
@@ -134,7 +137,12 @@ export function MobilePage<T>({
             },
           ]}
         >
-          <View style={styles.headerTopRow}>
+          <View
+            style={[
+              styles.headerTopRow,
+              usesAccessibilityLayout && styles.headerTopRowAccessibility,
+            ]}
+          >
             <View style={styles.headerCopy}>
               {eyebrow ? (
                 <Text
@@ -178,7 +186,16 @@ export function MobilePage<T>({
                 </Text>
               ) : null}
             </View>
-            {action ? <View style={styles.headerAction}>{action}</View> : null}
+            {action ? (
+              <View
+                style={[
+                  styles.headerAction,
+                  usesAccessibilityLayout && styles.headerActionAccessibility,
+                ]}
+              >
+                {action}
+              </View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -253,6 +270,8 @@ export function HeaderActionButton({
 
   return (
     <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
@@ -308,6 +327,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
+  headerTopRowAccessibility: {
+    flexDirection: "column",
+  },
   headerCopy: {
     flex: 1,
     gap: 3,
@@ -315,6 +337,9 @@ const styles = StyleSheet.create({
   },
   headerAction: {
     paddingTop: 2,
+  },
+  headerActionAccessibility: {
+    alignSelf: "flex-start",
   },
   eyebrow: {
     fontSize: 11,
@@ -337,7 +362,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButton: {
-    minHeight: 32,
+    minHeight: 44,
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",

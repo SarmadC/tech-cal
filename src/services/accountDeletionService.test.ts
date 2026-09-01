@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getConnectionWithTokens: vi.fn(),
+  revokeRetainedAppleAuthorization: vi.fn(),
+}));
+
+vi.mock('@/services/appleAuthorizationService', () => ({
+  revokeRetainedAppleAuthorization: (...args: unknown[]) =>
+    mocks.revokeRetainedAppleAuthorization(...args),
 }));
 
 vi.mock('@/services/calendarConnectionService', () => ({
@@ -46,6 +52,7 @@ describe('deleteUserAccount', () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     mocks.getConnectionWithTokens.mockResolvedValue(null);
+    mocks.revokeRetainedAppleAuthorization.mockResolvedValue(false);
   });
 
   it('removes storage data before invoking the transactional deletion RPC', async () => {

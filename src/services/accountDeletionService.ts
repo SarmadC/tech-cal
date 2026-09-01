@@ -1,5 +1,6 @@
 import type { SupabaseClientType } from '@/utils/supabase/service';
 import { CalendarConnectionService } from '@/services/calendarConnectionService';
+import { revokeRetainedAppleAuthorization } from '@/services/appleAuthorizationService';
 
 const STORAGE_PAGE_SIZE = 100;
 
@@ -105,8 +106,16 @@ async function deleteRevenueCatCustomer(
 
 export async function deleteUserAccount(
   supabase: SupabaseClientType,
-  userId: string
-): Promise<void> {
+  userId: string,
+  options: { usesAppleSignIn?: boolean } = {},
+): Promise<{
+  appleAuthorizationRevoked: boolean;
+  appleManualRevocationRequired: boolean;
+}> {
+  const appleAuthorizationRevoked = await revokeRetainedAppleAuthorization(
+    supabase,
+    userId,
+  );
   await deleteRevenueCatCustomer(supabase, userId);
   await revokeGoogleCalendarAccess(supabase, userId);
   await removeStorageFolder(supabase, 'community-media', userId);
@@ -119,4 +128,10 @@ export async function deleteUserAccount(
   if (error) {
     throw new Error('Unable to delete the account data. Please try again.');
   }
+
+  return {
+    appleAuthorizationRevoked,
+    appleManualRevocationRequired:
+      options.usesAppleSignIn === true && !appleAuthorizationRevoked,
+  };
 }

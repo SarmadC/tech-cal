@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -24,6 +24,8 @@ import {
 } from "../../src/lib/mobileApi";
 import { useAppTheme } from "../../src/providers/ThemeProvider";
 import { RECOMMENDATION_THRESHOLDS } from "../../../../src/config/recommendationThresholds";
+import { useAuth } from "../../src/context/AuthProvider";
+import { readMobileSnapshot, writeMobileSnapshot } from "../../src/lib/mobileSnapshotCache";
 
 type DashboardAttentionItem = {
   id: string;
@@ -36,6 +38,9 @@ type DashboardAttentionItem = {
 
 export default function DashboardScreen() {
   const { tokens } = useAppTheme();
+  const { profile } = useAuth();
+  const { fontScale } = useWindowDimensions();
+  const usesAccessibilityLayout = fontScale >= 1.6;
   const insets = useSafeAreaInsets();
   const hasLoadedRef = useRef(false);
   const [data, setData] = useState<MobileDashboardSummary | null>(null);
@@ -84,18 +89,33 @@ export default function DashboardScreen() {
         setData(summary);
         setSpeakerMatches(nextSpeakerMatches);
         setError(null);
-      } catch (nextError) {
-        setSpeakerMatches([]);
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : "Unable to load dashboard",
+        void writeMobileSnapshot(
+          profile?.profile.id ?? "signed-out",
+          "dashboard",
+          { summary, speakerMatches: nextSpeakerMatches },
         );
+      } catch (nextError) {
+        const cached = await readMobileSnapshot<{
+          summary: MobileDashboardSummary;
+          speakerMatches: MobileCommunityNetworkingSpeakerMatch[];
+        }>(profile?.profile.id ?? "signed-out", "dashboard");
+        if (cached) {
+          setData(cached.value.summary);
+          setSpeakerMatches(cached.value.speakerMatches);
+          setError("Showing your last saved dashboard. Pull to refresh when connected.");
+        } else {
+          setSpeakerMatches([]);
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "Unable to load dashboard",
+          );
+        }
       } finally {
         setLoading(false);
       }
     },
-    [],
+    [profile?.profile.id],
   );
 
   useFocusEffect(
@@ -330,7 +350,7 @@ export default function DashboardScreen() {
                   funnelValues={funnelValues}
                 />
 
-                <View style={styles.utilityRow}>
+                <View style={[styles.utilityRow, usesAccessibilityLayout && styles.utilityColumn]}>
                   <View
                     style={[
                       styles.utilityCard,
@@ -704,6 +724,9 @@ const styles = StyleSheet.create({
   utilityRow: {
     flexDirection: "row",
     gap: 10,
+  },
+  utilityColumn: {
+    flexDirection: "column",
   },
   utilityCard: {
     flex: 1,

@@ -1,13 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-
-const colors = {
-  accent: '#BDC2FF',
-  accentStrong: '#5E6AD2',
-  border: 'rgba(255, 255, 255, 0.08)',
-  surface: '#121314',
-  text: '#E3E2E3',
-  textMuted: '#C6C5D5',
-};
+import { useAppTheme } from '../providers/ThemeProvider';
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 interface ScreenStateViewProps {
   description: string;
@@ -22,22 +15,40 @@ export function ScreenStateView({
   title,
   onRetry,
 }: ScreenStateViewProps) {
+  const { tokens } = useAppTheme();
+  const isDelayed = useDelayedLoading(mode === 'loading');
+
   return (
-    <View style={styles.root}>
+    <View
+      accessibilityLiveRegion="polite"
+      accessibilityRole={mode === 'error' ? 'alert' : undefined}
+      style={[
+        styles.root,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderColor: tokens.colors.border,
+        },
+      ]}
+    >
       {mode === 'loading' ? (
-        <ActivityIndicator color={colors.accent} size="small" />
+        <ActivityIndicator color={tokens.colors.accent} size="small" />
       ) : null}
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[styles.title, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>{title}</Text>
+      <Text style={[styles.description, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
+        {isDelayed ? 'This is taking longer than expected. Check your connection or try again.' : description}
+      </Text>
       {mode === 'error' && onRetry ? (
         <Pressable
           onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading"
           style={({ pressed }) => [
             styles.retryButton,
+            { backgroundColor: tokens.colors.pillActive, borderColor: tokens.colors.pillActive },
             pressed ? styles.retryButtonPressed : null,
           ]}
         >
-          <Text style={styles.retryLabel}>Retry</Text>
+          <Text style={[styles.retryLabel, { color: tokens.colors.pillActiveText, fontFamily: tokens.typography.sans }]}>Retry</Text>
         </Pressable>
       ) : null}
     </View>
@@ -46,20 +57,17 @@ export function ScreenStateView({
 
 const styles = StyleSheet.create({
   description: {
-    color: colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
   },
   retryButton: {
     alignItems: 'center',
-    backgroundColor: colors.accentStrong,
-    borderColor: colors.accentStrong,
     borderRadius: 6,
     borderWidth: 1,
     justifyContent: 'center',
     marginTop: 4,
-    minHeight: 32,
+    minHeight: 44,
     minWidth: 96,
     paddingHorizontal: 12,
   },
@@ -67,14 +75,11 @@ const styles = StyleSheet.create({
     opacity: 0.84,
   },
   retryLabel: {
-    color: '#FDFAFF',
     fontSize: 13,
     fontWeight: '600',
   },
   root: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: 6,
     borderWidth: 1,
     gap: 8,
@@ -83,7 +88,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    color: colors.text,
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 24,

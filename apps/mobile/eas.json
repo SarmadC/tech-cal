@@ -17,6 +17,7 @@
     },
     "preview": {
       "environment": "preview",
+      "channel": "preview",
       "env": {
         "APP_VARIANT": "development"
       },
@@ -24,6 +25,7 @@
     },
     "production": {
       "environment": "production",
+      "channel": "production",
       "env": {
         "APP_VARIANT": "production"
       },

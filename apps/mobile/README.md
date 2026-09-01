@@ -36,6 +36,19 @@ can remove the RevenueCat customer record:
 - `REVENUECAT_V2_SECRET_API_KEY`
 - `REVENUECAT_PROJECT_ID`
 
+Sign in with Apple remains enabled. To revoke only the deleting user's Apple
+authorization during permanent account deletion, configure the API deployment:
+
+- `APPLE_CLIENT_ID=com.kurecal.mobile`
+- `APPLE_DEVELOPMENT_CLIENT_ID=com.kurecal.mobile.dev` for physical dev builds
+- `APPLE_TEAM_ID`
+- `APPLE_SIGN_IN_KEY_ID`
+- `APPLE_SIGN_IN_PRIVATE_KEY`
+- `TOKEN_ENCRYPTION_KEY` (64 hexadecimal characters)
+
+Production and preview EAS environments must also provide
+`EXPO_PUBLIC_SENTRY_DSN` and an appropriate `EXPO_PUBLIC_SENTRY_ENVIRONMENT`.
+
 ## RevenueCat webhook
 
 Configure a RevenueCat webhook destination for the production API deployment:
@@ -106,6 +119,7 @@ npx eas-cli env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON
 cd apps/mobile
 npx eas-cli env:list --environment production
 npm run release:check
+npm run verify:ios-live # requires APPLE_TEAM_ID and a deployed production API
 ```
 
 5. For App Store submission, run `npm run configure:ios-submit` with

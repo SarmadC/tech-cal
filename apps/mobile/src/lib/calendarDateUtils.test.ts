@@ -4,6 +4,7 @@ import type { MobileCalendarFeed } from '@kurecal/domain';
 
 import {
   groupCalendarEventsByDate,
+  buildCalendarWeeks,
   resolveCurrentMonthStartKey,
   resolveMonthStartKey,
   resolvePreferredSelectedDate,
@@ -133,5 +134,12 @@ describe('calendar date helpers', () => {
   it('resolves month starts consistently', () => {
     expect(resolveMonthStartKey('2026-05-18')).toBe('2026-05-01');
     expect(resolveCurrentMonthStartKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('starts calendar weeks using the device first-weekday convention', () => {
+    const month = new Date(2026, 4, 1);
+    expect(buildCalendarWeeks(month, 1)[0]?.[0]?.date.getDay()).toBe(0);
+    expect(buildCalendarWeeks(month, 2)[0]?.[0]?.date.getDay()).toBe(1);
+    expect(buildCalendarWeeks(month, 7)[0]?.[0]?.date.getDay()).toBe(6);
   });
 });

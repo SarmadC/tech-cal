@@ -25,6 +25,8 @@ import {
   getAttendanceCtaState,
 } from '../../src/components/event-detail/eventDetailUtils';
 import { ScreenStateView } from '../../src/components/ScreenStateView';
+import { useAuth } from '../../src/context/AuthProvider';
+import { recordSignatureInteraction } from '../../src/lib/signatureInteractions';
 import {
   getDeviceCalendarMapping,
   removeEventFromDeviceCalendar,
@@ -45,6 +47,7 @@ import {
 } from '../../src/lib/mobileApi';
 
 export default function EventDetailRoute() {
+  const { session } = useAuth();
   const { id } = useLocalSearchParams<{
     id: string | string[];
   }>();
@@ -297,6 +300,10 @@ export default function EventDetailRoute() {
       setData(nextDetail);
       setGoogleStatus(nextStatus);
       Alert.alert('Calendar synced', 'This event is synced to Google Calendar.');
+      void recordSignatureInteraction({
+        accountCreatedAt: session?.user.created_at,
+        interaction: 'calendar-sync',
+      });
     } catch (nextError) {
       Alert.alert(
         'Google sync failed',
@@ -356,6 +363,10 @@ export default function EventDetailRoute() {
       } else {
         setAppleMapping(result.mapping);
         Alert.alert('Saved to Device Calendar', 'This event is saved on this device.');
+        void recordSignatureInteraction({
+          accountCreatedAt: session?.user.created_at,
+          interaction: 'calendar-sync',
+        });
       }
     } catch (nextError) {
       Alert.alert(
@@ -405,6 +416,12 @@ export default function EventDetailRoute() {
 
       updateEngagementState(engagement);
       void syncGoogleAfterEngagementChange(engagement);
+      if (nextValue) {
+        void recordSignatureInteraction({
+          accountCreatedAt: session?.user.created_at,
+          interaction: 'event-save',
+        });
+      }
     } catch (nextError) {
       Alert.alert(
         'Unable to update bookmark',

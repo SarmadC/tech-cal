@@ -4,6 +4,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { useAuth } from '../context/AuthProvider';
 import { loadMobileNotificationUnreadCount } from '../lib/mobileApi';
+import { setApplicationBadgeCount } from '../lib/pushNotifications';
 
 interface UseUnreadNotificationsResult {
   count: number;
@@ -18,6 +19,7 @@ const listeners = new Set<(value: number) => void>();
 
 function publish(next: number) {
   cachedCount = next;
+  void setApplicationBadgeCount(next);
   listeners.forEach((listener) => listener(next));
 }
 

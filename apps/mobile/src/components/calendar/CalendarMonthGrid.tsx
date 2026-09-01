@@ -14,6 +14,10 @@ import {
   parseLocalDateKey,
 } from "../../lib/calendarDateUtils";
 import { useAppTheme } from "../../providers/ThemeProvider";
+import {
+  getDeviceCalendarPreferences,
+  getLocalizedWeekdayLabels,
+} from "../../lib/localization";
 
 interface CalendarMonthGridProps {
   monthStart: LocalCalendarDateKey;
@@ -39,7 +43,18 @@ export function CalendarMonthGrid({
     () => parseLocalDateKey(monthStart) ?? new Date(),
     [monthStart],
   );
-  const weeks = useMemo(() => buildCalendarWeeks(monthDate), [monthDate]);
+  const firstWeekday = useMemo(
+    () => getDeviceCalendarPreferences().firstWeekday,
+    [],
+  );
+  const weekdayLabels = useMemo(
+    () => getLocalizedWeekdayLabels(firstWeekday),
+    [firstWeekday],
+  );
+  const weeks = useMemo(
+    () => buildCalendarWeeks(monthDate, firstWeekday),
+    [firstWeekday, monthDate],
+  );
   const swipeLockedRef = useRef(false);
 
   const dayDots = useMemo(() => {
@@ -153,9 +168,9 @@ export function CalendarMonthGrid({
       </View>
 
       <View style={styles.weekdayRow}>
-        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+        {weekdayLabels.map((day, index) => (
           <Text
-            key={day}
+            key={`${day}-${index}`}
             style={[
               styles.weekday,
               {
@@ -260,8 +275,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   navButton: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     borderRadius: 4,
     borderWidth: 1,
     alignItems: "center",
@@ -286,7 +301,7 @@ const styles = StyleSheet.create({
   },
   dayButton: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     borderRadius: 4,
     borderWidth: 1,
     alignItems: "center",

@@ -132,6 +132,19 @@ const PENDING_NETWORKING_FOLLOW_UP_EVENT_KEY =
 const COMMUNITY_MEDIA_BUCKET = 'community-media';
 const MAX_COMMUNITY_IMAGE_BYTES = 8 * 1024 * 1024;
 
+function reportMobileApiFailure(
+  error: unknown,
+  context: Record<string, string | number | boolean | null>,
+) {
+  // Keep the API contract module usable in Node contract tests while loading
+  // the native Sentry bridge only inside the app runtime.
+  void import('./monitoring')
+    .then(({ captureMobileException }) =>
+      captureMobileException(error, context),
+    )
+    .catch(() => undefined);
+}
+
 export interface MobileAvatarUploadInput {
   fileName?: string | null;
   mimeType?: string | null;
@@ -216,8 +229,18 @@ async function fetchMobileEnvelope(
     });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Request timed out');
+      const timeoutError = new Error('Request timed out');
+      reportMobileApiFailure(timeoutError, {
+        endpoint: path.split('?')[0] ?? path,
+        method: requestInit.method ?? 'GET',
+        timeoutMs,
+      });
+      throw timeoutError;
     }
+    reportMobileApiFailure(err, {
+      endpoint: path.split('?')[0] ?? path,
+      method: requestInit.method ?? 'GET',
+    });
     throw err;
   } finally {
     clearTimeout(timeoutId);
@@ -228,7 +251,15 @@ async function fetchMobileEnvelope(
     .catch(() => ({}))) as MobileApiEnvelope<unknown>;
 
   if (!response.ok || payload.success === false) {
-    throw new Error(payload.error || 'Mobile request failed');
+    const responseError = new Error(payload.error || 'Mobile request failed');
+    if (response.status >= 500) {
+      reportMobileApiFailure(responseError, {
+        endpoint: path.split('?')[0] ?? path,
+        method: requestInit.method ?? 'GET',
+        status: response.status,
+      });
+    }
+    throw responseError;
   }
 
   return Object.prototype.hasOwnProperty.call(payload, 'data')
@@ -397,10 +428,30 @@ export async function loadMobileSubscriptionStatus(): Promise<NormalizedSubscrip
   );
 }
 
-export async function deleteMobileAccount(): Promise<void> {
-  await fetchMobileEnvelope('/api/mobile/account', {
+export interface MobileAccountDeletionResult {
+  appleAuthorizationRevoked: boolean;
+  appleManualRevocationRequired: boolean;
+}
+
+const mobileAccountDeletionResultSchema = z.object({
+  appleAuthorizationRevoked: z.boolean(),
+  appleManualRevocationRequired: z.boolean(),
+});
+
+export async function deleteMobileAccount(): Promise<MobileAccountDeletionResult> {
+  return fetchMobileContract('/api/mobile/account', mobileAccountDeletionResultSchema, {
     method: 'DELETE',
     body: JSON.stringify({ confirmation: 'DELETE' }),
+  });
+}
+
+export async function completeMobileAppleAuthorization(
+  authorizationCode: string,
+  clientId: string,
+): Promise<void> {
+  await fetchMobileEnvelope('/api/mobile/auth/apple/complete', {
+    method: 'POST',
+    body: JSON.stringify({ authorizationCode, clientId }),
   });
 }
 

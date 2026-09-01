@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image as ExpoImage } from 'expo-image';
 import { useEffect, useState, type PropsWithChildren } from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -79,10 +79,13 @@ export function EventImageSurface({
             }}
           />
         ) : (
-          <Image
+          <ExpoImage
             source={{ uri: imageUri }}
             style={StyleSheet.absoluteFillObject}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={imageUri}
+            transition={150}
             onError={() => {
               if (imageUri === event.imageUrl && event.organizerLogoUrl) {
                 setImageUri(event.organizerLogoUrl);
@@ -113,10 +116,13 @@ export function EventImageSurface({
             onError={() => setImageUri(null)}
           />
         ) : (
-          <Image
+          <ExpoImage
             source={{ uri: logoFallbackUri }}
             style={styles.logoFallback}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            recyclingKey={logoFallbackUri}
+            transition={150}
             onError={() => setImageUri(null)}
           />
         )

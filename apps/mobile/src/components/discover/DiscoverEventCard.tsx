@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Animated from "react-native-reanimated";
-import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import type { MobileEventCard } from "@kurecal/domain";
 
@@ -111,6 +112,8 @@ export function DiscoverEventCard({
   showSavedIndicator = true,
 }: DiscoverEventCardProps) {
   const { tokens } = useAppTheme();
+  const { fontScale } = useWindowDimensions();
+  const usesAccessibilityLayout = fontScale >= 1.8;
   const { scale, onPressIn, onPressOut } = useScalePress({ haptic: true });
   const initialImage = event.organizerLogoUrl ?? event.imageUrl ?? null;
   const [imageUri, setImageUri] = useState<string | null>(initialImage);
@@ -145,10 +148,13 @@ export function DiscoverEventCard({
         <View style={styles.logoWrap}>
           <View style={styles.logoFrame}>
             {imageUri ? (
-              <Image
+              <ExpoImage
                 source={{ uri: imageUri }}
                 style={styles.logoImage}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                recyclingKey={imageUri}
+                transition={120}
                 onError={() => {
                   if (imageUri === event.organizerLogoUrl) {
                     setImageUri(event.imageUrl ?? null);
@@ -182,7 +188,7 @@ export function DiscoverEventCard({
 
         <View style={styles.copy}>
           <Text
-            numberOfLines={2}
+            numberOfLines={usesAccessibilityLayout ? 4 : 2}
             style={{
               color: tokens.colors.textPrimary,
               fontFamily: tokens.typography.sans,
@@ -195,7 +201,7 @@ export function DiscoverEventCard({
           </Text>
 
           <Text
-            numberOfLines={1}
+            numberOfLines={usesAccessibilityLayout ? 2 : 1}
             style={{
               color: tokens.colors.discoverTextMuted,
               fontFamily: tokens.typography.sans,
@@ -253,7 +259,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: ROW_GAP,
     paddingHorizontal: ROW_PADDING_H,
-    paddingVertical: 9,
+    paddingVertical: 12,
+    minHeight: 60,
   },
   savedDot: {
     borderRadius: 999,

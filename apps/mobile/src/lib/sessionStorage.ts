@@ -9,6 +9,8 @@ const USER_SCOPED_KEYS = [
   'mobile_calendar_oauth_return_url',
   'mobile_device_calendar_event_mappings',
   'mobile_pending_networking_follow_up_event_id',
+  'kurecal_signature_event_save_count',
+  'kurecal_notification_context_prompted',
 ] as const;
 
 function getWebStorage(): Storage | null {
@@ -79,5 +81,11 @@ export const sessionStorage = {
 };
 
 export async function clearUserScopedSessionStorage(): Promise<void> {
-  await Promise.all(USER_SCOPED_KEYS.map((key) => sessionStorage.removeItem(key)));
+  const clearSnapshots = import('./mobileSnapshotCache')
+    .then(({ clearMobileSnapshotCache }) => clearMobileSnapshotCache())
+    .catch(() => undefined);
+  await Promise.all([
+    ...USER_SCOPED_KEYS.map((key) => sessionStorage.removeItem(key)),
+    clearSnapshots,
+  ]);
 }

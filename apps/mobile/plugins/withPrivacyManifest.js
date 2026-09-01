@@ -100,6 +100,20 @@ const COLLECTED_DATA_TYPES = [
     NSPrivacyCollectedDataTypeTracking: false,
     NSPrivacyCollectedDataTypePurposes: [APP_FUNCTIONALITY],
   },
+  {
+    // Production Sentry diagnostics are scrubbed of user identity and request
+    // payloads before upload.
+    NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeCrashData',
+    NSPrivacyCollectedDataTypeLinked: false,
+    NSPrivacyCollectedDataTypeTracking: false,
+    NSPrivacyCollectedDataTypePurposes: [APP_FUNCTIONALITY],
+  },
+  {
+    NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePerformanceData',
+    NSPrivacyCollectedDataTypeLinked: false,
+    NSPrivacyCollectedDataTypeTracking: false,
+    NSPrivacyCollectedDataTypePurposes: [APP_FUNCTIONALITY],
+  },
 ];
 
 function mergeCollectedDataTypes(existing) {

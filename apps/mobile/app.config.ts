@@ -20,6 +20,8 @@ const PROD_LOCATION_DESCRIPTION =
   'Allow KureCal to detect your location for nearby discovery results.';
 const PROD_GOOGLE_IOS_URL_SCHEME =
   'com.googleusercontent.apps.1092999529211-m987etstd446h7jj2u3q67ka8qq52nog';
+const EAS_PROJECT_ID = '788fd018-fbcd-4809-9760-9fed5af7d221';
+const UNIVERSAL_LINK_DOMAIN = 'applinks:www.kure-cal.com';
 
 function normalizeVariant(value: string | undefined): MobileAppVariant | null {
   const normalized = value?.trim().toLowerCase();
@@ -59,14 +61,7 @@ export default function getMobileExpoConfig() {
       ...baseConfig.expo,
       plugins: [
         ...(baseConfig.expo.plugins ?? []),
-        [
-          'expo-build-properties',
-          {
-            ios: {
-              reactNativeReleaseLevel: 'experimental',
-            },
-          },
-        ],
+        'expo-build-properties',
         [
           'expo-location',
           {
@@ -100,6 +95,9 @@ export default function getMobileExpoConfig() {
           },
         ],
         'expo-notifications',
+        'expo-localization',
+        'expo-sqlite',
+        'expo-updates',
         './plugins/withPrivacyManifest',
         './plugins/withPodfileModularHeaders',
         [
@@ -150,12 +148,21 @@ export default function getMobileExpoConfig() {
           'com.apple.developer.applesignin': ['Default'],
           'aps-environment': isProduction ? 'production' : 'development',
         },
+        associatedDomains: [UNIVERSAL_LINK_DOMAIN],
       },
       android: {
         package: isProduction ? 'com.kurecal.mobile' : 'com.kurecal.mobile.dev',
       },
       name: isProduction ? 'KureCal' : 'KureCal Dev',
       scheme: isProduction ? 'kurecal' : 'kurecal-dev',
+      runtimeVersion: {
+        policy: 'appVersion',
+      },
+      updates: {
+        url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+        checkAutomatically: 'ON_LOAD',
+        fallbackToCacheTimeout: 0,
+      },
     },
   };
 }

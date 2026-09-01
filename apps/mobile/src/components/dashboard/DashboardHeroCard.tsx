@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import type { MobileEventCard } from "@kurecal/domain";
 
@@ -24,6 +24,10 @@ export function DashboardHeroCard({
   onPress,
 }: DashboardHeroCardProps) {
   const { tokens } = useAppTheme();
+  const { fontScale } = useWindowDimensions();
+  const dynamicCardStyle = {
+    minHeight: 160 + Math.max(0, fontScale - 1) * 72,
+  };
 
   if (event) {
     const meta = formatEventMeta(event.startTime, event.location, daysUntil);
@@ -31,7 +35,7 @@ export function DashboardHeroCard({
       <EventImageSurface
         event={event}
         onPress={onPress}
-        style={[styles.card, { borderColor: tokens.colors.border }]}
+        style={[styles.card, dynamicCardStyle, { borderColor: tokens.colors.border }]}
         pressedStyle={styles.pressed}
       >
         <View
@@ -72,6 +76,7 @@ export function DashboardHeroCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        dynamicCardStyle,
         {
           borderColor: tokens.colors.borderStrong,
           backgroundColor: tokens.colors.surface,
@@ -115,7 +120,7 @@ export function DashboardHeroCard({
                 fontFamily: tokens.typography.sans,
               },
             ]}
-            numberOfLines={3}
+            numberOfLines={fontScale >= 1.8 ? 6 : 3}
           >
             {body}
           </Text>

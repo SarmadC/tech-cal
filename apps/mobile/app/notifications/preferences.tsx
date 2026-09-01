@@ -21,6 +21,12 @@ import type {
   MobileNotificationPreferences,
   MobileNotificationPreferencesUpdate,
 } from '@kurecal/domain';
+import {
+  getPushPermissionState,
+  openNotificationSettings,
+  registerForPushNotificationsAsync,
+  type PushPermissionState,
+} from '../../src/lib/pushNotifications';
 
 const ROWS: ReadonlyArray<{
   key: keyof MobileNotificationPreferences;
@@ -50,6 +56,8 @@ export default function NotificationPreferencesScreen() {
 
   const [prefs, setPrefs] = useState<MobileNotificationPreferences | null>(null);
   const [mode, setMode] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [systemPermission, setSystemPermission] =
+    useState<PushPermissionState>('unavailable');
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +75,14 @@ export default function NotificationPreferencesScreen() {
       cancelled = true;
     };
   }, []);
+
+  const refreshSystemPermission = useCallback(async () => {
+    setSystemPermission(await getPushPermissionState());
+  }, []);
+
+  useEffect(() => {
+    void refreshSystemPermission();
+  }, [refreshSystemPermission]);
 
   const toggle = useCallback(
     async (key: keyof MobileNotificationPreferences, nextValue: boolean) => {
@@ -129,6 +145,50 @@ export default function NotificationPreferencesScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingVertical: 16 }}>
+          <View
+            style={[
+              styles.permissionCard,
+              {
+                backgroundColor: tokens.colors.surface,
+                borderColor: tokens.colors.border,
+              },
+            ]}
+          >
+            <View style={styles.permissionCopy}>
+              <Text style={[styles.rowTitle, { color: tokens.colors.textPrimary }]}>
+                System notifications
+              </Text>
+              <Text style={[styles.rowSubtitle, { color: tokens.colors.textTertiary }]}>
+                {systemPermission === 'authorized'
+                  ? 'Enabled on this device'
+                  : systemPermission === 'provisional'
+                    ? 'Delivered quietly on this device'
+                    : systemPermission === 'denied'
+                      ? 'Disabled in iOS Settings'
+                      : 'Choose when KureCal can notify you'}
+              </Text>
+            </View>
+            {systemPermission === 'denied' ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void openNotificationSettings()}
+                style={styles.permissionAction}
+              >
+                <Text style={[styles.permissionActionLabel, { color: tokens.colors.accent }]}>Open Settings</Text>
+              </Pressable>
+            ) : systemPermission === 'not-determined' ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  void registerForPushNotificationsAsync({ requestPermission: true })
+                    .then(refreshSystemPermission);
+                }}
+                style={styles.permissionAction}
+              >
+                <Text style={[styles.permissionActionLabel, { color: tokens.colors.accent }]}>Enable</Text>
+              </Pressable>
+            ) : null}
+          </View>
           {ROWS.map((row) => (
             <View
               key={row.key}
@@ -182,8 +242,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,5 +274,27 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     fontSize: 13,
     lineHeight: 17,
+  },
+  permissionCard: {
+    alignItems: 'center',
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 12,
+    marginHorizontal: 20,
+    minHeight: 64,
+    padding: 12,
+  },
+  permissionCopy: { flex: 1, gap: 4, paddingRight: 12 },
+  permissionAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: 8,
+  },
+  permissionActionLabel: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

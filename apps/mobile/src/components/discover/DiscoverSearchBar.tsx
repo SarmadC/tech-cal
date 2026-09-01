@@ -1,5 +1,5 @@
 import { FontAwesome } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 
 import { useAppTheme } from "../../providers/ThemeProvider";
 
@@ -19,11 +19,14 @@ export function DiscoverSearchBar({
   value,
 }: DiscoverSearchBarProps) {
   const { tokens } = useAppTheme();
+  const { fontScale } = useWindowDimensions();
+  const accessibilityHeight = Math.min(76, 44 + Math.max(0, fontScale - 1) * 16);
 
   return (
     <View
       style={[
         styles.toolbar,
+        { minHeight: accessibilityHeight },
         compact && styles.toolbarCompact,
         {
           backgroundColor: tokens.colors.discoverToolbar,
@@ -46,6 +49,7 @@ export function DiscoverSearchBar({
           placeholder="Search events, topics, or location"
           placeholderTextColor={tokens.colors.discoverTextMuted}
           returnKeyType="search"
+          maxFontSizeMultiplier={2}
           selectionColor={tokens.colors.accent}
           style={[
             styles.input,
@@ -61,6 +65,7 @@ export function DiscoverSearchBar({
 
       <Pressable
         accessibilityLabel="Open filters"
+        accessibilityRole="button"
         onPress={onOpenFilters}
         style={({ pressed }) => [
           styles.filterButton,
@@ -125,12 +130,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 4,
     justifyContent: "center",
-    minHeight: 30,
-    width: 30,
+    minHeight: 44,
+    width: 44,
   },
   filterButtonCompact: {
-    minHeight: 28,
-    width: 28,
+    minHeight: 44,
+    width: 44,
   },
   input: {
     flex: 1,
@@ -154,12 +159,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: "row",
-    minHeight: 38,
+    minHeight: 44,
     paddingLeft: 10,
     paddingRight: 4,
   },
   toolbarCompact: {
-    minHeight: 34,
+    minHeight: 44,
     paddingLeft: 9,
     paddingRight: 4,
   },

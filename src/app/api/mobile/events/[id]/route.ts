@@ -40,16 +40,31 @@ async function loadMobileEventDetailSource(
 ) {
   try {
     return await EventService.getEventWithAgenda(id, supabase);
-  } catch (error) {
-    const message = getErrorMessage(error);
+  } catch (idError) {
+    if (getErrorMessage(idError).toLowerCase().includes('not found')) {
+      // Universal Links use the canonical web slug while in-app navigation
+      // uses the event id. A failed slug lookup must preserve the original
+      // not-found response rather than converting it to a server error.
+      try {
+        const { data: slugMatch } = await supabase
+          .from('events')
+          .select('id')
+          .eq('slug', id)
+          .maybeSingle();
 
-    if (message.toLowerCase().includes('not found')) {
-      throw error;
+        if (slugMatch?.id) {
+          return EventService.getEventWithAgenda(slugMatch.id, supabase);
+        }
+      } catch {
+        // Preserve the original EventService error below.
+      }
+
+      throw idError;
     }
 
     console.warn(
       '[mobile/events] Agenda detail query failed; falling back to base event detail',
-      { eventId: id, message }
+      { eventId: id, message: getErrorMessage(idError) }
     );
 
     return EventService.getEventById(id, supabase);
