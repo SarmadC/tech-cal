@@ -49,8 +49,8 @@ and liquid glass requires iOS 26 hardware or simulator).
 - [ ] Discover: fast-scroll 50+ events — no blank cells, no stutter;
       pagination loads on reaching the end (the "Show more" button is gone).
 - [ ] Community home, Notifications, Saved: same fast-scroll check.
-- [ ] Keyboard: community composer and Submit Event form — inputs stay
-      visible, dragging the list dismisses the keyboard.
+- [ ] Keyboard: community composer inputs stay visible; dragging the list
+      dismisses the keyboard.
 
 ## Recommendations parity
 

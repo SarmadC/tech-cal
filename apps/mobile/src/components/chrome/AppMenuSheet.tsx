@@ -364,28 +364,6 @@ export function AppMenuSheet({ visible, onClose }: AppMenuSheetProps) {
             </Pressable>
           ) : null}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Submit event"
-            onPress={() => go("/submit-event")}
-            style={({ pressed }) => [
-              styles.primaryAction,
-              {
-                backgroundColor: pressed ? tokens.colors.pillActive : tokens.colors.accent,
-              },
-            ]}
-          >
-            <FontAwesome name="plus" size={14} color={tokens.colors.textInverse} />
-            <Text
-              style={[
-                styles.primaryActionLabel,
-                { color: tokens.colors.textInverse, fontFamily: tokens.typography.sans },
-              ]}
-            >
-              Submit event
-            </Text>
-          </Pressable>
-
           {groups.map((group) => (
             <View key={group.key} style={styles.group}>
               <Text
@@ -550,19 +528,6 @@ const styles = StyleSheet.create({
   upgradeMeta: {
     fontSize: 11,
     fontWeight: "500",
-  },
-  primaryAction: {
-    alignItems: "center",
-    borderRadius: 6,
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    minHeight: 44,
-    paddingHorizontal: 12,
-  },
-  primaryActionLabel: {
-    fontSize: 14,
-    fontWeight: "800",
   },
   group: {
     gap: 6,
