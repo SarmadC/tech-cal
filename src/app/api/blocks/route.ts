@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createServiceClient } from '@/utils/supabase/service';
+import { unauthorizedJson, rateLimitedJson, validationErrorJson, successJson, errorJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { BlockService } from '@/services/blockService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
@@ -15,71 +16,35 @@ const blockActionRateLimiter = createRateLimiter('social-block-actions', 'LOW_FR
 export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthenticatedRequestContext(request);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const readSupabase = getServiceSupabaseClient();
+    if (!readSupabase) return errorJson('Blocks service is not configured.', 500);
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { success: false, error: 'Blocks service is not configured.' },
-        { status: 500 }
-      );
-    }
-
-    const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
     const blockedUsers = await BlockService.getBlockedUsersForUser(
       authContext.user.id,
       readSupabase
     );
 
-    return NextResponse.json({
-      success: true,
-      data: blockedUsers,
-    });
+    return successJson(blockedUsers);
   } catch (error) {
     console.error('Get blocked users API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch blocked users' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to fetch blocked users');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const authContext = await getAuthenticatedRequestContext(request);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
-    const rateLimitResult = await checkRateLimit(
-      blockActionRateLimiter,
-      authContext.user.id
-    );
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    const rateLimitResult = await checkRateLimit(blockActionRateLimiter, authContext.user.id);
+    if (!rateLimitResult.success) return rateLimitedJson();
 
     const body = await request.json();
     const validation = BlockRequestSchema.safeParse(body);
-
     if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid input', details: validation.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid input', validation.error.issues);
     }
 
     await BlockService.blockUser(
@@ -92,15 +57,9 @@ export async function POST(request: NextRequest) {
       authContext.supabase
     );
 
-    return NextResponse.json({
-      success: true,
-      message: 'User blocked successfully.',
-    });
+    return successJson({ message: 'User blocked successfully.' });
   } catch (error) {
     console.error('Block user API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to block user' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to block user');
   }
 }

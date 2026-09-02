@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { unauthorizedJson, validationErrorJson, errorJson } from '@/lib/api/apiResponse';
 import { createClient } from '@/utils/supabase/server';
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
 
@@ -25,19 +26,11 @@ export async function POST(request: NextRequest) {
       request.json()
     ]);
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!user) return unauthorizedJson();
 
     const validation = TelemetrySchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid telemetry payload', details: validation.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid telemetry payload', validation.error.issues);
     }
 
     // Respect analytics consent (default to opt-out if null/false)
@@ -70,9 +63,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true }, { status: 202 });
   } catch (error) {
     console.error('Telemetry API error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to log telemetry event' },
-      { status: 500 }
-    );
+    return errorJson('Failed to log telemetry event', 500);
   }
 }

@@ -1,4 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { unauthorizedJson, errorJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { communityReportSchema } from '@/lib/communitySchemas';
 import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { CommunityReportService } from '@/services/communityReportService';
@@ -7,17 +9,10 @@ import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 export async function POST(request: Request) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
     if (authContext.authMethod === 'cookie') {
       const sameOriginError = validateSameOriginRequest(request as NextRequest);
-      if (sameOriginError) {
-        return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 });
-      }
+      if (sameOriginError) return errorJson(sameOriginError, 403);
     }
 
     const payload = communityReportSchema.parse(await request.json());
@@ -32,9 +27,6 @@ export async function POST(request: Request) {
       message: 'Thanks. Your report has been submitted for review.',
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to submit report' },
-      { status: 400 }
-    );
+    return catchErrorJson(error, 'Failed to submit report', 400);
   }
 }

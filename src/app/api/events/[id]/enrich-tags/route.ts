@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { unauthorizedJson, rateLimitedJson, errorJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
 import { EventService } from '@/services/eventServices';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
+import { createClient } from '@/utils/supabase/server';
 
 // Rate limiter for tag enrichment
 const ratelimit = new Ratelimit({
@@ -27,21 +28,10 @@ export async function POST(
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
-    // Apply rate limiting
     const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
-    if (!rateLimitSuccess) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    if (!rateLimitSuccess) return rateLimitedJson();
 
     // Check if enrichment is needed
     const shouldEnrich = await EventTagEnrichmentService.shouldEnrich(eventId, supabase);
@@ -84,10 +74,7 @@ export async function POST(
     );
 
     if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error || 'Failed to enrich event tags' },
-        { status: 500 }
-      );
+      return errorJson(result.error || 'Failed to enrich event tags', 500);
     }
 
     return NextResponse.json({
@@ -99,12 +86,6 @@ export async function POST(
 
   } catch (error) {
     console.error('Error enriching event tags:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Internal server error');
   }
 }

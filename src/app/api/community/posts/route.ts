@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { unauthorizedJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { communityPostDraftSchema } from '@/lib/communitySchemas';
 import { validateSameOriginRequest } from '@/lib/requestSecurity';
 import { CommunityMutationsService } from '@/services/communityMutationsService';
@@ -7,17 +8,10 @@ import { getAuthenticatedRequestContext } from '@/utils/supabase/requestAuth';
 export async function POST(request: Request) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as NextRequest);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
     if (authContext.authMethod === 'cookie') {
       const sameOriginError = validateSameOriginRequest(request as NextRequest);
-      if (sameOriginError) {
-        return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 });
-      }
+      if (sameOriginError) return errorJson(sameOriginError, 403);
     }
 
     const parsedPayload = communityPostDraftSchema.safeParse(await request.json());
@@ -32,11 +26,8 @@ export async function POST(request: Request) {
       parsedPayload.data,
       authContext.supabase
     );
-    return NextResponse.json({ success: true, data: post });
+    return successJson(post);
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to create post' },
-      { status: 400 }
-    );
+    return catchErrorJson(error, 'Failed to create post', 400);
   }
 }

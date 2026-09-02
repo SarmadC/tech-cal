@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { unauthorizedJson, rateLimitedJson, validationErrorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { BlockService } from '@/services/blockService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
@@ -17,29 +17,13 @@ export async function DELETE(
 ) {
   try {
     const authContext = await getAuthenticatedRequestContext(request as never);
-
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
     const rateLimitResult = await checkRateLimit(unblockActionRateLimiter, authContext.user.id);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    if (!rateLimitResult.success) return rateLimitedJson();
 
     const parsedParams = ParamsSchema.safeParse(await params);
-    if (!parsedParams.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
+    if (!parsedParams.success) return validationErrorJson('Invalid user ID');
 
     await BlockService.unblockUser(
       authContext.user.id,
@@ -51,15 +35,9 @@ export async function DELETE(
       authContext.supabase
     );
 
-    return NextResponse.json({
-      success: true,
-      message: 'User unblocked successfully.',
-    });
+    return successJson({ message: 'User unblocked successfully.' });
   } catch (error) {
     console.error('Unblock user API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to unblock user' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to unblock user');
   }
 }

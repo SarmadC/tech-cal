@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { unauthorizedJson, rateLimitedJson, validationErrorJson, successJson, errorJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { FollowService } from '@/services/followService';
 import { TrustLevelService } from '@/services/trustLevelService';
 import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
@@ -12,10 +13,7 @@ const FollowRequestSchema = z.object({
 const followActionRateLimiter = createRateLimiter('social-follow-actions', 'FOLLOW_ACTIONS_DAILY');
 
 const getStatusForError = (error: unknown): number => {
-  if (!(error instanceof Error)) {
-    return 500;
-  }
-
+  if (!(error instanceof Error)) return 500;
   if (
     error.message.includes('cannot follow yourself') ||
     error.message.includes('Unblock this user') ||
@@ -23,37 +21,20 @@ const getStatusForError = (error: unknown): number => {
   ) {
     return 400;
   }
-
   return 500;
 };
 
 export async function POST(request: NextRequest) {
   try {
     const authContext = await getAuthenticatedRequestContext(request);
-    if (!authContext) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authContext) return unauthorizedJson();
 
-    const rateLimitResult = await checkRateLimit(
-      followActionRateLimiter,
-      authContext.user.id
-    );
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    const rateLimitResult = await checkRateLimit(followActionRateLimiter, authContext.user.id);
+    if (!rateLimitResult.success) return rateLimitedJson();
 
     const validation = FollowRequestSchema.safeParse(await request.json());
     if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid input', details: validation.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid input', validation.error.issues);
     }
 
     const trust = await TrustLevelService.evaluateAndPersistTrustLevel(
@@ -61,13 +42,7 @@ export async function POST(request: NextRequest) {
       authContext.supabase
     );
     if (trust.level < 1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Following is available after 7 days and onboarding completion.',
-        },
-        { status: 403 }
-      );
+      return errorJson('Following is available after 7 days and onboarding completion.', 403);
     }
 
     await FollowService.followUser(
@@ -76,15 +51,9 @@ export async function POST(request: NextRequest) {
       authContext.supabase
     );
 
-    return NextResponse.json({
-      success: true,
-      message: 'User followed successfully.',
-    });
+    return successJson({ message: 'User followed successfully.' });
   } catch (error) {
     console.error('Follow user API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to follow user' },
-      { status: getStatusForError(error) }
-    );
+    return catchErrorJson(error, 'Failed to follow user', getStatusForError(error));
   }
 }

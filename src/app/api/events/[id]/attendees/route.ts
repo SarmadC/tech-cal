@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
+import { unauthorizedJson, validationErrorJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { WhosGoingService } from '@/services/whosGoingService';
+import { createClient } from '@/utils/supabase/server';
 
 const ParamsSchema = z.object({
   id: z.string().uuid(),
@@ -18,48 +19,22 @@ export async function GET(
 ) {
   try {
     const userScopedSupabase = await createClient();
-
     const { data: authData } = await userScopedSupabase.auth.getUser();
-
-    if (!authData.user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (!authData.user) return unauthorizedJson();
 
     const [parsedParams, parsedQuery] = await Promise.all([
       params.then(p => ParamsSchema.safeParse(p)),
       Promise.resolve(QuerySchema.safeParse({ limit: request.nextUrl.searchParams.get('limit') })),
     ]);
 
-    if (!parsedParams.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid event id' },
-        { status: 400 }
-      );
-    }
-
+    if (!parsedParams.success) return validationErrorJson('Invalid event id');
     if (!parsedQuery.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid query parameters', details: parsedQuery.error.issues },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid query parameters', parsedQuery.error.issues);
     }
 
-    // Reads in this endpoint require access to other users' public profile fields.
-    // Use a server-side service role client to avoid widening global profiles RLS.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const readSupabase = getServiceSupabaseClient();
+    if (!readSupabase) return errorJson('Attendees service is not configured.', 500);
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { success: false, error: 'Attendees service is not configured.' },
-        { status: 500 }
-      );
-    }
-
-    const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
     const viewerId = authData.user.id;
     const attendeeData = await WhosGoingService.getEventAttendees(
       parsedParams.data.id,
@@ -68,15 +43,9 @@ export async function GET(
       parsedQuery.data.limit
     );
 
-    return NextResponse.json({
-      success: true,
-      data: attendeeData,
-    });
+    return successJson(attendeeData);
   } catch (error) {
     console.error('Event attendees API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch attendees' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to fetch attendees');
   }
 }

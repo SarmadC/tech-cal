@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { unauthorizedJson, validationErrorJson, errorJson, catchErrorJson } from '@/lib/api/apiResponse';
 import { CareerImpactService } from '@/services/careerImpactService';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
 import { EventService } from '@/services/eventServices';
 import { CareerImpactCalculationOptions } from '@/types/careerImpact';
+import { createClient } from '@/utils/supabase/server';
 
 interface ScoreRequestBody {
   eventId: string;
@@ -44,45 +45,23 @@ export async function GET(request: NextRequest) {
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
-    // Extract query parameters
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId');
     const lite = searchParams.get('lite') === 'true';
     const skipCache = searchParams.get('skipCache') === 'true';
 
-    if (!eventId) {
-      return NextResponse.json(
-        { success: false, error: 'eventId parameter is required' },
-        { status: 400 }
-      );
-    }
+    if (!eventId) return validationErrorJson('eventId parameter is required');
 
-    // Get user profile and career profile
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
     const careerProfile = await MemoizedProfileService.getCareerProfile(userProfile, supabase);
-
     if (!careerProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Career profile not found. Please complete career onboarding.' },
-        { status: 404 }
-      );
+      return errorJson('Career profile not found. Please complete career onboarding.', 404);
     }
 
-    // Get event data
     const event = await EventService.getEventById(eventId, supabase);
-    if (!event) {
-      return NextResponse.json(
-        { success: false, error: 'Event not found' },
-        { status: 404 }
-      );
-    }
+    if (!event) return errorJson('Event not found', 404);
 
     const startTime = Date.now();
     const options: CareerImpactCalculationOptions = { skipCache };
@@ -128,72 +107,35 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Career impact score API error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Internal server error');
   }
 }
 
-/**
- * POST /api/career-impact/score
- * Calculate career impact score with request body options
- */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
-    // Parse request body
     let body: ScoreRequestBody;
     try {
       body = await request.json();
     } catch (_error) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid JSON in request body');
     }
 
     const { eventId, options = {} } = body;
+    if (!eventId) return validationErrorJson('eventId is required');
 
-    if (!eventId) {
-      return NextResponse.json(
-        { success: false, error: 'eventId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Get user profile and career profile
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
     const careerProfile = await MemoizedProfileService.getCareerProfile(userProfile, supabase);
-
     if (!careerProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Career profile not found. Please complete career onboarding.' },
-        { status: 404 }
-      );
+      return errorJson('Career profile not found. Please complete career onboarding.', 404);
     }
 
-    // Get event data
     const event = await EventService.getEventById(eventId, supabase);
-    if (!event) {
-      return NextResponse.json(
-        { success: false, error: 'Event not found' },
-        { status: 404 }
-      );
-    }
+    if (!event) return errorJson('Event not found', 404);
 
     const startTime = Date.now();
 
@@ -223,12 +165,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Career impact score POST API error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Internal server error');
   }
 }

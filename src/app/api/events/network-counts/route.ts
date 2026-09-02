@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/utils/supabase/server';
-import { createServiceClient } from '@/utils/supabase/service';
-import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { unauthorizedJson, rateLimitedJson, validationErrorJson, errorJson, successJson, catchErrorJson } from '@/lib/api/apiResponse';
+import { getServiceSupabaseClient } from '@/lib/api/serviceClient';
 import { NetworkEventCountsService } from '@/services/networkEventCountsService';
+import { createRateLimiter, checkRateLimit } from '@/utils/rateLimit';
+import { createClient } from '@/utils/supabase/server';
 
 const QuerySchema = z.object({
   eventIds: z.string().trim().min(1).max(8000),
@@ -46,85 +47,41 @@ export async function GET(request: NextRequest) {
     const viewerSupabase = await createClient();
     const { data: { user }, error: authError } = await viewerSupabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return unauthorizedJson();
 
     const rateLimitResult = await checkRateLimit(networkCountsRateLimiter, user.id);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    if (!rateLimitResult.success) return rateLimitedJson();
 
     const queryValidation = QuerySchema.safeParse({
       eventIds: request.nextUrl.searchParams.get('eventIds') ?? undefined,
     });
-
     if (!queryValidation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid query parameters',
-          details: queryValidation.error.issues,
-        },
-        { status: 400 }
-      );
+      return validationErrorJson('Invalid query parameters', queryValidation.error.issues);
     }
 
     const eventIds = parseEventIds(queryValidation.data.eventIds);
-    if (eventIds.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          counts: [],
-        },
-      });
-    }
+    if (eventIds.length === 0) return successJson({ counts: [] });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const readSupabase = getServiceSupabaseClient();
+    if (!readSupabase) return errorJson('Network counts service is not configured.', 500);
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { success: false, error: 'Network counts service is not configured.' },
-        { status: 500 }
-      );
-    }
-
-    const readSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
     const counts = await NetworkEventCountsService.getNetworkCountsForEvents(
       user.id,
       eventIds,
       readSupabase
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        counts,
-      },
-    });
+    return successJson({ counts });
   } catch (error) {
     if (error instanceof Error && (
       error.message.includes('maximum') ||
       error.message.includes('invalid')
     )) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 }
-      );
+      return errorJson(error.message, 400);
     }
 
     console.error('Network counts API error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch network counts' },
-      { status: 500 }
-    );
+    return catchErrorJson(error, 'Failed to fetch network counts');
   }
 }
 
