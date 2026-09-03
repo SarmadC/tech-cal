@@ -1,6 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BrandPageLoadingState } from './brand/BrandPageLoadingState';
 import { useAppTheme } from '../providers/ThemeProvider';
-import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 interface ScreenStateViewProps {
   description: string;
@@ -16,7 +16,10 @@ export function ScreenStateView({
   onRetry,
 }: ScreenStateViewProps) {
   const { tokens } = useAppTheme();
-  const isDelayed = useDelayedLoading(mode === 'loading');
+
+  if (mode === 'loading') {
+    return <BrandPageLoadingState style={styles.loadingState} />;
+  }
 
   return (
     <View
@@ -30,12 +33,9 @@ export function ScreenStateView({
         },
       ]}
     >
-      {mode === 'loading' ? (
-        <ActivityIndicator color={tokens.colors.accent} size="small" />
-      ) : null}
       <Text style={[styles.title, { color: tokens.colors.textPrimary, fontFamily: tokens.typography.sans }]}>{title}</Text>
       <Text style={[styles.description, { color: tokens.colors.textSecondary, fontFamily: tokens.typography.sans }]}>
-        {isDelayed ? 'This is taking longer than expected. Check your connection or try again.' : description}
+        {description}
       </Text>
       {mode === 'error' && onRetry ? (
         <Pressable
@@ -60,6 +60,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  loadingState: {
+    minHeight: 180,
   },
   retryButton: {
     alignItems: 'center',
