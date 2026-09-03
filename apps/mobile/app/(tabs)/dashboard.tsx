@@ -255,6 +255,7 @@ export default function DashboardScreen() {
       ].filter((item): item is DashboardAttentionItem => item !== null)
     : [];
   const primaryAttention = attentionItems[0] ?? null;
+  const hasNextMove = Boolean(topRecommendation || primaryAttention);
   const secondaryAttentionCount = Math.max(0, attentionItems.length - 1);
   const pipelineStatusColor =
     pipelineScore >= RECOMMENDATION_THRESHOLDS.BUCKETS.HIGH
@@ -335,14 +336,16 @@ export default function DashboardScreen() {
         {dashboard ? (
           <View style={styles.stack}>
             <View style={styles.statusBoard}>
-              <DashboardHeroCard
-                event={topRecommendation?.event ?? null}
-                daysUntil={topRecommendation?.daysUntil}
-                eyebrow={heroEyebrow}
-                title={heroTitle}
-                body={heroBody}
-                onPress={heroCtaPress}
-              />
+              {hasNextMove ? (
+                <DashboardHeroCard
+                  event={topRecommendation?.event ?? null}
+                  daysUntil={topRecommendation?.daysUntil}
+                  eyebrow={heroEyebrow}
+                  title={heroTitle}
+                  body={heroBody}
+                  onPress={heroCtaPress}
+                />
+              ) : null}
 
               <View style={styles.statusSideColumn}>
                 <DashboardFollowThroughCard
