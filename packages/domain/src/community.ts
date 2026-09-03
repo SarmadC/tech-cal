@@ -742,6 +742,60 @@ export const mobileCommunityEventsSchema = z.object({
   popularWithMembers: z.array(mobileCommunityEventCardSchema),
 });
 
+export const mobileCommunityDiscoveryCardSchema = mobileCommunityCircleSchema.extend({
+  contextSignals: z.array(z.string()).optional(),
+  upcomingEventTitle: z.string().nullable().optional(),
+});
+
+export const mobileCommunityRecentActivitySchema = z.object({
+  id: z.string(),
+  circleSlug: z.string(),
+  circleName: z.string(),
+  kind: z.enum(['post', 'event', 'member']),
+  summary: z.string(),
+  createdAt: z.string(),
+});
+
+export const mobileCommunityDiscoverySchema = z.object({
+  header: mobileSurfaceHeaderSchema,
+  forYou: z.array(mobileCommunityDiscoveryCardSchema),
+  joined: z.array(mobileCommunityDiscoveryCardSchema),
+  explore: z.array(mobileCommunityDiscoveryCardSchema),
+  suggested: z.array(mobileCommunityDiscoveryCardSchema),
+  recentActivity: z.array(mobileCommunityRecentActivitySchema),
+});
+
+export const mobileCommunityPersonContextSchema = mobileCommunityCircleMemberSchema.extend({
+  contextLabel: z.string().nullable().optional(),
+  sharedEventId: z.string().nullable().optional(),
+  sharedEventTitle: z.string().nullable().optional(),
+});
+
+export const mobileCommunityPeopleSchema = z.object({
+  header: mobileSurfaceHeaderSchema,
+  circle: mobileCommunityCircleSchema,
+  peopleForYou: z.array(mobileCommunityPersonContextSchema),
+  activeMembers: z.array(mobileCommunityPersonContextSchema),
+  goingToNextEvent: z.array(mobileCommunityPersonContextSchema),
+  mutuals: z.array(mobileCommunityPersonContextSchema),
+  newMembers: z.array(mobileCommunityPersonContextSchema),
+});
+
+export const mobileCommunityEventCardSchema = mobileCommunityUpcomingEventSchema.extend({
+  attendingFromCircleCount: z.number().int().nonnegative().optional(),
+  rsvpState: z.enum(['none', 'saved', 'going']).optional(),
+  discussionCount: z.number().int().nonnegative().optional(),
+});
+
+export const mobileCommunityEventsSchema = z.object({
+  header: mobileSurfaceHeaderSchema,
+  circle: mobileCommunityCircleSchema,
+  nextUp: z.array(mobileCommunityEventCardSchema),
+  thisMonth: z.array(mobileCommunityEventCardSchema),
+  past: z.array(mobileCommunityEventCardSchema),
+  popularWithMembers: z.array(mobileCommunityEventCardSchema),
+});
+
 export const mobileCommunityCirclePageSchema = z.object({
   header: mobileSurfaceHeaderSchema,
   circle: mobileCommunityCircleSchema,
