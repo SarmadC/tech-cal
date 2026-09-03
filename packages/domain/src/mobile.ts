@@ -1012,6 +1012,14 @@ export const mobileNotificationTypeSchema = z.enum([
   'mention',
 ]);
 
+// PostgreSQL's uuid type accepts canonical UUID text without requiring RFC
+// version or variant bits. Some long-lived seeded circle IDs use that format,
+// so validate the database representation rather than Zod's stricter RFC UUID.
+export const postgresUuidSchema = z.string().regex(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  'Invalid PostgreSQL UUID'
+);
+
 export const mobileNotificationItemSchema = z.object({
   id: z.string().uuid(),
   type: mobileNotificationTypeSchema,
@@ -1026,7 +1034,7 @@ export const mobileNotificationItemSchema = z.object({
     .nullable(),
   circle: z
     .object({
-      id: z.string().uuid().nullable(),
+      id: postgresUuidSchema.nullable(),
       slug: z.string().nullable(),
     })
     .nullable(),
@@ -1049,6 +1057,11 @@ export const mobileNotificationMarkReadRequestSchema = z
     message: 'Provide either `ids` or `all`, not both.',
   });
 
+export const mobileNotificationDismissRequestSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  dismissed: z.boolean(),
+});
+
 export const mobileNotificationUnreadCountSchema = z.object({
   count: z.number().int().nonnegative(),
 });
@@ -1069,6 +1082,9 @@ export type MobileNotificationListResponse = z.infer<
 >;
 export type MobileNotificationMarkReadRequest = z.infer<
   typeof mobileNotificationMarkReadRequestSchema
+>;
+export type MobileNotificationDismissRequest = z.infer<
+  typeof mobileNotificationDismissRequestSchema
 >;
 export type MobileNotificationUnreadCount = z.infer<
   typeof mobileNotificationUnreadCountSchema

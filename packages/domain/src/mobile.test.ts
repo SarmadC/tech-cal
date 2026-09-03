@@ -11,6 +11,8 @@ import {
   mobileEventNetworkingFeedbackSchema,
   mobileEventNetworkingFeedbackUpdateSchema,
   mobileEventEngagementUpdateSchema,
+  mobileNotificationDismissRequestSchema,
+  mobileNotificationListResponseSchema,
   mobileProfileUpdateSchema,
   mobileProfileStateSchema,
   mobileSavedEventsFeedSchema,
@@ -687,5 +689,48 @@ describe('mobile domain contracts', () => {
     expect(() => mobileEventNetworkingFeedbackUpdateSchema.parse({})).toThrow(
       'At least one feedback field must be provided.'
     );
+  });
+
+  it('accepts PostgreSQL UUID text for seeded notification circle IDs', () => {
+    const parsed = mobileNotificationListResponseSchema.parse({
+      items: [
+        {
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          type: 'post_reply',
+          createdAt: '2026-09-03T12:00:00.000Z',
+          readAt: null,
+          actor: null,
+          circle: {
+            id: '11111111-1111-1111-1111-111111111111',
+            slug: 'ai',
+          },
+          postId: null,
+          commentId: null,
+          preview: 'A reply to your post',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    expect(parsed.items[0]?.circle?.id).toBe(
+      '11111111-1111-1111-1111-111111111111'
+    );
+  });
+
+  it('validates notification dismissal requests', () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+    expect(
+      mobileNotificationDismissRequestSchema.parse({ ids: [id], dismissed: true })
+    ).toEqual({ ids: [id], dismissed: true });
+    expect(() =>
+      mobileNotificationDismissRequestSchema.parse({ ids: [], dismissed: true })
+    ).toThrow();
+    expect(() =>
+      mobileNotificationDismissRequestSchema.parse({
+        ids: ['not-a-uuid'],
+        dismissed: false,
+      })
+    ).toThrow();
   });
 });

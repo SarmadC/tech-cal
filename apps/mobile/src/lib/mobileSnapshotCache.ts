@@ -49,6 +49,18 @@ export async function writeMobileSnapshot<T>(
   }
 }
 
+export async function removeItemsFromMobileSnapshot<
+  T extends { items: Array<{ id: string }> },
+>(scope: string, key: string, ids: ReadonlySet<string>): Promise<void> {
+  const cached = await readMobileSnapshot<T>(scope, key);
+  if (!cached) return;
+
+  await writeMobileSnapshot(scope, key, {
+    ...cached.value,
+    items: cached.value.items.filter((item) => !ids.has(item.id)),
+  });
+}
+
 export async function clearMobileSnapshotCache(): Promise<void> {
   try {
     const keys = await AsyncStorage.getAllKeys();

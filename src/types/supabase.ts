@@ -3480,6 +3480,7 @@ export type Database = {
           circle_slug: string | null
           comment_id: string | null
           created_at: string
+          dismissed_at: string | null
           entity_preview: string | null
           id: string
           post_id: string | null
@@ -3495,6 +3496,7 @@ export type Database = {
           circle_slug?: string | null
           comment_id?: string | null
           created_at?: string
+          dismissed_at?: string | null
           entity_preview?: string | null
           id?: string
           post_id?: string | null
@@ -3510,6 +3512,7 @@ export type Database = {
           circle_slug?: string | null
           comment_id?: string | null
           created_at?: string
+          dismissed_at?: string | null
           entity_preview?: string | null
           id?: string
           post_id?: string | null
@@ -5855,6 +5858,7 @@ export type Database = {
           circle_slug: string | null
           comment_id: string | null
           created_at: string | null
+          dismissed_at: string | null
           entity_preview: string | null
           id: string | null
           post_id: string | null

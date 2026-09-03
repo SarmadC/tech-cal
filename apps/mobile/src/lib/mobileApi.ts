@@ -91,6 +91,7 @@ import {
   mobileNotificationListResponseSchema,
   mobileNotificationPreferencesSchema,
   mobileNotificationUnreadCountSchema,
+  type MobileNotificationDismissRequest,
   type MobileNotificationListResponse,
   type MobileNotificationPreferences,
   type MobileNotificationPreferencesUpdate,
@@ -1383,6 +1384,15 @@ export async function markMobileNotificationsRead(
 ): Promise<void> {
   await fetchMobileEnvelope('/api/mobile/notifications/mark-read', {
     method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function dismissMobileNotifications(
+  body: MobileNotificationDismissRequest
+): Promise<void> {
+  await fetchMobileEnvelope('/api/mobile/notifications/dismiss', {
+    method: 'PATCH',
     body: JSON.stringify(body),
   });
 }
