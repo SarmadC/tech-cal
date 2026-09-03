@@ -27,19 +27,19 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
   HeaderActionButton,
   MobilePage,
-} from "../../src/components/chrome/MobilePage";
-import { MobileBackButton } from "../../src/components/chrome/MobileBackButton";
-import { ScreenState } from "../../src/components/chrome/ScreenState";
-import { CommunityRichPostContent } from "../../src/components/CommunityRichPostContent";
-import { CommunityAvatar } from "../../src/components/community/CommunityAvatar";
-import { CommunityAttachedEventRow } from "../../src/components/community/CommunityAttachedEventRow";
-import { ProfileCompactHeader } from "../../src/components/profile/ProfileCompactHeader";
-import { ProfileMutualGround } from "../../src/components/profile/ProfileMutualGround";
-import { useAuth } from "../../src/context/AuthProvider";
-import { showActionSheet } from "../../src/lib/actionSheet";
-import { getMobileApiBaseUrl } from "../../src/lib/env";
-import { haptics } from "../../src/lib/haptics";
-import { formatCommunityRelativeTime } from "../../src/lib/communityPresentation";
+} from "../../../../src/components/chrome/MobilePage";
+import { MobileBackButton } from "../../../../src/components/chrome/MobileBackButton";
+import { ScreenState } from "../../../../src/components/chrome/ScreenState";
+import { CommunityRichPostContent } from "../../../../src/components/CommunityRichPostContent";
+import { CommunityAvatar } from "../../../../src/components/community/CommunityAvatar";
+import { CommunityAttachedEventRow } from "../../../../src/components/community/CommunityAttachedEventRow";
+import { ProfileCompactHeader } from "../../../../src/components/profile/ProfileCompactHeader";
+import { ProfileMutualGround } from "../../../../src/components/profile/ProfileMutualGround";
+import { useAuth } from "../../../../src/context/AuthProvider";
+import { showActionSheet } from "../../../../src/lib/actionSheet";
+import { getMobileApiBaseUrl } from "../../../../src/lib/env";
+import { haptics } from "../../../../src/lib/haptics";
+import { formatCommunityRelativeTime } from "../../../../src/lib/communityPresentation";
 import {
   blockMobileUser,
   followMobileUser,
@@ -47,8 +47,8 @@ import {
   removeMobileAvatar,
   unfollowMobileUser,
   uploadMobileAvatar,
-} from "../../src/lib/mobileApi";
-import { useAppTheme } from "../../src/providers/ThemeProvider";
+} from "../../../../src/lib/mobileApi";
+import { useAppTheme } from "../../../../src/providers/ThemeProvider";
 
 type ProfileEvent = MobilePublicProfile["recentAttendingEvents"][number];
 type ProfilePost = NonNullable<MobilePublicProfile["communityPosts"]>[number];
@@ -259,10 +259,8 @@ export default function PublicProfileScreen() {
 }
 
 export function PublicProfileView({
-  showSettingsAction = false,
   username,
 }: {
-  showSettingsAction?: boolean;
   username: string | undefined;
 }) {
   const { tokens } = useAppTheme();
@@ -622,13 +620,7 @@ export function PublicProfileView({
             username={profile.username}
             visible={headerCompact}
             action={
-              showSettingsAction || profile.isViewerOwner ? (
-                <IconHeaderButton
-                  accessibilityLabel="More profile options"
-                  iconName="ellipsis-h"
-                  onPress={() => router.push("/settings/all")}
-                />
-              ) : (
+              profile.isViewerOwner ? null : (
                 <CompactFollowButton
                   following={following}
                   onPress={() => {
@@ -655,7 +647,6 @@ export function PublicProfileView({
                 profile={profile}
                 onAvatarPress={openAvatarActions}
                 onShare={openPublicProfileActions}
-                onSettings={() => router.push("/settings/all")}
               />
 
               {!profile.isViewerOwner ? (
@@ -757,13 +748,11 @@ function ProfileHero({
   profile,
   onAvatarPress,
   onShare,
-  onSettings,
 }: {
   avatarPending: boolean;
   profile: MobilePublicProfile;
   onAvatarPress: () => void;
   onShare: () => void;
-  onSettings: () => void;
 }) {
   const { tokens } = useAppTheme();
   const displayName = getProfileDisplayName(profile);
@@ -803,11 +792,7 @@ function ProfileHero({
           {profile.username ? `@${profile.username}` : "Profile"}
         </Text>
         {profile.isViewerOwner ? (
-          <IconHeaderButton
-            accessibilityLabel="More profile options"
-            iconName="ellipsis-h"
-            onPress={onSettings}
-          />
+          <View style={styles.profileNavSpacer} />
         ) : (
           <IconHeaderButton
             accessibilityLabel="Profile actions"
@@ -1969,6 +1954,9 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginHorizontal: 12,
     textAlign: "center",
+  },
+  profileNavSpacer: {
+    width: 32,
   },
   heroHeader: {
     alignItems: "flex-start",

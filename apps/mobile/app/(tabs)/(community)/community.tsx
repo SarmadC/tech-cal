@@ -28,23 +28,23 @@ import {
 
 import {
   useScalePress,
-} from "../../src/hooks/useAnimation";
+} from "../../../src/hooks/useAnimation";
 
-import { KureButton } from "../../src/components/chrome/KureButton";
-import { MobilePage } from "../../src/components/chrome/MobilePage";
-import { ScreenState } from "../../src/components/chrome/ScreenState";
-import { TabMenuOverlay } from "../../src/components/chrome/TabMenuOverlay";
+import { KureButton } from "../../../src/components/chrome/KureButton";
+import { MobilePage } from "../../../src/components/chrome/MobilePage";
+import { ScreenState } from "../../../src/components/chrome/ScreenState";
+import { TabMenuOverlay } from "../../../src/components/chrome/TabMenuOverlay";
 import {
   CommunityComposerModal,
   type CommunityComposerEventOption,
-} from "../../src/components/community/CommunityComposerModal";
-import { useCommunityImageAttachments } from "../../src/hooks/useCommunityImageAttachments";
-import { CommunityNetworkingPersonCard } from "../../src/components/community/CommunityNetworkingPersonCard";
-import { CommunityDirectoryPersonCard } from "../../src/components/community/CommunityDirectoryPersonCard";
-import { CommunityNetworkingSpeakerCard } from "../../src/components/community/CommunityNetworkingSpeakerCard";
-import { CommunityRoomSheet } from "../../src/components/community/CommunityRoomSheet";
-import { CommunityFeedCard } from "../../src/components/CommunityFeedCard";
-import { DiscoverEventCard } from "../../src/components/discover/DiscoverEventCard";
+} from "../../../src/components/community/CommunityComposerModal";
+import { useCommunityImageAttachments } from "../../../src/hooks/useCommunityImageAttachments";
+import { CommunityNetworkingPersonCard } from "../../../src/components/community/CommunityNetworkingPersonCard";
+import { CommunityDirectoryPersonCard } from "../../../src/components/community/CommunityDirectoryPersonCard";
+import { CommunityNetworkingSpeakerCard } from "../../../src/components/community/CommunityNetworkingSpeakerCard";
+import { CommunityRoomSheet } from "../../../src/components/community/CommunityRoomSheet";
+import { CommunityFeedCard } from "../../../src/components/CommunityFeedCard";
+import { DiscoverEventCard } from "../../../src/components/discover/DiscoverEventCard";
 import {
   createMobileCommunityPost,
   followMobileUser,
@@ -54,8 +54,8 @@ import {
   loadMobileCommunityHome,
   searchMobileCommunityDirectory,
   unfollowMobileUser,
-} from "../../src/lib/mobileApi";
-import { useAppTheme } from "../../src/providers/ThemeProvider";
+} from "../../../src/lib/mobileApi";
+import { useAppTheme } from "../../../src/providers/ThemeProvider";
 
 type LoadMode = "initial" | "refresh";
 type RoomLens = "for_you" | "going" | "saved" | "nearby" | "past";
