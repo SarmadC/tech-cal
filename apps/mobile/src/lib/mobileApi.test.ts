@@ -19,6 +19,7 @@ import {
   createMobileCommunityComment,
   createMobileCommunityPost,
   disconnectMobileGoogleCalendar,
+  dismissMobileNotifications,
   joinMobileCommunityCircle,
   leaveMobileCommunityCircle,
   loadMobileCalendarFeed,
@@ -79,6 +80,33 @@ describe('mobile api helpers', () => {
     });
 
     await expect(loadMobileDashboardSummary()).rejects.toThrow('Sign in required');
+  });
+
+  it('dismisses and restores notifications through the authenticated API', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: { updated: 1 } }))
+    );
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+    await dismissMobileNotifications({ ids: [id], dismissed: true });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://mobile.kurecal.test/api/mobile/notifications/dismiss',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ ids: [id], dismissed: true }),
+      })
+    );
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ success: false, error: 'Unable to restore' }),
+        { status: 500 }
+      )
+    );
+    await expect(
+      dismissMobileNotifications({ ids: [id], dismissed: false })
+    ).rejects.toThrow('Unable to restore');
   });
 
   it('posts discover filters with bearer auth and parses the shared contract', async () => {

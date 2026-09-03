@@ -12,6 +12,7 @@ let nativeModuleWarningLogged = false;
 interface NotificationResponseLike {
   notification: {
     request: {
+      identifier?: string;
       content: {
         data?: Record<string, unknown>;
       };
@@ -27,8 +28,10 @@ interface NotificationsModule {
     projectId: string;
   }) => Promise<{ data?: string }>;
   getLastNotificationResponseAsync: () => Promise<NotificationResponseLike | null>;
+  getPresentedNotificationsAsync: () => Promise<NotificationResponseLike['notification'][]>;
   getPermissionsAsync: () => Promise<NotificationPermissionLike>;
   requestPermissionsAsync: (input?: unknown) => Promise<NotificationPermissionLike>;
+  dismissNotificationAsync: (notificationIdentifier: string) => Promise<void>;
   setBadgeCountAsync: (count: number) => Promise<boolean>;
   setNotificationHandler: (handler: unknown) => void;
 }
@@ -188,6 +191,44 @@ export async function setApplicationBadgeCount(count: number): Promise<void> {
   const Notifications = getNotificationsModule();
   if (!Notifications) return;
   await Notifications.setBadgeCountAsync(Math.max(0, count)).catch(() => false);
+}
+
+export async function dismissPresentedNotificationByInboxId(
+  notificationId: string,
+): Promise<void> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
+  await dismissPresentedNotificationByInboxIdWithModule(
+    Notifications,
+    notificationId,
+  );
+}
+
+export async function dismissPresentedNotificationByInboxIdWithModule(
+  Notifications: Pick<
+    NotificationsModule,
+    'dismissNotificationAsync' | 'getPresentedNotificationsAsync'
+  >,
+  notificationId: string,
+): Promise<void> {
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    const matchingIdentifiers = presented.flatMap((notification) => {
+      const matches =
+        notification.request.content.data?.notificationId === notificationId;
+      const identifier = notification.request.identifier;
+      return matches && identifier ? [identifier] : [];
+    });
+
+    await Promise.all(
+      matchingIdentifiers.map((identifier) =>
+        Notifications.dismissNotificationAsync(identifier)
+      )
+    );
+  } catch (error) {
+    console.warn('[push] Failed to dismiss a presented notification.', error);
+  }
 }
 
 export async function registerForPushNotificationsAsync(

@@ -83,3 +83,7 @@ export function useUnreadNotifications(): UseUnreadNotificationsResult {
 export function setLocalUnreadCount(next: number) {
   publish(Math.max(0, next));
 }
+
+export function adjustLocalUnreadCount(delta: number) {
+  publish(Math.max(0, cachedCount + delta));
+}
