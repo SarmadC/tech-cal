@@ -133,22 +133,16 @@ export function formatEventDateTime(
   }
 
   const startDateLabel = formatDatePart(startTime, timeZone);
-  const startTimeLabel = formatTimePart(startTime, timeZone);
 
   if (!endTime || !isValidDate(endTime)) {
-    return `${startDateLabel} · ${startTimeLabel}`;
+    return startDateLabel;
   }
 
   const endDateLabel = formatDatePart(endTime, timeZone);
-  const endTimeLabel = formatTimePart(endTime, timeZone);
 
-  if (startDateLabel === endDateLabel) {
-    return startTimeLabel === endTimeLabel
-      ? `${startDateLabel} · ${startTimeLabel}`
-      : `${startDateLabel} · ${startTimeLabel} to ${endTimeLabel}`;
-  }
+  if (startDateLabel === endDateLabel) return startDateLabel;
 
-  return `${startDateLabel} · ${startTimeLabel} to ${endDateLabel} · ${endTimeLabel}`;
+  return `${startDateLabel} to ${endDateLabel}`;
 }
 
 export function formatEventStartDateTime(startTime: string, timeZone?: string | null) {

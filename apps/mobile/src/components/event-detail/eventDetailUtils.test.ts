@@ -4,6 +4,7 @@ import {
   buildAgendaSecondaryText,
   formatAgendaDayLabel,
   formatAgendaSessionCount,
+  formatEventDateTime,
   getAttendanceCtaState,
   type AgendaDayGroup,
 } from './eventDetailUtils';
@@ -53,6 +54,44 @@ describe('getAttendanceCtaState', () => {
     );
 
     expect(state.label).toBe('I attended');
+  });
+});
+
+describe('event date presentation', () => {
+  it('shows only the date for a single-day event', () => {
+    expect(
+      formatEventDateTime(
+        '2026-05-24T16:00:00.000Z',
+        '2026-05-24T18:00:00.000Z',
+        'UTC'
+      )
+    ).toBe('May 24');
+  });
+
+  it('shows a date range for a multi-day event', () => {
+    expect(
+      formatEventDateTime(
+        '2026-05-24T16:00:00.000Z',
+        '2026-05-25T18:00:00.000Z',
+        'UTC'
+      )
+    ).toBe('May 24 to May 25');
+  });
+
+  it('uses the event timezone to determine whether dates span multiple days', () => {
+    expect(
+      formatEventDateTime(
+        '2026-05-24T23:00:00.000Z',
+        '2026-05-25T01:00:00.000Z',
+        'America/Edmonton'
+      )
+    ).toBe('May 24');
+  });
+
+  it('falls back to the start date when the end timestamp is invalid', () => {
+    expect(formatEventDateTime('2026-05-24T16:00:00.000Z', 'invalid', 'UTC')).toBe(
+      'May 24'
+    );
   });
 });
 
